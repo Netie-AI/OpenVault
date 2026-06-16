@@ -154,10 +154,10 @@ test added: `test_elevated_cli_parameters_quotes_paths_with_spaces`.
 
 | Item | Status |
 |------|--------|
-| GitHub Actions CI green (6-cell matrix) | Fixed Linux mypy (ctypes/fcntl); verify on [Actions](https://github.com/Netie-AI/OpenVault/actions) after push |
+| GitHub Actions CI green (6-cell matrix) | **Green** — [run #5](https://github.com/Netie-AI/OpenVault/actions/runs/27600723484) on `320751a` |
 | Degraded-telemetry banner in BenchRunReport | Done — `bench/report.py` |
 | This handoff section (empirical WMI finding) | Done |
-| Tag `v0.1.0` | After CI confirmed green |
+| Tag `v0.1.0` | Done — points at `320751a` (CI-green) |
 
 **Next effort (separate repo/track):** `flash-kv-cache` middleware — not an extension of this toolchain.
 
