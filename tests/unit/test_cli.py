@@ -100,6 +100,7 @@ def test_list_devices_exits_zero() -> None:
     assert result.exit_code == 0
 
 
+@pytest.mark.windows_only
 def test_resolve_output_paths_in_argv_makes_absolute(tmp_path: Path) -> None:
     project_root = tmp_path / "project"
     (project_root / "reports").mkdir(parents=True)
@@ -117,6 +118,7 @@ def test_resolve_output_paths_in_argv_makes_absolute(tmp_path: Path) -> None:
     assert Path(resolved[out_idx]).is_absolute()
 
 
+@pytest.mark.windows_only
 def test_resolve_output_paths_in_argv_matches_output_resolve(tmp_path: Path) -> None:
     project_root = tmp_path / "project"
     (project_root / "reports").mkdir(parents=True)
@@ -143,6 +145,7 @@ def test_elevated_cli_parameters_quotes_paths_with_spaces() -> None:
     assert r"\\.\PhysicalDrive1" in params
 
 
+@pytest.mark.windows_only
 def test_elevation_relaunch_uses_resolved_argv_and_working_directory(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
