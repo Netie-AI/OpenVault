@@ -74,9 +74,7 @@ def collect_snapshot(
     device_info_dict: dict[str, str | int | bool] | None = None
     caps: list[str] = []
 
-    identify_b64, smart_b64 = _fetch_raw_passthrough(
-        device_path, mock=mock, force=adapter_force
-    )
+    identify_b64, smart_b64 = _fetch_raw_passthrough(device_path, mock=mock, force=adapter_force)
 
     if smart_result.smart is not None or mock:
         try:

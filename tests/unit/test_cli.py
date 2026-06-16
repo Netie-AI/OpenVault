@@ -3,11 +3,21 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
+from types import ModuleType
 
+import pytest
+import typer
 from typer.testing import CliRunner
 
-from nvme_sentinel.cli import app
+import nvme_sentinel.cli as cli_module
+from nvme_sentinel.cli import (
+    _elevated_cli_parameters,
+    _require_admin_or_elevate,
+    _resolve_output_paths_in_argv,
+    app,
+)
 
 runner = CliRunner()
 
@@ -88,6 +98,114 @@ def test_collect_mock(tmp_path: Path) -> None:
 def test_list_devices_exits_zero() -> None:
     result = runner.invoke(app, ["list-devices"])
     assert result.exit_code == 0
+
+
+def test_resolve_output_paths_in_argv_makes_absolute(tmp_path: Path) -> None:
+    project_root = tmp_path / "project"
+    (project_root / "reports").mkdir(parents=True)
+    argv = [
+        "collect",
+        "--device",
+        r"\\.\PhysicalDrive1",
+        "--output",
+        r"reports\baseline.json",
+    ]
+    resolved = _resolve_output_paths_in_argv(argv, base=project_root)
+    out_idx = resolved.index("--output") + 1
+    expected = str((project_root / "reports" / "baseline.json").resolve())
+    assert resolved[out_idx] == expected
+    assert Path(resolved[out_idx]).is_absolute()
+
+
+def test_resolve_output_paths_in_argv_matches_output_resolve(tmp_path: Path) -> None:
+    project_root = tmp_path / "project"
+    (project_root / "reports").mkdir(parents=True)
+    relative = Path(r"..\..\somewhere\baseline.json")
+    argv = ["collect", "-o", str(relative)]
+    from_argv = _resolve_output_paths_in_argv(argv, base=project_root)[2]
+    from_path = (project_root / relative).resolve()
+    assert Path(from_argv) == from_path
+
+
+def test_elevated_cli_parameters_quotes_paths_with_spaces() -> None:
+    params = _elevated_cli_parameters(
+        [
+            "collect",
+            "--device",
+            r"\\.\PhysicalDrive1",
+            "--output",
+            r"C:\Users\oojia\NVME Sentinel\reports\baseline_biwin_after.json",
+        ]
+    )
+    assert (
+        '--output "C:\\Users\\oojia\\NVME Sentinel\\reports\\baseline_biwin_after.json"' in params
+    )
+    assert r"\\.\PhysicalDrive1" in params
+
+
+def test_elevation_relaunch_uses_resolved_argv_and_working_directory(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    project_root = tmp_path / "project"
+    (project_root / "reports").mkdir(parents=True)
+    monkeypatch.chdir(project_root)
+    cli_sys: ModuleType = cli_module.sys  # type: ignore[attr-defined]
+    cli_ctypes: ModuleType = cli_module.ctypes  # type: ignore[attr-defined]
+    cli_typer: ModuleType = cli_module.typer  # type: ignore[attr-defined]
+    monkeypatch.setattr(cli_sys, "platform", "win32")
+    monkeypatch.setattr(
+        cli_sys,
+        "executable",
+        str(project_root / "python.exe"),
+    )
+    monkeypatch.setattr(
+        cli_sys,
+        "argv",
+        [
+            "nvme-sentinel",
+            "collect",
+            "-d",
+            r"\\.\PhysicalDrive1",
+            "-o",
+            r"reports\baseline.json",
+        ],
+    )
+
+    class _FakeShell32:
+        @staticmethod
+        def IsUserAnAdmin() -> bool:
+            return False
+
+    class _FakeWindll:
+        shell32 = _FakeShell32()
+
+    monkeypatch.setattr(cli_ctypes, "windll", _FakeWindll())
+
+    captured: list[dict[str, object]] = []
+
+    def _fake_run_elevated(**kwargs: object) -> None:
+        captured.append(kwargs)
+
+    monkeypatch.setattr(cli_module, "_run_elevated_windows", _fake_run_elevated)
+    monkeypatch.setattr(cli_typer, "prompt", lambda *args, **kwargs: "y")
+
+    with pytest.raises(typer.Exit) as exc_info:
+        _require_admin_or_elevate(r"\\.\PhysicalDrive1")
+
+    assert exc_info.value.exit_code == 0
+    assert len(captured) == 1
+    call = captured[0]
+    expected_output = str((project_root / "reports" / "baseline.json").resolve())
+    assert call["executable"] == str(project_root / "python.exe")
+    assert call["working_directory"] == os.fspath(project_root)
+    argv = call["argv"]
+    assert isinstance(argv, list)
+    assert argv[argv.index("-o") + 1] == expected_output
+    params = _elevated_cli_parameters(argv)
+    assert expected_output in params
+    assert " -o reports\\baseline.json" not in params
+    assert " -o reports/baseline.json" not in params
 
 
 def test_smart_host_proxy(tmp_path: Path) -> None:

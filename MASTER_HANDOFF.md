@@ -114,4 +114,53 @@ or real spare drive.
 
 ---
 
+## PART 6 — Empirical hardware findings (2026-06-16)
+
+### WMI telemetry does not expose NVMe wear counters on USB-bridged drives
+
+Verified 2026-06-16 against a real BIWIN PR2000 (USB-bridged, `\\.\PhysicalDrive1`).
+
+- `list-devices` correctly reports `is_nvme: false`, `bus_type: "USB"`, falling back to
+  `suggested_telemetry: ["wmi", "usb-bridge-degraded"]`.
+- `collect` correctly uses `telemetry_source: "wmi"` (MSFT_StorageReliabilityCounter) since
+  native NVMe admin passthrough is unavailable through this bridge.
+- A real 256MB / 30s 4K random-write fio workload was run against the drive between two
+  `collect` snapshots.
+- Both snapshots show `smart_health: null` and `wmi_fallback.Wear: 0`, unchanged before
+  and after the workload.
+- `compute_wear_delta()` therefore correctly reports a 0.00 GB / 0 data-units-written delta
+  in the BenchRunReport HTML — this is the HONEST output given the input, not a bug. WMI's
+  MSFT_StorageReliabilityCounter does not surface NVMe Data Units Written; it is not a
+  substitute for the SMART/Health log page (NVMe Base Spec 2.0c LID 0x02).
+
+Conclusion: wear-delta accounting via BenchRunReport requires native NVMe admin passthrough
+(Linux ioctl or Windows DeviceIoControl with stornvme.sys loaded). USB-bridged drives on
+the WMI fallback path can report health/error-count signals but NOT quantified wear (TBW).
+This is surfaced in `nvme_sentinel/bench/report.py` via a "degraded telemetry" banner when
+`telemetry_source` is not native passthrough (`native-nvme` / `ioctl` / `device-io-control`).
+
+### Real bug found and fixed: elevation relaunch broke on a path containing a space
+
+`_require_admin_or_elevate()`'s Windows auto-elevation originally built a single
+`-ArgumentList` string for `Start-Process`, which silently mis-tokenized when the project
+path (`C:\Users\oojia\NVME Sentinel`) contained a space — the elevated child never ran the
+intended command. No mocked unit test caught this because none used a spaced path. Fixed
+via `ShellExecuteExW` + `subprocess.list2cmdline` for correct argument quoting. Regression
+test added: `test_elevated_cli_parameters_quotes_paths_with_spaces`.
+
+---
+
+## PART 7 — Release gate (v0.1.0)
+
+| Item | Status |
+|------|--------|
+| GitHub Actions CI green (6-cell matrix) | Verify after lint fixes pushed |
+| Degraded-telemetry banner in BenchRunReport | Done — `bench/report.py` |
+| This handoff section (empirical WMI finding) | Done |
+| Tag `v0.1.0` | After CI confirmed green |
+
+**Next effort (separate repo/track):** `flash-kv-cache` middleware — not an extension of this toolchain.
+
+---
+
 *End of MASTER_HANDOFF.md*

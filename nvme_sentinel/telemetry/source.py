@@ -24,6 +24,20 @@ class TelemetrySource(str, Enum):
         return _LABELS.get(self, self.value)
 
 
+_NATIVE_PASSTHROUGH: frozenset[TelemetrySource] = frozenset(
+    {
+        TelemetrySource.NATIVE_NVME,
+        TelemetrySource.IOCTL,
+        TelemetrySource.DEVICE_IO_CONTROL,
+    }
+)
+
+
+def is_native_passthrough(source: TelemetrySource) -> bool:
+    """True when NVMe SMART log 0x02 (data_units_written) may be available."""
+    return source in _NATIVE_PASSTHROUGH
+
+
 _LABELS: dict[TelemetrySource, str] = {
     TelemetrySource.NATIVE_NVME: "Full NVMe admin passthrough (512-byte SMART)",
     TelemetrySource.IOCTL: "Linux NVMe ioctl passthrough",

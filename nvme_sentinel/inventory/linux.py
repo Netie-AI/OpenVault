@@ -9,7 +9,6 @@ from pathlib import Path
 
 from nvme_sentinel.inventory.models import InventoryDevice
 
-
 _NVME_NS_RE = re.compile(r"^(nvme\d+)n\d+$")
 
 

@@ -44,7 +44,10 @@ select = ["E", "F", "I", "N", "UP", "B", "SIM", "TID", "RUF"]
 [tool.ruff.lint.per-file-ignores]
 # Typer idioms use Option(...) in defaults; structlog.configure must precede sibling imports.
 "nvme_sentinel/cli.py" = ["B008", "E402"]
+"nvme_sentinel/cli_nas.py" = ["B008"]
 "nvme_sentinel/reporting/report.py" = ["E501"]
+"nvme_sentinel/bench/report.py" = ["E501"]
+"tests/unit/test_cli.py" = ["N802"]
 
 [tool.ruff.format]
 quote-style = "double"

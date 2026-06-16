@@ -68,11 +68,11 @@ def read_smart(
                 degraded=False,
             )
         except (PermissionDenied, AdminCommandError) as exc:
-            is_ioctl_unsupported = (
-                isinstance(exc, AdminCommandError) and exc.status_code == 1
-            )
-            if sys.platform == "win32" and device_path and (
-                isinstance(exc, PermissionDenied) or is_ioctl_unsupported
+            is_ioctl_unsupported = isinstance(exc, AdminCommandError) and exc.status_code == 1
+            if (
+                sys.platform == "win32"
+                and device_path
+                and (isinstance(exc, PermissionDenied) or is_ioctl_unsupported)
             ):
                 from nvme_sentinel.adapters._wmi_fallback import (
                     disk_number_from_path,

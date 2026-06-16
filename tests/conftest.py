@@ -38,5 +38,5 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
 def adapter_and_path(request: pytest.FixtureRequest) -> tuple[StorageInterface, str]:
     """Parametrized adapter for cross-platform roundtrip tests."""
     kind, path = request.param
-    adapter = get_adapter(device_path=path, force=kind)  # type: ignore[arg-type]
+    adapter = get_adapter(device_path=path, force=kind)
     return adapter, path

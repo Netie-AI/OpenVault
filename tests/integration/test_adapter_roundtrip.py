@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+
 import pytest
 
 from nvme_sentinel.commands.identify import identify_controller
@@ -10,7 +12,7 @@ from nvme_sentinel.hal.interface import StorageInterface
 
 
 @pytest.fixture(autouse=True)
-def _open_adapter(adapter_and_path: tuple[StorageInterface, str]) -> None:
+def _open_adapter(adapter_and_path: tuple[StorageInterface, str]) -> Iterator[None]:
     adapter, _ = adapter_and_path
     adapter.open()
     yield

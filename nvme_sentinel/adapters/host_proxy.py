@@ -61,9 +61,7 @@ class HostProxyAdapter(BaseAdapter):
             self.snapshot_path.read_text(encoding="utf-8")
         )
         if self._snapshot.identify_controller_b64:
-            self._identify_bytes = base64.standard_b64decode(
-                self._snapshot.identify_controller_b64
-            )
+            self._identify_bytes = base64.standard_b64decode(self._snapshot.identify_controller_b64)
         if self._snapshot.smart_health_b64:
             self._smart_bytes = base64.standard_b64decode(self._snapshot.smart_health_b64)
         self._opened = True
