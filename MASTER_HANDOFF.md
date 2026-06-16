@@ -159,7 +159,109 @@ test added: `test_elevated_cli_parameters_quotes_paths_with_spaces`.
 | This handoff section (empirical WMI finding) | Done |
 | Tag `v0.1.0` | Done — points at `320751a` (CI-green) |
 
-**Next effort (separate repo/track):** `flash-kv-cache` middleware — not an extension of this toolchain.
+**Next effort (separate repo/track):** `flash-kv-cache` — see PART 8.
+
+---
+
+## PART 8 — Mypy typing tradeoff (documented gate, v0.1.0)
+
+### What CI actually certifies
+
+- **Lint job** (`ubuntu-latest` only): `uv run mypy nvme_sentinel` then `uv run mypy nvme_sentinel tests`.
+- **No `--platform` split.** Windows matrix legs run pytest only, not mypy.
+- **`v0.1.0` means CI-green per this workflow**, not strict cross-platform typing under every
+  `--platform` permutation.
+
+### Scoped override (incident `468379a`)
+
+`pyproject.toml` waives `attr-defined` on exactly three modules:
+
+- `nvme_sentinel.adapters.linux`
+- `nvme_sentinel.adapters.windows`
+- `nvme_sentinel.cli`
+
+**Gate rule (review checklist):** do not add modules to this list unless they hit the same
+typeshed platform-conditional `ctypes`/`fcntl` pattern. Any other `attr-defined` waiver gets
+its own `[[tool.mypy.overrides]]` block.
+
+### Blast radius — what mypy will NOT catch
+
+If code inside those three modules (or new code added to them) references platform-native
+symbols (`WinDLL`, `windll`, `fcntl.ioctl`, etc.) **without** going through the existing leaf
+modules (`_linux_native.py`, `_windows_native.py`), mypy will **not** report `attr-defined`
+errors there — the override silences that code for the entire module.
+
+**Watch when touching:** `cli.py` elevation (`windll`), `windows.py` kernel32 bindings,
+`linux.py` ioctl path. Prefer extending `_windows_native.py` / `_linux_native.py` for new
+ctypes surface; keep upper layers on `StorageInterface`-shaped APIs.
+
+### What remains fully checked
+
+**`nvme_sentinel.hal.factory` is NOT in the override list** (verified: `uv run mypy
+nvme_sentinel/hal/factory.py` clean). It lazy-imports `LinuxNvmeAdapter` /
+`WindowsStorageAdapter` and returns `StorageInterface` — it does not touch `windll`/`fcntl`
+symbols directly. Cross-adapter wiring at the factory layer is still strict-checked.
+
+**Not checked by either leg:** a future module that imports both adapters and calls their
+native ctypes internals inline would need its own typing strategy (or leaf-module refactor).
+
+### Deferred (backlog, not v0.1.0)
+
+Option 2 from typing discussion: isolate `cli.py` `windll` into `_windows_native.py`, then
+three-pass mypy (linux-only / win32-only / shared). Only if interview narrative needs CI
+sophistication beyond the documented waiver.
+
+---
+
+## PART 9 — Next window: `flash-kv-cache` (separate effort)
+
+### Gate before coding
+
+Claude/Cursor next window should **verify** (not self-report):
+
+1. `git checkout v0.1.0 && uv sync && uv run pytest -q` — baseline still green.
+2. Read this PART 8 + `pyproject.toml` override comment — confirm no drift.
+3. Agree scope: **measurement repo**, not aiDAPTIV clone.
+
+### What nvme-sentinel already proved (carry forward)
+
+| Artifact | Evidence |
+|----------|----------|
+| Closed-loop wear accounting | `BenchRunReport` + degraded-telemetry banner |
+| Real hardware boundary | BIWIN USB/WMI — honest zero delta |
+| Cross-platform HAL | ioctl + DeviceIoControl + mock |
+| CI | 6-cell matrix green at `320751a` / run #5–#6 |
+
+### Strategic framing — don't "outpace aiDAPTIV"
+
+Phison aiDAPTIV+ is **proprietary training middleware + vendor SSDs**. Turbo/quant stacks
+(GPTQ/AWQ/etc.) solve **model compression**, not **KV/offload I/O path**. Maistorage-class
+products are **vendor storage appliances**, not reproducible open instrumentation.
+
+**nvme-sentinel + flash-kv-cache wins a different game:** vendor-neutral **proof** that an
+offload path actually moved bytes, cost wear, and where the bottleneck was (SSD vs PCIe vs
+GPU idle). That is more defensible in an SSD validation interview than claiming to beat
+aiDAPTIV's closed stack.
+
+### Recommended near-term stack (VISION.md aligned)
+
+| Layer | Choice | Why |
+|-------|--------|-----|
+| Inference runtime | vLLM or llama.cpp | Real KV eviction to host/disk |
+| KV offload | **LMCache** (disk backend) | Active OSS, matches "flash-kv-cache" name |
+| Instrumentation | nvme-sentinel `collect` → workload → `BenchRunReport` | Already shipped |
+| Correlation | Timestamp-aligned manifest | env_manifest + workload window |
+
+**Not first:** training weight tiering (aiDAPTIV comparison), custom quant kernels, or
+building middleware inside the nvme-sentinel repo.
+
+### flash-kv-cache exit gate (draft)
+
+- [ ] Separate repo initialized from handoff, not bolted onto nvme-sentinel package.
+- [ ] One reproducible run: baseline snapshot → LMCache/vLLM disk-backed inference → after
+      snapshot → HTML report with non-zero host writes (on **native NVMe**, not USB/WMI).
+- [ ] One-page write-up: bytes moved, wear delta, bottleneck hypothesis — cite nvme-sentinel
+      snapshots as evidence.
 
 ---
 

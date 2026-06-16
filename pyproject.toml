@@ -61,6 +61,17 @@ warn_unused_ignores = true
 module = "tests.*"
 disallow_untyped_defs = false
 
+# Scoped waiver, not a general escape hatch — see incident at commit 468379a.
+# typeshed exposes ctypes.WinDLL / ctypes.windll only under win32-shaped stubs, and
+# fcntl.ioctl only under posix-shaped stubs. CI runs a single `mypy nvme_sentinel`
+# invocation on ubuntu-latest (no --platform split), so either branch trips
+# attr-defined depending on which OS's stubs mypy resolves locally.
+# NON-GOAL: this override does not certify cli.py/linux.py/windows.py as
+# cross-platform strict-typed. It certifies they pass the single-OS lint CI
+# actually runs. Do not add modules to this list for reasons other than this
+# exact typeshed platform-conditional ctypes pattern — if a new module needs
+# attr-defined waived for a different reason, give it its own override block
+# so this one stays auditable.
 [[tool.mypy.overrides]]
 module = [
     "nvme_sentinel.adapters.linux",
