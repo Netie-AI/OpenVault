@@ -1,0 +1,92 @@
+' Render online: https://www.plantuml.com/plantuml/uml/
+' Or: java -jar plantuml.jar docs/architecture.puml
+@startuml nvme-sentinel-architecture
+skinparam monochrome false
+skinparam classFontStyle plain
+skinparam arrowThickness 1
+skinparam backgroundColor #0f1117
+skinparam classBackgroundColor #1a1f35
+skinparam classBorderColor #0d4a7a
+skinparam classArrowColor #60a5fa
+skinparam classFontColor #e0e0e0
+skinparam classHeaderBackgroundColor #0d4a7a
+
+abstract class StorageInterface {
+  + open() : None
+  + close() : None
+  + admin_passthru(cmd: AdminCommand) : CommandResult
+  + get_device_info() : DeviceInfo
+  + list_namespaces() : list[int]
+  + is_nvme() : bool
+  + capabilities() : frozenset[str]
+}
+
+abstract class BaseAdapter {
+  # log : BoundLogger
+  # _timed(cmd) : ContextManager
+  # _retry(fn, retries, backoff) : T
+}
+
+class LinuxNvmeAdapter {
+  - _fd : int
+  - _ioctl_call : Callable
+  + open() : None
+  + close() : None
+  + admin_passthru(cmd) : CommandResult
+  + capabilities() : frozenset["ioctl", "nvme-cli?"]
+}
+
+class WindowsStorageAdapter {
+  - _handle : int
+  - _win32 : _Win32Api
+  + open() : None
+  + close() : None
+  + admin_passthru(cmd) : CommandResult
+  + capabilities() : frozenset["device-io-control"]
+}
+
+class MockNvmeAdapter {
+  - _identify_ctrl : bytes
+  - _smart : bytes
+  + admin_passthru(cmd) : CommandResult
+  + capabilities() : frozenset["mock"]
+}
+
+package "commands" {
+  class identify_controller
+  class identify_namespace
+  class active_namespace_list
+  class get_smart_health
+  class get_error_info_log
+  class get_firmware_slot_info
+}
+
+package "models" {
+  class SmartHealthLog
+  class ControllerIdentify
+  class NamespaceIdentify
+  class ErrorLogEntry
+  class FirmwareSlotInfo
+}
+
+class ReportBuilder {
+  + render_smart_report(log, path) : None
+  + render_demo_report(path) : None
+}
+
+StorageInterface <|-- BaseAdapter
+BaseAdapter <|-- LinuxNvmeAdapter
+BaseAdapter <|-- WindowsStorageAdapter
+BaseAdapter <|-- MockNvmeAdapter
+
+identify_controller ..> StorageInterface : uses
+identify_namespace ..> StorageInterface : uses
+active_namespace_list ..> StorageInterface : uses
+get_smart_health ..> StorageInterface : uses
+
+get_smart_health ..> SmartHealthLog : returns
+identify_controller ..> ControllerIdentify : returns
+
+ReportBuilder ..> SmartHealthLog : reads
+ReportBuilder ..> ControllerIdentify : reads
+@enduml
