@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Results>
+  <TimeSpan>
+    <Latency>
+      <Bucket percentile="50.000000" ReadLatency="200000" WriteLatency="0"/>
+      <Bucket percentile="99.000000" ReadLatency="800000" WriteLatency="0"/>
+      <Bucket percentile="99.990000" ReadLatency="1200000" WriteLatency="0"/>
+    </Latency>
+    <Thread>
+      <Target ReadIops="100000" WriteIops="0" ReadBytesSec="419430400" WriteBytesSec="0"/>
+    </Thread>
+  </TimeSpan>
+</Results>
