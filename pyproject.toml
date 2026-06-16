@@ -1,0 +1,82 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "nvme-sentinel"
+version = "0.0.1"
+description = "Cross-platform NVMe SSD validation, characterization, and health monitoring."
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+dependencies = [
+  "pydantic>=2.5",
+  "typer>=0.12",
+  "structlog>=24.1",
+  "jinja2>=3.1",
+  "matplotlib>=3.8",
+]
+
+[project.scripts]
+nvme-sentinel = "nvme_sentinel.cli:app"
+
+[dependency-groups]
+dev = [
+  "pytest>=8",
+  "pytest-cov>=5",
+  "pytest-xdist>=3",
+  "hypothesis>=6.100",
+  "mypy>=1.10",
+  "ruff>=0.6",
+  "pre-commit>=3.7",
+  "types-jinja2",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["nvme_sentinel"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "SIM", "TID", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+# Typer idioms use Option(...) in defaults; structlog.configure must precede sibling imports.
+"nvme_sentinel/cli.py" = ["B008", "E402"]
+"nvme_sentinel/reporting/report.py" = ["E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.mypy]
+strict = true
+python_version = "3.10"
+warn_unused_ignores = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+
+[tool.pytest.ini_options]
+markers = [
+  "requires_nvme: needs a real NVMe device (skipped in CI)",
+  "slow: slow test, skipped on fast runs",
+  "windows_only: Windows-specific",
+  "linux_only: Linux-specific",
+]
+addopts = "--strict-markers -ra"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["nvme_sentinel"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
+exclude_lines = [
+  "pragma: no cover",
+  "if TYPE_CHECKING:",
+  "raise NotImplementedError",
+]

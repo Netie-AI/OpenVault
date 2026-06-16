@@ -1,0 +1,85 @@
+name: CI
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Install Python 3.12
+        run: uv python install 3.12
+
+      - name: Sync dependencies
+        run: uv sync --all-extras --dev
+
+      - name: Ruff lint
+        run: uv run ruff check .
+
+      - name: Ruff format check
+        run: uv run ruff format --check .
+
+      - name: Mypy (package)
+        run: uv run mypy nvme_sentinel
+
+      - name: Mypy (package + tests)
+        run: uv run mypy nvme_sentinel tests
+
+  test:
+    needs: [lint]
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.10", "3.11", "3.12"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Install Python
+        run: uv python install ${{ matrix.python-version }}
+
+      - name: Sync dependencies
+        run: uv sync --all-extras --dev
+
+      - name: Pytest
+        run: uv run pytest -n auto tests/unit tests/integration -q
+
+      - name: Pytest HAL + mock coverage gate
+        run: >
+          uv run pytest
+          --cov=nvme_sentinel.hal
+          --cov=nvme_sentinel.adapters.mock
+          --cov-fail-under=80
+          tests/unit tests/integration
+
+      - name: Demo smoke test
+        run: uv run nvme-sentinel demo
+
+      - name: Upload reports artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: demo-report-${{ matrix.os }}-py${{ matrix.python-version }}
+          path: reports/
