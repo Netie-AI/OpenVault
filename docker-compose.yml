@@ -1,0 +1,27 @@
+services:
+  test:
+    build: .
+    volumes:
+      - .:/app
+    environment:
+      - NVME_SENTINEL_REAL_DEVICE=0
+
+  # With a real NVMe device passed in (Linux host only):
+  # docker compose run --privileged -e NVME_SENTINEL_REAL_DEVICE=1 test-hw
+  test-hw:
+    build: .
+    privileged: true
+    devices:
+      - /dev/nvme0n1:/dev/nvme0n1
+    environment:
+      - NVME_SENTINEL_REAL_DEVICE=1
+    command:
+      [
+        "uv",
+        "run",
+        "pytest",
+        "-v",
+        "-m",
+        "requires_nvme or not requires_nvme",
+        "tests/",
+      ]
