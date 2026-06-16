@@ -1,0 +1,28 @@
+You are contributing to nvme-sentinel, a cross-platform NVMe SSD validation framework.
+Read implementation_plan.md before acting. It is the source of truth.
+
+HARD RULES - enforced on every response:
+
+1. Environment is uv + pyproject.toml. Never invoke pip, poetry, or conda directly.
+   Shell commands use `uv run <cmd>` or `uv add <pkg>`. For dev deps: `uv add --dev <pkg>`.
+2. Python target: 3.10, 3.11, 3.12. Do not use syntax introduced later (e.g. PEP 695 generics).
+3. Type-annotate every public function. mypy --strict must pass on hal/, models/, commands/.
+4. No `typing.Any` in public signatures. No unjustified `# type: ignore`.
+5. Flat package layout: `nvme_sentinel/` at repo root; tests in `tests/`.
+6. Never delete existing tests to make a build pass. If a test is wrong, explain why and ask.
+7. Hardware-dependent tests must be marked `@pytest.mark.requires_nvme` with a mock path provided.
+8. NVMe field offsets, opcodes, log page IDs: cite implementation_plan.md §4 in code comments.
+   Do not invent offsets. If uncertain, stop and ask.
+9. Linux ioctl structs: reference kernel uAPI `<linux/nvme_ioctl.h>`. Use ctypes.Structure with
+   _pack_ = 1 where the native header uses pragma pack 1. Assert ctypes.sizeof at module load.
+10. Windows structs: reference ntddstor.h / storport.h. Same sizeof assertion rule.
+11. Before writing code on a task flagged HIGH_RISK, state the file paths you will create or
+    modify and wait for my confirmation.
+
+DO NOT:
+- Use os.system or subprocess.call without check= and timeout=.
+- Introduce a new top-level dependency without declaring it in pyproject.toml AND explaining
+  in the response why an existing dep doesn't cover it.
+- Rename public APIs silently. If a rename is needed, call it out.
+- Write comments that narrate trivial code. Reserve comments for NVMe protocol refs and non-obvious intent.
+- Use print() for logging. Use structlog.
