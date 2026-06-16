@@ -154,7 +154,7 @@ test added: `test_elevated_cli_parameters_quotes_paths_with_spaces`.
 
 | Item | Status |
 |------|--------|
-| GitHub Actions CI green (6-cell matrix) | Verify after lint fixes pushed |
+| GitHub Actions CI green (6-cell matrix) | Fixed Linux mypy (ctypes/fcntl); verify on [Actions](https://github.com/Netie-AI/OpenVault/actions) after push |
 | Degraded-telemetry banner in BenchRunReport | Done — `bench/report.py` |
 | This handoff section (empirical WMI finding) | Done |
 | Tag `v0.1.0` | After CI confirmed green |

@@ -61,6 +61,13 @@ warn_unused_ignores = true
 module = "tests.*"
 disallow_untyped_defs = false
 
+[[tool.mypy.overrides]]
+module = [
+    "nvme_sentinel.adapters.windows",
+    "nvme_sentinel.cli",
+]
+disable_error_code = ["attr-defined"]
+
 [tool.pytest.ini_options]
 markers = [
   "requires_nvme: needs a real NVMe device (skipped in CI)",
