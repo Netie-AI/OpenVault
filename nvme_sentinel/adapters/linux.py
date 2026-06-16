@@ -29,7 +29,7 @@ _LOG = structlog.get_logger()
 try:
     import fcntl
 
-    _ioctl_call = cast(Callable[..., int], getattr(fcntl, "ioctl"))
+    _ioctl_call = cast(Callable[..., int], fcntl.ioctl)
 except ModuleNotFoundError:  # pragma: no cover - exercised on non-Linux runtimes
 
     def _ioctl_call(*_a: object, **_kw: object) -> int:

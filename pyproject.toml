@@ -63,6 +63,7 @@ disallow_untyped_defs = false
 
 [[tool.mypy.overrides]]
 module = [
+    "nvme_sentinel.adapters.linux",
     "nvme_sentinel.adapters.windows",
     "nvme_sentinel.cli",
 ]
