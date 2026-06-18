@@ -51,6 +51,9 @@ _TIER_TOK_S_RANGE: dict[HardwareTier, tuple[float, float]] = {
 }
 
 
+_TIER_ORDER: tuple[HardwareTier, ...] = ("NANO", "SMALL", "MID", "LARGE", "XLARGE")
+
+
 @dataclass(frozen=True)
 class ModelSpec:
     """One entry from the model registry."""
@@ -58,6 +61,7 @@ class ModelSpec:
     id: str
     name: str
     tier: HardwareTier
+    comfortable_tier: HardwareTier
     params_B: float
     layers: int
     context_length: int
@@ -94,6 +98,19 @@ def classify_tier(vram_gb: float) -> HardwareTier:
         if vram_gb < upper_bound:
             return tier
     return "XLARGE"
+
+
+def tier_upper_bound_gb(tier: HardwareTier) -> float:
+    """Return the exclusive VRAM upper bound (GB) for a hardware tier."""
+    for upper_bound, bound_tier in _TIER_VRAM_BOUNDS:
+        if bound_tier == tier:
+            return upper_bound
+    return math.inf
+
+
+def tier_rank(tier: HardwareTier) -> int:
+    """Return ordinal rank for min_tier vs comfortable_tier comparisons."""
+    return _TIER_ORDER.index(tier)
 
 
 def quant_effective_bits(quant_level: str) -> float:
@@ -135,10 +152,13 @@ def load_registry(path: Path | None = None) -> dict[str, ModelSpec]:
         if not isinstance(entry, dict):
             raise ValueError("each registry entry must be an object")
         model_id = str(entry["id"])
+        tier = str(entry["tier"])
+        comfortable_raw = entry.get("comfortable_tier", tier)
         specs[model_id] = ModelSpec(
             id=model_id,
             name=str(entry["name"]),
-            tier=str(entry["tier"]),  # type: ignore[arg-type]
+            tier=tier,  # type: ignore[arg-type]
+            comfortable_tier=str(comfortable_raw),  # type: ignore[arg-type]
             params_B=float(entry["params_B"]),
             layers=int(entry["layers"]),
             context_length=int(entry["context_length"]),

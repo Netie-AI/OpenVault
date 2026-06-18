@@ -50,13 +50,20 @@ KV quant (Q8/Q4 cache) cuts KV term 50–75% — ties to existing `kv_quant.py` 
 
 ## 5-tier routing table (PART 2)
 
-| Tier | VRAM range | FP16 fits | Q4_K_M fits | Target tok/s | Recommended models |
-|------|------------|-----------|-------------|--------------|-------------------|
+`tier` (min_tier) = lowest hardware tier the model can run on with GPU/CPU/NVMe offload.
+`comfortable_tier` = tier where the model fits entirely on GPU per `estimate_vram_gb()` at
+Q4_K_M and 4096 ctx (see `models.json`).
+
+| Tier | VRAM range | FP16 fits (comfortable) | Q4_K_M fits (comfortable) | Target tok/s | Example models (min → comfortable) |
+|------|------------|-------------------------|---------------------------|--------------|-------------------------------------|
 | **NANO** | 0–6 GB (CPU) | 3B | 7B | 8–20 | Phi-4-Mini, Gemma-3-2B |
 | **SMALL** | 6–12 GB | 3B | 7–8B | 40–60 | Qwen3.5-9B, Llama-3.3-8B |
-| **MID** | 12–16 GB | 7B | 13–14B | 55–70 | Mistral-Small-3.1-24B@Q4 |
-| **LARGE** | 16–24 GB | 13B | 27–32B | 35–50 | Qwen3-32B@Q4 |
-| **XLARGE** | 24+ GB (unified ≥48 GB) | 27B | 70B | 15–40 | Llama-3.3-70B@Q4 |
+| **MID** | 12–16 GB | 7B | 13–14B | 55–70 | qwen2.5-14b, llama-3.1-13b; Mistral-24B runs here **with offload** (comfortable: LARGE) |
+| **LARGE** | 16–24 GB | 13B | 22–27B | 35–50 | Codestral-22B; Qwen3-32B / Yi-34B run with offload (comfortable: XLARGE) |
+| **XLARGE** | 24+ GB discrete **or** ≥48 GB unified | 27B | up to ~32B on GPU | 15–40 | Llama-3.3-70B needs **≥48 GB unified or dual-GPU / heavy offload** — not a single 24 GB card at Q4 |
+
+**Registry overrides (comfortable_tier > tier):** `mistral-small-3.1-24b` MID→LARGE;
+`qwen3-32b` LARGE→XLARGE; `yi-34b` LARGE→XLARGE. All other entries: `comfortable_tier == tier`.
 
 ## Offload split (PART 2 preview)
 
@@ -87,7 +94,7 @@ Implemented in `openmw/model_router.py` + `openmw/data/models.json`.
 | **Unified memory** | Apple pool = `system_ram_gb × 0.9`; all fit layers on accelerator, overflow → NVMe |
 | **CPU-only** | `gpu_layers=0`; RAM first (`ram × 0.75`), then NVMe |
 | **KV quant bits** | Recommended: value=4, key=2 (`KvQuantConfig` defaults); else FP16 (16/16) |
-| **Registry** | 20 models, 4 per tier; fields: `params_B`, `layers`, `quant_options`, `download_url`, `license` |
+| **Registry** | 20 models, 4 per tier; fields: `tier` (min), `comfortable_tier`, `params_B`, `layers`, `quant_options`, `download_url`, `license` |
 | **Default ctx** | 4096 tokens (configurable via `ModelRouter(ctx_tokens=…)`) |
 
 ### Issues flagged for PART 3

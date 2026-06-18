@@ -13,6 +13,8 @@ from openmw.model_router import (
     layer_vram_gb,
     load_registry,
     quant_effective_bits,
+    tier_rank,
+    tier_upper_bound_gb,
 )
 
 
@@ -49,6 +51,29 @@ class TestRegistry:
         assert len(registry) == 20
         tiers = {spec.tier for spec in registry.values()}
         assert tiers == {"NANO", "SMALL", "MID", "LARGE", "XLARGE"}
+
+    def test_comfortable_tier_never_below_curated_tier(self) -> None:
+        registry = load_registry()
+        for spec in registry.values():
+            assert tier_rank(spec.comfortable_tier) >= tier_rank(spec.tier), (
+                f"{spec.id}: comfortable_tier {spec.comfortable_tier} < tier {spec.tier}"
+            )
+
+
+class TestComfortableTierFormula:
+    @pytest.mark.parametrize(
+        "model_id",
+        sorted(load_registry().keys()),
+    )
+    def test_comfortable_tier_fits_formula(self, model_id: str) -> None:
+        router = ModelRouter()
+        spec = router.registry[model_id]
+        q4 = quant_effective_bits("Q4_K_M")
+        needed = estimate_vram_gb(spec.params_B, q4, router._ctx_tokens)
+        ceiling = tier_upper_bound_gb(spec.comfortable_tier)
+        assert needed <= ceiling, (
+            f"{model_id}: {needed:.4f} GB > {spec.comfortable_tier} ceiling {ceiling} GB"
+        )
 
 
 class TestVramFormula:

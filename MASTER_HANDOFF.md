@@ -370,4 +370,84 @@ Requires PRE-FLIGHT complete **or** explicit degraded-telemetry fallback documen
 
 ---
 
+## PART 11 — OpenMW Consumer Track Verification & Handoff
+
+> **Naming note:** this is PART 11 of `MASTER_HANDOFF.md`'s own numbering
+> (continuing from PART 10's profiler/kernel-acceleration research). It is
+> **not** the same numbering as the separate "OpenMW Consumer SaaS Middleware
+> Master Plan" document, whose PARTs 1–10 are a different list (Device
+> Intelligence, Model Routing, Prefetch v3, etc.). Going forward, refer to
+> those as **"OpenMW-Plan PART n"** in conversation to avoid collision with
+> MASTER_HANDOFF's own PART numbers.
+
+### 1. What was verified (commit `804217b`)
+
+Pushed to `main` and cloned fresh for independent verification — not taken on
+the strength of the self-report. Confirmed directly:
+
+- `uv sync` resolves cleanly (`nvidia-ml-py`, `psutil`, `scipy`, `numpy`, etc.).
+- `uv run pytest -q` → **107 passed** (pre–comfortable_tier fix).
+- `uv run mypy openmw` → clean, 21 source files.
+- VRAM recalculations (mistral-24b 20.59 GB, llama-70b 60.05 GB, qwen-14b
+  12.01 GB @ 4096 ctx) independently re-derived from `model_router.py` — matched.
+
+### 2. Tier/formula bug — full 20-model audit
+
+Registry `tier` (min_tier) did not always match `estimate_vram_gb()` for
+full-GPU fit. Three entries over their curated tier ceiling at Q4_K_M / 4k ctx:
+
+| model_id | tier (min) | VRAM @ Q4, 4k | ceiling | over by |
+|---|---|---|---|---|
+| mistral-small-3.1-24b | MID | 20.59 GB | 16 GB | 4.59 GB |
+| qwen3-32b | LARGE | 27.45 GB | 24 GB | 3.45 GB |
+| yi-34b | LARGE | 29.17 GB | 24 GB | 5.17 GB |
+
+`model_router.py` offload logic was never wrong; the bug was static registry
+labels and `PART2_findings.md` inheriting them.
+
+### 3. Fix — `comfortable_tier` (implemented post-`804217b`)
+
+- `ModelSpec` gains `comfortable_tier` alongside `tier` (`tier` = min tier with
+  offload; unchanged for `model_manager.py`).
+- `comfortable_tier` only **bumps up** from curated `tier`, never down (avoids
+  breaking NANO CPU-only semantics and MoE curatorial judgments).
+- `models.json`: all 20 entries carry `comfortable_tier`; three differ
+  (mistral-24b→LARGE, qwen3-32b/yi-34b→XLARGE).
+- Public `tier_upper_bound_gb()` + `tier_rank()` in `model_router.py`.
+- Tests: `test_comfortable_tier_fits_formula` (20 parametrized) +
+  `test_comfortable_tier_never_below_curated_tier`.
+- `PART2_findings.md` table rewritten (min vs comfortable; 70B XLARGE footnote).
+
+**Verified:** `uv run pytest -q` → **128 passed**; `uv run mypy openmw` clean.
+
+### 4. Still open: project identity and scope
+
+Decision for Jian Hong, not momentum:
+
+| Track | Path | Charter |
+|---|---|---|
+| nvme-sentinel | repo root | Portfolio + vendor-neutral measurement (MASTER_HANDOFF PARTs 1–10) |
+| OpenMW middleware | `OpenMW/` | OpenMW-Plan PARTs 1–6 — routing, prefetch, KV quant (verified) |
+| Commercial SaaS | `OpenMW/docs/research/PART8_findings.md` | Research sketch only — not a committed decision |
+
+If SaaS is chosen: per-model commercial license review (registry `license` field)
+and managed fine-tune = separate product (GPU pool, job queue, data policy) — not
+PART 5's local Unsloth bridge.
+
+### 5. OpenMW-Plan progress
+
+- OpenMW-Plan PARTs 1–5: done, verified.
+- PART 6 (WebUI): in progress per session log — verify clone before trusting.
+- PARTs 7, 8, 10: not started.
+- PART 9 (real vLLM/LMCache): hardware-gated (Linux + CUDA + native NVMe passthrough).
+
+### 6. Recommended next steps
+
+1. Decide scope in §4 explicitly (SaaS vs measurement-tool).
+2. ~~Apply comfortable_tier fix~~ — **done** on `main` after `804217b`.
+3. Before trusting PART 6: fresh clone + `uv run pytest -q` + `uv run mypy openmw`.
+4. If SaaS confirmed: PART 8 pre-flight on registry `license` gating before JWT work.
+
+---
+
 *End of MASTER_HANDOFF.md*
