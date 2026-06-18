@@ -1,0 +1,52 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "nvme-profiler"
+version = "0.1.0"
+description = "Full-path bottleneck profiler and capability probe for nvme-sentinel."
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+dependencies = [
+  "nvme-sentinel",
+  "pydantic>=2.5",
+  "typer>=0.12",
+  "structlog>=24.1",
+]
+
+[project.scripts]
+nvme-profiler = "nvme_profiler.cli:app"
+
+[dependency-groups]
+dev = [
+  "pytest>=8",
+  "mypy>=1.10",
+  "ruff>=0.6",
+]
+
+[tool.uv.sources]
+nvme-sentinel = { path = "..", editable = true }
+
+[tool.hatch.build.targets.wheel]
+packages = ["nvme_profiler"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "SIM", "TID", "RUF"]
+
+[tool.mypy]
+strict = true
+python_version = "3.10"
+warn_unused_ignores = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+
+[[tool.mypy.overrides]]
+module = "nvme_sentinel.*"
+ignore_missing_imports = true

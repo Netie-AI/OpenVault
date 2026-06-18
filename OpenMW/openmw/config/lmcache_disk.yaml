@@ -1,0 +1,8 @@
+# LMCache disk backend template (OpenMW)
+# Used with vLLM kv_connector — see docs.lmcache.ai
+backend: disk
+path: ./kv_cache
+prefetch:
+  enabled: false
+  lookahead_blocks: 4
+  block_size_bytes: 262144

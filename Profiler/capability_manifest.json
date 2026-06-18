@@ -1,0 +1,32 @@
+{
+  "schema_version": "1",
+  "collected_at": "2026-06-18T06:10:51.650014Z",
+  "os": "win32",
+  "kernel": null,
+  "python_version": "3.12.13",
+  "gpu_vendor": "nvidia",
+  "gpu_class": "consumer",
+  "gpu_model": "NVIDIA GeForce RTX 4050 Laptop GPU",
+  "cuda_version": "13.0",
+  "rocm_version": null,
+  "nvme_devices": [
+    {
+      "device_path": "\\\\.\\PhysicalDrive0",
+      "friendly_name": "NVMe Micron_3400_MTFDKBA1T0TFH",
+      "is_boot_drive": true,
+      "is_nvme": true,
+      "bus_type": "NVMe",
+      "telemetry_source_hint": "native-nvme",
+      "has_spare_candidate": false
+    }
+  ],
+  "enabled_tiers": [
+    "baseline",
+    "windows_ioring"
+  ],
+  "degraded_reasons": [
+    "io_uring_nvme: io_uring requires Linux",
+    "gds: GDS requires Linux",
+    "spdk: SPDK requires spare non-boot NVMe; boot drive cannot be unbound"
+  ]
+}

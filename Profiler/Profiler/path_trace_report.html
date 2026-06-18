@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>nvme-profiler PathTraceReport</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem;
+           background: #0d1117; color: #e6edf3; }
+    h1 { color: #58a6ff; }
+    .metric { font-size: 1.4rem; margin: 0.5rem 0; }
+    .banner.degraded {
+      background: #3d2c00; border: 1px solid #d29922; color: #f0c14b;
+      padding: 1rem 1.25rem; margin: 1rem 0 1.5rem; border-radius: 6px;
+      line-height: 1.5;
+    }
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+    th, td { border: 1px solid #30363d; padding: 0.5rem; text-align: left; }
+    th { background: #161b22; }
+    pre { background: #161b22; padding: 1rem; overflow: auto; }
+  </style>
+</head>
+<body>
+  <h1>Full-Path Trace</h1>
+  
+  <div class="banner degraded">
+    <strong>Degraded acceleration tiers.</strong>
+    The probe detected capabilities below the best-case path. This is expected on
+    commodity laptops (GeForce, boot NVMe). Enabled tiers:
+    baseline, windows_ioring.
+    <br/><br/>io_uring_nvme: io_uring requires Linux<br/>gds: GDS requires Linux<br/>spdk: SPDK requires spare non-boot NVMe; boot drive cannot be unbound
+  </div>
+
+  <div class="metric">Bottleneck hop: <strong>ram_to_vram</strong></div>
+  <div class="metric">GPU idle waiting on I/O: <strong>27.9%</strong></div>
+  <h2>Hop timeline</h2>
+  <table>
+    <thead><tr><th>Hop</th><th>Duration (ms)</th><th>Bytes</th><th>Notes</th></tr></thead>
+    <tbody>
+        <tr>
+          <td>ssd_admin</td>
+          <td>2.500</td>
+          <td>512</td>
+          <td>MockNvmeAdapter</td>
+        </tr>
+        <tr>
+          <td>driver_ioctl</td>
+          <td>1.200</td>
+          <td>4,096</td>
+          <td>MockNvmeAdapter</td>
+        </tr>
+        <tr>
+          <td>pcie_link</td>
+          <td>5.000</td>
+          <td>4,194,304</td>
+          <td>mock pcie</td>
+        </tr>
+        <tr>
+          <td>ram_to_vram</td>
+          <td>30.000</td>
+          <td>67,108,864</td>
+          <td>mock cudaMemcpyAsync H2D</td>
+        </tr>
+        <tr>
+          <td>gpu_compute</td>
+          <td>100.000</td>
+          <td>0</td>
+          <td>mock attention kernel</td>
+        </tr></tbody>
+  </table>
+  <h2>Environment</h2>
+  <pre>{
+  &quot;collected_at&quot;: &quot;2026-06-18T06:11:10.042158Z&quot;,
+  &quot;platform&quot;: &quot;win32&quot;,
+  &quot;python_version&quot;: &quot;3.12.13&quot;,
+  &quot;kernel&quot;: null,
+  &quot;device_path&quot;: &quot;/dev/mock-nvme0&quot;,
+  &quot;nsys_version&quot;: null,
+  &quot;capability_manifest&quot;: {
+    &quot;schema_version&quot;: &quot;1&quot;,
+    &quot;collected_at&quot;: &quot;2026-06-18T06:11:10.041157Z&quot;,
+    &quot;os&quot;: &quot;win32&quot;,
+    &quot;kernel&quot;: null,
+    &quot;python_version&quot;: &quot;3.12.13&quot;,
+    &quot;gpu_vendor&quot;: &quot;nvidia&quot;,
+    &quot;gpu_class&quot;: &quot;consumer&quot;,
+    &quot;gpu_model&quot;: &quot;NVIDIA GeForce RTX 4050 Laptop GPU&quot;,
+    &quot;cuda_version&quot;: &quot;13.0&quot;,
+    &quot;rocm_version&quot;: null,
+    &quot;nvme_devices&quot;: [
+      {
+        &quot;device_path&quot;: &quot;\\\\.\\PhysicalDrive0&quot;,
+        &quot;friendly_name&quot;: &quot;NVMe Micron_3400_MTFDKBA1T0TFH&quot;,
+        &quot;is_boot_drive&quot;: true,
+        &quot;is_nvme&quot;: true,
+        &quot;bus_type&quot;: &quot;NVMe&quot;,
+        &quot;telemetry_source_hint&quot;: &quot;native-nvme&quot;,
+        &quot;has_spare_candidate&quot;: false
+      }
+    ],
+    &quot;enabled_tiers&quot;: [
+      &quot;baseline&quot;,
+      &quot;windows_ioring&quot;
+    ],
+    &quot;degraded_reasons&quot;: [
+      &quot;io_uring_nvme: io_uring requires Linux&quot;,
+      &quot;gds: GDS requires Linux&quot;,
+      &quot;spdk: SPDK requires spare non-boot NVMe; boot drive cannot be unbound&quot;
+    ]
+  }
+}</pre>
+</body>
+</html>

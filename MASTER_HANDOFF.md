@@ -95,9 +95,13 @@ TBW estimate: `(data_units_written_after - before) * 512 * 1000` bytes (NVMe spe
 | Issue | Mitigation |
 |-------|------------|
 | `.venv` Access denied (Windows) | Close IDE/terminals locking venv; `Remove-Item -Recurse -Force .venv`; `uv sync` |
-| Windows `stornvme.sys` STOPPED | Passthrough returns `ERROR_INVALID_FUNCTION`; WMI fallback works — not a code bug |
+| Windows `stornvme.sys` STOPPED | Passthrough returns `ERROR_INVALID_FUNCTION` on all internal drives; WMI fallback works — not a code bug. Loading `stornvme.sys` is unresolved research, not a given. |
 | Docker not running | Use local `uv sync` + pytest; or start Docker Desktop for `docker compose run test` |
 | External USB enclosure not enumerating | Physical: cable, power, seating, port capability — software cannot diagnose until OS sees device |
+| USB-bridged NVMe (e.g. BIWIN PR2000) | WMI path: `data_units_written` not exposed → wear delta stays zero. See PART 6. |
+| Boot drive on this machine | WSL2 sharing violation if exercised; endurance-class workload inappropriate for OS disk anyway. |
+| Docker on Windows for native ioctl | Linux ioctl path works in container, but Docker cannot passthrough a real `/dev/nvme*` for wear accounting without a Linux host + spare drive + `--device`/`--privileged`. |
+| **Native NVMe wear-readable target** | **Not yet pinned on available hardware.** See PART 9 pre-flight gate before flash-kv-cache exit criteria. |
 
 ---
 
@@ -159,7 +163,7 @@ test added: `test_elevated_cli_parameters_quotes_paths_with_spaces`.
 | This handoff section (empirical WMI finding) | Done |
 | Tag `v0.1.0` | Done — points at `320751a` (CI-green) |
 
-**Next effort (separate repo/track):** `flash-kv-cache` — see PART 8.
+**Next effort (separate repos):** `OpenMW/` flash-kv-cache + `Profiler/` path profiler — see PART 9–10.
 
 ---
 
@@ -213,14 +217,18 @@ sophistication beyond the documented waiver.
 
 ---
 
-## PART 9 — Next window: `flash-kv-cache` (separate effort)
+## PART 9 — Next window: `OpenMW/` flash-kv-cache (separate effort)
 
 ### Gate before coding
 
-Claude/Cursor next window should **verify** (not self-report):
+Claude/Cursor next window should **verify** (not self-report). Two checkouts — do not conflate them:
 
-1. `git checkout v0.1.0 && uv sync && uv run pytest -q` — baseline still green.
-2. Read this PART 8 + `pyproject.toml` override comment — confirm no drift.
+1. **CI baseline (tag, not HEAD):** `git checkout v0.1.0 && uv sync && uv run pytest -q` —
+   confirms the tagged release (`320751a`) is still green. `v0.1.0` predates the PART 8/9
+   handoff commits (`e3f8789`, `59e4840`); that is expected.
+2. **Handoff docs (HEAD on `main`):** `git checkout main && uv sync` — read **PART 8** (mypy
+   override blast radius), **this PART 9** (flash-kv-cache gates), and the `pyproject.toml`
+   override comment. Confirm no drift from what PART 8 documents.
 3. Agree scope: **measurement repo**, not aiDAPTIV clone.
 
 ### What nvme-sentinel already proved (carry forward)
@@ -252,16 +260,113 @@ aiDAPTIV's closed stack.
 | Instrumentation | nvme-sentinel `collect` → workload → `BenchRunReport` | Already shipped |
 | Correlation | Timestamp-aligned manifest | env_manifest + workload window |
 
-**Not first:** training weight tiering (aiDAPTIV comparison), custom quant kernels, or
+training weight tiering (aiDAPTIV comparison), custom quant kernels, or
 building middleware inside the nvme-sentinel repo.
+
+### PRE-FLIGHT: native-NVMe wear-readable target (blocks exit gate, not build)
+
+The exit gate below assumes **native NVMe admin passthrough** so `data_units_written` moves
+and is readable. On current hardware that precondition is **unproven** — USB/WMI and stopped
+`stornvme.sys` can block it indefinitely, independent of flash-kv-cache code quality.
+
+**Candidate resolutions (rough effort order):**
+
+| # | Target | Notes |
+|---|--------|-------|
+| 1 | Spare internal NVMe on a **Linux host** (bare metal, not WSL2) | Cleanest path — ioctl already proven in code |
+| 2 | Fix `stornvme.sys` on Windows for internal drive | Driver currently STOPPED; research, not a given |
+| 3 | Cloud Linux instance with local NVMe (`/dev/nvme*`) | Check cost/feasibility for workload write volume |
+
+- [ ] **PRE-FLIGHT:** native-NVMe wear-readable target identified and proven. Run
+      `nvme-sentinel collect` twice with a real fio write between on the candidate device;
+      confirm `data_units_written` delta > 0 **before** any LMCache/vLLM work.
+- [ ] Record in handoff: device path, OS, driver state, `telemetry_source` on both snapshots.
+
+**If no native target exists before the interview:** the offload run can still be built and
+demoed on mock/USB — but the report **must** show the degraded-telemetry banner, and the
+write-up states *"wear delta unmeasurable on available hardware"* as the honest boundary,
+not a TODO. Demo the full offload → snapshot → report loop; explain what native passthrough
+would add. Same honesty signal as the BIWIN finding.
 
 ### flash-kv-cache exit gate (draft)
 
-- [ ] Separate repo initialized from handoff, not bolted onto nvme-sentinel package.
+Requires PRE-FLIGHT complete **or** explicit degraded-telemetry fallback documented above.
+
+- [ ] Separate repo initialized at [`OpenMW/`](OpenMW/) — not bolted onto nvme-sentinel package.
 - [ ] One reproducible run: baseline snapshot → LMCache/vLLM disk-backed inference → after
-      snapshot → HTML report with non-zero host writes (on **native NVMe**, not USB/WMI).
-- [ ] One-page write-up: bytes moved, wear delta, bottleneck hypothesis — cite nvme-sentinel
-      snapshots as evidence.
+      snapshot → HTML report. **Full pass:** non-zero host writes on native NVMe (not USB/WMI).
+      **Fallback pass:** full loop on available hardware with degraded-telemetry banner and
+      honest boundary statement in write-up.
+- [ ] One-page write-up: bytes moved, wear delta (or unmeasurable boundary), bottleneck
+      hypothesis — cite nvme-sentinel snapshots as evidence. See [`docs/evidence-aidaptiv-comparison.md`](docs/evidence-aidaptiv-comparison.md).
+
+---
+
+## PART 10 — Full-Path Profiler & Kernel Acceleration (2026-06-18)
+
+> Builds on [`docs/VISION.md`](docs/VISION.md) crown jewel: data-path hop timing SSD → page cache →
+> DRAM → PCIe → GPU. **Not a pivot** — operationalizes existing vision + PART 9 measurement stack.
+
+### Repo split (resolved)
+
+| Repo | Path | Role |
+|------|------|------|
+| nvme-sentinel | repo root | HAL, collect, `BenchRunReport` — no GPU/vLLM deps |
+| nvme-profiler | [`Profiler/`](Profiler/) | Capability probe + `PathTraceReport` + nsys fusion |
+| openmw | [`OpenMW/`](OpenMW/) | LMCache/vLLM measurement glue + prefetch config |
+
+### Q1 — Capability probe (done)
+
+- [x] `Profiler/` package: `nvme-profiler probe` → `capability_manifest.json`
+- [x] Unit tests green (`uv run --directory Profiler pytest`)
+- [x] Windows dev machine probe: GeForce RTX 4050, boot NVMe, `baseline` + `windows_ioring` enabled;
+      GDS/io_uring/SPDK degraded with honest reasons
+
+**Makefile targets:** `make probe`, `make trace-mock`
+
+### Q2 — Full-Path Profiler v1 (done — mock + fusion)
+
+- [x] `PathTraceReport` schema in `Profiler/nvme_profiler/schema.py`
+- [x] `fuse.py` — admin `_timed()` records + nsys export; `gpu_idle_pct_waiting_on_io`
+- [x] `nsys.py` — export parser + `mock_nsys_hops()` for CI
+- [x] `report.py` — dark-industrial HTML (matches `BenchRunReport` convention)
+- [x] `nvme-profiler trace-mock` CLI for hardware-free demos
+
+**Linux nsys on real hardware:** manual gate — run `nsys profile` and pass export JSON to
+`build_path_trace_report()`.
+
+### Q3 — OpenMW flash-kv-cache MVP (done — mock loop)
+
+- [x] [`OpenMW/`](OpenMW/) repo with `run_offload_measurement_loop()`
+- [x] Correlates `BenchRunReport` + `PathTraceReport` + offload manifest JSON
+- [x] Phase-1 naive prefetch via `NaivePrefetchConfig` + `compare_prefetch_runs()`
+- [ ] Real LMCache/vLLM disk inference on Linux native NVMe — blocked on PART 9 PRE-FLIGHT
+
+### Q4 — Research tracks (scaffolded)
+
+- [x] `openmw/prefetch_heuristic.py` — Phase-2 Comet/SpeCache-inspired config overlay
+- [x] `openmw/windows_ioring_spike.py` — exploratory IoRing probe (`exploratory-not-committed`)
+- [x] `compare_prefetch_runs()` — prefetch on/off metrics for profiler evidence
+
+### Q5 — Evidence write-up (done)
+
+- [x] [`docs/evidence-aidaptiv-comparison.md`](docs/evidence-aidaptiv-comparison.md) — vendor claims vs measured artifacts
+
+### Hardware constraint matrix (PART 10.3)
+
+| Tier | Laptop reality on dev machine (2026-06-18) |
+|------|------------------------------------------|
+| GDS | Disabled — GeForce RTX 4050; cuFile unsupported on consumer GPUs |
+| SPDK | Disabled — boot NVMe (`PhysicalDrive0`); cannot unbind kernel driver |
+| io_uring | Linux only — N/A on Windows dev host |
+| windows_ioring | Enabled on Win32 build ≥ 17763; tensor KV use unproven (Q4 spike) |
+| baseline | Always — HAL `_timed()` + collect |
+
+### Pre-flight still open
+
+- [ ] Spare non-boot NVMe for wear-readable native passthrough (PART 9 + SPDK)
+- [ ] Workstation GPU for real GDS path (optional; probe documents GeForce boundary)
+- [ ] Linux host + nsys for real-machine `PathTraceReport` (Q2 manual gate)
 
 ---
 

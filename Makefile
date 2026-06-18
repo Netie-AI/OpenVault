@@ -1,4 +1,4 @@
-.PHONY: demo test lint typecheck coverage docker-test clean
+.PHONY: demo test lint typecheck coverage docker-test clean probe trace-mock
 
 demo:       ## Run end-to-end demo (mock adapter, no hardware)
 	uv run nvme-sentinel demo
@@ -27,5 +27,11 @@ fixtures:   ## Regenerate binary test fixtures
 clean:      ## Remove build artefacts
 	rm -rf .venv htmlcov .coverage coverage.xml .mypy_cache .ruff_cache .pytest_cache
 	rm -rf reports/ dist/ build/ *.egg-info
+
+probe:      ## Run capability probe (Profiler/)
+	uv run --directory Profiler nvme-profiler probe
+
+trace-mock: ## Mock path trace HTML (Profiler/)
+	uv run --directory Profiler nvme-profiler trace-mock
 
 ci: lint typecheck test coverage ## Full local CI gate
