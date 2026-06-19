@@ -1,16 +1,19 @@
-"""Copy the current Cursor agent chat transcript to the clipboard.
+"""Copy the latest Cursor agent reply to the clipboard.
 
-Cursor has no built-in "copy entire chat" control. This script reads the most
-recently updated top-level agent transcript for the workspace and copies a
-readable text export (user + assistant messages) to the clipboard.
+Default: the most recent assistant message only (one turn — avoids re-pasting
+full transcript history). Use --all for the full chat export.
+
+The VS Code task runs with cwd = workspace root, so --workspace is optional
+(Path.cwd()) and the task never passes a spaced path through the shell.
 
 Usage:
   uv run python scripts/copy_cursor_chat.py
+  uv run python scripts/copy_cursor_chat.py --dry-run
+  uv run python scripts/copy_cursor_chat.py --all
   uv run python scripts/copy_cursor_chat.py --list
   uv run python scripts/copy_cursor_chat.py --id <uuid>
 
-Bind to a key via .vscode/tasks.json + keybindings.json (see repo docs in
-.vscode/tasks.json label "Copy Cursor Chat").
+Bind via .vscode/tasks.json label "Copy Cursor Chat" + Ctrl+Shift+Alt+C.
 """
 
 from __future__ import annotations
@@ -55,6 +58,22 @@ def _strip_user_query(text: str) -> str:
     return text.strip()
 
 
+def _normalize_text(text: str) -> str:
+    """Repair common UTF-8-as-CP1252 mojibake and normalize punctuation."""
+    fixes = (
+        ("ΓåÆ", "→"),
+        ("ΓÇö", "—"),
+        ("ΓÇô", "–"),
+        ("ΓÇÖ", "'"),
+        ("ΓÇ£", '"'),
+        ("ΓÇ¥", '"'),
+        ("ΓÇª", "…"),
+    )
+    for bad, good in fixes:
+        text = text.replace(bad, good)
+    return text
+
+
 def _extract_message_text(
     record: dict[str, object],
     *,
@@ -86,41 +105,57 @@ def _extract_message_text(
     body = "\n".join(parts)
     if role == "user":
         body = _strip_user_query(body)
+    body = re.sub(r"\n*\[REDACTED\]\s*$", "", body, flags=re.IGNORECASE)
+    body = _normalize_text(body.strip())
     return body or None
 
 
-def _format_transcript(path: Path, *, include_tools: bool) -> str:
-    sections: list[str] = []
+def _load_records(path: Path) -> list[dict[str, object]]:
+    records: list[dict[str, object]] = []
     with path.open(encoding="utf-8") as handle:
         for line in handle:
             line = line.strip()
             if not line:
                 continue
-            record = json.loads(line)
-            role = record.get("role")
-            if role not in {"user", "assistant"}:
-                continue
-            body = _extract_message_text(record, include_tools=include_tools)
-            if body:
-                label = "User" if role == "user" else "Assistant"
-                sections.append(f"=== {label} ===\n{body}")
+            parsed = json.loads(line)
+            if isinstance(parsed, dict):
+                records.append(parsed)
+    return records
+
+
+def _format_latest_assistant(path: Path, *, include_tools: bool) -> str | None:
+    for record in reversed(_load_records(path)):
+        if record.get("role") != "assistant":
+            continue
+        body = _extract_message_text(record, include_tools=include_tools)
+        if body:
+            return body + "\n"
+    return None
+
+
+def _format_full_transcript(path: Path, *, include_tools: bool) -> str:
+    sections: list[str] = []
+    for record in _load_records(path):
+        role = record.get("role")
+        if role not in {"user", "assistant"}:
+            continue
+        body = _extract_message_text(record, include_tools=include_tools)
+        if body:
+            label = "User" if role == "user" else "Assistant"
+            sections.append(f"=== {label} ===\n{body}")
 
     header = f"# Cursor chat export\n# source: {path}\n\n"
     return header + "\n\n".join(sections) + "\n"
 
 
 def _copy_to_clipboard(text: str) -> None:
+    text = _normalize_text(text)
     if sys.platform == "win32":
+        # clip.exe expects UTF-16 LE with BOM; UTF-8 stdin becomes mojibake (e.g. ΓåÆ).
+        payload = b"\xff\xfe" + text.encode("utf-16-le")
         subprocess.run(
-            [
-                "powershell",
-                "-NoProfile",
-                "-Command",
-                "Set-Clipboard -Value ([Console]::In.ReadToEnd())",
-            ],
-            input=text,
-            text=True,
-            encoding="utf-8",
+            ["clip"],
+            input=payload,
             check=True,
             timeout=30,
         )
@@ -138,13 +173,22 @@ def _copy_to_clipboard(text: str) -> None:
     )
 
 
+def _configure_stdout_utf8() -> None:
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except AttributeError:
+        pass
+
+
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Copy Cursor agent chat to clipboard.")
+    parser = argparse.ArgumentParser(
+        description="Copy latest Cursor assistant reply (default) or full chat.",
+    )
     parser.add_argument(
         "--workspace",
         type=Path,
-        default=Path.cwd(),
-        help="Workspace root (default: current directory).",
+        default=None,
+        help="Workspace root (default: current working directory).",
     )
     parser.add_argument(
         "--id",
@@ -154,6 +198,11 @@ def main() -> int:
         "--list",
         action="store_true",
         help="List available transcript IDs (newest first) and exit.",
+    )
+    parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Copy the full transcript instead of the latest assistant message.",
     )
     parser.add_argument(
         "--include-tools",
@@ -167,7 +216,8 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    transcripts_dir = _transcripts_dir(args.workspace)
+    workspace = args.workspace if args.workspace is not None else Path.cwd()
+    transcripts_dir = _transcripts_dir(workspace)
     transcripts = _list_top_level_transcripts(transcripts_dir)
     if not transcripts:
         print(f"No transcripts found under {transcripts_dir}", file=sys.stderr)
@@ -186,17 +236,23 @@ def main() -> int:
     else:
         path = transcripts[0]
 
-    export = _format_transcript(path, include_tools=args.include_tools)
+    if args.all:
+        export = _format_full_transcript(path, include_tools=args.include_tools)
+    else:
+        latest = _format_latest_assistant(path, include_tools=args.include_tools)
+        if latest is None:
+            print(f"No assistant message found in {path}", file=sys.stderr)
+            return 1
+        export = latest
+
     if args.dry_run:
-        try:
-            sys.stdout.reconfigure(encoding="utf-8")
-        except AttributeError:
-            pass
+        _configure_stdout_utf8()
         sys.stdout.write(export)
         return 0
 
     _copy_to_clipboard(export)
-    print(f"Copied chat {path.parent.name} ({len(export)} chars) to clipboard.")
+    mode = "full chat" if args.all else "latest reply"
+    print(f"Copied {mode} from {path.parent.name} ({len(export)} chars) to clipboard.")
     return 0
 
 
