@@ -11,7 +11,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import structlog
-
 from nvme_sentinel.inventory.discovery import list_devices
 
 from nvme_profiler.schema import (
@@ -74,9 +73,7 @@ def _probe_nvme_devices() -> list[NvmeDeviceProbe]:
             bus_type=dev.bus_type,
             telemetry_source_hint=telemetry_hint,
             is_boot_drive="C" in {x.upper().rstrip(":") for x in dev.drive_letters}
-            or (
-                sys.platform == "win32" and dev.device_path.endswith("PhysicalDrive0")
-            ),
+            or (sys.platform == "win32" and dev.device_path.endswith("PhysicalDrive0")),
         )
         probes.append(probe)
     return probes
@@ -145,7 +142,11 @@ def _linux_io_uring_available() -> tuple[bool, str]:
     return True, ""
 
 
-def _gds_available(gpu_vendor: GpuVendor, gpu_class: GpuClass, gpu_model: str | None) -> tuple[bool, str]:
+def _gds_available(
+    gpu_vendor: GpuVendor,
+    gpu_class: GpuClass,
+    gpu_model: str | None,
+) -> tuple[bool, str]:
     """Probe GPUDirect Storage eligibility (workstation GPU + cuFile)."""
     if sys.platform != "linux":
         return False, "GDS requires Linux"
@@ -153,14 +154,21 @@ def _gds_available(gpu_vendor: GpuVendor, gpu_class: GpuClass, gpu_model: str | 
         return False, "GDS requires NVIDIA GPU"
     if gpu_class == GpuClass.CONSUMER:
         model = gpu_model or "unknown"
-        return False, f"GDS not supported on consumer GeForce GPUs ({model}); cuFile returns unsupported device"
+        return (
+            False,
+            f"GDS not supported on consumer GeForce GPUs ({model}); "
+            "cuFile returns unsupported device",
+        )
     cufile = shutil.which("cufile") or shutil.which("gdscheck")
     if cufile is None:
         return False, "cuFile/gdscheck not found; GDS driver stack not installed"
     code, text = _run_cmd([cufile, "-h"] if cufile.endswith("cufile") else [cufile])
     if code != 0 and "unsupported" in text.lower():
         return False, f"cuFile probe failed: {text[:200]}"
-    return gpu_class == GpuClass.WORKSTATION, "GDS requires workstation-class NVIDIA GPU with cuFile"
+    return (
+        gpu_class == GpuClass.WORKSTATION,
+        "GDS requires workstation-class NVIDIA GPU with cuFile",
+    )
 
 
 def _spdk_available(nvme_devices: list[NvmeDeviceProbe]) -> tuple[bool, str]:
@@ -183,7 +191,7 @@ def _windows_ioring_available() -> tuple[bool, str]:
     if sys.platform != "win32":
         return False, "IoRing is Windows-only"
     try:
-        import winreg  # noqa: PLC0415
+        import winreg
 
         with winreg.OpenKey(
             winreg.HKEY_LOCAL_MACHINE,

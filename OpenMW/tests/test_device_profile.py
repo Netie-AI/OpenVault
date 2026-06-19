@@ -14,8 +14,8 @@ from openmw.device_profile import (
     _detect_uncached,
     _load_cache,
     _save_cache,
+    _with_timeout,
     detect,
-    read_boot_id,
 )
 
 
@@ -32,10 +32,14 @@ def cache_path(tmp_path: Path) -> Path:
 
 class TestNvidiaPath:
     @patch("openmw.device_profile._estimate_endurance_tbw", return_value=600.0)
-    @patch("openmw.device_profile._select_primary_nvme", return_value=("Samsung 990 PRO", "/dev/nvme0"))
+    @patch(
+        "openmw.device_profile._select_primary_nvme", return_value=("Samsung 990 PRO", "/dev/nvme0")
+    )
     @patch("openmw.device_profile._probe_apple_silicon", return_value=(None, False))
     @patch("openmw.device_profile._probe_amd_gpu", return_value=(None, 0.0))
-    @patch("openmw.device_profile._probe_nvidia_gpu", return_value=("NVIDIA GeForce RTX 4090", 24.0))
+    @patch(
+        "openmw.device_profile._probe_nvidia_gpu", return_value=("NVIDIA GeForce RTX 4090", 24.0)
+    )
     @patch("openmw.device_profile.psutil.cpu_count", return_value=16)
     @patch("openmw.device_profile.psutil.virtual_memory")
     def test_detect_nvidia_profile(
@@ -83,7 +87,10 @@ class TestNoGpuPath:
 
 class TestApplePath:
     @patch("openmw.device_profile._estimate_endurance_tbw", return_value=0.0)
-    @patch("openmw.device_profile._select_primary_nvme", return_value=("APPLE SSD AP1024", "/dev/disk0"))
+    @patch(
+        "openmw.device_profile._select_primary_nvme",
+        return_value=("APPLE SSD AP1024", "/dev/disk0"),
+    )
     @patch("openmw.device_profile._probe_nvidia_gpu", return_value=(None, 0.0))
     @patch(
         "openmw.device_profile._probe_apple_silicon",
@@ -205,3 +212,146 @@ class TestCache:
 
         payload = json.loads(cache_path.read_text(encoding="utf-8"))
         assert payload["boot_id"] == "new-boot"
+
+
+class TestHardwareProbeTimeout:
+    """PART 12: a hung native call (e.g. Windows DeviceIoControl with no timeout
+    or overlapped I/O) must not block detect() indefinitely. See MASTER_HANDOFF.md
+    PART 12 hang investigation — confirmed root cause was an unbounded ctypes call."""
+
+    def test_with_timeout_returns_default_on_hang(self) -> None:
+        import time
+
+        def _hangs_forever() -> str:
+            time.sleep(10.0)
+            return "should never be reached"
+
+        t0 = time.monotonic()
+        result = _with_timeout(_hangs_forever, timeout_s=0.2, default="DEGRADED")
+        elapsed = time.monotonic() - t0
+
+        assert result == "DEGRADED"
+        assert elapsed < 1.0, f"timeout wrapper did not bound the call: took {elapsed:.2f}s"
+
+    def test_with_timeout_returns_real_result_when_fast(self) -> None:
+        def _fast() -> str:
+            return "real"
+
+        assert _with_timeout(_fast, timeout_s=5.0, default="DEGRADED") == "real"
+
+    def test_with_timeout_returns_default_on_exception(self) -> None:
+        def _raises() -> str:
+            raise RuntimeError("simulated driver error")
+
+        assert _with_timeout(_raises, timeout_s=5.0, default="DEGRADED") == "DEGRADED"
+
+    @patch("openmw.device_profile._estimate_endurance_tbw")
+    @patch("openmw.device_profile._select_primary_nvme", return_value=("Boot NVMe", "/dev/nvme0"))
+    @patch("openmw.device_profile._probe_apple_silicon", return_value=(None, False))
+    @patch("openmw.device_profile._probe_amd_gpu", return_value=(None, 0.0))
+    @patch("openmw.device_profile._probe_nvidia_gpu", return_value=("RTX 4090", 24.0))
+    @patch("openmw.device_profile._probe_cpu_cores", return_value=16)
+    @patch("openmw.device_profile._probe_system_ram_gb", return_value=64.0)
+    @patch("openmw.device_profile._HARDWARE_PROBE_TIMEOUT_S", 0.2)
+    def test_detect_uncached_survives_hung_endurance_probe(
+        self,
+        _mock_ram: MagicMock,
+        _mock_cores: MagicMock,
+        _mock_nvidia: MagicMock,
+        _mock_amd: MagicMock,
+        _mock_apple: MagicMock,
+        _mock_select_nvme: MagicMock,
+        mock_endurance: MagicMock,
+    ) -> None:
+        """End-to-end: _detect_uncached() must complete even if the endurance
+        probe (which calls read_smart() -> DeviceIoControl on Windows) hangs."""
+        import time
+
+        def _hangs(_device_path: str | None) -> float:
+            time.sleep(10.0)
+            return 999.0  # never reached
+
+        mock_endurance.side_effect = _hangs
+
+        t0 = time.monotonic()
+        profile = _detect_uncached(benchmark_fn=lambda **_kwargs: 3.5)
+        elapsed = time.monotonic() - t0
+
+        assert elapsed < 2.0, f"_detect_uncached did not survive the hung probe: {elapsed:.2f}s"
+        assert profile.nvme_endurance_tbw == 0.0  # honest degraded value, not the hung 999.0
+        assert profile.gpu_name == "RTX 4090"  # rest of detection still completed normally
+
+    @patch("openmw.device_profile._estimate_endurance_tbw", return_value=600.0)
+    @patch("openmw.device_profile._select_primary_nvme", return_value=("Boot NVMe", "/dev/nvme0"))
+    @patch("openmw.device_profile._probe_apple_silicon", return_value=(None, False))
+    @patch("openmw.device_profile._probe_amd_gpu", return_value=(None, 0.0))
+    @patch("openmw.device_profile._probe_cpu_cores", return_value=16)
+    @patch("openmw.device_profile._probe_system_ram_gb", return_value=64.0)
+    @patch("openmw.device_profile._HARDWARE_PROBE_TIMEOUT_S", 0.2)
+    def test_detect_uncached_survives_hung_nvidia_probe(
+        self,
+        _mock_ram: MagicMock,
+        _mock_cores: MagicMock,
+        _mock_amd: MagicMock,
+        _mock_apple: MagicMock,
+        _mock_select_nvme: MagicMock,
+        _mock_endurance: MagicMock,
+    ) -> None:
+        """PART 12b: real-hardware report showed openmw doctor still hung (165s,
+        killed) after the endurance-probe fix alone. Root cause: _probe_nvidia_gpu()
+        calls raw NVML (pynvml.nvmlInit() etc.) with zero timeout - a stalled GPU
+        driver can hang nvmlInit() indefinitely. This test proves that path is now
+        bounded too."""
+        import time
+
+        with patch("openmw.device_profile._probe_nvidia_gpu") as mock_nvidia:
+
+            def _hangs() -> tuple[str | None, float]:
+                time.sleep(10.0)
+                return ("never reached", 999.0)
+
+            mock_nvidia.side_effect = _hangs
+
+            t0 = time.monotonic()
+            profile = _detect_uncached(benchmark_fn=lambda **_kwargs: 3.5)
+            elapsed = time.monotonic() - t0
+
+        assert elapsed < 2.0, f"_detect_uncached did not survive a hung NVML probe: {elapsed:.2f}s"
+        # NVML timed out -> falls through to AMD probe (also mocked None) -> CPU-only
+        assert profile.gpu_name is None
+        assert profile.cpu_inference_mode is True
+
+    @patch("openmw.device_profile._estimate_endurance_tbw", return_value=600.0)
+    @patch("openmw.device_profile._select_primary_nvme", return_value=("Boot NVMe", "/dev/nvme0"))
+    @patch("openmw.device_profile._probe_apple_silicon", return_value=(None, False))
+    @patch("openmw.device_profile._probe_amd_gpu", return_value=(None, 0.0))
+    @patch("openmw.device_profile._probe_nvidia_gpu", return_value=("RTX 4090", 24.0))
+    @patch("openmw.device_profile._probe_cpu_cores", return_value=16)
+    @patch("openmw.device_profile._probe_system_ram_gb", return_value=64.0)
+    @patch("openmw.device_profile._BENCHMARK_TIMEOUT_S", 0.2)
+    def test_detect_uncached_survives_hung_benchmark(
+        self,
+        _mock_ram: MagicMock,
+        _mock_cores: MagicMock,
+        _mock_nvidia: MagicMock,
+        _mock_amd: MagicMock,
+        _mock_apple: MagicMock,
+        _mock_select_nvme: MagicMock,
+        _mock_endurance: MagicMock,
+    ) -> None:
+        """PART 12b: benchmark_nvme_seq_read_gbps()'s internal deadline check only
+        fires *between* reads - a single blocked read/write/tempfile call on a
+        stalled boot drive can hang past its own 5s intended duration. This test
+        proves the outer wrapper bounds it regardless."""
+        import time
+
+        def _hung_benchmark(**_kwargs: object) -> float:
+            time.sleep(10.0)
+            return 999.0  # never reached
+
+        t0 = time.monotonic()
+        profile = _detect_uncached(benchmark_fn=_hung_benchmark)
+        elapsed = time.monotonic() - t0
+
+        assert elapsed < 2.0, f"_detect_uncached did not survive a hung benchmark: {elapsed:.2f}s"
+        assert profile.nvme_seq_read_gbps == 3.5  # _DEFAULT_NVME_SEQ_READ_GBPS, not the hung 999.0

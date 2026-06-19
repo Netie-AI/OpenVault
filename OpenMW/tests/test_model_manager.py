@@ -86,7 +86,9 @@ class TestRepoParsing:
 
 
 class TestLicenseGate:
-    def test_mit_model_downloads(self, models_dir: Path, router: ModelRouter, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_mit_model_downloads(
+        self, models_dir: Path, router: ModelRouter, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         payload = b"gguf-payload"
         digest = _sha256_bytes(payload)
         hf_filename = "Phi-4-mini-instruct-Q4_K_M.gguf"
@@ -105,7 +107,9 @@ class TestLicenseGate:
             "openmw.model_manager.hf_hub_download",
             lambda **kwargs: str(cache_file),
         )
-        monkeypatch.setattr("openmw.model_manager.shutil.disk_usage", lambda _path: MagicMock(free=10**12))
+        monkeypatch.setattr(
+            "openmw.model_manager.shutil.disk_usage", lambda _path: MagicMock(free=10**12)
+        )
 
         outcome = download(
             "phi-4-mini",
@@ -245,7 +249,9 @@ class TestAutoSelect:
             "openmw.model_manager.hf_hub_download",
             lambda **kwargs: str(cache_file),
         )
-        monkeypatch.setattr("openmw.model_manager.shutil.disk_usage", lambda _path: MagicMock(free=10**12))
+        monkeypatch.setattr(
+            "openmw.model_manager.shutil.disk_usage", lambda _path: MagicMock(free=10**12)
+        )
 
         outcome = auto_select_and_download(
             _profile(gpu_vram_gb=10.0),

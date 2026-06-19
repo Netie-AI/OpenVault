@@ -837,6 +837,7 @@ dependencies = [
     { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "structlog" },
+    { name = "typer" },
 ]
 
 [package.dev-dependencies]
@@ -858,6 +859,7 @@ requires-dist = [
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "scipy", specifier = ">=1.11" },
     { name = "structlog", specifier = ">=24.1" },
+    { name = "typer", specifier = ">=0.12" },
 ]
 provides-extras = ["training"]
 

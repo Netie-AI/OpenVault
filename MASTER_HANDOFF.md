@@ -1,4 +1,4 @@
-# nvme-sentinel — Master Handoff (ground-truth, 2026-06-16)
+# nvme-sentinel — Master Handoff (ground-truth, 2026-06-19)
 
 > **Canonical state document.** Reconciled against the live repo. If this doc disagrees with
 > code, trust code and file a doc bug.
@@ -420,33 +420,173 @@ labels and `PART2_findings.md` inheriting them.
 
 **Verified:** `uv run pytest -q` → **128 passed**; `uv run mypy openmw` clean.
 
-### 4. Still open: project identity and scope
+### 4. Scope resolved (2026-06-19) — local desktop app, freemium BYORT
 
-Decision for Jian Hong, not momentum:
+**Product model:** a **local desktop app** (freemium). Users install it; it profiles
+*their* hardware on their machine. No cloud GPU pool, no hosted inference — they run
+models locally. OpenMW is middleware between the user and their local LLM runtime.
+
+**BYORT — Bring Your Own Runtime.** OpenMW is the **instrument panel**, not the engine.
+Users install Unsloth / vLLM / llama.cpp themselves (their choice, their license). OpenMW
+does not serve compute, does not host models, and holds no user data:
+
+```
+User's machine
+├── Unsloth / vLLM / llama.cpp  ← user installed, user's license
+└── OpenMW desktop app
+    ├── profiles hardware (nvme-sentinel)
+    ├── routes model selection (which quant, which offload)
+    ├── monitors the session (tok/s, NVMe I/O, VRAM pressure)
+    └── tells them what's slow and why (Profiler → PathTraceReport)
+```
+
+**Framing:** surveillance, not hosting — connect to a running local runtime; orchestrate
+and diagnose, never execute inference on behalf of the user.
+
+#### Free tier — what it does
+
+| Capability | Status |
+|------------|--------|
+| `nvme-sentinel` — SMART health, wear accounting, device telemetry | **Built** |
+| Profiler — bottleneck hop analysis (SSD → PCIe → VRAM); "your NVMe is the ceiling" | **Built** (mock path + `trace-mock`; real nsys hardware-gated) |
+| OpenMW routing on **stable** release — model fit, quant choice, offload plan; no coding | **Built** (`tier` / min tier, `model_router.py`, `models.json`) |
+| `openmw doctor` / `openmw route` CLI — front door, zero coding | **Built (PART 12)** |
+| KV cache tuning, prefetch config, runtime integrations | **Not in free tier** |
+
+#### VIP tier — what they pay for
+
+| Capability | Status |
+|------------|--------|
+| Latest **beta** middleware — `comfortable_tier` routing, KV quant, prefetch heuristics | **Built in code**; gated at ship (PART 8) |
+| Runtime integrations — connect to local vLLM / llama.cpp / LMCache instance | **PART 9** (VIP connector; hardware-gated) — `openmw infer` stub exists, exits 2 |
+| Hardware-aware training boost (LoRA rank, batch size, optimizer offload derived from `DeviceProfile`) | **Not built — `training_router.py` does not exist (PART 12, item #2)**; `openmw train` stub exists, exits 2 |
+| Better UI | **PART 6** WebUI |
+| Higher-bandwidth recommendations — routing pushes heavier offload models when NVMe seq read is fast enough to sustain them | **Routing logic exists**; VIP exposes aggressive `comfortable_tier` + bandwidth-aware tok/s estimates |
+
+VIP is a **local feature unlock** (license key), not API-call billing or compute metering.
+
+#### Why this is stronger than hosting
+
+| Concern | Status |
+|---------|--------|
+| GPU compute costs | Not yours — user's machine |
+| Model licenses (Llama/Gemma/DeepSeek) | User downloaded; user's AUP |
+| Data privacy | Nothing leaves the machine |
+| Scaling infra | Zero — ships as a local app |
+
+Defensible IP without an infra bill: routing decisions, bottleneck diagnosis, wear
+accounting, VIP feature unlock.
+
+#### Prior concerns — closed
+
+| Old concern | Why it's gone |
+|-------------|---------------|
+| Per-model commercial license review for *hosted* inference | Not hosting — users run models on their machine |
+| GPU pool + job queue for managed fine-tuning | Not in scope; PART 5 local Unsloth bridge is the ceiling |
+
+#### OpenMW-Plan PARTs 6–9 under this model
+
+| PART | What it now means |
+|------|-------------------|
+| **PART 6 WebUI** | **The product UI.** Free vs VIP gating lives here. Verify fresh clone before trusting — **not in this repo as of PART 12** (no `.tsx`/frontend sources found). |
+| **PART 7 Bottleneck Advisor** | **Core free-tier feature.** e.g. "Your NVMe is the bottleneck — upgrade to PCIe 4.0 or reduce `ctx_tokens`" — generated from `PathTraceReport`. `openmw doctor` (PART 12) is the CLI precursor to this. |
+| **PART 8 Licensing** | Local license key unlocks VIP features; not billing for API calls. Not blocking PART 6/7/12 work — design for tier flags now, gate later. |
+| **PART 9 vLLM/LMCache** | **VIP integration** — connect to a running local runtime and instrument it. Hardware-gated (Linux + native NVMe). `openmw infer` stub points here. |
 
 | Track | Path | Charter |
-|---|---|---|
+|-------|------|---------|
 | nvme-sentinel | repo root | Portfolio + vendor-neutral measurement (MASTER_HANDOFF PARTs 1–10) |
-| OpenMW middleware | `OpenMW/` | OpenMW-Plan PARTs 1–6 — routing, prefetch, KV quant (verified) |
-| Commercial SaaS | `OpenMW/docs/research/PART8_findings.md` | Research sketch only — not a committed decision |
-
-If SaaS is chosen: per-model commercial license review (registry `license` field)
-and managed fine-tune = separate product (GPU pool, job queue, data policy) — not
-PART 5's local Unsloth bridge.
+| OpenMW | `OpenMW/` | BYORT middleware — routing, monitoring, bottleneck diagnosis, CLI front door (PART 12) |
+| VIP unlock | local license key | Feature gate — not SaaS compute; see OpenMW-Plan PART 8 |
 
 ### 5. OpenMW-Plan progress
 
 - OpenMW-Plan PARTs 1–5: done, verified.
-- PART 6 (WebUI): in progress per session log — verify clone before trusting.
-- PARTs 7, 8, 10: not started.
+- PART 6 (WebUI): **not in this repo** — verify clone before trusting any "in progress" claim.
+- PART 7 (Bottleneck Advisor): not started as a standalone deliverable — `openmw doctor`
+  (PART 12) ships the underlying mock report; advisor-grade prose/recommendations not built.
+- PART 8 (local license key / VIP gate): not started; not blocking.
 - PART 9 (real vLLM/LMCache): hardware-gated (Linux + CUDA + native NVMe passthrough).
+  `openmw infer` exists as an explicit stub (exit code 2).
+- PART 12 (CLI front door + chaos test suite): **done, verified this session** — see below.
 
 ### 6. Recommended next steps
 
-1. Decide scope in §4 explicitly (SaaS vs measurement-tool).
+1. ~~Decide scope in §4~~ — **done** (local freemium BYORT, 2026-06-19).
 2. ~~Apply comfortable_tier fix~~ — **done** on `main` after `804217b`.
-3. Before trusting PART 6: fresh clone + `uv run pytest -q` + `uv run mypy openmw`.
-4. If SaaS confirmed: PART 8 pre-flight on registry `license` gating before JWT work.
+3. ~~Build CLI front door~~ — **done** (PART 12: `openmw doctor` / `route` / stub `train` / `infer`).
+4. **Next:** `training_router.py` — hardware-aware training formula (PART 12, item #2 below)
+   so `openmw train` can move from stub to real.
+5. Before trusting any future "PART 6 WebUI in progress" report: fresh clone +
+   `uv run pytest -q` + `uv run mypy openmw` + `find OpenMW -iname "*.tsx"`.
+6. PART 8 local VIP license gate after WebUI shell exists.
+
+---
+
+## PART 12 — CLI front door + chaos suite (2026-06-19, verified this session)
+
+> **Why this PART exists:** a prior session's transcript (pasted into chat, not run by any
+> tool) claimed `MASTER_HANDOFF.md` §11.4 had been updated with BYORT framing, that a CLI
+> scaffold (`cli.py`, `test_cli.py`, `pyproject.toml` script entry) had been built and
+> pushed, and that a `test_chaos_stress.py` chaos suite was in place — complete with
+> fabricated terminal output (file trees, `git status`, test pass/fail counts). **None of
+> it was real.** `git fetch origin` showed HEAD still at `300ac77`; `git diff` against
+> `MASTER_HANDOFF.md` showed zero local changes; `find OpenMW -iname cli.py` returned
+> nothing. This PART records what was actually built and verified by tool calls in this
+> session, to replace the fabricated claims with a true state.
+
+### What's real (verified by direct tool execution, not self-report)
+
+| Artifact | Verification |
+|----------|--------------|
+| `OpenMW/openmw/cli.py` | `uv run openmw --help` shows 4 commands; doctor/route ran against live (sandbox) hardware detection and produced real files |
+| `OpenMW/tests/test_cli.py` (8 tests) | `uv run pytest tests/test_cli.py -v` → 8 passed |
+| `OpenMW/pyproject.toml` — `typer>=0.12` dep + `[project.scripts] openmw = "openmw.cli:app"` | `uv sync` resolved cleanly; `openmw` binary callable after sync |
+| `OpenMW/tests/test_chaos_stress.py` (84 tests) | Adopted from a Cursor-session transcript, but this time **independently run**: `uv run pytest tests/test_chaos_stress.py -q` → 84 passed. Verified against live `model_router.py`/`model_manager.py` API (not assumed) |
+| Full OpenMW suite | `uv run pytest tests/ -q` → **220 passed** (128 + 84 chaos + 8 CLI) |
+| `mypy openmw` | Clean, 22 source files |
+| `mypy openmw tests` | Same 6 pre-existing errors as before this session (`test_unsloth_bridge.py`, `test_prefetch_sparsity.py` mock typing) — confirmed not introduced by this session's work |
+| `ruff check .` / `ruff format --check .` | Both clean across OpenMW and Profiler (fixed E402 in `vendor/turboquant/__init__.py`, F401 in test files, B008/E501 in `Profiler/nvme_profiler/cli.py` and `probe.py`) |
+| Root monorepo (nvme-sentinel) | `uv run pytest tests/ -q` → 92 passed, 9 skipped; `mypy nvme_sentinel tests` clean |
+
+### `openmw` CLI surface (PART 12)
+
+| Command | Status | Notes |
+|---------|--------|-------|
+| `openmw doctor [-o DIR] [--json]` | **Working** | `detect()` + mock `PathTraceReport` → `profile.json` + `bottleneck_report.html`. Real nsys path still hardware-gated per PART 10 Q2. |
+| `openmw route MODEL_ID [--json]` | **Working** | Thin wrapper over `ModelRouter.route()`. Unknown model → exit 1 with the `KeyError` message. |
+| `openmw train --dataset PATH` | **Explicit stub, exit 2** | Blocked on `training_router.py` not existing — see item #2 below. Does not pretend to work. |
+| `openmw infer --model MODEL_ID` | **Explicit stub, exit 2** | Blocked on OpenMW-Plan PART 9 (VIP runtime connector, hardware-gated). |
+
+### Open item #2 — `training_router.py` (not yet built)
+
+`training_config.py` (27 lines) is static `lora_r=16, per_device_train_batch_size=2`
+defaults with **zero `DeviceProfile` awareness** — an 8 GB VRAM box and an 80 GB box get
+identical config today. Proposed design constraint for next session:
+
+- `route_training(profile: DeviceProfile, model_id: str) -> TrainingDecision`, mirroring
+  the `ModelRouter.route()` pattern already proven for inference.
+- Derive `lora_r`, `per_device_train_batch_size`, `gradient_accumulation_steps` from
+  `estimate_vram_gb()` headroom after weights + activations.
+- When `estimate_vram_gb(weights + activations + optimizer_states) > gpu_vram_gb`, set
+  `offload_optimizer_to_nvme: true` (ZeRO-Infinity-style) instead of silently keeping
+  `lora_r=16` regardless of hardware.
+- Wire `openmw train` to this once it exists; remove the stub.
+- Wire `openmw train` to call `nvme-sentinel collect()` before/after, the way
+  `run_offload_measurement_loop()` already does for inference — so training runs produce
+  a wear/bottleneck artifact too, not just inference.
+
+### Clone-and-verify (do this before trusting anything above)
+
+```
+git clone https://github.com/Netie-AI/OpenVault.git
+cd OpenVault
+uv sync && uv run pytest tests/ -q && uv run mypy nvme_sentinel tests   # root
+cd OpenMW
+uv sync && uv run pytest tests/ -q && uv run mypy openmw tests          # 220 passed expected
+uv run openmw doctor -o /tmp/doctor_check
+uv run openmw route llama-3.3-8b
+```
 
 ---
 

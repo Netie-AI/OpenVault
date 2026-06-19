@@ -9,7 +9,6 @@ from pathlib import Path
 from nvme_profiler.fuse import enrich_path_trace, fuse_admin_timings
 from nvme_profiler.nsys import mock_nsys_hops, nsys_version, parse_nsys_export_json
 from nvme_profiler.probe import run_capability_probe
-from nvme_profiler.report import save_path_trace_report
 from nvme_profiler.schema import PathTraceEnvManifest, PathTraceReport
 
 

@@ -19,7 +19,11 @@ dependencies = [
   "psutil>=7.2.2",
   "nvidia-ml-py>=12",
   "huggingface-hub>=1.20.0",
+  "typer>=0.12",
 ]
+
+[project.scripts]
+openmw = "openmw.cli:app"
 
 [dependency-groups]
 dev = [
@@ -41,6 +45,9 @@ packages = ["openmw"]
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "SIM", "TID", "RUF"]
 
 [tool.mypy]
 strict = true

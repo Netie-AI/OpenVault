@@ -109,11 +109,15 @@ def run_offload_measurement_loop(
     )
 
 
-def compare_prefetch_runs(output_dir: Path, device_path: str = "/dev/mock-nvme0") -> dict[str, object]:
+def compare_prefetch_runs(
+    output_dir: Path, device_path: str = "/dev/mock-nvme0"
+) -> dict[str, object]:
     """Run prefetch off/on and return comparison metrics for Q4 gate."""
     off_dir = output_dir / "prefetch_off"
     on_dir = output_dir / "prefetch_on"
-    off = run_offload_measurement_loop(off_dir, device_path=device_path, prefetch=NaivePrefetchConfig(enabled=False))
+    off = run_offload_measurement_loop(
+        off_dir, device_path=device_path, prefetch=NaivePrefetchConfig(enabled=False)
+    )
     on = run_offload_measurement_loop(
         on_dir,
         device_path=device_path,

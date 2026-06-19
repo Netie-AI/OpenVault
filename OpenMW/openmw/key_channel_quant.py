@@ -156,7 +156,9 @@ def _dequantize_group_per_channel(group: KeyGroupQuantized) -> NDArray[np.float3
     return cast(NDArray[np.float32], out.astype(np.float32))
 
 
-def quantize_group_per_token(chunk: np.ndarray, bits: int) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+def quantize_group_per_token(
+    chunk: np.ndarray, bits: int
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Per-token baseline: one min/max pair shared across all channels per token row."""
     levels = (1 << bits) - 1
     token_mins = np.min(chunk, axis=1, keepdims=True)

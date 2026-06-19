@@ -40,7 +40,13 @@ def test_compute_bottleneck_hop() -> None:
 def test_gpu_idle_pct() -> None:
     timeline = [
         HopRecord(hop_id=HopId.SSD_ADMIN, start_ts=0, end_ts=0.05, duration_ms=50, bytes_moved=512),
-        HopRecord(hop_id=HopId.GPU_COMPUTE, start_ts=0.05, end_ts=0.15, duration_ms=100, bytes_moved=0),
+        HopRecord(
+            hop_id=HopId.GPU_COMPUTE,
+            start_ts=0.05,
+            end_ts=0.15,
+            duration_ms=100,
+            bytes_moved=0,
+        ),
     ]
     pct = compute_gpu_idle_pct_waiting_on_io(timeline)
     assert pct is not None

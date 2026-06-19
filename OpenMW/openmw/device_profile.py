@@ -8,16 +8,70 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Callable
+from typing import Callable, TypeVar
 
 import psutil
 import structlog
 
 log = structlog.get_logger()
+
+_T = TypeVar("_T")
+_SENTINEL = object()
+
+# Hard wall-clock cap on hardware probes that may block indefinitely on native
+# Windows ctypes calls (DeviceIoControl has no timeout/overlapped-I/O path —
+# see PART 12 hang investigation in MASTER_HANDOFF.md). A daemon thread is used
+# deliberately: ThreadPoolExecutor registers an atexit handler that *joins*
+# worker threads even after a caller-side timeout fires, which re-introduces
+# the hang at process exit. A plain daemon thread leaks silently instead.
+_HARDWARE_PROBE_TIMEOUT_S = 5.0
+
+# Benchmark has its own internal 5s deadline loop (_BENCHMARK_DURATION_S below) but
+# that deadline check only fires *between* reads - a single blocked read/write/tempfile
+# call on a stalled drive can still hang past it. This wrapper timeout needs headroom
+# above the benchmark's own intended duration so a slow-but-honest run isn't killed early.
+_BENCHMARK_TIMEOUT_S = 15.0
+
+
+def _with_timeout(
+    fn: Callable[..., _T],
+    *args: object,
+    timeout_s: float = _HARDWARE_PROBE_TIMEOUT_S,
+    default: _T,
+    **kwargs: object,
+) -> _T:
+    """Run fn with a hard wall-clock timeout; return default on timeout or error.
+
+    Does not (and cannot) kill a hung native call — if fn blocks forever in a
+    ctypes/DeviceIoControl call, the daemon thread leaks until process exit.
+    What this guarantees is that the *caller* is never blocked past timeout_s.
+    """
+    box: list[object] = [_SENTINEL]
+
+    def _runner() -> None:
+        try:
+            box[0] = fn(*args, **kwargs)
+        except Exception as exc:
+            log.debug("hardware_probe_failed", fn=getattr(fn, "__name__", repr(fn)), error=str(exc))
+            box[0] = default
+
+    t = threading.Thread(target=_runner, daemon=True)
+    t.start()
+    t.join(timeout=timeout_s)
+    if box[0] is _SENTINEL:
+        log.warning(
+            "hardware_probe_timeout",
+            fn=getattr(fn, "__name__", repr(fn)),
+            timeout_s=timeout_s,
+        )
+        return default
+    return box[0]  # type: ignore[return-value]
+
 
 _DEFAULT_CACHE_DIR = Path.home() / ".openmw"
 _DEFAULT_CACHE_FILE = _DEFAULT_CACHE_DIR / "device_profile.json"
@@ -287,9 +341,11 @@ def _detect_uncached(
     """Run full hardware detection without reading cache."""
     benchmark = benchmark_fn or benchmark_nvme_seq_read_gbps
 
+    log.info("detect_stage", stage="ram_cores_start")
     system_ram_gb = _probe_system_ram_gb()
     cpu_cores = _probe_cpu_cores()
     apple_name, is_apple = _probe_apple_silicon()
+    log.info("detect_stage", stage="ram_cores_done", ram_gb=round(system_ram_gb, 1))
 
     gpu_name: str | None = None
     gpu_vram_gb = 0.0
@@ -301,12 +357,26 @@ def _detect_uncached(
         gpu_vram_gb = system_ram_gb
         unified_memory = True
     else:
-        nvidia_name, nvidia_vram = _probe_nvidia_gpu()
+        log.info("detect_stage", stage="nvidia_gpu_start")
+        _no_nvidia_default: tuple[str | None, float] = (None, 0.0)
+        nvidia_name, nvidia_vram = _with_timeout(
+            _probe_nvidia_gpu,
+            timeout_s=_HARDWARE_PROBE_TIMEOUT_S,
+            default=_no_nvidia_default,
+        )
+        log.info("detect_stage", stage="nvidia_gpu_done", found=nvidia_name is not None)
         if nvidia_name is not None:
             gpu_name = nvidia_name
             gpu_vram_gb = nvidia_vram
         else:
-            amd_name, _ = _probe_amd_gpu()
+            log.info("detect_stage", stage="amd_gpu_start")
+            _no_amd_default: tuple[str | None, float] = (None, 0.0)
+            amd_name, _ = _with_timeout(
+                _probe_amd_gpu,
+                timeout_s=_HARDWARE_PROBE_TIMEOUT_S,
+                default=_no_amd_default,
+            )
+            log.info("detect_stage", stage="amd_gpu_done", found=amd_name is not None)
             if amd_name is not None:
                 gpu_name = amd_name
                 gpu_vram_gb = 0.0
@@ -321,9 +391,32 @@ def _detect_uncached(
     else:
         gpu_bandwidth_gbps = _gpu_bandwidth_from_name(gpu_name)
 
-    nvme_model, nvme_path = _select_primary_nvme()
-    nvme_seq_read_gbps = benchmark(device_path=nvme_path)
-    nvme_endurance_tbw = _estimate_endurance_tbw(nvme_path)
+    log.info("detect_stage", stage="select_nvme_start")
+    _no_nvme_default: tuple[str | None, str | None] = (None, None)
+    nvme_model, nvme_path = _with_timeout(
+        _select_primary_nvme,
+        timeout_s=_HARDWARE_PROBE_TIMEOUT_S,
+        default=_no_nvme_default,
+    )
+    log.info("detect_stage", stage="select_nvme_done", nvme_model=nvme_model)
+
+    log.info("detect_stage", stage="benchmark_start")
+    nvme_seq_read_gbps = _with_timeout(
+        benchmark,
+        device_path=nvme_path,
+        timeout_s=_BENCHMARK_TIMEOUT_S,
+        default=_DEFAULT_NVME_SEQ_READ_GBPS,
+    )
+    log.info("detect_stage", stage="benchmark_done", gbps=round(nvme_seq_read_gbps, 2))
+
+    log.info("detect_stage", stage="endurance_start")
+    nvme_endurance_tbw = _with_timeout(
+        _estimate_endurance_tbw,
+        nvme_path,
+        timeout_s=_HARDWARE_PROBE_TIMEOUT_S,
+        default=0.0,
+    )
+    log.info("detect_stage", stage="endurance_done", tbw=round(nvme_endurance_tbw, 1))
 
     return DeviceProfile(
         gpu_name=gpu_name,

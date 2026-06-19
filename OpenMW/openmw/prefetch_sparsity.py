@@ -90,9 +90,7 @@ def run_calibration(
                 f"activation_provider must return 2-D (layers, neurons), got {layer_acts.shape}"
             )
         if layer_acts.shape[0] != config.layer_count:
-            raise ValueError(
-                f"expected {config.layer_count} layers, got {layer_acts.shape[0]}"
-            )
+            raise ValueError(f"expected {config.layer_count} layers, got {layer_acts.shape[0]}")
         samples.append(layer_acts)
 
     stacked = np.stack(samples, axis=0)
@@ -156,8 +154,7 @@ class SparsityPrefetcher:
     def lmcache_section(self) -> dict[str, object]:
         """Return LMCache sparsity-prefetch config section."""
         hot_layers: dict[str, list[int]] = {
-            str(layer): sorted(self._index.hot_neurons(layer))
-            for layer in self._index.layer_ids()
+            str(layer): sorted(self._index.hot_neurons(layer)) for layer in self._index.layer_ids()
         }
         return {
             "enabled": True,

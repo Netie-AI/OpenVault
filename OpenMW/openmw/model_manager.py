@@ -178,8 +178,7 @@ def verify(
 
     if actual != expected.lower():
         raise IntegrityError(
-            f"SHA-256 mismatch for {model_id}/{quant_level}: "
-            f"expected {expected}, got {actual}"
+            f"SHA-256 mismatch for {model_id}/{quant_level}: expected {expected}, got {actual}"
         )
     return True
 
@@ -246,9 +245,13 @@ def download(
 
     root = models_dir or default_models_dir()
     dest_path = _local_gguf_path(root, model_id, quant_level)
-    routing = resolved_router.route(profile, model_id) if profile is not None else resolved_router.route(
-        _synthetic_profile_for_quant(spec.tier),
-        model_id,
+    routing = (
+        resolved_router.route(profile, model_id)
+        if profile is not None
+        else resolved_router.route(
+            _synthetic_profile_for_quant(spec.tier),
+            model_id,
+        )
     )
 
     if dest_path.exists():
@@ -534,9 +537,7 @@ def _resolve_gguf_filename(
     )
     chosen = ranked[0]
     if not pattern.search(Path(chosen).stem):
-        raise ModelFileNotFoundError(
-            f"no GGUF matching quant {quant_level} in repo {repo_id}"
-        )
+        raise ModelFileNotFoundError(f"no GGUF matching quant {quant_level} in repo {repo_id}")
 
     size_bytes, sha256 = _sibling_metadata(api, repo_id, chosen)
     return chosen, size_bytes, sha256

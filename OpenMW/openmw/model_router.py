@@ -209,7 +209,9 @@ class ModelRouter:
             per_layer_gb=per_layer_gb,
             kv_gb=kv_gb,
         )
-        offload_strategy = self._offload_strategy(gpu_layers, cpu_ram_layers, nvme_layers, spec.layers)
+        offload_strategy = self._offload_strategy(
+            gpu_layers, cpu_ram_layers, nvme_layers, spec.layers
+        )
         kv_quant_recommended = self._kv_quant_recommended(
             profile=profile,
             estimated_vram=estimated_vram,

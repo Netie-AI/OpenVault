@@ -124,7 +124,9 @@ class TestKeyCacheWrapper:
         enabled = lmcache_disk_config(
             NaivePrefetchConfig(),
             "/tmp/kv",
-            kv_quant=KvQuantConfig(key_quant_enabled=True, k_bits=2, group_size=32, residual_length=32),
+            kv_quant=KvQuantConfig(
+                key_quant_enabled=True, k_bits=2, group_size=32, residual_length=32
+            ),
         )
         key_quant = enabled["key_quant"]
         assert isinstance(key_quant, dict)

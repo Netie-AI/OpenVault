@@ -246,12 +246,7 @@ def format_alpaca_examples(rows: list[dict[str, str]]) -> list[str]:
     """Format Alpaca rows into plain-text SFT prompts."""
     texts: list[str] = []
     for row in rows:
-        text = (
-            "### Instruction:\n"
-            f"{row['instruction']}\n\n"
-            "### Response:\n"
-            f"{row['output']}"
-        )
+        text = f"### Instruction:\n{row['instruction']}\n\n### Response:\n{row['output']}"
         texts.append(text)
     return texts
 
@@ -300,7 +295,9 @@ def unsloth_finetune(
     )
     train_result = getattr(trainer, "train")()
     steps = int(getattr(train_result, "global_step", 0) or cfg.num_train_epochs)
-    trained_session = UnslothSession(model_id=session.model_id, model=model, tokenizer=session.tokenizer)
+    trained_session = UnslothSession(
+        model_id=session.model_id, model=model, tokenizer=session.tokenizer
+    )
 
     log.info(
         "unsloth_finetune_complete",

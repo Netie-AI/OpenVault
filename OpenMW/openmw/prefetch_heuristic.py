@@ -15,7 +15,9 @@ class HeuristicPrefetchConfig:
     cooldown_ms: int = 50
 
 
-def lmcache_heuristic_overlay(base: dict[str, object], config: HeuristicPrefetchConfig) -> dict[str, object]:
+def lmcache_heuristic_overlay(
+    base: dict[str, object], config: HeuristicPrefetchConfig
+) -> dict[str, object]:
     """Merge heuristic prefetch settings into LMCache config."""
     merged = dict(base)
     raw_prefetch = merged.get("prefetch")
