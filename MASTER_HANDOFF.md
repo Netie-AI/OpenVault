@@ -666,7 +666,7 @@ Smartctl open device: \\.\PhysicalDrive1 [USB NVMe <chip>] failed: Invalid argum
 ```
 
 `collect --device \\.\PhysicalDrive0` → blocked at `Auto-elevate? [y/N]` (non-interactive TTY).
-`origin/main` HEAD: `9eb644b` (see tooling note below).
+`origin/main` HEAD: `996a60d` (see tooling note below for prior `9eb644b` copy-script fix).
 
 **Decision:** BIWIN bridge NVMe admin passthrough **does not work** via smartmontools device-type
 overrides on this enclosure — stop investigating bypass. Micron native snapshot (if elevated collect
