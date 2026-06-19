@@ -1,17 +1,20 @@
-"""Copy the latest Cursor agent reply to the clipboard.
+"""Copy Cursor agent output to the clipboard for Claude handoff.
 
-Default: the most recent assistant message only (one turn — avoids re-pasting
-full transcript history). Use --all for the full chat export.
+Default: all assistant text after the last Read tool anchor (prefers
+nvme_sentinel/cli.py offset 160 when present), through end of transcript.
+Skips tool-only records and [REDACTED] stubs.
 
-The VS Code task runs with cwd = workspace root, so --workspace is optional
-(Path.cwd()) and the task never passes a spaced path through the shell.
+Modes:
+  (default)  since last Read anchor → end
+  --latest     single most recent assistant message
+  --turn       all assistant messages since last user message
+  --all        full transcript
 
 Usage:
   uv run python scripts/copy_cursor_chat.py
   uv run python scripts/copy_cursor_chat.py --dry-run
+  uv run python scripts/copy_cursor_chat.py --latest
   uv run python scripts/copy_cursor_chat.py --all
-  uv run python scripts/copy_cursor_chat.py --list
-  uv run python scripts/copy_cursor_chat.py --id <uuid>
 
 Bind via .vscode/tasks.json label "Copy Cursor Chat" + Ctrl+Shift+Alt+C.
 """
@@ -74,6 +77,75 @@ def _normalize_text(text: str) -> str:
     return text
 
 
+def _path_endswith(path_value: object, suffix: str) -> bool:
+    if not isinstance(path_value, str):
+        return False
+    normalized = path_value.replace("\\", "/").lower()
+    return normalized.endswith(suffix.lower())
+
+
+def _read_tool_matches(
+    block: dict[str, object],
+    *,
+    path_suffix: str | None,
+    offset: int | None,
+) -> bool:
+    if block.get("type") != "tool_use" or block.get("name") != "Read":
+        return False
+    raw_input = block.get("input")
+    if not isinstance(raw_input, dict):
+        return False
+    if path_suffix is not None and not _path_endswith(raw_input.get("path"), path_suffix):
+        return False
+    if offset is not None:
+        block_offset = raw_input.get("offset")
+        if not isinstance(block_offset, int) or block_offset != offset:
+            return False
+    return True
+
+
+def _record_has_read_tool(
+    record: dict[str, object],
+    *,
+    path_suffix: str | None = None,
+    offset: int | None = None,
+) -> bool:
+    message = record.get("message")
+    if not isinstance(message, dict):
+        return False
+    content = message.get("content")
+    if not isinstance(content, list):
+        return False
+    for block in content:
+        if isinstance(block, dict) and _read_tool_matches(
+            block,
+            path_suffix=path_suffix,
+            offset=offset,
+        ):
+            return True
+    return False
+
+
+def _find_read_anchor_index(
+    records: list[dict[str, object]],
+    *,
+    path_suffix: str | None,
+    offset: int | None,
+) -> int | None:
+    """Return index of the last matching Read tool anchor, or any Read, or None."""
+    for i in range(len(records) - 1, -1, -1):
+        if records[i].get("role") != "assistant":
+            continue
+        if _record_has_read_tool(records[i], path_suffix=path_suffix, offset=offset):
+            return i
+    for i in range(len(records) - 1, -1, -1):
+        if records[i].get("role") != "assistant":
+            continue
+        if _record_has_read_tool(records[i], path_suffix=None, offset=None):
+            return i
+    return None
+
+
 def _extract_message_text(
     record: dict[str, object],
     *,
@@ -123,14 +195,86 @@ def _load_records(path: Path) -> list[dict[str, object]]:
     return records
 
 
-def _format_latest_assistant(path: Path, *, include_tools: bool) -> str | None:
-    for record in reversed(_load_records(path)):
+def _last_user_index(records: list[dict[str, object]]) -> int | None:
+    last_user = -1
+    for i, record in enumerate(records):
+        if record.get("role") == "user":
+            last_user = i
+    return last_user if last_user >= 0 else None
+
+
+def _collect_assistant_text(
+    records: list[dict[str, object]],
+    start: int,
+    end: int | None,
+    *,
+    include_tools: bool,
+) -> list[str]:
+    bodies: list[str] = []
+    limit = end if end is not None else len(records)
+    for record in records[start:limit]:
+        if record.get("role") != "assistant":
+            continue
+        body = _extract_message_text(record, include_tools=include_tools)
+        if body:
+            bodies.append(body)
+    return bodies
+
+
+def _format_latest_assistant(
+    records: list[dict[str, object]],
+    *,
+    include_tools: bool,
+) -> str | None:
+    for record in reversed(records):
         if record.get("role") != "assistant":
             continue
         body = _extract_message_text(record, include_tools=include_tools)
         if body:
             return body + "\n"
     return None
+
+
+def _format_since_last_user(
+    records: list[dict[str, object]],
+    *,
+    include_tools: bool,
+) -> str | None:
+    last_user = _last_user_index(records)
+    if last_user is None:
+        return None
+    bodies = _collect_assistant_text(
+        records,
+        last_user + 1,
+        None,
+        include_tools=include_tools,
+    )
+    if not bodies:
+        return None
+    return "\n\n".join(bodies) + "\n"
+
+
+def _format_since_read_anchor(
+    records: list[dict[str, object]],
+    *,
+    path_suffix: str,
+    offset: int,
+    through_end: bool,
+    include_tools: bool,
+) -> str | None:
+    anchor = _find_read_anchor_index(records, path_suffix=path_suffix, offset=offset)
+    if anchor is None:
+        return _format_since_last_user(records, include_tools=include_tools)
+    end = None if through_end else _last_user_index(records)
+    bodies = _collect_assistant_text(
+        records,
+        anchor + 1,
+        end,
+        include_tools=include_tools,
+    )
+    if not bodies:
+        return _format_latest_assistant(records, include_tools=include_tools)
+    return "\n\n".join(bodies) + "\n"
 
 
 def _format_full_transcript(path: Path, *, include_tools: bool) -> str:
@@ -151,7 +295,6 @@ def _format_full_transcript(path: Path, *, include_tools: bool) -> str:
 def _copy_to_clipboard(text: str) -> None:
     text = _normalize_text(text)
     if sys.platform == "win32":
-        # clip.exe expects UTF-16 LE with BOM; UTF-8 stdin becomes mojibake (e.g. ΓåÆ).
         payload = b"\xff\xfe" + text.encode("utf-16-le")
         subprocess.run(
             ["clip"],
@@ -182,7 +325,7 @@ def _configure_stdout_utf8() -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Copy latest Cursor assistant reply (default) or full chat.",
+        description="Copy Cursor assistant output for Claude handoff.",
     )
     parser.add_argument(
         "--workspace",
@@ -199,10 +342,37 @@ def main() -> int:
         action="store_true",
         help="List available transcript IDs (newest first) and exit.",
     )
-    parser.add_argument(
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument(
+        "--latest",
+        action="store_true",
+        help="Copy only the single most recent assistant message.",
+    )
+    mode.add_argument(
+        "--turn",
+        action="store_true",
+        help="Copy all assistant messages since the last user message.",
+    )
+    mode.add_argument(
         "--all",
         action="store_true",
-        help="Copy the full transcript instead of the latest assistant message.",
+        help="Copy the full transcript.",
+    )
+    parser.add_argument(
+        "--anchor-path",
+        default="nvme_sentinel/cli.py",
+        help="Preferred Read anchor path suffix (default: nvme_sentinel/cli.py).",
+    )
+    parser.add_argument(
+        "--anchor-offset",
+        type=int,
+        default=160,
+        help="Preferred Read anchor line offset (default: 160).",
+    )
+    parser.add_argument(
+        "--through-end",
+        action="store_true",
+        help="Include assistant output after the last user message (default: stop before it).",
     )
     parser.add_argument(
         "--include-tools",
@@ -236,14 +406,38 @@ def main() -> int:
     else:
         path = transcripts[0]
 
+    records = _load_records(path)
+
     if args.all:
         export = _format_full_transcript(path, include_tools=args.include_tools)
-    else:
-        latest = _format_latest_assistant(path, include_tools=args.include_tools)
+        mode_label = "full chat"
+    elif args.latest:
+        latest = _format_latest_assistant(records, include_tools=args.include_tools)
         if latest is None:
             print(f"No assistant message found in {path}", file=sys.stderr)
             return 1
         export = latest
+        mode_label = "latest reply"
+    elif args.turn:
+        turn = _format_since_last_user(records, include_tools=args.include_tools)
+        if turn is None:
+            print(f"No assistant turn found in {path}", file=sys.stderr)
+            return 1
+        export = turn
+        mode_label = "current turn"
+    else:
+        anchored = _format_since_read_anchor(
+            records,
+            path_suffix=args.anchor_path,
+            offset=args.anchor_offset,
+            through_end=args.through_end,
+            include_tools=args.include_tools,
+        )
+        if anchored is None:
+            print(f"No anchored assistant output found in {path}", file=sys.stderr)
+            return 1
+        export = anchored
+        mode_label = "since Read anchor"
 
     if args.dry_run:
         _configure_stdout_utf8()
@@ -251,8 +445,7 @@ def main() -> int:
         return 0
 
     _copy_to_clipboard(export)
-    mode = "full chat" if args.all else "latest reply"
-    print(f"Copied {mode} from {path.parent.name} ({len(export)} chars) to clipboard.")
+    print(f"Copied {mode_label} from {path.parent.name} ({len(export)} chars) to clipboard.")
     return 0
 
 

@@ -282,6 +282,20 @@ and is readable. On current hardware that precondition is **unproven** — USB/W
       confirm `data_units_written` delta > 0 **before** any LMCache/vLLM work.
 - [ ] Record in handoff: device path, OS, driver state, `telemetry_source` on both snapshots.
 
+**Laptop hardware probe (2026-06-19, admin pending — not verified):**
+
+| Device | Path | Bus | nvme-sentinel telemetry | PRE-FLIGHT role |
+|--------|------|-----|-------------------------|-----------------|
+| Micron 3400 (boot) | `C:` / `\\.\PhysicalDrive0` | NVMe | `native-nvme`, `device-io-control`, `wmi` | **Primary laptop candidate** — collect blocked on UAC (non-interactive shell); needs elevated PowerShell |
+| BIWIN PR2000 (external) | `E:` / `\\.\PhysicalDrive1` | USB | `wmi`, `usb-bridge-degraded` | Bridge-chip smartctl test pending admin; do not plan PRE-FLIGHT around it |
+
+smartmontools 7.5 installed. Non-admin smartctl on PhysicalDrive1: `Error=5` (access denied) for
+`sntjmicron`, `sntrealtek`, `sntasmedia` — inconclusive until elevated run. BIWIN bridge bypass
+via smartctl device-type overrides is a **5-minute free check**, not a project code path.
+
+**Decision:** cloud instance (`c5d.large` / `m5d.large`, instance-store NVMe) remains the guaranteed
+PRE-FLIGHT path. Laptop Micron is worth one elevated collect attempt before paying for cloud.
+
 **If no native target exists before the interview:** the offload run can still be built and
 demoed on mock/USB — but the report **must** show the degraded-telemetry banner, and the
 write-up states *"wear delta unmeasurable on available hardware"* as the honest boundary,
@@ -621,13 +635,34 @@ timeout kills the child); degraded-device benchmark uses `_BENCHMARK_DURATION_DE
 with a matching outer wrapper budget. `_with_timeout` retained only for calls with no kill boundary
 (NVML, `read_smart`/DeviceIoControl, blocked file reads).
 
-### Session priority pointer (2026-06-19)
+### Session priority pointer (2026-06-19, updated)
 
 | Priority | Item | Status |
 |----------|------|--------|
-| 1 | PART 9 PRE-FLIGHT (native-NVMe wear-readable target) | **Open — start here next session** |
-| 2 | `training_router.py` (PART 12 open item #2) | **Not built** — `openmw train` stub until this ships |
-| — | `STATUS.md` split from handoff | Defer until `MASTER_HANDOFF.md` > ~800 lines or PART 15 |
+| 1 | PART 9 PRE-FLIGHT | **In progress** — laptop mapped; elevated smartctl + `collect` on PhysicalDrive0 pending |
+| 2 | `training_router.py` | **Not built** — next after PRE-FLIGHT; `openmw train` stub |
+| — | `STATUS.md` split | Defer until `MASTER_HANDOFF.md` > ~800 lines or PART 15 |
+
+### Open item #4 — PRE-FLIGHT hardware probe (2026-06-19, admin pending)
+
+**Short-term goal:** run elevated smartctl on `\\.\PhysicalDrive1` (E: BIWIN); attempt
+`nvme-sentinel collect` on `\\.\PhysicalDrive0` (boot Micron). Paste verbatim output.
+
+**Long-term goal:** prove one native-NVMe path where `data_units_written` delta > 0 between
+two collects with a real write between — unblocks PART 9 flash-kv-cache exit gate.
+
+**Evidence:** `nvme-sentinel list-devices` on live laptop (2026-06-19); smartctl 7.5 installed;
+non-admin probes returned `Error=5`; `collect` on PhysicalDrive0 blocked at `Auto-elevate? [y/N]`
+in non-interactive shell. Pushed HEAD: `501c750` on `origin/main`.
+
+**Decision:** BIWIN = WMI-only in our stack unless elevated smartctl surprises; cloud `*d.large`
+remains guaranteed path. Do not scope bridge-chip code into nvme-sentinel (vendor-neutral positioning).
+
+**Not verified:** elevated smartctl output; admin `collect` snapshots; `data_units_written` delta.
+
+**Next Cursor action:** user runs elevated PowerShell commands from open item #4; paste output for review.
+
+**Next Claude action:** review elevated probe output; gate whether laptop Micron closes PRE-FLIGHT or cloud required.
 
 ---
 
