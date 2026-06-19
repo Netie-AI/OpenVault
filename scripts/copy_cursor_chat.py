@@ -1,13 +1,14 @@
 """Copy Cursor agent output to the clipboard for Claude handoff.
 
-Default: all assistant text after the last Read tool anchor (prefers
-nvme_sentinel/cli.py offset 160 when present), through end of transcript.
-Skips tool-only records and [REDACTED] stubs.
+Default (Ctrl+Shift+Alt+C): the latest handoff block — most recent assistant
+message that looks like project progress / status (HEAD:, Project progress,
+Evidence Bundle). Falls back to the current turn, then the latest reply.
 
 Modes:
-  (default)  since last Read anchor → end
-  --latest     single most recent assistant message
+  (default)  latest handoff block
   --turn       all assistant messages since last user message
+  --latest     single most recent assistant message
+  --since-read assistant text after last Read tool anchor (legacy)
   --all        full transcript
 
 Usage:
@@ -221,6 +222,34 @@ def _collect_assistant_text(
     return bodies
 
 
+_HANDOFF_MARKERS = (
+    "## Project progress",
+    "Project progress (for Claude",
+    "**HEAD:**",
+    "## Evidence Bundle",
+    "## Cursor Execution Result",
+    "Message for Claude:",
+)
+
+
+def _looks_like_handoff(text: str) -> bool:
+    return any(marker in text for marker in _HANDOFF_MARKERS)
+
+
+def _format_handoff(
+    records: list[dict[str, object]],
+    *,
+    include_tools: bool,
+) -> str | None:
+    for record in reversed(records):
+        if record.get("role") != "assistant":
+            continue
+        body = _extract_message_text(record, include_tools=include_tools)
+        if body and _looks_like_handoff(body):
+            return body + "\n"
+    return None
+
+
 def _format_latest_assistant(
     records: list[dict[str, object]],
     *,
@@ -344,14 +373,19 @@ def main() -> int:
     )
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument(
-        "--latest",
+        "--since-read",
         action="store_true",
-        help="Copy only the single most recent assistant message.",
+        help="Copy assistant text after the last Read tool anchor (legacy).",
     )
     mode.add_argument(
         "--turn",
         action="store_true",
         help="Copy all assistant messages since the last user message.",
+    )
+    mode.add_argument(
+        "--latest",
+        action="store_true",
+        help="Copy only the single most recent assistant message.",
     )
     mode.add_argument(
         "--all",
@@ -411,6 +445,19 @@ def main() -> int:
     if args.all:
         export = _format_full_transcript(path, include_tools=args.include_tools)
         mode_label = "full chat"
+    elif args.since_read:
+        anchored = _format_since_read_anchor(
+            records,
+            path_suffix=args.anchor_path,
+            offset=args.anchor_offset,
+            through_end=args.through_end,
+            include_tools=args.include_tools,
+        )
+        if anchored is None:
+            print(f"No anchored assistant output found in {path}", file=sys.stderr)
+            return 1
+        export = anchored
+        mode_label = "since Read anchor"
     elif args.latest:
         latest = _format_latest_assistant(records, include_tools=args.include_tools)
         if latest is None:
@@ -426,18 +473,22 @@ def main() -> int:
         export = turn
         mode_label = "current turn"
     else:
-        anchored = _format_since_read_anchor(
-            records,
-            path_suffix=args.anchor_path,
-            offset=args.anchor_offset,
-            through_end=args.through_end,
-            include_tools=args.include_tools,
-        )
-        if anchored is None:
-            print(f"No anchored assistant output found in {path}", file=sys.stderr)
-            return 1
-        export = anchored
-        mode_label = "since Read anchor"
+        handoff = _format_handoff(records, include_tools=args.include_tools)
+        if handoff is not None:
+            export = handoff
+            mode_label = "project handoff"
+        else:
+            turn = _format_since_last_user(records, include_tools=args.include_tools)
+            if turn is not None:
+                export = turn
+                mode_label = "current turn"
+            else:
+                latest = _format_latest_assistant(records, include_tools=args.include_tools)
+                if latest is None:
+                    print(f"No handoff output found in {path}", file=sys.stderr)
+                    return 1
+                export = latest
+                mode_label = "latest reply"
 
     if args.dry_run:
         _configure_stdout_utf8()
