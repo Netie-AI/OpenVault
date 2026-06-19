@@ -294,7 +294,10 @@ smartmontools 7.5 installed. Non-admin smartctl on PhysicalDrive1: `Error=5` (ac
 via smartctl device-type overrides is a **5-minute free check**, not a project code path.
 
 **Decision:** cloud instance (`c5d.large` / `m5d.large`, instance-store NVMe) remains the guaranteed
-PRE-FLIGHT path. Laptop Micron is worth one elevated collect attempt before paying for cloud.
+PRE-FLIGHT path for the **wear-delta gate** (two collects bracketing a real write). Laptop Micron
+`collect` confirms only whether Windows admin passthrough works — **not** permission to run endurance
+workloads on `\\.\PhysicalDrive0` (boot drive). BIWIN bridge bypass: **closed** (2026-06-19 smartctl,
+see open item #4).
 
 **If no native target exists before the interview:** the offload run can still be built and
 demoed on mock/USB — but the report **must** show the degraded-telemetry banner, and the
@@ -639,30 +642,50 @@ with a matching outer wrapper budget. `_with_timeout` retained only for calls wi
 
 | Priority | Item | Status |
 |----------|------|--------|
-| 1 | PART 9 PRE-FLIGHT | **In progress** — laptop mapped; elevated smartctl + `collect` on PhysicalDrive0 pending |
+| 1 | PART 9 PRE-FLIGHT | **Partial** — BIWIN bridge closed; Micron `collect` needs user elevated shell; wear-delta → cloud |
 | 2 | `training_router.py` | **Not built** — next after PRE-FLIGHT; `openmw train` stub |
 | — | `STATUS.md` split | Defer until `MASTER_HANDOFF.md` > ~800 lines or PART 15 |
 
-### Open item #4 — PRE-FLIGHT hardware probe (2026-06-19, admin pending)
+### Open item #4 — PRE-FLIGHT hardware probe (2026-06-19, partial)
 
-**Short-term goal:** run elevated smartctl on `\\.\PhysicalDrive1` (E: BIWIN); attempt
-`nvme-sentinel collect` on `\\.\PhysicalDrive0` (boot Micron). Paste verbatim output.
+**Short-term goal:** user runs `collect` on `\\.\PhysicalDrive0` from **elevated** PowerShell (Cursor
+agent shell is non-admin and cannot answer `Auto-elevate? [y/N]`). Paste `before_micron.json` telemetry.
 
-**Long-term goal:** prove one native-NVMe path where `data_units_written` delta > 0 between
-two collects with a real write between — unblocks PART 9 flash-kv-cache exit gate.
+**Long-term goal:** wear-delta PRE-FLIGHT on **cloud instance-store NVMe** (not boot Micron, not BIWIN).
 
-**Evidence:** `nvme-sentinel list-devices` on live laptop (2026-06-19); smartctl 7.5 installed;
-non-admin probes returned `Error=5`; `collect` on PhysicalDrive0 blocked at `Auto-elevate? [y/N]`
-in non-interactive shell. Pushed HEAD: `501c750` on `origin/main`.
+**Evidence (Cursor, 2026-06-19, non-admin shell):**
 
-**Decision:** BIWIN = WMI-only in our stack unless elevated smartctl surprises; cloud `*d.large`
-remains guaranteed path. Do not scope bridge-chip code into nvme-sentinel (vendor-neutral positioning).
+```text
+=== smartctl --scan ===
+/dev/sda -d nvme # /dev/sda, NVMe device
+/dev/sdb -d scsi # /dev/sdb, SCSI device
 
-**Not verified:** elevated smartctl output; admin `collect` snapshots; `data_units_written` delta.
+=== sntjmicron / sntrealtek / sntasmedia on \\.\PhysicalDrive1 ===
+Smartctl open device: \\.\PhysicalDrive1 [USB NVMe <chip>] failed: Invalid argument
+(all three bridge types — no NVMe log data)
+```
 
-**Next Cursor action:** user runs elevated PowerShell commands from open item #4; paste output for review.
+`collect --device \\.\PhysicalDrive0` → blocked at `Auto-elevate? [y/N]` (non-interactive TTY).
+`origin/main` HEAD: `9eb644b` (see tooling note below).
 
-**Next Claude action:** review elevated probe output; gate whether laptop Micron closes PRE-FLIGHT or cloud required.
+**Decision:** BIWIN bridge NVMe admin passthrough **does not work** via smartmontools device-type
+overrides on this enclosure — stop investigating bypass. Micron native snapshot (if elevated collect
+succeeds) confirms ioctl path only. **Wear-delta PRE-FLIGHT → cloud `*d.large`.**
+
+**Not verified:** elevated `before_micron.json`; `data_units_written` delta (requires cloud write bracket).
+
+**Next Cursor action:** after user pastes elevated `collect` output, record `telemetry_source` in handoff.
+
+**Next Claude action:** gate cloud PRE-FLIGHT scoping; do not treat Micron snapshot as write-target approval.
+
+**Backlog:** `collect --yes` (or env var) to skip `Auto-elevate?` prompt for scripted two-collect sequences.
+
+### Tooling note — `9eb644b` (2026-06-19)
+
+`9eb644b` supersedes `2e3f355` on `scripts/copy_cursor_chat.py`: default `Ctrl+Shift+Alt+C` copies the
+**latest handoff block** (messages containing `Project progress`, `HEAD:`, `Evidence Bundle`) instead of
+anchoring on a stale `cli.py` Read from earlier in the thread. `--since-read` retains legacy anchor behavior.
+Intentional — fixes copy plugin pasting outdated BIWIN content when starting a new Claude chat.
 
 ---
 
