@@ -9,9 +9,11 @@ from nvme_sentinel.inventory.models import InventoryDevice
 from nvme_sentinel.inventory.windows import list_windows_devices
 
 
-def list_devices() -> list[InventoryDevice]:
+def list_devices(*, timeout_s: float | None = None) -> list[InventoryDevice]:
     """Return storage devices for the current platform."""
     if sys.platform == "win32":
+        if timeout_s is not None:
+            return list_windows_devices(timeout_s=timeout_s)
         return list_windows_devices()
     if sys.platform == "linux":
         return list_linux_devices()

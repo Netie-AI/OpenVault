@@ -515,11 +515,12 @@ accounting, VIP feature unlock.
 1. ~~Decide scope in §4~~ — **done** (local freemium BYORT, 2026-06-19).
 2. ~~Apply comfortable_tier fix~~ — **done** on `main` after `804217b`.
 3. ~~Build CLI front door~~ — **done** (PART 12: `openmw doctor` / `route` / stub `train` / `infer`).
-4. **Next:** `training_router.py` — hardware-aware training formula (PART 12, item #2 below)
-   so `openmw train` can move from stub to real.
-5. Before trusting any future "PART 6 WebUI in progress" report: fresh clone +
+4. ~~Discovery/benchmark timeout architecture~~ — **done** (open item #3 below; subprocess kill boundary + `duration + margin` benchmark budget).
+5. **Next (highest leverage): PART 9 PRE-FLIGHT** — native-NVMe wear-readable target. Blocks flash-kv-cache exit gate and downstream wear artifacts for both inference and training measurement loops. See PART 9 PRE-FLIGHT checklist.
+6. **Next (important, after PRE-FLIGHT): `training_router.py`** — **not built** (PART 12 open item #2). `openmw train` remains an explicit stub (exit 2) until this exists. Design constraints drafted below; do not treat as complete or in progress.
+7. Before trusting any future "PART 6 WebUI in progress" report: fresh clone +
    `uv run pytest -q` + `uv run mypy openmw` + `find OpenMW -iname "*.tsx"`.
-6. PART 8 local VIP license gate after WebUI shell exists.
+8. PART 8 local VIP license gate after WebUI shell exists.
 
 ---
 
@@ -558,7 +559,7 @@ accounting, VIP feature unlock.
 | `openmw train --dataset PATH` | **Explicit stub, exit 2** | Blocked on `training_router.py` not existing — see item #2 below. Does not pretend to work. |
 | `openmw infer --model MODEL_ID` | **Explicit stub, exit 2** | Blocked on OpenMW-Plan PART 9 (VIP runtime connector, hardware-gated). |
 
-### Open item #2 — `training_router.py` (not yet built)
+### Open item #2 — `training_router.py` (not yet built — next after PRE-FLIGHT)
 
 `training_config.py` (27 lines) is static `lora_r=16, per_device_train_batch_size=2`
 defaults with **zero `DeviceProfile` awareness** — an 8 GB VRAM box and an 80 GB box get
@@ -587,6 +588,46 @@ uv sync && uv run pytest tests/ -q && uv run mypy openmw tests          # 220 pa
 uv run openmw doctor -o /tmp/doctor_check
 uv run openmw route llama-3.3-8b
 ```
+
+### Open item #3 — discovery/benchmark timeout architecture (2026-06-19, implemented)
+
+Verified against pushed HEAD (`300ac77`), independent of the unpushed `b46bfd0` wrapper:
+
+- `list_windows_devices()` (`nvme_sentinel/inventory/windows.py`) spawns a fresh `powershell.exe`
+  per call running `Get-PhysicalDisk | ForEach-Object { Get-Partition ... }` — cold process start +
+  Storage Management Service first-query latency + N serial nested WMI calls. 5s is tight against
+  this pattern's known real-world cost; not necessarily a regression.
+- Root cause of leaked `openmw.exe` zombies (hypothesis, not confirmed — `b46bfd0` not pushed):
+  a `ThreadPoolExecutor`-style `future.result(timeout=N)` wrapper bounds the *caller's* wait but
+  does not kill the underlying `subprocess.run()`/file-read call, which keeps running to its own
+  internal limit (30s inner subprocess timeout vs 5s wrapper budget — mismatched, not unified).
+- Benchmark timeout cause (5s intended loop exceeding 15s wrapper) — **not diagnosed**, file I/O
+  only, no subprocess involved. Needs per-chunk timing instrumentation on real hardware to confirm;
+  candidate causes (Defender/EDR scan-on-access, Controlled Folder Access) are environmental and
+  unverifiable from source alone.
+
+**Decision:** do not skip the benchmark when `select_nvme` degrades. Shrink `duration_s` for the
+unknown-device case instead, and fix the timeout architecture at its actual blocking boundary
+(`subprocess.run(timeout=)` / `Popen.communicate(timeout=)` + explicit `.kill()`), not via a thread
+wrapper around it. Align inner subprocess timeout to the outer probe budget — two disagreeing
+limits is the proximate cause of the zombie processes.
+
+**Backlog:** native Win32 device enumeration (`_windows_native.py` already proves the ctypes pattern
+for passthrough) would remove the PowerShell spawn from the discovery path entirely. Not a v1 fix.
+
+**Implemented (Cursor, same session):** `list_windows_devices(timeout_s=)` aligned to probe budget;
+`_select_primary_nvme()` calls `list_devices(timeout_s=)` directly (no thread wrapper — subprocess
+timeout kills the child); degraded-device benchmark uses `_BENCHMARK_DURATION_DEGRADED_S` (1.5s)
+with a matching outer wrapper budget. `_with_timeout` retained only for calls with no kill boundary
+(NVML, `read_smart`/DeviceIoControl, blocked file reads).
+
+### Session priority pointer (2026-06-19)
+
+| Priority | Item | Status |
+|----------|------|--------|
+| 1 | PART 9 PRE-FLIGHT (native-NVMe wear-readable target) | **Open — start here next session** |
+| 2 | `training_router.py` (PART 12 open item #2) | **Not built** — `openmw train` stub until this ships |
+| — | `STATUS.md` split from handoff | Defer until `MASTER_HANDOFF.md` > ~800 lines or PART 15 |
 
 ---
 

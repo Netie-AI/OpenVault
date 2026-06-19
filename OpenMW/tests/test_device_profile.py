@@ -328,7 +328,8 @@ class TestHardwareProbeTimeout:
     @patch("openmw.device_profile._probe_nvidia_gpu", return_value=("RTX 4090", 24.0))
     @patch("openmw.device_profile._probe_cpu_cores", return_value=16)
     @patch("openmw.device_profile._probe_system_ram_gb", return_value=64.0)
-    @patch("openmw.device_profile._BENCHMARK_TIMEOUT_S", 0.2)
+    @patch("openmw.device_profile._BENCHMARK_DURATION_S", 0.01)
+    @patch("openmw.device_profile._BENCHMARK_TIMEOUT_MARGIN_S", 0.19)
     def test_detect_uncached_survives_hung_benchmark(
         self,
         _mock_ram: MagicMock,
@@ -355,3 +356,31 @@ class TestHardwareProbeTimeout:
 
         assert elapsed < 2.0, f"_detect_uncached did not survive a hung benchmark: {elapsed:.2f}s"
         assert profile.nvme_seq_read_gbps == 3.5  # _DEFAULT_NVME_SEQ_READ_GBPS, not the hung 999.0
+
+    @patch("openmw.device_profile._estimate_endurance_tbw", return_value=0.0)
+    @patch("openmw.device_profile._select_primary_nvme", return_value=(None, None))
+    @patch("openmw.device_profile._probe_apple_silicon", return_value=(None, False))
+    @patch("openmw.device_profile._probe_amd_gpu", return_value=(None, 0.0))
+    @patch("openmw.device_profile._probe_nvidia_gpu", return_value=(None, 0.0))
+    @patch("openmw.device_profile.psutil.cpu_count", return_value=8)
+    @patch("openmw.device_profile.psutil.virtual_memory")
+    def test_detect_uses_shorter_benchmark_when_nvme_unknown(
+        self,
+        mock_mem: MagicMock,
+        *_mocks: object,
+    ) -> None:
+        mock_mem.return_value = _mock_ram()
+        seen: dict[str, float] = {}
+
+        def _capture_benchmark(**kwargs: object) -> float:
+            duration = kwargs.get("duration_s")
+            if isinstance(duration, (int, float)):
+                seen["duration_s"] = float(duration)
+            return 3.5
+
+        from openmw import device_profile as dp
+
+        profile = _detect_uncached(benchmark_fn=_capture_benchmark)
+
+        assert profile.nvme_model is None
+        assert seen["duration_s"] == dp._BENCHMARK_DURATION_DEGRADED_S

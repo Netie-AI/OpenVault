@@ -23,19 +23,20 @@ log = structlog.get_logger()
 _T = TypeVar("_T")
 _SENTINEL = object()
 
-# Hard wall-clock cap on hardware probes that may block indefinitely on native
-# Windows ctypes calls (DeviceIoControl has no timeout/overlapped-I/O path —
-# see PART 12 hang investigation in MASTER_HANDOFF.md). A daemon thread is used
-# deliberately: ThreadPoolExecutor registers an atexit handler that *joins*
-# worker threads even after a caller-side timeout fires, which re-introduces
-# the hang at process exit. A plain daemon thread leaks silently instead.
+# Wall-clock cap on subprocess-backed probes (PowerShell discovery) and as the default
+# budget passed into list_devices(). subprocess.run(timeout=) kills the child on expiry.
 _HARDWARE_PROBE_TIMEOUT_S = 5.0
 
-# Benchmark has its own internal 5s deadline loop (_BENCHMARK_DURATION_S below) but
-# that deadline check only fires *between* reads - a single blocked read/write/tempfile
-# call on a stalled drive can still hang past it. This wrapper timeout needs headroom
-# above the benchmark's own intended duration so a slow-but-honest run isn't killed early.
-_BENCHMARK_TIMEOUT_S = 15.0
+# Full benchmark when NVMe identity is known; shorter run when select_nvme degraded.
+_BENCHMARK_DURATION_S = 5.0
+_BENCHMARK_DURATION_DEGRADED_S = 1.5
+# Headroom above duration_s for blocked read/write/tempfile calls that ignore the loop
+# deadline. _with_timeout is used here because file I/O has no kill boundary on Windows.
+_BENCHMARK_TIMEOUT_MARGIN_S = 2.0
+
+# Daemon-thread wrapper for calls with no kill boundary (NVML, DeviceIoControl, blocked
+# file reads). ThreadPoolExecutor is avoided — its atexit handler joins workers and can
+# re-introduce hangs at process exit.
 
 
 def _with_timeout(
@@ -90,7 +91,6 @@ _GPU_BANDWIDTH_GBPS: dict[str, float] = {
 _DEFAULT_GPU_BANDWIDTH_GBPS = 100.0
 _DEFAULT_CPU_RAM_BANDWIDTH_GBPS = 50.0
 _DEFAULT_NVME_SEQ_READ_GBPS = 3.5
-_BENCHMARK_DURATION_S = 5.0
 _BENCHMARK_CHUNK_BYTES = 128 * 1024 * 1024
 
 
@@ -217,14 +217,17 @@ def _probe_cpu_cores() -> int:
     return max(int(count or 1), 1)
 
 
-def _select_primary_nvme() -> tuple[str | None, str | None]:
+def _select_primary_nvme(
+    *,
+    timeout_s: float = _HARDWARE_PROBE_TIMEOUT_S,
+) -> tuple[str | None, str | None]:
     """Return (model, device_path) for the boot or first NVMe drive."""
     try:
         from nvme_sentinel.inventory.discovery import list_devices
     except ImportError:
         return None, None
 
-    devices = list_devices()
+    devices = list_devices(timeout_s=timeout_s)
     nvme_devices = [d for d in devices if d.is_nvme]
     if not nvme_devices:
         return None, None
@@ -392,19 +395,24 @@ def _detect_uncached(
         gpu_bandwidth_gbps = _gpu_bandwidth_from_name(gpu_name)
 
     log.info("detect_stage", stage="select_nvme_start")
-    _no_nvme_default: tuple[str | None, str | None] = (None, None)
-    nvme_model, nvme_path = _with_timeout(
-        _select_primary_nvme,
-        timeout_s=_HARDWARE_PROBE_TIMEOUT_S,
-        default=_no_nvme_default,
-    )
+    try:
+        nvme_model, nvme_path = _select_primary_nvme(timeout_s=_HARDWARE_PROBE_TIMEOUT_S)
+    except Exception as exc:  # noqa: BLE001 — inventory paths vary by platform
+        log.debug("select_nvme_failed", error=str(exc))
+        nvme_model, nvme_path = None, None
     log.info("detect_stage", stage="select_nvme_done", nvme_model=nvme_model)
 
-    log.info("detect_stage", stage="benchmark_start")
+    benchmark_duration_s = (
+        _BENCHMARK_DURATION_DEGRADED_S if nvme_path is None else _BENCHMARK_DURATION_S
+    )
+    benchmark_timeout_s = benchmark_duration_s + _BENCHMARK_TIMEOUT_MARGIN_S
+
+    log.info("detect_stage", stage="benchmark_start", duration_s=benchmark_duration_s)
     nvme_seq_read_gbps = _with_timeout(
         benchmark,
         device_path=nvme_path,
-        timeout_s=_BENCHMARK_TIMEOUT_S,
+        duration_s=benchmark_duration_s,
+        timeout_s=benchmark_timeout_s,
         default=_DEFAULT_NVME_SEQ_READ_GBPS,
     )
     log.info("detect_stage", stage="benchmark_done", gbps=round(nvme_seq_read_gbps, 2))

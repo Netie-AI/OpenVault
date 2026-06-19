@@ -8,7 +8,10 @@ import subprocess
 from nvme_sentinel.inventory.models import InventoryDevice
 
 
-def list_windows_devices() -> list[InventoryDevice]:
+_DEFAULT_LIST_TIMEOUT_S = 5.0
+
+
+def list_windows_devices(*, timeout_s: float = _DEFAULT_LIST_TIMEOUT_S) -> list[InventoryDevice]:
     """Enumerate physical disks via Get-PhysicalDisk + partition drive letters."""
     ps = (
         "Get-PhysicalDisk | ForEach-Object { "
@@ -27,13 +30,16 @@ def list_windows_devices() -> list[InventoryDevice]:
         "} "
         "} | ConvertTo-Json -Compress"
     )
-    result = subprocess.run(
-        ["powershell", "-NoProfile", "-Command", ps],
-        capture_output=True,
-        text=True,
-        timeout=30,
-        check=False,
-    )
+    try:
+        result = subprocess.run(
+            ["powershell", "-NoProfile", "-Command", ps],
+            capture_output=True,
+            text=True,
+            timeout=timeout_s,
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        return []
     if result.returncode != 0 or not result.stdout.strip():
         return []
 
