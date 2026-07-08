@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OpenMW — Hardware Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg-deep: #070a12;
+      --bg-mesh-1: #0d1528;
+      --bg-mesh-2: #121a32;
+      --glass: rgba(255, 255, 255, 0.055);
+      --glass-strong: rgba(255, 255, 255, 0.09);
+      --glass-border: rgba(255, 255, 255, 0.14);
+      --glass-highlight: rgba(255, 255, 255, 0.22);
+      --blur: 28px;
+      --text: rgba(255, 255, 255, 0.92);
+      --text-muted: rgba(255, 255, 255, 0.55);
+      --accent: #6eb5ff;
+      --accent-soft: rgba(110, 181, 255, 0.18);
+      --success: #5ee4a8;
+      --warn: #ffb347;
+      --danger: #ff6b6b;
+      --serif: "Newsreader", "Georgia", serif;
+      --sans: "Outfit", system-ui, sans-serif;
+      --radius: 20px;
+      --radius-sm: 14px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--sans);
+      color: var(--text);
+      background: var(--bg-deep);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .mesh-bg {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 15% 10%, rgba(62, 120, 255, 0.22), transparent 55%),
+        radial-gradient(ellipse 70% 50% at 85% 20%, rgba(140, 90, 255, 0.14), transparent 50%),
+        radial-gradient(ellipse 60% 40% at 50% 90%, rgba(40, 180, 200, 0.1), transparent 55%),
+        linear-gradient(165deg, var(--bg-mesh-1) 0%, var(--bg-deep) 45%, var(--bg-mesh-2) 100%);
+    }
+
+    .mesh-bg::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+      pointer-events: none;
+    }
+
+    .app {
+      position: relative;
+      z-index: 1;
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 28px 24px 64px;
+    }
+
+    .glass {
+      background: var(--glass);
+      backdrop-filter: blur(var(--blur)) saturate(160%);
+      -webkit-backdrop-filter: blur(var(--blur)) saturate(160%);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius);
+      box-shadow:
+        inset 0 1px 0 var(--glass-highlight),
+        0 8px 32px rgba(0, 0, 0, 0.35);
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 18px 24px;
+      margin-bottom: 24px;
+    }
+
+    .brand h1 {
+      font-family: var(--serif);
+      font-size: 1.65rem;
+      font-weight: 500;
+      letter-spacing: -0.02em;
+    }
+
+    .brand p {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .scan-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      background: var(--glass-strong);
+      border: 1px solid var(--glass-border);
+    }
+
+    .scan-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      animation: pulse 2s ease infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.85); }
+    }
+
+    nav.tabs {
+      display: flex;
+      gap: 6px;
+      padding: 6px;
+      margin-bottom: 24px;
+      border-radius: 999px;
+      width: fit-content;
+    }
+
+    nav.tabs button {
+      font-family: var(--sans);
+      font-size: 0.82rem;
+      font-weight: 500;
+      padding: 10px 18px;
+      border: none;
+      border-radius: 999px;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.25s ease;
+    }
+
+    nav.tabs button.active {
+      background: var(--glass-strong);
+      color: var(--text);
+      border: 1px solid var(--glass-border);
+      box-shadow: inset 0 1px 0 var(--glass-highlight);
+    }
+
+    .panel { display: none; animation: fadeUp 0.45s ease; }
+    .panel.active { display: block; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .section-title {
+      font-family: var(--serif);
+      font-size: 1.35rem;
+      font-weight: 500;
+      margin-bottom: 6px;
+    }
+
+    .section-sub {
+      color: var(--text-muted);
+      font-size: 0.88rem;
+      margin-bottom: 20px;
+    }
+
+    /* Detection — Samsung Magician style */
+    .detect-grid {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 900px) {
+      .detect-grid { grid-template-columns: 1fr; }
+    }
+
+    .health-ring-wrap {
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    .health-ring {
+      position: relative;
+      width: 160px;
+      height: 160px;
+      margin: 12px 0 16px;
+    }
+
+    .health-ring svg { transform: rotate(-90deg); }
+
+    .health-ring circle.track {
+      fill: none;
+      stroke: rgba(255, 255, 255, 0.08);
+      stroke-width: 10;
+    }
+
+    .health-ring circle.progress {
+      fill: none;
+      stroke: url(#ringGrad);
+      stroke-width: 10;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .health-value {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .health-value span:first-child {
+      font-family: var(--serif);
+      font-size: 2.4rem;
+      font-weight: 500;
+      line-height: 1;
+    }
+
+    .health-value span:last-child {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-top: 4px;
+    }
+
+    .device-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+    }
+
+    .device-card {
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+
+    .device-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(110, 181, 255, 0.35);
+    }
+
+    .device-card::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent), transparent);
+      opacity: 0.6;
+    }
+
+    .device-kind {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+
+    .device-name {
+      font-family: var(--serif);
+      font-size: 1.05rem;
+      margin-bottom: 14px;
+      line-height: 1.3;
+    }
+
+    .device-metrics {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .metric-block label {
+      display: block;
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .metric-block strong {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .status-badge {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      font-size: 0.65rem;
+      padding: 4px 10px;
+      border-radius: 999px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 600;
+    }
+
+    .status-badge.good {
+      background: rgba(94, 228, 168, 0.15);
+      color: var(--success);
+      border: 1px solid rgba(94, 228, 168, 0.3);
+    }
+
+    .status-badge.caution {
+      background: rgba(255, 179, 71, 0.15);
+      color: var(--warn);
+      border: 1px solid rgba(255, 179, 71, 0.3);
+    }
+
+    /* Data flow */
+    .flow-canvas {
+      padding: 32px 24px;
+      overflow-x: auto;
+    }
+
+    .flow-track {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      min-width: 720px;
+      justify-content: center;
+    }
+
+    .flow-node {
+      flex: 0 0 auto;
+      width: 108px;
+      text-align: center;
+      position: relative;
+    }
+
+    .flow-icon {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 10px;
+      border-radius: 18px;
+      background: var(--glass-strong);
+      border: 1px solid var(--glass-border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.62rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      color: var(--accent);
+      transition: all 0.35s ease;
+    }
+
+    .flow-node.bottleneck .flow-icon {
+      border-color: rgba(255, 107, 107, 0.6);
+      background: rgba(255, 107, 107, 0.12);
+      box-shadow: 0 0 24px rgba(255, 107, 107, 0.25);
+    }
+
+    .flow-node.active .flow-icon {
+      border-color: rgba(110, 181, 255, 0.5);
+      animation: flowGlow 1.8s ease infinite;
+    }
+
+    @keyframes flowGlow {
+      0%, 100% { box-shadow: 0 0 0 rgba(110, 181, 255, 0); }
+      50% { box-shadow: 0 0 20px rgba(110, 181, 255, 0.35); }
+    }
+
+    .flow-label {
+      font-size: 0.72rem;
+      font-weight: 500;
+      line-height: 1.25;
+    }
+
+    .flow-ms {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .flow-connector {
+      flex: 0 0 48px;
+      height: 2px;
+      background: linear-gradient(90deg, var(--glass-border), var(--accent), var(--glass-border));
+      position: relative;
+      opacity: 0.5;
+    }
+
+    .flow-connector::after {
+      content: "";
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      top: -3px;
+      left: 0;
+      animation: packetMove 2.4s linear infinite;
+    }
+
+    @keyframes packetMove {
+      0% { left: 0; opacity: 0; }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
+      100% { left: calc(100% - 8px); opacity: 0; }
+    }
+
+    /* Bottleneck waterfall */
+    .waterfall {
+      padding: 24px;
+    }
+
+    .hop-row {
+      display: grid;
+      grid-template-columns: 140px 1fr 80px;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 12px;
+    }
+
+    .hop-label {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+    }
+
+    .hop-bar-wrap {
+      height: 28px;
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .hop-bar {
+      height: 100%;
+      border-radius: 8px;
+      background: linear-gradient(90deg, rgba(110, 181, 255, 0.5), rgba(110, 181, 255, 0.85));
+      transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+      min-width: 4px;
+    }
+
+    .hop-row.bottleneck .hop-bar {
+      background: linear-gradient(90deg, rgba(255, 107, 107, 0.5), rgba(255, 140, 100, 0.9));
+    }
+
+    .hop-ms {
+      font-size: 0.82rem;
+      font-weight: 600;
+      text-align: right;
+    }
+
+    .bottleneck-callout {
+      margin-top: 20px;
+      padding: 16px 20px;
+      border-radius: var(--radius-sm);
+      background: rgba(255, 107, 107, 0.08);
+      border: 1px solid rgba(255, 107, 107, 0.25);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .bottleneck-callout strong {
+      font-family: var(--serif);
+      font-size: 1.1rem;
+      color: #ff9a9a;
+    }
+
+    /* Performance comparison */
+    .perf-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 280px;
+      gap: 18px;
+    }
+
+    @media (max-width: 960px) {
+      .perf-grid { grid-template-columns: 1fr; }
+    }
+
+    .perf-card {
+      padding: 24px;
+      text-align: center;
+    }
+
+    .perf-card h3 {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .perf-value {
+      font-family: var(--serif);
+      font-size: 2.8rem;
+      font-weight: 500;
+      line-height: 1;
+    }
+
+    .perf-unit {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+
+    .speedup-hero {
+      padding: 28px 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(145deg, rgba(110, 181, 255, 0.12), rgba(94, 228, 168, 0.08));
+    }
+
+    .speedup-hero .pct {
+      font-family: var(--serif);
+      font-size: 3.2rem;
+      font-weight: 500;
+      background: linear-gradient(135deg, var(--accent), var(--success));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .speedup-hero p {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-top: 8px;
+      text-align: center;
+    }
+
+    .feature-list {
+      margin-top: 20px;
+      padding: 20px 24px;
+    }
+
+    .feature-list ul {
+      list-style: none;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 10px;
+    }
+
+    .feature-list li {
+      font-size: 0.85rem;
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .feature-list li::before {
+      content: "→ ";
+      color: var(--accent);
+    }
+
+    .routing-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .layer-chip {
+      padding: 16px;
+      text-align: center;
+      border-radius: var(--radius-sm);
+    }
+
+    .layer-chip span {
+      display: block;
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .layer-chip strong {
+      font-family: var(--serif);
+      font-size: 1.6rem;
+      font-weight: 500;
+    }
+
+    footer {
+      margin-top: 32px;
+      text-align: center;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="mesh-bg"></div>
+  <div class="app">
+    <header class="glass">
+      <div class="brand">
+        <h1>OpenMW</h1>
+        <p>Bring Your Own Runtime · Hardware Intelligence</p>
+      </div>
+      <div class="scan-pill">
+        <span class="scan-dot"></span>
+        <span id="scanStatus">Scanning host…</span>
+      </div>
+    </header>
+
+    <nav class="tabs glass" role="tablist">
+      <button type="button" class="active" data-tab="detect">Detection</button>
+      <button type="button" data-tab="flow">Data Flow</button>
+      <button type="button" data-tab="bottleneck">Bottleneck</button>
+      <button type="button" data-tab="performance">Middleware Gain</button>
+    </nav>
+
+    <!-- DETECTION -->
+    <section id="panel-detect" class="panel active">
+      <h2 class="section-title">System Detection</h2>
+      <p class="section-sub">Samsung Magician–style host inventory · nvme-sentinel + NVML + psutil</p>
+      <div class="detect-grid">
+        <div class="glass health-ring-wrap">
+          <span style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em">Overall Health</span>
+          <div class="health-ring">
+            <svg width="160" height="160" viewBox="0 0 160 160">
+              <defs>
+                <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#6eb5ff"/>
+                  <stop offset="100%" stop-color="#5ee4a8"/>
+                </linearGradient>
+              </defs>
+              <circle class="track" cx="80" cy="80" r="68"/>
+              <circle class="progress" id="healthRing" cx="80" cy="80" r="68"
+                stroke-dasharray="427.26" stroke-dashoffset="427.26"/>
+            </svg>
+            <div class="health-value">
+              <span id="healthPct">—</span>
+              <span>Score</span>
+            </div>
+          </div>
+          <p id="detectSummary" style="font-size:0.85rem;color:var(--text-muted);line-height:1.5"></p>
+        </div>
+        <div class="device-cards" id="deviceCards"></div>
+      </div>
+    </section>
+
+    <!-- DATA FLOW -->
+    <section id="panel-flow" class="panel">
+      <h2 class="section-title">Inference Data Path</h2>
+      <p class="section-sub">KV offload hop sequence · SSD admin → PCIe → VRAM → GPU compute</p>
+      <div class="glass flow-canvas">
+        <div class="flow-track" id="flowTrack"></div>
+      </div>
+    </section>
+
+    <!-- BOTTLENECK -->
+    <section id="panel-bottleneck" class="panel">
+      <h2 class="section-title">Bottleneck Analysis</h2>
+      <p class="section-sub">PathTraceReport hop timeline · where inference waits</p>
+      <div class="glass waterfall">
+        <div id="waterfall"></div>
+        <div class="bottleneck-callout">
+          <div>
+            <div style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em">Primary bottleneck</div>
+            <strong id="bottleneckLabel">—</strong>
+          </div>
+          <div style="margin-left:auto;text-align:right">
+            <div style="font-size:0.72rem;color:var(--text-muted)">GPU idle waiting on I/O</div>
+            <strong id="gpuIdle" style="font-family:var(--serif);font-size:1.4rem">—</strong>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PERFORMANCE -->
+    <section id="panel-performance" class="panel">
+      <h2 class="section-title">Middleware Performance</h2>
+      <p class="section-sub">Estimated tok/s before vs after OpenMW KV offload + prefetch tuning</p>
+      <div class="perf-grid">
+        <div class="glass perf-card">
+          <h3>Baseline (BYORT only)</h3>
+          <div class="perf-value" id="baselineTok">—</div>
+          <div class="perf-unit">tokens / sec</div>
+        </div>
+        <div class="glass perf-card">
+          <h3>With OpenMW middleware</h3>
+          <div class="perf-value" id="optimizedTok">—</div>
+          <div class="perf-unit">tokens / sec</div>
+        </div>
+        <div class="glass speedup-hero">
+          <div class="pct" id="speedupPct">—</div>
+          <p>Inference speed increase<br/>after middleware applied</p>
+        </div>
+      </div>
+      <div class="glass feature-list">
+        <p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.08em">Active optimizations</p>
+        <ul id="featureList"></ul>
+      </div>
+      <div class="glass feature-list" style="margin-top:18px;padding:20px 24px">
+        <p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.08em">Routing plan · <span id="routeModel">—</span></p>
+        <div class="routing-grid">
+          <div class="glass layer-chip"><span>GPU layers</span><strong id="gpuLayers">—</strong></div>
+          <div class="glass layer-chip"><span>CPU RAM layers</span><strong id="cpuLayers">—</strong></div>
+          <div class="glass layer-chip"><span>NVMe layers</span><strong id="nvmeLayers">—</strong></div>
+        </div>
+      </div>
+    </section>
+
+    <footer>Demo data from <code style="color:var(--accent)">openmw demo-ui</code> · mock PathTrace until nsys hardware gate</footer>
+  </div>
+
+  <script>
+    const ICONS = {
+      ssd_admin: "NVMe", driver_ioctl: "IO", pcie_link: "PCIe", cpu_copy: "CPU",
+      host_ram: "DRAM", ram_to_vram: "H2D", gpu_compute: "GPU"
+    };
+
+    const FALLBACK = {
+      schema_version: "1",
+      profile: {
+        gpu_name: "GeForce RTX 4050 Laptop GPU",
+        nvme_model: "Micron 3400 NVMe",
+        nvme_seq_read_gbps: 6.8,
+        gpu_vram_gb: 6
+      },
+      devices: [
+        { kind: "nvme", name: "Micron 3400 NVMe", health_pct: 94, status: "good",
+          metric_label: "Seq Read", metric_value: "6.8 GB/s",
+          secondary_label: "Endurance", secondary_value: "600 TBW" },
+        { kind: "gpu", name: "GeForce RTX 4050 Laptop GPU", health_pct: 72, status: "caution",
+          metric_label: "VRAM", metric_value: "6 GB",
+          secondary_label: "Bandwidth", secondary_value: "192 GB/s" },
+        { kind: "cpu", name: "12-core host", health_pct: 96, status: "good",
+          metric_label: "System RAM", metric_value: "32 GB",
+          secondary_label: "Inference", secondary_value: "GPU primary" }
+      ],
+      data_flow: [
+        { id: "ssd_admin", label: "NVMe Admin", duration_ms: 2.5, is_bottleneck: false },
+        { id: "driver_ioctl", label: "Driver IOCTL", duration_ms: 1.2, is_bottleneck: false },
+        { id: "pcie_link", label: "PCIe Link", duration_ms: 5.0, is_bottleneck: false },
+        { id: "ram_to_vram", label: "Host → VRAM", duration_ms: 30.0, is_bottleneck: true },
+        { id: "gpu_compute", label: "GPU Compute", duration_ms: 100.0, is_bottleneck: false }
+      ],
+      path_trace: {
+        hop_timeline: [],
+        bottleneck_hop: "ram_to_vram",
+        bottleneck_label: "Host → VRAM",
+        gpu_idle_pct_waiting_on_io: 27.9
+      },
+      routing: {
+        model_id: "llama-3.3-8b", gpu_layers: 20, cpu_ram_layers: 12, nvme_layers: 8,
+        estimated_tok_s: 28.4, quant_level: "Q4_K_M", offload_strategy: "nvme_offload"
+      },
+      middleware_comparison: {
+        baseline_tok_s: 28.4, optimized_tok_s: 41.2, speedup_pct: 45.1,
+        baseline_gpu_idle_pct: 27.9, optimized_gpu_idle_pct: 11.2,
+        bottleneck_before: "ram_to_vram", bottleneck_after: "gpu_compute",
+        middleware_features: [
+          "LMCache disk-backed KV offload",
+          "Naive prefetch (4 blocks)",
+          "KV quant recommendation",
+          "Bandwidth-aware layer split"
+        ]
+      }
+    };
+
+    FALLBACK.path_trace.hop_timeline = FALLBACK.data_flow.map(h => ({
+      hop_id: h.id, label: h.label, duration_ms: h.duration_ms,
+      bytes_moved: 0, is_bottleneck: h.is_bottleneck
+    }));
+
+    async function loadData() {
+      try {
+        const res = await fetch("demo.json", { cache: "no-store" });
+        if (!res.ok) throw new Error("no demo.json");
+        return await res.json();
+      } catch {
+        return FALLBACK;
+      }
+    }
+
+    function avgHealth(devices) {
+      if (!devices.length) return 0;
+      return Math.round(devices.reduce((s, d) => s + d.health_pct, 0) / devices.length);
+    }
+
+    function render(data) {
+      const health = avgHealth(data.devices);
+      document.getElementById("healthPct").textContent = health + "%";
+      const ring = document.getElementById("healthRing");
+      const circ = 2 * Math.PI * 68;
+      ring.setAttribute("stroke-dasharray", circ);
+      ring.setAttribute("stroke-dashoffset", circ * (1 - health / 100));
+
+      const p = data.profile;
+      document.getElementById("detectSummary").textContent =
+        `${p.gpu_name || "CPU host"} · ${p.nvme_model || "storage"} · ${p.nvme_seq_read_gbps?.toFixed?.(1) || "?"} GB/s NVMe`;
+      document.getElementById("scanStatus").textContent =
+        data.demo_mode ? "Demo profile loaded" : "Live host detected";
+
+      const cards = document.getElementById("deviceCards");
+      cards.innerHTML = data.devices.map(d => `
+        <div class="glass device-card">
+          <span class="status-badge ${d.status}">${d.status}</span>
+          <div class="device-kind">${d.kind}</div>
+          <div class="device-name">${d.name}</div>
+          <div class="device-metrics">
+            <div class="metric-block"><label>${d.metric_label}</label><strong>${d.metric_value}</strong></div>
+            <div class="metric-block"><label>${d.secondary_label}</label><strong>${d.secondary_value}</strong></div>
+          </div>
+        </div>`).join("");
+
+      const flow = document.getElementById("flowTrack");
+      const nodes = data.data_flow || [];
+      flow.innerHTML = nodes.map((n, i) => {
+        const icon = ICONS[n.id] || "•";
+        const cls = [n.is_bottleneck ? "bottleneck" : "", "active"].filter(Boolean).join(" ");
+        const conn = i < nodes.length - 1 ? '<div class="flow-connector"></div>' : "";
+        return `<div class="flow-node ${cls}">
+          <div class="flow-icon">${icon}</div>
+          <div class="flow-label">${n.label}</div>
+          <div class="flow-ms">${n.duration_ms} ms</div>
+        </div>${conn}`;
+      }).join("");
+
+      const hops = data.path_trace?.hop_timeline || [];
+      const maxMs = Math.max(...hops.map(h => h.duration_ms), 1);
+      document.getElementById("waterfall").innerHTML = hops.map(h => `
+        <div class="hop-row ${h.is_bottleneck ? "bottleneck" : ""}">
+          <div class="hop-label">${h.label}</div>
+          <div class="hop-bar-wrap"><div class="hop-bar" style="width:${(h.duration_ms / maxMs) * 100}%"></div></div>
+          <div class="hop-ms">${h.duration_ms} ms</div>
+        </div>`).join("");
+
+      document.getElementById("bottleneckLabel").textContent =
+        data.path_trace?.bottleneck_label || data.path_trace?.bottleneck_hop || "—";
+      document.getElementById("gpuIdle").textContent =
+        (data.path_trace?.gpu_idle_pct_waiting_on_io ?? "—") + "%";
+
+      const mc = data.middleware_comparison;
+      document.getElementById("baselineTok").textContent = mc.baseline_tok_s;
+      document.getElementById("optimizedTok").textContent = mc.optimized_tok_s;
+      document.getElementById("speedupPct").textContent = "+" + mc.speedup_pct + "%";
+      document.getElementById("featureList").innerHTML =
+        (mc.middleware_features || []).map(f => `<li>${f}</li>`).join("");
+
+      const r = data.routing;
+      document.getElementById("routeModel").textContent = r.model_id;
+      document.getElementById("gpuLayers").textContent = r.gpu_layers;
+      document.getElementById("cpuLayers").textContent = r.cpu_ram_layers;
+      document.getElementById("nvmeLayers").textContent = r.nvme_layers;
+    }
+
+    document.querySelectorAll("nav.tabs button").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll("nav.tabs button").forEach(b => b.classList.remove("active"));
+        document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+        btn.classList.add("active");
+        document.getElementById("panel-" + btn.dataset.tab).classList.add("active");
+      });
+    });
+
+    loadData().then(render);
+  </script>
+</body>
+</html>

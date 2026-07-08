@@ -28,6 +28,7 @@ dist/
 
 # Local reports
 reports/
+openmw_demo_ui/
 
 # IDE files
 .vscode/

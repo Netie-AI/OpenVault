@@ -104,5 +104,18 @@ def test_help_lists_all_commands() -> None:
     result = runner.invoke(app, ["--help"])
 
     assert result.exit_code == 0
-    for cmd in ("doctor", "route", "train", "infer"):
+    for cmd in ("doctor", "route", "train", "infer", "demo-ui"):
         assert cmd in result.output
+
+
+def test_demo_ui_writes_artifacts(tmp_path: Path) -> None:
+    out_dir = tmp_path / "ui_out"
+    result = runner.invoke(
+        app,
+        ["demo-ui", "--out", str(out_dir), "--mock-profile", "--no-serve"],
+    )
+    assert result.exit_code == 0, result.output
+    assert (out_dir / "index.html").exists()
+    assert (out_dir / "demo.json").exists()
+    payload = json.loads((out_dir / "demo.json").read_text(encoding="utf-8"))
+    assert payload["middleware_comparison"]["speedup_pct"] > 0

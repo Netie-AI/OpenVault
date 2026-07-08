@@ -41,6 +41,7 @@ packages = ["openmw"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "openmw/data/models.json" = "openmw/data/models.json"
+"webui/index.html" = "webui/index.html"
 
 [tool.ruff]
 line-length = 100

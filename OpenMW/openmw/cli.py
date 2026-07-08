@@ -16,6 +16,7 @@ import typer
 from nvme_profiler.path_trace import build_mock_path_trace_report
 from nvme_profiler.report import save_path_trace_report
 
+from openmw.demo_payload import bundled_webui_dir, write_demo_payload
 from openmw.device_profile import DeviceProfile, detect
 from openmw.model_router import ModelRouter
 
@@ -157,6 +158,74 @@ def infer_cmd(
         err=True,
     )
     raise typer.Exit(code=2)
+
+
+@app.command("demo-ui")
+def demo_ui_cmd(
+    out: Path = typer.Option(  # noqa: B008
+        Path("openmw_demo_ui"),
+        "--out",
+        "-o",
+        help="Output directory for demo.json (index.html served from bundled webui/).",
+    ),
+    model_id: str = typer.Option(
+        "llama-3.3-8b",
+        "--model",
+        help="Model id for routing panel in demo payload.",
+    ),
+    mock_profile: bool = typer.Option(
+        False,
+        "--mock-profile",
+        help="Use fallback RTX 4050 profile instead of live detect().",
+    ),
+    serve: bool = typer.Option(
+        True,
+        "--serve/--no-serve",
+        help="Start local HTTP server and open the demo in a browser.",
+    ),
+    port: int = typer.Option(5000, "--port", help="HTTP port when --serve is set."),
+) -> None:
+    """Export schema-backed demo JSON and open the liquid-glass WebUI dashboard."""
+    import shutil
+    import webbrowser
+    from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+
+    webui_src = bundled_webui_dir()
+    if not webui_src.is_dir():
+        typer.echo(f"Bundled WebUI not found: {webui_src}", err=True)
+        raise typer.Exit(code=1)
+
+    out.mkdir(parents=True, exist_ok=True)
+    index_path = out / "index.html"
+    shutil.copy2(webui_src / "index.html", index_path)
+    json_path = write_demo_payload(
+        out,
+        model_id=model_id,
+        use_live_detect=not mock_profile,
+    )
+
+    typer.echo(f"Wrote {json_path}")
+    typer.echo(f"Wrote {index_path}")
+
+    if not serve:
+        typer.echo(f"Open file://{index_path.resolve()} in a browser.")
+        return
+
+    class _QuietHandler(SimpleHTTPRequestHandler):
+        def log_message(self, format: str, *args: object) -> None:
+            log.debug("demo_ui_http", message=format % args)
+
+    handler = lambda *args, **kwargs: _QuietHandler(  # noqa: E731
+        *args, directory=str(out.resolve()), **kwargs
+    )
+    server = ThreadingHTTPServer(("127.0.0.1", port), handler)
+    url = f"http://127.0.0.1:{port}/"
+    typer.echo(f"Serving demo UI at {url}")
+    webbrowser.open(url)
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        typer.echo("Demo UI server stopped.")
 
 
 if __name__ == "__main__":

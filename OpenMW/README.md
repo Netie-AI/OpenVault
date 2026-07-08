@@ -22,3 +22,14 @@ bash scripts/run_offload_demo.sh
 | `windows_ioring_spike.py` | Q4 exploratory IoRing probe |
 
 Real vLLM/LMCache runs require Linux + GPU; mock loop proves report correlation without them.
+
+## WebUI demo (liquid glass dashboard)
+
+```bash
+cd OpenMW
+uv sync
+uv run openmw demo-ui --port 5000
+```
+
+Opens `http://127.0.0.1:5000/` with Detection · Data Flow · Bottleneck · Middleware Gain tabs.
+Use `--mock-profile` for a fixed RTX 4050 demo profile, or `--no-serve` to only write `demo.json` + `index.html`.
