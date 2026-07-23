@@ -27,9 +27,9 @@ $env:OPENIDE_URL = $OpenIdeUrl
 $env:OPENVAULT_RUST_URL = "http://127.0.0.1:5055"
 
 Write-Host "==> Local mesh env" -ForegroundColor Cyan
-Write-Host "OPENVAULT_HOME=$env:OPENVAULT_HOME"
-Write-Host "CORTEX_URL=$CortexUrl"
-Write-Host "OPENIDE_URL=$OpenIdeUrl"
+Write-Host ("OPENVAULT_HOME=" + $env:OPENVAULT_HOME)
+Write-Host ("CORTEX_URL=" + $CortexUrl)
+Write-Host ("OPENIDE_URL=" + $OpenIdeUrl)
 
 # Ensure uv
 if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
@@ -60,7 +60,7 @@ if ($WithRustAuth) {
     $rustDir = Join-Path $Root "OpenMW\rust\openvault-console"
     Start-Process -FilePath "cargo" -ArgumentList @("run", "--release") -WorkingDirectory $rustDir
   } else {
-    Write-Host "cargo not found — skip Rust console" -ForegroundColor Yellow
+    Write-Host "cargo not found - skip Rust console" -ForegroundColor Yellow
   }
 }
 
@@ -70,7 +70,9 @@ for ($i = 0; $i -lt 40; $i++) {
   try {
     $h = Invoke-RestMethod -Uri "http://127.0.0.1:5000/api/healthz" -TimeoutSec 2
     if ($h.status -eq "ok") { $ok = $true; break }
-  } catch { Start-Sleep -Seconds 1 }
+  } catch {
+    Start-Sleep -Seconds 1
+  }
   Start-Sleep -Seconds 1
 }
 if (-not $ok) { throw "OpenVault did not become healthy on :5000" }
@@ -103,9 +105,13 @@ $pack = Invoke-RestMethod -Uri "http://127.0.0.1:5000/api/local/connect-pack"
 $packPath = Join-Path $env:OPENVAULT_HOME "connect_pack.json"
 $pack | ConvertTo-Json -Depth 8 | Set-Content -Path $packPath -Encoding UTF8
 
+$ovBase = [string]$pack.openvault.base_url
+$ideAnnounce = [string]$pack.openide.announce
+$perfectMsg = [string]$pack.perfect_local.message
+
 Write-Host ""
 Write-Host "OpenVault UI:     http://127.0.0.1:5000/#mesh" -ForegroundColor Green
-Write-Host "Connect pack:     $packPath"
-Write-Host "Cortex should use OPENVAULT_URL=$($pack.openvault.base_url)"
-Write-Host "OpenIDE should POST handshake to $($pack.openide.announce)"
-Write-Host "Perfect local:    $($pack.perfect_local.message)"
+Write-Host ("Connect pack:     " + $packPath)
+Write-Host ("Cortex should use OPENVAULT_URL=" + $ovBase)
+Write-Host ("OpenIDE should POST handshake to " + $ideAnnounce)
+Write-Host ("Perfect local:    " + $perfectMsg)
