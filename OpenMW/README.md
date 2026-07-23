@@ -48,9 +48,13 @@ Starts the liquid-glass **OpenVault** console with:
 - Encrypted vault under `~/.openvault` (override with `OPENVAULT_HOME`)
 - Secure local endpoint `http://127.0.0.1:5000/v1/chat/completions`
 - Cortex / Netie Engine status + model catalog selection
+- Provider catalog (OpenRouter / Ollama / LiteLLM / Groq / …) with free-tier register links + downtime checks
+- `POST /api/vault/seed-essentials` so Cortex/AirGPT coverage is explicit
 - Hardware detection / bottleneck panels
+- Deploy-to-web gate pipeline (`POST /api/deploy/from-cortex`)
 
 Point Cursor / tools at the `/v1` endpoint. Cortex URL defaults to `http://127.0.0.1:8000` (`--cortex-url`).
 
 See [`docs/openvault-cortex.md`](../docs/openvault-cortex.md).
-Scale-merge map (Cortex deploy-to-web → OpenShip gates): [`docs/OPENVAULT_SCALE_MERGE.md`](../docs/OPENVAULT_SCALE_MERGE.md).
+Scale-merge map: [`docs/OPENVAULT_SCALE_MERGE.md`](../docs/OPENVAULT_SCALE_MERGE.md).
+Provider catalog: [`docs/openvault-provider-catalog.md`](../docs/openvault-provider-catalog.md).

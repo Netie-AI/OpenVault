@@ -28,6 +28,11 @@ class PrecheckResult:
 def _default_base_url(provider: str, base_url: str) -> str:
     if base_url.strip():
         return base_url.rstrip("/")
+    from openmw.openvault.providers import get_provider
+
+    spec = get_provider(provider)
+    if spec is not None:
+        return spec.base_url.rstrip("/")
     defaults = {
         "openai": "https://api.openai.com/v1",
         "anthropic": "https://api.anthropic.com",
@@ -35,7 +40,7 @@ def _default_base_url(provider: str, base_url: str) -> str:
         "mistral": "https://api.mistral.ai/v1",
         "huggingface": "https://huggingface.co",
         "cortex": "http://127.0.0.1:8000",
-        "ollama": "http://127.0.0.1:11434",
+        "ollama": "http://127.0.0.1:11434/v1",
         "custom": "",
     }
     return defaults.get(provider, "").rstrip("/")
@@ -80,9 +85,15 @@ async def probe_key(
             }
             resp = await http.get(url, headers=headers)
         elif record.provider == "cortex":
-            resp = await http.get(f"{base}/health")
+            resp = await http.get(f"{base}/health" if not base.endswith("/health") else base)
         elif record.provider == "ollama":
-            resp = await http.get(f"{base}/api/tags")
+            # Prefer OpenAI-compatible /v1/models; fall back to native /api/tags
+            try:
+                resp = await http.get(f"{base}/models")
+                if resp.status_code >= 500:
+                    resp = await http.get("http://127.0.0.1:11434/api/tags")
+            except httpx.HTTPError:
+                resp = await http.get("http://127.0.0.1:11434/api/tags")
         elif record.provider == "huggingface":
             resp = await http.get(
                 f"{base}/api/whoami-v2",

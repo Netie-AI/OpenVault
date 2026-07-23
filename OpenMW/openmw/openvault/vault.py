@@ -15,11 +15,20 @@ from openmw.openvault.paths import keys_db_path
 ProviderKind = Literal[
     "openai",
     "anthropic",
+    "openrouter",
+    "groq",
     "google",
     "mistral",
+    "deepseek",
+    "together",
+    "fireworks",
+    "cerebras",
     "huggingface",
-    "cortex",
     "ollama",
+    "cortex",
+    "litellm",
+    "github_models",
+    "siliconflow",
     "custom",
 ]
 KeyRole = Literal["primary", "backup", "cheap", "free"]

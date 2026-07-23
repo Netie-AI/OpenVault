@@ -22,7 +22,14 @@ from openmw.openvault.fallback import FallbackConfig, FallbackManager
 from openmw.openvault.health import bottleneck_payload, devices_payload
 from openmw.openvault.orchestration import OrchestrationSelection, load_selection, save_selection
 from openmw.openvault.precheck import PrecheckLoop, precheck_all, precheck_one
+from openmw.openvault.providers import (
+    catalog_coverage_report,
+    check_provider_downtime,
+    get_provider,
+    list_catalog,
+)
 from openmw.openvault.proxy import chat_completions
+from openmw.openvault.seed import seed_essentials
 from openmw.openvault.vault import KeyRole, KeyVault, ProviderKind
 
 log = structlog.get_logger()
@@ -82,6 +89,11 @@ class DeployFromCortex(BaseModel):
 
 class DetectBody(BaseModel):
     project_path: str
+
+
+class SeedBody(BaseModel):
+    consumers: list[str] = Field(default_factory=lambda: ["cortex", "airgpt", "openvault"])
+    include_local_placeholders: bool = True
 
 
 def create_app(
@@ -274,6 +286,62 @@ def create_app(
     @app.get("/api/deploy")
     def get_deploys() -> dict[str, Any]:
         return {"deploys": list_plans()}
+
+    @app.get("/api/providers/catalog")
+    def providers_catalog(
+        free_only: bool = False,
+        needed_by: str | None = None,
+    ) -> dict[str, Any]:
+        return {
+            "providers": list_catalog(free_only=free_only, needed_by=needed_by),
+            "count": len(list_catalog(free_only=free_only, needed_by=needed_by)),
+        }
+
+    @app.get("/api/providers/free")
+    def providers_free() -> dict[str, Any]:
+        rows = list_catalog(free_only=True)
+        return {
+            "providers": rows,
+            "count": len(rows),
+            "help": "Use register_url to create keys, then POST /api/keys and precheck",
+        }
+
+    @app.get("/api/providers/coverage")
+    def providers_coverage() -> dict[str, Any]:
+        ids = {str(k.provider) for k in state_vault.list_keys()}
+        return catalog_coverage_report(ids)
+
+    @app.post("/api/providers/{provider_id}/downtime-check")
+    async def provider_downtime(provider_id: str) -> dict[str, Any]:
+        spec = get_provider(provider_id)
+        if spec is None:
+            raise HTTPException(status_code=404, detail="unknown provider in catalog")
+        result = await check_provider_downtime(spec)
+        return result.to_dict()
+
+    @app.post("/api/providers/check-all-free")
+    async def check_all_free() -> dict[str, Any]:
+        results = []
+        for row in list_catalog(free_only=True):
+            spec = get_provider(row["id"])
+            if spec is None:
+                continue
+            results.append((await check_provider_downtime(spec)).to_dict())
+        online = sum(1 for r in results if r["online"])
+        return {
+            "results": results,
+            "online": online,
+            "total": len(results),
+            "all_ok": online == len(results) and len(results) > 0,
+        }
+
+    @app.post("/api/vault/seed-essentials")
+    def vault_seed(body: SeedBody) -> dict[str, Any]:
+        return seed_essentials(
+            state_vault,
+            consumers=tuple(body.consumers),
+            include_local_placeholders=body.include_local_placeholders,
+        )
 
     @app.post("/v1/chat/completions")
     async def v1_chat(body: ChatBody) -> JSONResponse:

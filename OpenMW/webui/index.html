@@ -865,13 +865,22 @@
             <div>
               <label for="keyProvider">Provider</label>
               <select id="keyProvider">
-                <option value="openai">OpenAI-compatible</option>
+                <option value="openai">OpenAI</option>
                 <option value="anthropic">Anthropic</option>
+                <option value="openrouter">OpenRouter</option>
+                <option value="groq">Groq</option>
+                <option value="google">Google AI Studio</option>
                 <option value="mistral">Mistral</option>
-                <option value="google">Google</option>
+                <option value="deepseek">DeepSeek</option>
+                <option value="together">Together</option>
+                <option value="fireworks">Fireworks</option>
+                <option value="cerebras">Cerebras</option>
                 <option value="huggingface">Hugging Face</option>
-                <option value="cortex">Cortex</option>
                 <option value="ollama">Ollama</option>
+                <option value="cortex">Cortex</option>
+                <option value="litellm">LiteLLM</option>
+                <option value="github_models">GitHub Models</option>
+                <option value="siliconflow">SiliconFlow</option>
                 <option value="custom">Custom</option>
               </select>
             </div>
@@ -898,6 +907,8 @@
           <div class="actions">
             <button type="button" class="btn" id="addKeyBtn">Store key</button>
             <button type="button" class="btn-ghost" id="precheckAllBtn">Precheck all</button>
+            <button type="button" class="btn-ghost" id="seedEssentialsBtn">Seed Cortex/AirGPT</button>
+            <button type="button" class="btn-ghost" id="checkFreeBtn">Check free APIs</button>
           </div>
           <p id="vaultMsg" style="margin-top:12px;font-size:0.8rem;color:var(--text-muted)"></p>
         </div>
@@ -906,9 +917,14 @@
             <h3 style="font-family:var(--serif);font-weight:500;margin-bottom:8px">Stored keys</h3>
             <div id="keyList"></div>
           </div>
-          <div class="glass vault-list">
+          <div class="glass vault-list" style="margin-bottom:18px">
             <h3 style="font-family:var(--serif);font-weight:500;margin-bottom:8px">Fallback chain</h3>
             <div id="fallbackList"></div>
+          </div>
+          <div class="glass vault-list">
+            <h3 style="font-family:var(--serif);font-weight:500;margin-bottom:8px">Free / register catalog</h3>
+            <div id="freeCatalog"></div>
+            <div id="coverageMissing" style="margin-top:12px"></div>
           </div>
         </div>
       </div>
@@ -1300,6 +1316,74 @@
       await refreshVault();
       document.getElementById("vaultMsg").textContent = "Precheck complete.";
     });
+
+    async function refreshCatalog() {
+      if (!apiMode) return;
+      const [freeRes, covRes] = await Promise.all([
+        fetch("/api/providers/free"),
+        fetch("/api/providers/coverage")
+      ]);
+      const free = await freeRes.json();
+      const cov = await covRes.json();
+      document.getElementById("freeCatalog").innerHTML = (free.providers || []).map(p => `
+        <div class="hop-status">
+          <span class="pill">${p.tier}</span>
+          <strong>${p.name}</strong>
+          <div class="key-meta">
+            ${p.free_notes || ""}
+            · <a href="${p.register_url}" target="_blank" rel="noopener" style="color:var(--accent)">register</a>
+            · <button type="button" class="btn-ghost" data-down="${p.id}" style="padding:2px 8px">uptime</button>
+          </div>
+        </div>`).join("");
+      const missing = [];
+      for (const [consumer, rows] of Object.entries(cov.missing_by_consumer || {})) {
+        for (const r of rows) {
+          missing.push(`<div class="hop-status"><span class="pill warn">${consumer}</span> needs <strong>${r.name}</strong> · <a href="${r.register_url}" target="_blank" rel="noopener" style="color:var(--accent)">get key</a></div>`);
+        }
+      }
+      document.getElementById("coverageMissing").innerHTML = missing.length
+        ? ("<p style='font-size:0.72rem;color:var(--text-muted);margin-bottom:8px'>Missing for Cortex / AirGPT</p>" + missing.join(""))
+        : "<p style='color:var(--success);font-size:0.85rem'>Vault covers Cortex/AirGPT essentials (or only locals pending).</p>";
+      document.querySelectorAll("[data-down]").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const res = await fetch(`/api/providers/${btn.dataset.down}/downtime-check`, { method: "POST" });
+          const data = await res.json();
+          document.getElementById("vaultMsg").textContent =
+            `${data.provider_id}: ${data.online ? "online" : "DOWN"} (${data.detail})`;
+        });
+      });
+    }
+
+    document.getElementById("seedEssentialsBtn").addEventListener("click", async () => {
+      if (!apiMode) return;
+      const res = await fetch("/api/vault/seed-essentials", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ consumers: ["cortex", "airgpt", "openvault"] })
+      });
+      const data = await res.json();
+      const pending = (data.pending_register || []).length;
+      document.getElementById("vaultMsg").textContent =
+        `Seeded ${ (data.created_local || []).length } local · ${pending} cloud keys need register links`;
+      await refreshVault();
+      await refreshCatalog();
+    });
+
+    document.getElementById("checkFreeBtn").addEventListener("click", async () => {
+      if (!apiMode) return;
+      document.getElementById("vaultMsg").textContent = "Checking free/local provider uptime…";
+      const res = await fetch("/api/providers/check-all-free", { method: "POST" });
+      const data = await res.json();
+      document.getElementById("vaultMsg").textContent =
+        `Free/local uptime: ${data.online}/${data.total} online`;
+      await refreshCatalog();
+    });
+
+    const _origRefreshVault = refreshVault;
+    refreshVault = async function() {
+      await _origRefreshVault();
+      await refreshCatalog();
+    };
 
     document.getElementById("saveSelection").addEventListener("click", async () => {
       if (!apiMode) return;
