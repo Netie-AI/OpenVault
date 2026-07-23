@@ -732,7 +732,7 @@
     <header class="glass">
       <div class="brand">
         <h1>OpenVault</h1>
-        <p>Secure keys · Fallback · Netie Engine · Hardware Intelligence</p>
+        <p>Custody · Keys · OpenShip · Playwright · Netie Engine</p>
       </div>
       <div class="scan-pill">
         <span class="scan-dot"></span>
@@ -754,6 +754,7 @@
       <button type="button" data-tab="bottleneck">Bottleneck</button>
       <button type="button" data-tab="performance">Middleware Gain</button>
       <button type="button" data-tab="vault">Vault</button>
+      <button type="button" data-tab="accounts">Accounts</button>
       <button type="button" data-tab="engine">Engine</button>
       <button type="button" data-tab="deploy">Deploy</button>
     </nav>
@@ -930,6 +931,59 @@
       </div>
     </section>
 
+    <!-- ACCOUNTS -->
+    <section id="panel-accounts" class="panel">
+      <h2 class="section-title">Account Custody</h2>
+      <p class="section-sub">Prefer new Netie email · private relay · operator can create/save/kill keys under us</p>
+      <div class="vault-layout">
+        <div class="glass vault-form">
+          <h3 style="font-family:var(--serif);font-weight:500;margin-bottom:8px">Create account</h3>
+          <label for="acctName">Display name</label>
+          <input id="acctName" placeholder="Acme Ops" />
+          <label for="acctProvider">Signup method</label>
+          <select id="acctProvider">
+            <option value="netie_email" selected>Netie email (best — under us)</option>
+            <option value="email">External email</option>
+            <option value="google">Google account</option>
+          </select>
+          <label for="acctLocal">Netie local-part / email</label>
+          <input id="acctLocal" placeholder="acme or user@gmail.com" />
+          <div class="actions">
+            <button type="button" class="btn" id="createAcctBtn">Create + allocate relay</button>
+            <button type="button" class="btn-ghost" id="refreshAcctBtn">Refresh</button>
+          </div>
+          <p id="acctMsg" style="margin-top:12px;font-size:0.8rem;color:var(--text-muted)"></p>
+          <hr style="border:none;border-top:1px solid rgba(255,255,255,0.08);margin:18px 0" />
+          <h3 style="font-family:var(--serif);font-weight:500;margin-bottom:8px">Managed key for account</h3>
+          <label for="acctKeyAccount">Account</label>
+          <select id="acctKeyAccount"></select>
+          <label for="acctKeyProvider">Provider</label>
+          <select id="acctKeyProvider">
+            <option value="openai">OpenAI</option>
+            <option value="anthropic">Anthropic</option>
+            <option value="openrouter">OpenRouter</option>
+            <option value="groq">Groq</option>
+            <option value="ollama">Ollama</option>
+            <option value="cortex">Cortex</option>
+          </select>
+          <label for="acctKeySecret">Secret</label>
+          <input id="acctKeySecret" type="password" placeholder="sk-…" autocomplete="off" />
+          <div class="actions">
+            <button type="button" class="btn" id="acctSaveKeyBtn">Save key for them</button>
+            <button type="button" class="btn-ghost" id="acctIncidentBtn">Incident: kill + replace</button>
+          </div>
+          <label for="acctReplaceSecret" style="margin-top:10px">Replacement secret (optional)</label>
+          <input id="acctReplaceSecret" type="password" placeholder="new cloud key after rotate" autocomplete="off" />
+        </div>
+        <div class="glass vault-list">
+          <h3 style="font-family:var(--serif);font-weight:500;margin-bottom:8px">Accounts under custody</h3>
+          <div id="acctList"></div>
+          <h3 style="font-family:var(--serif);font-weight:500;margin:18px 0 8px">Selected account keys</h3>
+          <div id="acctKeyList"></div>
+        </div>
+      </div>
+    </section>
+
     <!-- ENGINE -->
     <section id="panel-engine" class="panel">
       <h2 class="section-title">Netie Engine · Cortex</h2>
@@ -991,9 +1045,13 @@
             <option value="cortex">cortex</option>
             <option value="manual" selected>manual</option>
           </select>
+          <label for="deploySmokeUrl">Smoke URL (optional)</label>
+          <input id="deploySmokeUrl" placeholder="https://app.example.com" />
           <div class="actions">
             <button type="button" class="btn" id="runDetectBtn">Auto-detect</button>
             <button type="button" class="btn" id="runDeployBtn">Run gates</button>
+            <button type="button" class="btn-ghost" id="runSmokeBtn">Playwright smoke</button>
+            <button type="button" class="btn-ghost" id="runExecuteBtn">Execute OpenShip</button>
           </div>
           <p id="deployMsg" style="margin-top:12px;font-size:0.8rem;color:var(--text-muted)"></p>
           <div id="detectResult" style="margin-top:14px;font-size:0.85rem;color:var(--text-muted)"></div>
@@ -1002,6 +1060,7 @@
           <h3 style="font-family:var(--serif);font-weight:500;margin-bottom:8px">Gate pipeline</h3>
           <div id="gateList"></div>
           <p id="readyScale" style="margin-top:14px;font-size:0.85rem"></p>
+          <p id="deployIds" style="margin-top:8px;font-size:0.75rem;color:var(--text-muted)"></p>
         </div>
       </div>
     </section>
@@ -1433,7 +1492,8 @@
           subdomain: document.getElementById("deploySubdomain").value,
           source: document.getElementById("deploySource").value,
           intent: "deploy_to_web",
-          open_console: true
+          open_console: true,
+          smoke_url: document.getElementById("deploySmokeUrl").value || ""
         })
       });
       const data = await res.json();
@@ -1443,6 +1503,14 @@
         document.getElementById("detectResult").textContent =
           `${data.stack.primary} · confidence ${data.stack.confidence}`;
       }
+      if (res.ok) renderDeployPlan(data);
+    }
+
+    let lastDeployId = null;
+    let selectedAccountId = null;
+
+    function renderDeployPlan(data) {
+      lastDeployId = data.deploy_id || lastDeployId;
       document.getElementById("gateList").innerHTML = (data.gates || []).map(g => `
         <div class="hop-status">
           <span class="pill ${pillClass(g.status === "pass" ? "ok" : g.status === "fail" ? "bad" : "unknown")}">${g.status}</span>
@@ -1454,10 +1522,155 @@
         : "Blocked — fix failing/pending blocker gates first";
       document.getElementById("readyScale").style.color =
         data.ready_to_scale ? "var(--success)" : "var(--warn)";
+      document.getElementById("deployIds").textContent =
+        `deploy=${data.deploy_id || "—"} · ship=${data.ship_id || "—"} · smoke=${data.smoke_id || "—"}`;
     }
 
     document.getElementById("runDetectBtn").addEventListener("click", runDetect);
     document.getElementById("runDeployBtn").addEventListener("click", runDeployGates);
+    document.getElementById("runSmokeBtn").addEventListener("click", async () => {
+      if (!apiMode || !lastDeployId) {
+        document.getElementById("deployMsg").textContent = "Run gates first to create a deploy plan";
+        return;
+      }
+      document.getElementById("deployMsg").textContent = "Running Playwright smoke…";
+      const res = await fetch(`/api/deploy/${lastDeployId}/playwright-smoke`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          url: document.getElementById("deploySmokeUrl").value || null
+        })
+      });
+      const data = await res.json();
+      document.getElementById("deployMsg").textContent = res.ok
+        ? `Smoke ${data.smoke_id} → ${(data.gates || []).find(g => g.id === "playwright")?.status}`
+        : "Smoke failed";
+      if (res.ok) renderDeployPlan(data);
+    });
+    document.getElementById("runExecuteBtn").addEventListener("click", async () => {
+      if (!apiMode || !lastDeployId) {
+        document.getElementById("deployMsg").textContent = "Run gates first to create a deploy plan";
+        return;
+      }
+      document.getElementById("deployMsg").textContent = "Executing OpenShip plan…";
+      const res = await fetch(`/api/deploy/${lastDeployId}/execute`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ simulate: true })
+      });
+      const data = await res.json();
+      document.getElementById("deployMsg").textContent = res.ok
+        ? `OpenShip executed · ship=${data.ship_id}`
+        : "Execute failed";
+      if (res.ok) renderDeployPlan(data);
+    });
+
+    async function refreshAccounts() {
+      if (!apiMode) return;
+      const res = await fetch("/api/accounts");
+      const data = await res.json();
+      const accounts = data.accounts || [];
+      const sel = document.getElementById("acctKeyAccount");
+      sel.innerHTML = accounts.map(a =>
+        `<option value="${a.id}">${a.display_name} · ${a.email}</option>`
+      ).join("");
+      if (selectedAccountId) sel.value = selectedAccountId;
+      else if (accounts[0]) selectedAccountId = accounts[0].id;
+      document.getElementById("acctList").innerHTML = accounts.map(a => `
+        <div class="hop-status" data-acct="${a.id}" style="cursor:pointer">
+          <span class="pill ${a.status === "active" ? "ok" : "bad"}">${a.auth_provider}</span>
+          <strong>${a.display_name}</strong>
+          <div class="key-meta">${a.email}${a.relay_address ? " · relay " + a.relay_address : ""} · ${a.status}</div>
+        </div>`).join("") || "<p style='color:var(--text-muted)'>No accounts yet — create a Netie email.</p>";
+      document.querySelectorAll("[data-acct]").forEach(el => {
+        el.addEventListener("click", () => {
+          selectedAccountId = el.dataset.acct;
+          sel.value = selectedAccountId;
+          loadAccountKeys(selectedAccountId);
+        });
+      });
+      if (selectedAccountId) await loadAccountKeys(selectedAccountId);
+    }
+
+    async function loadAccountKeys(accountId) {
+      const res = await fetch(`/api/accounts/${accountId}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      document.getElementById("acctKeyList").innerHTML = (data.keys || []).map(k => `
+        <div class="hop-status">
+          <span class="pill ${pillClass(k.lifecycle === "active" ? k.precheck_status : "bad")}">${k.lifecycle}</span>
+          <strong>${k.label}</strong>
+          <div class="key-meta">${k.provider} · ${k.masked_secret} · ${k.role}</div>
+        </div>`).join("") || "<p style='color:var(--text-muted)'>No keys for this account.</p>";
+    }
+
+    document.getElementById("createAcctBtn").addEventListener("click", async () => {
+      if (!apiMode) return;
+      const provider = document.getElementById("acctProvider").value;
+      const local = document.getElementById("acctLocal").value.trim();
+      const body = {
+        display_name: document.getElementById("acctName").value || local || "tenant",
+        auth_provider: provider,
+        allocate_relay: true
+      };
+      if (provider === "netie_email") body.local_part = local || body.display_name;
+      else body.email = local;
+      const res = await fetch("/api/accounts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      document.getElementById("acctMsg").textContent = res.ok
+        ? `Created ${data.email} · relay ${data.relay_address || "—"}`
+        : (data.detail || "Create failed");
+      if (res.ok) {
+        selectedAccountId = data.id;
+        await refreshAccounts();
+      }
+    });
+    document.getElementById("refreshAcctBtn").addEventListener("click", refreshAccounts);
+    document.getElementById("acctSaveKeyBtn").addEventListener("click", async () => {
+      const accountId = document.getElementById("acctKeyAccount").value;
+      if (!accountId) return;
+      const res = await fetch(`/api/accounts/${accountId}/keys`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          label: "managed",
+          provider: document.getElementById("acctKeyProvider").value,
+          secret: document.getElementById("acctKeySecret").value,
+          role: "primary"
+        })
+      });
+      document.getElementById("acctMsg").textContent = res.ok
+        ? "Key saved under account custody"
+        : "Failed to save key";
+      document.getElementById("acctKeySecret").value = "";
+      await loadAccountKeys(accountId);
+      await refreshVault();
+    });
+    document.getElementById("acctIncidentBtn").addEventListener("click", async () => {
+      const accountId = document.getElementById("acctKeyAccount").value;
+      if (!accountId) return;
+      if (!confirm("Kill all keys for this account and mark compromised?")) return;
+      const provider = document.getElementById("acctKeyProvider").value;
+      const replacement = document.getElementById("acctReplaceSecret").value;
+      const body = { reason: "compromised_or_manipulated", suspend_account: true, replacement_secrets: {} };
+      if (replacement) body.replacement_secrets[provider] = replacement;
+      const res = await fetch(`/api/accounts/${accountId}/incident`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      document.getElementById("acctMsg").textContent = res.ok
+        ? `Incident: killed ${(data.killed || []).length} · replaced ${(data.replacements || []).length} · needs_register ${(data.needs_register || []).join(", ") || "none"}`
+        : "Incident action failed";
+      document.getElementById("acctReplaceSecret").value = "";
+      await refreshAccounts();
+      await refreshVault();
+    });
 
     function activateTab(name) {
       const btn = document.querySelector(`nav.tabs button[data-tab="${name}"]`);
@@ -1468,12 +1681,14 @@
       document.getElementById("panel-" + name).classList.add("active");
       if (name === "vault") refreshVault();
       if (name === "engine") refreshEngine();
+      if (name === "accounts") refreshAccounts();
     }
 
     document.querySelectorAll("nav.tabs button").forEach(btn => {
       btn.addEventListener("click", () => {
         activateTab(btn.dataset.tab);
         if (btn.dataset.tab === "deploy") history.replaceState(null, "", "#deploy");
+        if (btn.dataset.tab === "accounts") history.replaceState(null, "", "#accounts");
       });
     });
 
@@ -1482,11 +1697,13 @@
       if (apiMode) {
         await refreshVault();
         await refreshEngine();
+        await refreshAccounts();
         setInterval(async () => {
           try { await refreshVault(); } catch (_) {}
         }, 30000);
       }
-      if (location.hash.replace("#", "") === "deploy") activateTab("deploy");
+      const hash = location.hash.replace("#", "");
+      if (hash === "deploy" || hash === "accounts") activateTab(hash);
     });
   </script>
 </body>

@@ -45,8 +45,10 @@ This selection is what OpenVault uses to **pick and assign the best model** for 
 - Agent skill scaling
 - Slurm / Kubernetes multi-server orchestration
 - Rust hot-path gateway inside Cortex
-- Live OpenShip executor + Playwright MCP fail→debug loop
+- Live Google OAuth token exchange (signup provider already recorded)
 
-## Scale merge
+## Scale merge / custody
 
-See [`OPENVAULT_SCALE_MERGE.md`](OPENVAULT_SCALE_MERGE.md) for Cortex/AirGPT → OpenVault → OpenShip-style deploy gates.
+See [`OPENVAULT_SCALE_MERGE.md`](OPENVAULT_SCALE_MERGE.md) and [`openvault-account-custody.md`](openvault-account-custody.md).
+
+Shipped in OpenVault: account custody + private relay, incident key kill/replace, OpenShip in-repo clone executor, Playwright smoke gate with artifacts.

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import os
-import shutil
 import time
 import uuid
 from dataclasses import asdict, dataclass, field
@@ -16,7 +15,9 @@ import structlog
 from openmw.openvault.detect import DetectedStack, detect_project
 from openmw.openvault.email_gates import check_email_auth
 from openmw.openvault.fallback import FallbackManager
+from openmw.openvault.openship import adapter_presence, build_openship_plan, execute_openship_plan
 from openmw.openvault.paths import ensure_home
+from openmw.openvault.playwright_smoke import run_playwright_smoke
 from openmw.openvault.vault import KeyVault
 
 log = structlog.get_logger()
@@ -46,6 +47,9 @@ class DeployPlan:
     console_url: str = "http://127.0.0.1:5000/#deploy"
     created_at: float = field(default_factory=time.time)
     openship: dict[str, Any] = field(default_factory=dict)
+    smoke_url: str = ""
+    ship_id: str | None = None
+    smoke_id: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -60,6 +64,9 @@ class DeployPlan:
             "console_url": self.console_url,
             "created_at": self.created_at,
             "openship": self.openship,
+            "smoke_url": self.smoke_url,
+            "ship_id": self.ship_id,
+            "smoke_id": self.smoke_id,
         }
 
 
@@ -94,6 +101,9 @@ def load_plan(deploy_id: str) -> DeployPlan | None:
         console_url=raw.get("console_url", "http://127.0.0.1:5000/#deploy"),
         created_at=float(raw.get("created_at", time.time())),
         openship=dict(raw.get("openship", {})),
+        smoke_url=raw.get("smoke_url", ""),
+        ship_id=raw.get("ship_id"),
+        smoke_id=raw.get("smoke_id"),
     )
 
 
@@ -107,19 +117,6 @@ def list_plans() -> list[dict[str, Any]]:
     return out
 
 
-def _openship_presence() -> dict[str, Any]:
-    cli = os.environ.get("OPENSHIP_CLI", "openship")
-    url = os.environ.get("OPENSHIP_URL", "").rstrip("/")
-    which = shutil.which(cli)
-    return {
-        "cli_configured": cli,
-        "cli_found": which is not None,
-        "cli_path": which,
-        "api_url": url or None,
-        "ready": which is not None or bool(url),
-    }
-
-
 def build_deploy_plan(
     *,
     project_path: str,
@@ -131,6 +128,8 @@ def build_deploy_plan(
     cortex_online: bool = False,
     sending_ip: str | None = None,
     console_base: str = "http://127.0.0.1:5000",
+    smoke_url: str = "",
+    run_smoke: bool = False,
 ) -> DeployPlan:
     """Auto-detect stack and run merge gates for scale deploy."""
     stack = detect_project(project_path)
@@ -268,31 +267,68 @@ def build_deploy_plan(
             Gate("build", "Build / rebuild plan", "fail", "No suggested build commands", True)
         )
 
-    # 7) Playwright / browser smoke
-    playwright = shutil.which("playwright") is not None
-    gates.append(
-        Gate(
-            "playwright",
-            "Playwright / MCP browser smoke",
-            "pass" if playwright else "pending",
-            (
-                "playwright CLI found — run smoke after roll"
-                if playwright
-                else (
-                    "Playwright MCP not installed — gate pending; attach fail logs when available"
-                )
-            ),
-            False,
+    # 7) Playwright / browser smoke — real runner when requested
+    target_smoke = smoke_url or (f"https://{subdomain}" if subdomain and "." in subdomain else "")
+    smoke_id: str | None = None
+    if run_smoke and target_smoke:
+        smoke = run_playwright_smoke(target_smoke)
+        smoke_id = smoke.smoke_id
+        gates.append(
+            Gate(
+                "playwright",
+                "Playwright / browser smoke",
+                smoke.status if smoke.status != "skipped" else "pending",
+                f"{smoke.mode}: {smoke.detail} artifact={smoke.artifact_path}",
+                False,
+            )
         )
-    )
+    else:
+        mode = os.environ.get("OPENVAULT_PLAYWRIGHT_MODE", "auto")
+        gates.append(
+            Gate(
+                "playwright",
+                "Playwright / browser smoke",
+                "pending",
+                (
+                    f"Call POST /api/deploy/{{id}}/playwright-smoke "
+                    f"(mode={mode}, target={target_smoke or 'unset'})"
+                ),
+                False,
+            )
+        )
 
-    # 8) OpenShip adapter / scale executor
-    ship = _openship_presence()
-    if ship["ready"]:
+    # 8) OpenShip full clone plan
+    ship = adapter_presence()
+    ship_id: str | None = None
+    if subdomain and stack.primary != "unknown":
+        ship_plan = build_openship_plan(
+            project_path=project_path,
+            subdomain=subdomain,
+            action="install",
+            sending_ip=sending_ip,
+        )
+        ship_id = ship_plan.ship_id
+        ship_status: GateStatus = "pass" if ship_plan.ready else "pending"
+        if any(s.status == "fail" for s in ship_plan.steps):
+            ship_status = "fail"
         gates.append(
             Gate(
                 "openship",
-                "OpenShip adapter (apps + services install/update)",
+                "OpenShip full plan (apps + services + TLS + mail)",
+                ship_status,
+                (
+                    f"ship_id={ship_id} ready={ship_plan.ready} "
+                    f"steps={len(ship_plan.steps)} mode={ship.get('mode')}"
+                ),
+                True,
+            )
+        )
+        ship = {**ship, "ship_id": ship_id, "plan_ready": ship_plan.ready}
+    elif ship["ready"]:
+        gates.append(
+            Gate(
+                "openship",
+                "OpenShip full plan (apps + services + TLS + mail)",
                 "pass",
                 f"cli={ship['cli_path'] or 'n/a'} api={ship['api_url'] or 'n/a'}",
                 True,
@@ -302,9 +338,9 @@ def build_deploy_plan(
         gates.append(
             Gate(
                 "openship",
-                "OpenShip adapter (apps + services install/update)",
+                "OpenShip full plan (apps + services + TLS + mail)",
                 "pending",
-                "Set OPENSHIP_CLI or OPENSHIP_URL to execute scale-only deploy",
+                "Set OPENSHIP_MODE=simulate or OPENSHIP_CLI / OPENSHIP_URL",
                 True,
             )
         )
@@ -317,7 +353,7 @@ def build_deploy_plan(
             "pending",
             (
                 "After green gates: install or update apps+services only "
-                "(no rebuild unless detect changed)"
+                "(POST /api/deploy/{id}/execute)"
             ),
             True,
         )
@@ -338,6 +374,9 @@ def build_deploy_plan(
         ready_to_scale=ready,
         console_url=f"{console_base.rstrip('/')}/#deploy",
         openship=ship,
+        smoke_url=target_smoke,
+        ship_id=ship_id,
+        smoke_id=smoke_id,
     )
     save_plan(plan)
     log.info(
@@ -348,3 +387,81 @@ def build_deploy_plan(
         source=source,
     )
     return plan
+
+
+def run_deploy_smoke(plan: DeployPlan, *, url: str | None = None) -> DeployPlan:
+    """Execute Playwright smoke against the deploy target and refresh the gate."""
+    target = url or plan.smoke_url or (f"https://{plan.subdomain}" if plan.subdomain else "")
+    smoke = run_playwright_smoke(target)
+    plan.smoke_id = smoke.smoke_id
+    plan.smoke_url = target
+    updated = False
+    for gate in plan.gates:
+        if gate.id == "playwright":
+            gate.status = smoke.status if smoke.status != "skipped" else "pending"
+            gate.detail = f"{smoke.mode}: {smoke.detail} artifact={smoke.artifact_path}"
+            updated = True
+    if not updated:
+        plan.gates.append(
+            Gate(
+                "playwright",
+                "Playwright / browser smoke",
+                smoke.status if smoke.status != "skipped" else "pending",
+                f"{smoke.mode}: {smoke.detail} artifact={smoke.artifact_path}",
+                False,
+            )
+        )
+    _recompute_ready(plan)
+    save_plan(plan)
+    return plan
+
+
+def execute_deploy(plan: DeployPlan, *, simulate: bool | None = None) -> DeployPlan:
+    """Run the OpenShip executor for this deploy and mark roll gate."""
+    if not plan.ship_id:
+        ship_plan = build_openship_plan(
+            project_path=plan.project_path,
+            subdomain=plan.subdomain,
+            action="install",
+        )
+        plan.ship_id = ship_plan.ship_id
+    else:
+        from openmw.openvault.openship import load_ship_plan
+
+        loaded = load_ship_plan(plan.ship_id)
+        ship_plan = loaded or build_openship_plan(
+            project_path=plan.project_path,
+            subdomain=plan.subdomain,
+            action="install",
+        )
+        plan.ship_id = ship_plan.ship_id
+
+    executed = execute_openship_plan(ship_plan, simulate=simulate)
+    plan.openship = {
+        **plan.openship,
+        **executed.adapter,
+        "ship_id": executed.ship_id,
+        "executed": executed.executed,
+        "ready": executed.ready,
+        "steps": [asdict(s) for s in executed.steps],
+    }
+    for gate in plan.gates:
+        if gate.id == "openship":
+            gate.status = "pass" if executed.ready else "fail"
+            gate.detail = f"executed ship_id={executed.ship_id} ready={executed.ready}"
+        if gate.id == "roll":
+            gate.status = "pass" if executed.ready else "fail"
+            gate.detail = (
+                "roll complete — rollback via openship roll rollback"
+                if executed.ready
+                else "roll failed — see openship steps"
+            )
+    _recompute_ready(plan)
+    save_plan(plan)
+    return plan
+
+
+def _recompute_ready(plan: DeployPlan) -> None:
+    blockers = [g for g in plan.gates if g.blocker and g.status == "fail"]
+    pending_blockers = [g for g in plan.gates if g.blocker and g.status == "pending"]
+    plan.ready_to_scale = len(blockers) == 0 and len(pending_blockers) == 0

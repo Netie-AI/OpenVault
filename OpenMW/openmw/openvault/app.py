@@ -6,7 +6,7 @@ import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager, suppress
 from dataclasses import asdict
-from typing import Any
+from typing import Any, Literal
 
 import structlog
 from fastapi import FastAPI, HTTPException
@@ -15,12 +15,26 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from openmw.demo_payload import bundled_webui_dir
+from openmw.openvault.accounts import AccountStore, AuthProvider
 from openmw.openvault.cortex_client import CortexClient
-from openmw.openvault.deploy import build_deploy_plan, list_plans, load_plan
+from openmw.openvault.deploy import (
+    build_deploy_plan,
+    execute_deploy,
+    list_plans,
+    load_plan,
+    run_deploy_smoke,
+)
 from openmw.openvault.detect import detect_project
 from openmw.openvault.fallback import FallbackConfig, FallbackManager
 from openmw.openvault.health import bottleneck_payload, devices_payload
+from openmw.openvault.openship import (
+    build_openship_plan,
+    execute_openship_plan,
+    list_ship_plans,
+    load_ship_plan,
+)
 from openmw.openvault.orchestration import OrchestrationSelection, load_selection, save_selection
+from openmw.openvault.playwright_smoke import load_smoke, run_playwright_smoke
 from openmw.openvault.precheck import PrecheckLoop, precheck_all, precheck_one
 from openmw.openvault.providers import (
     catalog_coverage_report,
@@ -43,6 +57,7 @@ class KeyCreate(BaseModel):
     base_url: str = ""
     priority: int = 100
     enabled: bool = True
+    account_id: str | None = None
 
 
 class KeyUpdate(BaseModel):
@@ -53,6 +68,16 @@ class KeyUpdate(BaseModel):
     base_url: str | None = None
     priority: int | None = None
     enabled: bool | None = None
+    account_id: str | None = None
+
+
+class KeyRotate(BaseModel):
+    new_secret: str
+    label_suffix: str = "rotated"
+
+
+class KeyRevoke(BaseModel):
+    reason: str = "operator_revoke"
 
 
 class FallbackUpdate(BaseModel):
@@ -85,6 +110,8 @@ class DeployFromCortex(BaseModel):
     open_console: bool = True
     sending_ip: str | None = None
     console_base: str = "http://127.0.0.1:5000"
+    smoke_url: str = ""
+    run_smoke: bool = False
 
 
 class DetectBody(BaseModel):
@@ -96,15 +123,63 @@ class SeedBody(BaseModel):
     include_local_placeholders: bool = True
 
 
+class AccountCreate(BaseModel):
+    display_name: str
+    email: str | None = None
+    auth_provider: AuthProvider = "netie_email"
+    local_part: str | None = None
+    operator_notes: str = ""
+    allocate_relay: bool = True
+
+
+class AccountKeyCreate(BaseModel):
+    label: str
+    provider: ProviderKind
+    secret: str
+    role: KeyRole = "backup"
+    base_url: str = ""
+    priority: int = 100
+
+
+class IncidentBody(BaseModel):
+    reason: str = "compromised_or_manipulated"
+    replacement_secrets: dict[str, str] = Field(default_factory=dict)
+    suspend_account: bool = True
+
+
+class OpenShipBody(BaseModel):
+    project_path: str
+    subdomain: str
+    action: Literal["install", "update", "rollback"] = "install"
+    sending_ip: str | None = None
+    execute: bool = False
+    simulate: bool | None = None
+
+
+class SmokeBody(BaseModel):
+    url: str
+    mode: str | None = None
+
+
+class DeploySmokeBody(BaseModel):
+    url: str | None = None
+
+
+class DeployExecuteBody(BaseModel):
+    simulate: bool | None = None
+
+
 def create_app(
     *,
     vault: KeyVault | None = None,
+    accounts: AccountStore | None = None,
     cortex_url: str = "http://127.0.0.1:8000",
     precheck_interval_s: float = 60.0,
     mock_health: bool = False,
     enable_precheck_loop: bool = True,
 ) -> FastAPI:
     state_vault = vault if vault is not None else KeyVault()
+    state_accounts = accounts if accounts is not None else AccountStore()
     fallback = FallbackManager(state_vault)
     cortex = CortexClient(cortex_url)
     loop_holder: dict[str, PrecheckLoop | None] = {"loop": None}
@@ -140,12 +215,90 @@ def create_app(
     def health_bottleneck() -> dict[str, Any]:
         return bottleneck_payload()
 
+    # --- Accounts / custody ---
+
+    @app.get("/api/accounts")
+    def list_accounts() -> dict[str, Any]:
+        return {"accounts": [a.to_dict() for a in state_accounts.list_accounts()]}
+
+    @app.post("/api/accounts")
+    def create_account(body: AccountCreate) -> dict[str, Any]:
+        try:
+            record = state_accounts.create(
+                display_name=body.display_name,
+                email=body.email,
+                auth_provider=body.auth_provider,
+                local_part=body.local_part,
+                operator_notes=body.operator_notes,
+                allocate_relay=body.allocate_relay,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return record.to_dict()
+
+    @app.get("/api/accounts/{account_id}")
+    def get_account(account_id: str) -> dict[str, Any]:
+        bundle = state_accounts.operator_access_bundle(account_id)
+        if bundle is None:
+            raise HTTPException(status_code=404, detail="account not found")
+        keys = [asdict(k) for k in state_vault.list_keys(account_id=account_id)]
+        bundle["keys"] = keys
+        return bundle
+
+    @app.post("/api/accounts/{account_id}/relay")
+    def account_relay(account_id: str) -> dict[str, Any]:
+        record = state_accounts.allocate_relay(account_id)
+        if record is None:
+            raise HTTPException(status_code=404, detail="account not found")
+        return record.to_dict()
+
+    @app.post("/api/accounts/{account_id}/keys")
+    def account_create_key(account_id: str, body: AccountKeyCreate) -> dict[str, Any]:
+        if state_accounts.get(account_id) is None:
+            raise HTTPException(status_code=404, detail="account not found")
+        record = state_vault.create(
+            label=body.label,
+            provider=body.provider,
+            secret=body.secret,
+            role=body.role,
+            base_url=body.base_url,
+            priority=body.priority,
+            account_id=account_id,
+        )
+        return asdict(record)
+
+    @app.post("/api/accounts/{account_id}/incident")
+    def account_incident(account_id: str, body: IncidentBody) -> dict[str, Any]:
+        if state_accounts.get(account_id) is None:
+            raise HTTPException(status_code=404, detail="account not found")
+        result = state_vault.incident_kill(
+            account_id,
+            reason=body.reason,
+            replacement_secrets=body.replacement_secrets or None,
+        )
+        account = None
+        if body.suspend_account:
+            account = state_accounts.set_status(
+                account_id,
+                "compromised",
+                operator_notes=f"incident: {body.reason}",
+            )
+        else:
+            account = state_accounts.get(account_id)
+        payload: dict[str, Any] = dict(result)
+        payload["account"] = account.to_dict() if account is not None else None
+        return payload
+
+    # --- Keys ---
+
     @app.get("/api/keys")
-    def list_keys() -> dict[str, Any]:
-        return {"keys": [asdict(k) for k in state_vault.list_keys()]}
+    def list_keys(account_id: str | None = None) -> dict[str, Any]:
+        return {"keys": [asdict(k) for k in state_vault.list_keys(account_id=account_id)]}
 
     @app.post("/api/keys")
     def create_key(body: KeyCreate) -> dict[str, Any]:
+        if body.account_id and state_accounts.get(body.account_id) is None:
+            raise HTTPException(status_code=404, detail="account not found")
         record = state_vault.create(
             label=body.label,
             provider=body.provider,
@@ -154,6 +307,7 @@ def create_app(
             base_url=body.base_url,
             priority=body.priority,
             enabled=body.enabled,
+            account_id=body.account_id,
         )
         return asdict(record)
 
@@ -168,6 +322,7 @@ def create_app(
             base_url=body.base_url,
             priority=body.priority,
             enabled=body.enabled,
+            account_id=body.account_id,
         )
         if record is None:
             raise HTTPException(status_code=404, detail="key not found")
@@ -179,6 +334,22 @@ def create_app(
         if not ok:
             raise HTTPException(status_code=404, detail="key not found")
         return {"deleted": True}
+
+    @app.post("/api/keys/{key_id}/revoke")
+    def revoke_key(key_id: str, body: KeyRevoke) -> dict[str, Any]:
+        record = state_vault.revoke(key_id, reason=body.reason)
+        if record is None:
+            raise HTTPException(status_code=404, detail="key not found")
+        return asdict(record)
+
+    @app.post("/api/keys/{key_id}/rotate")
+    def rotate_key(key_id: str, body: KeyRotate) -> dict[str, Any]:
+        record = state_vault.rotate(
+            key_id, new_secret=body.new_secret, label_suffix=body.label_suffix
+        )
+        if record is None:
+            raise HTTPException(status_code=404, detail="key not found")
+        return asdict(record)
 
     @app.get("/api/keys/{key_id}/secret")
     def reveal_secret(key_id: str) -> dict[str, str]:
@@ -271,6 +442,8 @@ def create_app(
             cortex_online=st.online,
             sending_ip=body.sending_ip,
             console_base=body.console_base,
+            smoke_url=body.smoke_url,
+            run_smoke=body.run_smoke,
         )
         payload = plan.to_dict()
         payload["open_console"] = body.open_console
@@ -286,6 +459,67 @@ def create_app(
     @app.get("/api/deploy")
     def get_deploys() -> dict[str, Any]:
         return {"deploys": list_plans()}
+
+    @app.post("/api/deploy/{deploy_id}/playwright-smoke")
+    def deploy_playwright_smoke(deploy_id: str, body: DeploySmokeBody) -> dict[str, Any]:
+        plan = load_plan(deploy_id)
+        if plan is None:
+            raise HTTPException(status_code=404, detail="deploy plan not found")
+        updated = run_deploy_smoke(plan, url=body.url)
+        return updated.to_dict()
+
+    @app.post("/api/deploy/{deploy_id}/execute")
+    def deploy_execute(deploy_id: str, body: DeployExecuteBody) -> dict[str, Any]:
+        plan = load_plan(deploy_id)
+        if plan is None:
+            raise HTTPException(status_code=404, detail="deploy plan not found")
+        updated = execute_deploy(plan, simulate=body.simulate)
+        return updated.to_dict()
+
+    # --- OpenShip full clone surface ---
+
+    @app.post("/api/openship/plan")
+    def openship_plan(body: OpenShipBody) -> dict[str, Any]:
+        plan = build_openship_plan(
+            project_path=body.project_path,
+            subdomain=body.subdomain,
+            action=body.action,
+            sending_ip=body.sending_ip,
+        )
+        if body.execute:
+            plan = execute_openship_plan(plan, simulate=body.simulate)
+        return plan.to_dict()
+
+    @app.get("/api/openship")
+    def openship_list() -> dict[str, Any]:
+        return {"ships": list_ship_plans()}
+
+    @app.get("/api/openship/{ship_id}")
+    def openship_get(ship_id: str) -> dict[str, Any]:
+        plan = load_ship_plan(ship_id)
+        if plan is None:
+            raise HTTPException(status_code=404, detail="openship plan not found")
+        return plan.to_dict()
+
+    @app.post("/api/openship/{ship_id}/execute")
+    def openship_execute(ship_id: str, body: DeployExecuteBody) -> dict[str, Any]:
+        plan = load_ship_plan(ship_id)
+        if plan is None:
+            raise HTTPException(status_code=404, detail="openship plan not found")
+        return execute_openship_plan(plan, simulate=body.simulate).to_dict()
+
+    # --- Playwright smoke ---
+
+    @app.post("/api/playwright/smoke")
+    def playwright_smoke(body: SmokeBody) -> dict[str, Any]:
+        return run_playwright_smoke(body.url, mode=body.mode).to_dict()
+
+    @app.get("/api/playwright/smoke/{smoke_id}")
+    def playwright_smoke_get(smoke_id: str) -> dict[str, Any]:
+        payload = load_smoke(smoke_id)
+        if payload is None:
+            raise HTTPException(status_code=404, detail="smoke artifact not found")
+        return payload
 
     @app.get("/api/providers/catalog")
     def providers_catalog(

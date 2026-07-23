@@ -9,61 +9,63 @@
 flowchart TB
   AirGPT[AirGPT / Cortex chat]
   OV[OpenVault console]
-  Keys[Key vault + precheck + fallback]
+  Acct[Account custody + private relay]
+  Keys[Key vault + precheck + fallback + incident kill]
   Engine[Netie Engine model pick]
   Detect[Auto project detect]
   Gates[LLM-assisted gate pipeline]
-  Ship[OpenShip-style deploy adapters]
+  Ship[OpenShip in-repo clone]
   Mail[Secure email DNS gates]
+  Smoke[Playwright smoke gate]
   Scale[Scale-only roll apps and services]
 
   AirGPT -->|"deploy to web"| OV
+  OV --> Acct
   OV --> Keys
   OV --> Engine
   OV --> Detect
   Detect --> Gates
   Gates --> Ship
   Gates --> Mail
+  Gates --> Smoke
   Ship --> Scale
 ```
 
 | System | What we take | What OpenVault owns |
 |--------|--------------|---------------------|
-| **OpenVault** (this repo) | Keys, continuous precheck, fallback, health, model assign, **deploy orchestrator** | Local secure hub + gate runner |
+| **OpenVault** (this repo) | Keys, custody, continuous precheck, fallback, health, model assign, **deploy orchestrator** | Local secure hub + gate runner |
 | **Cortex / AirGPT** | Intent (“deploy to web”), engines, finished work packs | Calls `POST /api/deploy/from-cortex`; OpenVault auto-opens |
 | **OmniRoute patterns** | Multi-key stability, precheck, fallback, best-model select | Already in OpenVault `/v1` + Engine tab |
-| **OpenShip patterns** | Subdomain→SSL, build/roll, mail (SPF/DKIM/DMARC), apps+services install/update | **Adapters + gates** — not a full OpenShip fork |
+| **OpenShip patterns** | Subdomain→TLS, build/roll, mail (SPF/DKIM/DMARC), apps+services install/update | **In-repo OpenShip clone** (`openship.py`) + CLI/API adapters |
+| **Account custody** | Netie email / Google / external email + private relay | Operator create/save/kill/replace keys |
 
 ## Target user flow
 
-1. Finish work in Cortex / AirGPT.
-2. Say **deploy to web**.
-3. Cortex posts deploy intent to OpenVault (or opens `http://127.0.0.1:5000/#deploy`).
-4. OpenVault **auto-detects** stack (Dockerfile / Node / Python / Go / static) — no manual “pick my type” like vanilla OpenShip UX.
-5. LLM-assisted **gate checklist** must pass:
-   - Keys healthy (precheck pool ready)
-   - Cortex online (optional but recommended)
-   - Subdomain + TLS plan
-   - Secure email DNS (SPF / DKIM / DMARC / PTR checklist)
-   - Build / rebuild
-   - Playwright smoke (MCP when available; stub gate when not)
-   - Bug/roll gates
-6. **Scale-only deploy**: install or update apps + services (compose/systemd/OpenShip CLI when configured).
+1. Tenant signs up — **prefer new Netie email**; Google/external also accepted; private relay allocated.
+2. Operator (or self-serve) creates provider keys under that account; OpenVault stores them encrypted.
+3. Finish work in Cortex / AirGPT → say **deploy to web**.
+4. OpenVault auto-detects stack and runs gates (keys, subdomain, mail, build, Playwright, OpenShip, roll).
+5. Playwright smoke writes an artifact under `~/.openvault/playwright-smoke/`.
+6. OpenShip executor installs/updates apps+services (`OPENSHIP_MODE=simulate` locally, or real CLI/API).
+7. If keys are hacked/manipulated → **incident kill** spins off: revoke all, mint replacements or list `needs_register`.
 
 ## Status (truth)
 
 | Capability | Status |
 |------------|--------|
 | Key vault + continuous precheck + fallback | **Shipped** |
+| Account custody + Netie email + private relay | **Shipped** |
+| Incident kill / rotate / replace cloud keys | **Shipped** |
 | Cortex engine/model catalog + selection | **Shipped** |
 | Hardware health / bottleneck | **Shipped** |
-| Auto project detect | **This slice** |
-| Deploy gate pipeline + Cortex handoff API | **This slice** |
-| Email DNS checklist gates | **This slice** (checks / plans — not a full mail server) |
-| Live OpenShip CLI / Docker deploy executor | **Adapter stub** — wires when `OPENSHIP_URL` or local `openship` CLI exists |
-| Playwright MCP fail→debug loop | **Gate stub** — MCP not in this environment; records fail artifact path |
+| Auto project detect | **Shipped** |
+| Deploy gate pipeline + Cortex handoff API | **Shipped** |
+| Email DNS checklist gates | **Shipped** (checks / plans — not a full mail server) |
+| OpenShip in-repo clone (plan + execute) | **Shipped** — simulate / CLI / API modes |
+| Playwright smoke gate + artifacts | **Shipped** — dry/httpx or real Playwright when installed |
 | Slurm / K8s server orchestration | Deferred |
 | Full OmniRoute 250-provider clone | Deferred (patterns only) |
+| Live Google OAuth handshake | Deferred (provider recorded; email supplied) |
 
 ## Cortex / AirGPT contract
 
@@ -76,11 +78,17 @@ Content-Type: application/json
   "subdomain": "app.example.com",
   "intent": "deploy_to_web",
   "source": "airgpt",
-  "open_console": true
+  "open_console": true,
+  "smoke_url": "https://app.example.com",
+  "run_smoke": false
 }
 ```
 
-Response includes `deploy_id`, auto-detect result, and ordered gates with `pass|fail|pending|skipped`.
+Follow-ups:
+
+- `POST /api/deploy/{id}/playwright-smoke`
+- `POST /api/deploy/{id}/execute` (OpenShip roll)
+- `POST /api/openship/plan` with `execute: true`
 
 ## OpenShip adapter env
 
@@ -88,10 +96,12 @@ Response includes `deploy_id`, auto-detect result, and ordered gates with `pass|
 |-----|---------|
 | `OPENSHIP_URL` | Remote OpenShip control plane API |
 | `OPENSHIP_CLI` | Path/name of local `openship` binary |
+| `OPENSHIP_MODE` | `auto` \| `simulate` \| `cli` \| `api` |
 | `OPENVAULT_DEPLOY_ROOT` | Default project root for detect |
+| `OPENVAULT_PLAYWRIGHT_MODE` | `auto` \| `playwright` \| `dry` |
 
-## Non-goals for this slice
+## Non-goals (still)
 
-- Vendoring the entire OpenShip monorepo
+- Vendoring an external OpenShip git monorepo (we ship an in-repo full surface clone instead)
 - Running a production SMTP stack inside OpenVault
-- Claiming Playwright MCP is installed when it is not
+- Claiming Playwright browsers are installed when they are not (`dry` mode is honest)
