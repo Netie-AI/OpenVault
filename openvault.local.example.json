@@ -1,0 +1,32 @@
+{
+  "schema": "openvault.local.config/v1",
+  "bind": "127.0.0.1",
+  "clone_path_windows": "D:\\OpenVault",
+  "services": {
+    "openvault": {
+      "url": "http://127.0.0.1:5000",
+      "v1": "http://127.0.0.1:5000/v1",
+      "start": "cd OpenMW && uv run openmw console --cortex-url http://127.0.0.1:8000 --openide-url http://127.0.0.1:5100"
+    },
+    "rust_console": {
+      "url": "http://127.0.0.1:5055",
+      "start": "cd OpenMW/rust/openvault-console && cargo run --release"
+    },
+    "cortex": {
+      "url": "http://127.0.0.1:8000",
+      "health": "http://127.0.0.1:8000/health",
+      "openvault_env": {
+        "OPENVAULT_URL": "http://127.0.0.1:5000",
+        "OPENVAULT_V1": "http://127.0.0.1:5000/v1",
+        "OPENVAULT_DEPLOY": "http://127.0.0.1:5000/api/deploy/from-cortex"
+      }
+    },
+    "openide": {
+      "url": "http://127.0.0.1:5100",
+      "announce": "http://127.0.0.1:5000/api/local/handshake",
+      "invoke": "http://127.0.0.1:5000/api/openide/invoke",
+      "connect_pack": "http://127.0.0.1:5000/api/local/connect-pack"
+    }
+  },
+  "auto_approve_loopback": true
+}

@@ -27,6 +27,15 @@ from openmw.openvault.deploy import (
 from openmw.openvault.detect import detect_project
 from openmw.openvault.fallback import FallbackConfig, FallbackManager
 from openmw.openvault.health import bottleneck_payload, devices_payload
+from openmw.openvault.local_mesh import (
+    announce_peer,
+    build_connect_pack,
+    decide_handshake,
+    load_mesh,
+    openide_invoke,
+    refresh_mesh,
+    save_mesh,
+)
 from openmw.openvault.openship import (
     build_openship_plan,
     execute_openship_plan,
@@ -169,11 +178,38 @@ class DeployExecuteBody(BaseModel):
     simulate: bool | None = None
 
 
+class HandshakeBody(BaseModel):
+    peer_kind: Literal["openvault", "cortex", "openide", "airgpt", "rust_console"]
+    name: str
+    base_url: str
+    capabilities: list[str] = Field(default_factory=list)
+    auto_approve: bool | None = None
+
+
+class HandshakeDecision(BaseModel):
+    approve: bool = True
+    note: str = ""
+
+
+class OpenIdeInvoke(BaseModel):
+    action: str
+    username: str = ""
+    payload: dict[str, Any] = Field(default_factory=dict)
+
+
+class MeshConfigUpdate(BaseModel):
+    auto_approve_loopback: bool = True
+    cortex_url: str | None = None
+    openide_url: str | None = None
+    rust_console_url: str | None = None
+
+
 def create_app(
     *,
     vault: KeyVault | None = None,
     accounts: AccountStore | None = None,
     cortex_url: str = "http://127.0.0.1:8000",
+    openide_url: str = "http://127.0.0.1:5100",
     precheck_interval_s: float = 60.0,
     mock_health: bool = False,
     enable_precheck_loop: bool = True,
@@ -187,11 +223,21 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+        mesh = load_mesh()
+        mesh.peers["cortex"].base_url = cortex_url.rstrip("/")
+        mesh.peers["openide"].base_url = openide_url.rstrip("/")
+        save_mesh(mesh)
+        refresh_mesh(mesh)
         if enable_precheck_loop:
             pre_loop = PrecheckLoop(state_vault, interval_s=precheck_interval_s)
             loop_holder["loop"] = pre_loop
             task_holder["task"] = asyncio.create_task(pre_loop.run_forever())
             log.info("openvault_precheck_loop_started", interval_s=precheck_interval_s)
+        log.info(
+            "openvault_local_mesh_ready",
+            cortex_url=cortex_url,
+            openide_url=openide_url,
+        )
         yield
         if loop_holder["loop"] is not None:
             loop_holder["loop"].stop()
@@ -204,8 +250,12 @@ def create_app(
     app = FastAPI(title="OpenVault", version="0.1.0", lifespan=lifespan)
 
     @app.get("/api/healthz")
-    def healthz() -> dict[str, str]:
-        return {"status": "ok", "service": "openvault"}
+    def healthz() -> dict[str, Any]:
+        return {
+            "status": "ok",
+            "service": "openvault",
+            "mesh": ["openvault", "cortex", "openide", "rust_console"],
+        }
 
     @app.get("/api/health/devices")
     def health_devices() -> dict[str, Any]:
@@ -214,6 +264,66 @@ def create_app(
     @app.get("/api/health/bottleneck")
     def health_bottleneck() -> dict[str, Any]:
         return bottleneck_payload()
+
+    # --- Local mesh: OpenVault ↔ Cortex ↔ OpenIDE ---
+
+    @app.get("/api/local/mesh")
+    def local_mesh_status() -> dict[str, Any]:
+        state = refresh_mesh()
+        pack = build_connect_pack(state)
+        return {
+            "mesh": state.to_dict(),
+            "connect_pack": pack,
+            "perfect_local": pack["perfect_local"],
+        }
+
+    @app.post("/api/local/mesh/refresh")
+    def local_mesh_refresh() -> dict[str, Any]:
+        state = refresh_mesh()
+        return {"mesh": state.to_dict(), "connect_pack": build_connect_pack(state)}
+
+    @app.put("/api/local/mesh/config")
+    def local_mesh_config(body: MeshConfigUpdate) -> dict[str, Any]:
+        state = load_mesh()
+        state.auto_approve_loopback = body.auto_approve_loopback
+        if body.cortex_url:
+            state.peers["cortex"].base_url = body.cortex_url.rstrip("/")
+        if body.openide_url:
+            state.peers["openide"].base_url = body.openide_url.rstrip("/")
+        if body.rust_console_url:
+            state.peers["rust_console"].base_url = body.rust_console_url.rstrip("/")
+        save_mesh(state)
+        state = refresh_mesh(state)
+        return {"mesh": state.to_dict(), "connect_pack": build_connect_pack(state)}
+
+    @app.post("/api/local/handshake")
+    def local_handshake(body: HandshakeBody) -> dict[str, Any]:
+        return announce_peer(
+            peer_kind=body.peer_kind,
+            name=body.name,
+            base_url=body.base_url,
+            capabilities=body.capabilities,
+            auto_approve=body.auto_approve,
+        )
+
+    @app.post("/api/local/handshake/{request_id}/decide")
+    def local_handshake_decide(request_id: str, body: HandshakeDecision) -> dict[str, Any]:
+        try:
+            return decide_handshake(request_id, approve=body.approve, note=body.note)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail="handshake not found") from exc
+
+    @app.get("/api/local/connect-pack")
+    def local_connect_pack() -> dict[str, Any]:
+        return build_connect_pack(refresh_mesh())
+
+    @app.post("/api/openide/invoke")
+    def api_openide_invoke(body: OpenIdeInvoke) -> dict[str, Any]:
+        return openide_invoke(
+            action=body.action,
+            username=body.username,
+            payload=body.payload,
+        )
 
     # --- Accounts / custody ---
 

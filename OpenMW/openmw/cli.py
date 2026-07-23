@@ -169,6 +169,11 @@ def console_cmd(
         "--cortex-url",
         help="Cortex / Netie Engine base URL.",
     ),
+    openide_url: str = typer.Option(
+        "http://127.0.0.1:5100",
+        "--openide-url",
+        help="OpenIDE local bridge base URL.",
+    ),
     mock_health: bool = typer.Option(
         False,
         "--mock-health",
@@ -185,7 +190,7 @@ def console_cmd(
         help="Open the liquid-glass console in a browser.",
     ),
 ) -> None:
-    """Start OpenVault: secure /v1 proxy, key vault, precheck/fallback, Cortex catalog."""
+    """Start OpenVault: secure /v1 proxy, key vault, precheck/fallback, Cortex+OpenIDE mesh."""
     import webbrowser
 
     import uvicorn
@@ -194,6 +199,7 @@ def console_cmd(
 
     app = create_app(
         cortex_url=cortex_url,
+        openide_url=openide_url,
         mock_health=mock_health,
         precheck_interval_s=precheck_interval,
     )
@@ -201,6 +207,9 @@ def console_cmd(
     typer.echo(f"OpenVault console at {url}")
     typer.echo(f"Secure API endpoint: {url}v1/chat/completions")
     typer.echo(f"Cortex URL: {cortex_url}")
+    typer.echo(f"OpenIDE URL: {openide_url}")
+    typer.echo(f"Local mesh: {url}api/local/mesh")
+    typer.echo(f"Connect pack: {url}api/local/connect-pack")
     if open_browser and host in ("127.0.0.1", "localhost"):
         webbrowser.open(url)
     uvicorn.run(app, host=host, port=port, log_level="info")

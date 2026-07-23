@@ -28,6 +28,20 @@ If Cortex is offline, OpenVault still serves the local OpenMW model registry and
 - Continuous precheck loop (default 60s) marks keys `ok` / `auth_fail` / `rate_limit` / `timeout` / `error`
 - Fallback order: `primary → backup → cheap → free` with circuit breaker
 
+## Local mesh (OpenIDE + Cortex)
+
+OpenVault is the approval authority for the laptop mesh:
+
+| Peer | Default | Announce |
+|------|---------|----------|
+| Cortex | `http://127.0.0.1:8000` | `POST /api/local/handshake` `peer_kind=cortex` |
+| OpenIDE | `http://127.0.0.1:5100` | `POST /api/local/handshake` `peer_kind=openide` |
+
+- Connect pack: `GET /api/local/connect-pack`
+- UI: `http://127.0.0.1:5000/#mesh`
+- Windows clone: `docs/local/WINDOWS_CLONE_D_DRIVE.md`
+- Stub OpenIDE for bring-up: `python scripts/openide_stub.py`
+
 ## Model assignment
 
 `PUT /api/orchestration/selection` stores:

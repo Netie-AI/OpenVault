@@ -755,6 +755,7 @@
       <button type="button" data-tab="performance">Middleware Gain</button>
       <button type="button" data-tab="vault">Vault</button>
       <button type="button" data-tab="accounts">Accounts</button>
+      <button type="button" data-tab="mesh">Local Mesh</button>
       <button type="button" data-tab="engine">Engine</button>
       <button type="button" data-tab="deploy">Deploy</button>
     </nav>
@@ -980,6 +981,42 @@
           <div id="acctList"></div>
           <h3 style="font-family:var(--serif);font-weight:500;margin:18px 0 8px">Selected account keys</h3>
           <div id="acctKeyList"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- LOCAL MESH -->
+    <section id="panel-mesh" class="panel">
+      <h2 class="section-title">Local Mesh</h2>
+      <p class="section-sub">OpenVault ↔ Cortex ↔ OpenIDE on 127.0.0.1 · approve · connect pack</p>
+      <div class="vault-layout">
+        <div class="glass vault-form">
+          <h3 style="font-family:var(--serif);font-weight:500;margin-bottom:8px">Peer URLs</h3>
+          <label for="meshCortex">Cortex URL</label>
+          <input id="meshCortex" placeholder="http://127.0.0.1:8000" />
+          <label for="meshOpenide">OpenIDE URL</label>
+          <input id="meshOpenide" placeholder="http://127.0.0.1:5100" />
+          <label for="meshRust">Rust auth console</label>
+          <input id="meshRust" placeholder="http://127.0.0.1:5055" />
+          <div class="actions">
+            <button type="button" class="btn" id="meshSaveBtn">Save + probe</button>
+            <button type="button" class="btn-ghost" id="meshRefreshBtn">Refresh</button>
+            <button type="button" class="btn-ghost" id="meshAnnounceIdeBtn">Approve OpenIDE</button>
+            <button type="button" class="btn-ghost" id="meshAnnounceCortexBtn">Approve Cortex</button>
+          </div>
+          <p id="meshMsg" style="margin-top:12px;font-size:0.8rem;color:var(--text-muted)"></p>
+          <h3 style="font-family:var(--serif);font-weight:500;margin:18px 0 8px">OpenIDE invoke</h3>
+          <div class="actions">
+            <button type="button" class="btn-ghost" id="meshInvokeSignin">Complete sign-in</button>
+            <button type="button" class="btn-ghost" id="meshInvokePasskey">Register passkey</button>
+          </div>
+        </div>
+        <div class="glass vault-list">
+          <h3 style="font-family:var(--serif);font-weight:500;margin-bottom:8px">Peers</h3>
+          <div id="meshPeers"></div>
+          <h3 style="font-family:var(--serif);font-weight:500;margin:18px 0 8px">Connect pack</h3>
+          <pre id="meshPack" style="font-size:0.72rem;color:var(--text-muted);white-space:pre-wrap;max-height:280px;overflow:auto"></pre>
+          <p id="meshPerfect" style="margin-top:12px;font-size:0.85rem"></p>
         </div>
       </div>
     </section>
@@ -1672,6 +1709,88 @@
       await refreshVault();
     });
 
+    async function refreshMesh() {
+      if (!apiMode) return;
+      const res = await fetch("/api/local/mesh");
+      const data = await res.json();
+      const peers = data.mesh?.peers || {};
+      document.getElementById("meshCortex").value = peers.cortex?.base_url || "http://127.0.0.1:8000";
+      document.getElementById("meshOpenide").value = peers.openide?.base_url || "http://127.0.0.1:5100";
+      document.getElementById("meshRust").value = peers.rust_console?.base_url || "http://127.0.0.1:5055";
+      document.getElementById("meshPeers").innerHTML = Object.entries(peers).map(([k, p]) => `
+        <div class="hop-status">
+          <span class="pill ${pillClass(p.approved && (p.status === "online" || p.status === "approved") ? "ok" : p.status === "offline" ? "bad" : "unknown")}">${p.status}</span>
+          <strong>${k}</strong>
+          <div class="key-meta">${p.base_url} · approved=${p.approved} · ${p.detail || ""}</div>
+        </div>`).join("");
+      document.getElementById("meshPack").textContent = JSON.stringify(data.connect_pack, null, 2);
+      const perfect = data.perfect_local || data.connect_pack?.perfect_local || {};
+      document.getElementById("meshPerfect").textContent = perfect.message || "";
+      document.getElementById("meshPerfect").style.color = perfect.ready ? "var(--success)" : "var(--warn)";
+    }
+    document.getElementById("meshRefreshBtn").addEventListener("click", () => refreshMesh().catch(e => {
+      document.getElementById("meshMsg").textContent = String(e);
+    }));
+    document.getElementById("meshSaveBtn").addEventListener("click", async () => {
+      const res = await fetch("/api/local/mesh/config", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          auto_approve_loopback: true,
+          cortex_url: document.getElementById("meshCortex").value,
+          openide_url: document.getElementById("meshOpenide").value,
+          rust_console_url: document.getElementById("meshRust").value
+        })
+      });
+      document.getElementById("meshMsg").textContent = res.ok ? "Mesh saved + probed" : "Save failed";
+      await refreshMesh();
+    });
+    async function announcePeer(kind, url, name) {
+      const res = await fetch("/api/local/handshake", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          peer_kind: kind,
+          name,
+          base_url: url,
+          capabilities: kind === "openide"
+            ? ["signin", "passkey", "editor"]
+            : ["engines", "models", "deploy"],
+          auto_approve: true
+        })
+      });
+      const data = await res.json();
+      document.getElementById("meshMsg").textContent = res.ok
+        ? `${kind} handshake ${data.handshake?.status}`
+        : (data.detail || "handshake failed");
+      await refreshMesh();
+    }
+    document.getElementById("meshAnnounceIdeBtn").addEventListener("click", () =>
+      announcePeer("openide", document.getElementById("meshOpenide").value, "OpenIDE local"));
+    document.getElementById("meshAnnounceCortexBtn").addEventListener("click", () =>
+      announcePeer("cortex", document.getElementById("meshCortex").value, "Cortex Netie Engine"));
+    document.getElementById("meshInvokeSignin").addEventListener("click", async () => {
+      const res = await fetch("/api/openide/invoke", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "complete_signin", username: "" })
+      });
+      const data = await res.json();
+      document.getElementById("meshMsg").textContent = data.ok
+        ? (data.instructions || []).join(" · ")
+        : (data.error || "invoke failed");
+    });
+    document.getElementById("meshInvokePasskey").addEventListener("click", async () => {
+      const res = await fetch("/api/openide/invoke", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "register_passkey" })
+      });
+      const data = await res.json();
+      document.getElementById("meshMsg").textContent = data.ok ? data.message : (data.error || "failed");
+      if (data.open_url) window.open(data.open_url, "_blank");
+    });
+
     function activateTab(name) {
       const btn = document.querySelector(`nav.tabs button[data-tab="${name}"]`);
       if (!btn) return;
@@ -1682,6 +1801,7 @@
       if (name === "vault") refreshVault();
       if (name === "engine") refreshEngine();
       if (name === "accounts") refreshAccounts();
+      if (name === "mesh") refreshMesh();
     }
 
     document.querySelectorAll("nav.tabs button").forEach(btn => {
@@ -1689,6 +1809,7 @@
         activateTab(btn.dataset.tab);
         if (btn.dataset.tab === "deploy") history.replaceState(null, "", "#deploy");
         if (btn.dataset.tab === "accounts") history.replaceState(null, "", "#accounts");
+        if (btn.dataset.tab === "mesh") history.replaceState(null, "", "#mesh");
       });
     });
 
@@ -1698,12 +1819,13 @@
         await refreshVault();
         await refreshEngine();
         await refreshAccounts();
+        await refreshMesh();
         setInterval(async () => {
           try { await refreshVault(); } catch (_) {}
         }, 30000);
       }
       const hash = location.hash.replace("#", "");
-      if (hash === "deploy" || hash === "accounts") activateTab(hash);
+      if (hash === "deploy" || hash === "accounts" || hash === "mesh") activateTab(hash);
     });
   </script>
 </body>

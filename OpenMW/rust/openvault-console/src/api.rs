@@ -33,10 +33,16 @@ fn bearer(headers: &HeaderMap) -> AppResult<String> {
 }
 
 async fn healthz() -> Json<Value> {
+    let openvault = std::env::var("OPENVAULT_URL").unwrap_or_else(|_| "http://127.0.0.1:5000".into());
     Json(json!({
         "status": "ok",
         "service": "openvault-console-rust",
-        "features": ["auth", "passkeys", "vault", "omniroute", "openship"]
+        "features": ["auth", "passkeys", "vault", "omniroute", "openship", "mesh"],
+        "mesh": {
+            "openvault": openvault,
+            "connect_pack": format!("{}/api/local/connect-pack", openvault.trim_end_matches('/')),
+            "role": "rust_console"
+        }
     }))
 }
 
