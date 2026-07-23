@@ -160,6 +160,52 @@ def infer_cmd(
     raise typer.Exit(code=2)
 
 
+@app.command("console")
+def console_cmd(
+    host: str = typer.Option("127.0.0.1", "--host", help="Bind address (localhost default)."),
+    port: int = typer.Option(5000, "--port", help="HTTP port for OpenVault console."),
+    cortex_url: str = typer.Option(
+        "http://127.0.0.1:8000",
+        "--cortex-url",
+        help="Cortex / Netie Engine base URL.",
+    ),
+    mock_health: bool = typer.Option(
+        False,
+        "--mock-health",
+        help="Use demo hardware profile instead of live detect().",
+    ),
+    precheck_interval: float = typer.Option(
+        60.0,
+        "--precheck-interval",
+        help="Seconds between continuous API-key health prechecks.",
+    ),
+    open_browser: bool = typer.Option(
+        True,
+        "--open-browser/--no-open-browser",
+        help="Open the liquid-glass console in a browser.",
+    ),
+) -> None:
+    """Start OpenVault: secure /v1 proxy, key vault, precheck/fallback, Cortex catalog."""
+    import webbrowser
+
+    import uvicorn
+
+    from openmw.openvault.app import create_app
+
+    app = create_app(
+        cortex_url=cortex_url,
+        mock_health=mock_health,
+        precheck_interval_s=precheck_interval,
+    )
+    url = f"http://{host}:{port}/"
+    typer.echo(f"OpenVault console at {url}")
+    typer.echo(f"Secure API endpoint: {url}v1/chat/completions")
+    typer.echo(f"Cortex URL: {cortex_url}")
+    if open_browser and host in ("127.0.0.1", "localhost"):
+        webbrowser.open(url)
+    uvicorn.run(app, host=host, port=port, log_level="info")
+
+
 @app.command("demo-ui")
 def demo_ui_cmd(
     out: Path = typer.Option(  # noqa: B008

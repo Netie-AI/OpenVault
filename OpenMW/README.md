@@ -33,3 +33,23 @@ uv run openmw demo-ui --port 5000
 
 Opens `http://127.0.0.1:5000/` with Detection · Data Flow · Bottleneck · Middleware Gain tabs.
 Use `--mock-profile` for a fixed RTX 4050 demo profile, or `--no-serve` to only write `demo.json` + `index.html`.
+
+## OpenVault console (secure keys + Cortex)
+
+```bash
+cd OpenMW
+uv sync
+uv run openmw console --port 5000 --mock-health
+```
+
+Starts the liquid-glass **OpenVault** console with:
+
+- Continuous API-key precheck + primary→backup→cheap→free fallback
+- Encrypted vault under `~/.openvault` (override with `OPENVAULT_HOME`)
+- Secure local endpoint `http://127.0.0.1:5000/v1/chat/completions`
+- Cortex / Netie Engine status + model catalog selection
+- Hardware detection / bottleneck panels
+
+Point Cursor / tools at the `/v1` endpoint. Cortex URL defaults to `http://127.0.0.1:8000` (`--cortex-url`).
+
+See [`docs/openvault-cortex.md`](../docs/openvault-cortex.md).

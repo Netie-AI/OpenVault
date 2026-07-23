@@ -602,6 +602,128 @@
       font-size: 0.72rem;
       color: var(--text-muted);
     }
+
+    .endpoint-strip {
+      margin-top: 14px;
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .endpoint-label {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .endpoint-strip code {
+      color: var(--accent);
+      font-size: 0.92rem;
+    }
+
+    .btn, .btn-ghost {
+      border: 1px solid var(--glass-border);
+      background: var(--glass-strong);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 8px 14px;
+      font: inherit;
+      font-size: 0.82rem;
+      cursor: pointer;
+    }
+
+    .btn:hover, .btn-ghost:hover { background: rgba(255,255,255,0.12); }
+
+    .btn-ghost { background: transparent; }
+
+    .vault-layout, .engine-layout {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 18px;
+    }
+
+    @media (max-width: 960px) {
+      .vault-layout, .engine-layout { grid-template-columns: 1fr; }
+    }
+
+    .vault-form, .vault-list, .engine-card, .model-list {
+      padding: 20px 22px;
+    }
+
+    .vault-form label {
+      display: block;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin: 10px 0 6px;
+    }
+
+    .vault-form input, .vault-form select, .engine-card select, .engine-card input {
+      width: 100%;
+      border-radius: 10px;
+      border: 1px solid var(--glass-border);
+      background: rgba(0,0,0,0.25);
+      color: var(--text);
+      padding: 10px 12px;
+      font: inherit;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .key-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .key-row:last-child { border-bottom: 0; }
+
+    .key-meta {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.68rem;
+      border: 1px solid var(--glass-border);
+      margin-right: 6px;
+    }
+
+    .pill.ok { color: var(--success); border-color: rgba(94,228,168,0.35); }
+    .pill.bad { color: var(--danger); border-color: rgba(255,107,107,0.35); }
+    .pill.warn { color: var(--warn); border-color: rgba(255,179,71,0.35); }
+
+    .hop-status {
+      font-size: 0.82rem;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .model-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      font-size: 0.85rem;
+    }
+
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
   </style>
 </head>
 <body>
@@ -609,8 +731,8 @@
   <div class="app">
     <header class="glass">
       <div class="brand">
-        <h1>OpenMW</h1>
-        <p>Bring Your Own Runtime · Hardware Intelligence</p>
+        <h1>OpenVault</h1>
+        <p>Secure keys · Fallback · Netie Engine · Hardware Intelligence</p>
       </div>
       <div class="scan-pill">
         <span class="scan-dot"></span>
@@ -618,11 +740,21 @@
       </div>
     </header>
 
+    <div class="glass endpoint-strip" id="endpointStrip" hidden>
+      <div>
+        <div class="endpoint-label">Secure local API</div>
+        <code id="endpointUrl">http://127.0.0.1:5000/v1</code>
+      </div>
+      <button type="button" class="btn" id="copyEndpoint">Copy</button>
+    </div>
+
     <nav class="tabs glass" role="tablist">
       <button type="button" class="active" data-tab="detect">Detection</button>
       <button type="button" data-tab="flow">Data Flow</button>
       <button type="button" data-tab="bottleneck">Bottleneck</button>
       <button type="button" data-tab="performance">Middleware Gain</button>
+      <button type="button" data-tab="vault">Vault</button>
+      <button type="button" data-tab="engine">Engine</button>
     </nav>
 
     <!-- DETECTION -->
@@ -717,7 +849,116 @@
       </div>
     </section>
 
-    <footer>Demo data from <code style="color:var(--accent)">openmw demo-ui</code> · mock PathTrace until nsys hardware gate</footer>
+    <!-- VAULT -->
+    <section id="panel-vault" class="panel">
+      <h2 class="section-title">API Key Vault</h2>
+      <p class="section-sub">Encrypted local store · continuous precheck · primary→backup→cheap→free fallback</p>
+      <div class="vault-layout">
+        <div class="glass vault-form">
+          <h3 style="font-family:var(--serif);font-weight:500;margin-bottom:8px">Add key</h3>
+          <div class="form-row">
+            <div>
+              <label for="keyLabel">Label</label>
+              <input id="keyLabel" placeholder="Claude work" />
+            </div>
+            <div>
+              <label for="keyProvider">Provider</label>
+              <select id="keyProvider">
+                <option value="openai">OpenAI-compatible</option>
+                <option value="anthropic">Anthropic</option>
+                <option value="mistral">Mistral</option>
+                <option value="google">Google</option>
+                <option value="huggingface">Hugging Face</option>
+                <option value="cortex">Cortex</option>
+                <option value="ollama">Ollama</option>
+                <option value="custom">Custom</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div>
+              <label for="keyRole">Role</label>
+              <select id="keyRole">
+                <option value="primary">primary</option>
+                <option value="backup" selected>backup</option>
+                <option value="cheap">cheap</option>
+                <option value="free">free</option>
+              </select>
+            </div>
+            <div>
+              <label for="keyPriority">Priority (lower first)</label>
+              <input id="keyPriority" type="number" value="100" />
+            </div>
+          </div>
+          <label for="keyBase">Base URL (optional)</label>
+          <input id="keyBase" placeholder="https://api.openai.com/v1" />
+          <label for="keySecret">Secret</label>
+          <input id="keySecret" type="password" placeholder="sk-…" autocomplete="off" />
+          <div class="actions">
+            <button type="button" class="btn" id="addKeyBtn">Store key</button>
+            <button type="button" class="btn-ghost" id="precheckAllBtn">Precheck all</button>
+          </div>
+          <p id="vaultMsg" style="margin-top:12px;font-size:0.8rem;color:var(--text-muted)"></p>
+        </div>
+        <div>
+          <div class="glass vault-list" style="margin-bottom:18px">
+            <h3 style="font-family:var(--serif);font-weight:500;margin-bottom:8px">Stored keys</h3>
+            <div id="keyList"></div>
+          </div>
+          <div class="glass vault-list">
+            <h3 style="font-family:var(--serif);font-weight:500;margin-bottom:8px">Fallback chain</h3>
+            <div id="fallbackList"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ENGINE -->
+    <section id="panel-engine" class="panel">
+      <h2 class="section-title">Netie Engine · Cortex</h2>
+      <p class="section-sub">Show available engines and models · pick the best for orchestration</p>
+      <div class="engine-layout">
+        <div class="glass engine-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px">
+            <div>
+              <div style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em">Cortex status</div>
+              <strong id="cortexStatusLabel" style="font-family:var(--serif);font-size:1.3rem">—</strong>
+            </div>
+            <button type="button" class="btn-ghost" id="refreshCortex">Refresh</button>
+          </div>
+          <p id="cortexDetail" style="font-size:0.85rem;color:var(--text-muted);margin-bottom:16px"></p>
+          <h3 style="font-family:var(--serif);font-weight:500;margin-bottom:8px">Engines</h3>
+          <div id="engineList"></div>
+        </div>
+        <div class="glass engine-card">
+          <h3 style="font-family:var(--serif);font-weight:500;margin-bottom:8px">Assign best model</h3>
+          <label for="primaryModel">Primary model</label>
+          <select id="primaryModel"></select>
+          <label for="cortexTier">Cortex tier</label>
+          <select id="cortexTier">
+            <option value="T0">T0</option>
+            <option value="T1" selected>T1</option>
+            <option value="T2">T2</option>
+            <option value="T3">T3</option>
+          </select>
+          <label for="engineId">Engine</label>
+          <select id="engineId">
+            <option value="ollama">ollama</option>
+            <option value="vllm">vllm</option>
+            <option value="sglang">sglang</option>
+            <option value="llama.cpp">llama.cpp</option>
+          </select>
+          <div class="actions">
+            <button type="button" class="btn" id="saveSelection">Save selection</button>
+          </div>
+          <p id="selectionMsg" style="margin-top:12px;font-size:0.8rem;color:var(--text-muted)"></p>
+          <h3 style="font-family:var(--serif);font-weight:500;margin:18px 0 8px">Model catalog</h3>
+          <div class="model-list" id="modelList" style="padding:0;max-height:320px;overflow:auto"></div>
+        </div>
+      </div>
+    </section>
+
+    <footer id="footerNote">OpenVault console · <code style="color:var(--accent)">openmw console</code></footer>
   </div>
 
   <script>
@@ -780,10 +1021,35 @@
       bytes_moved: 0, is_bottleneck: h.is_bottleneck
     }));
 
+    let apiMode = false;
+
+    async function probeApi() {
+      try {
+        const res = await fetch("/api/healthz", { cache: "no-store" });
+        return res.ok;
+      } catch {
+        return false;
+      }
+    }
+
     async function loadData() {
+      apiMode = await probeApi();
+      if (apiMode) {
+        const res = await fetch("/api/health/devices", { cache: "no-store" });
+        if (!res.ok) throw new Error("health devices failed");
+        const data = await res.json();
+        document.getElementById("endpointStrip").hidden = false;
+        document.getElementById("endpointUrl").textContent =
+          window.location.origin + "/v1";
+        document.getElementById("footerNote").innerHTML =
+          'OpenVault live · continuous key precheck · <code style="color:var(--accent)">openmw console</code>';
+        return data;
+      }
       try {
         const res = await fetch("demo.json", { cache: "no-store" });
         if (!res.ok) throw new Error("no demo.json");
+        document.getElementById("footerNote").innerHTML =
+          'Demo data from <code style="color:var(--accent)">openmw demo-ui</code>';
         return await res.json();
       } catch {
         return FALLBACK;
@@ -796,21 +1062,22 @@
     }
 
     function render(data) {
-      const health = avgHealth(data.devices);
+      const health = avgHealth(data.devices || []);
       document.getElementById("healthPct").textContent = health + "%";
       const ring = document.getElementById("healthRing");
       const circ = 2 * Math.PI * 68;
       ring.setAttribute("stroke-dasharray", circ);
       ring.setAttribute("stroke-dashoffset", circ * (1 - health / 100));
 
-      const p = data.profile;
+      const p = data.profile || {};
       document.getElementById("detectSummary").textContent =
         `${p.gpu_name || "CPU host"} · ${p.nvme_model || "storage"} · ${p.nvme_seq_read_gbps?.toFixed?.(1) || "?"} GB/s NVMe`;
       document.getElementById("scanStatus").textContent =
-        data.demo_mode ? "Demo profile loaded" : "Live host detected";
+        apiMode ? "OpenVault API connected" :
+        (data.demo_mode ? "Demo profile loaded" : "Live host detected");
 
       const cards = document.getElementById("deviceCards");
-      cards.innerHTML = data.devices.map(d => `
+      cards.innerHTML = (data.devices || []).map(d => `
         <div class="glass device-card">
           <span class="status-badge ${d.status}">${d.status}</span>
           <div class="device-kind">${d.kind}</div>
@@ -848,19 +1115,183 @@
       document.getElementById("gpuIdle").textContent =
         (data.path_trace?.gpu_idle_pct_waiting_on_io ?? "—") + "%";
 
-      const mc = data.middleware_comparison;
-      document.getElementById("baselineTok").textContent = mc.baseline_tok_s;
-      document.getElementById("optimizedTok").textContent = mc.optimized_tok_s;
-      document.getElementById("speedupPct").textContent = "+" + mc.speedup_pct + "%";
+      const mc = data.middleware_comparison || {};
+      document.getElementById("baselineTok").textContent = mc.baseline_tok_s ?? "—";
+      document.getElementById("optimizedTok").textContent = mc.optimized_tok_s ?? "—";
+      document.getElementById("speedupPct").textContent =
+        mc.speedup_pct != null ? ("+" + mc.speedup_pct + "%") : "—";
       document.getElementById("featureList").innerHTML =
         (mc.middleware_features || []).map(f => `<li>${f}</li>`).join("");
 
-      const r = data.routing;
-      document.getElementById("routeModel").textContent = r.model_id;
-      document.getElementById("gpuLayers").textContent = r.gpu_layers;
-      document.getElementById("cpuLayers").textContent = r.cpu_ram_layers;
-      document.getElementById("nvmeLayers").textContent = r.nvme_layers;
+      const r = data.routing || {};
+      document.getElementById("routeModel").textContent = r.model_id || "—";
+      document.getElementById("gpuLayers").textContent = r.gpu_layers ?? "—";
+      document.getElementById("cpuLayers").textContent = r.cpu_ram_layers ?? "—";
+      document.getElementById("nvmeLayers").textContent = r.nvme_layers ?? "—";
     }
+
+    function pillClass(status) {
+      if (status === "ok" || status === "closed") return "ok";
+      if (status === "unknown" || status === "half_open") return "warn";
+      return "bad";
+    }
+
+    async function refreshVault() {
+      if (!apiMode) {
+        document.getElementById("keyList").innerHTML =
+          "<p style='color:var(--text-muted);font-size:0.85rem'>Start <code>openmw console</code> for the live vault.</p>";
+        return;
+      }
+      const [keysRes, fbRes] = await Promise.all([
+        fetch("/api/keys"),
+        fetch("/api/fallback/status")
+      ]);
+      const keys = (await keysRes.json()).keys || [];
+      const fb = await fbRes.json();
+      document.getElementById("keyList").innerHTML = keys.length ? keys.map(k => `
+        <div class="key-row">
+          <div>
+            <strong>${k.label}</strong>
+            <div class="key-meta">
+              <span class="pill ${pillClass(k.precheck_status)}">${k.precheck_status}</span>
+              <span class="pill">${k.provider}</span>
+              <span class="pill">${k.role}</span>
+              ${k.masked_secret}
+              ${k.last_latency_ms != null ? (" · " + Math.round(k.last_latency_ms) + " ms") : ""}
+            </div>
+          </div>
+          <div class="actions" style="margin:0">
+            <button type="button" class="btn-ghost" data-copy="${k.id}">Copy</button>
+            <button type="button" class="btn-ghost" data-precheck="${k.id}">Test</button>
+            <button type="button" class="btn-ghost" data-del="${k.id}">Delete</button>
+          </div>
+        </div>`).join("") : "<p style='color:var(--text-muted)'>No keys yet.</p>";
+
+      document.getElementById("fallbackList").innerHTML = (fb.hops || []).map(h => `
+        <div class="hop-status">
+          <span class="pill ${pillClass(h.circuit)}">${h.circuit}</span>
+          <strong>${h.label}</strong>
+          <span style="color:var(--text-muted)"> · ${h.role} · precheck ${h.precheck_status}</span>
+        </div>`).join("") || "<p style='color:var(--text-muted)'>No enabled hops.</p>";
+
+      document.querySelectorAll("[data-copy]").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const res = await fetch(`/api/keys/${btn.dataset.copy}/secret`);
+          const data = await res.json();
+          await navigator.clipboard.writeText(data.secret || "");
+          document.getElementById("vaultMsg").textContent = "Secret copied locally.";
+        });
+      });
+      document.querySelectorAll("[data-precheck]").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          await fetch(`/api/keys/${btn.dataset.precheck}/precheck`, { method: "POST" });
+          await refreshVault();
+        });
+      });
+      document.querySelectorAll("[data-del]").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          await fetch(`/api/keys/${btn.dataset.del}`, { method: "DELETE" });
+          await refreshVault();
+        });
+      });
+    }
+
+    async function refreshEngine() {
+      if (!apiMode) {
+        document.getElementById("cortexStatusLabel").textContent = "Offline UI";
+        document.getElementById("cortexDetail").textContent =
+          "Start openmw console to talk to Cortex and assign models.";
+        return;
+      }
+      const [st, engines, models, selection] = await Promise.all([
+        fetch("/api/cortex/status").then(r => r.json()),
+        fetch("/api/cortex/engines").then(r => r.json()),
+        fetch("/api/cortex/models").then(r => r.json()),
+        fetch("/api/orchestration/selection").then(r => r.json())
+      ]);
+      document.getElementById("cortexStatusLabel").textContent =
+        st.online ? "Online" : "Offline";
+      document.getElementById("cortexDetail").textContent =
+        `${st.base_url} · ${st.detail}`;
+
+      const engineItems = Array.isArray(engines.engines)
+        ? engines.engines
+        : (engines.engines ? [engines.engines] : []);
+      document.getElementById("engineList").innerHTML = engineItems.map(e => {
+        const id = e.id || e.name || "engine";
+        const name = e.name || e.id || "engine";
+        return `<div class="hop-status"><span class="pill">${engines.source || "local"}</span><strong>${name}</strong> <span style="color:var(--text-muted)">· ${id}</span></div>`;
+      }).join("") || "<p style='color:var(--text-muted)'>No engines.</p>";
+
+      const modelSelect = document.getElementById("primaryModel");
+      const catalog = models.models || [];
+      modelSelect.innerHTML = catalog.map(m =>
+        `<option value="${m.id}">${m.name || m.id} (${m.tier || "?"})</option>`
+      ).join("");
+      if (selection.primary_model) modelSelect.value = selection.primary_model;
+      document.getElementById("cortexTier").value = selection.cortex_tier || "T1";
+      document.getElementById("engineId").value = selection.engine_id || "ollama";
+
+      document.getElementById("modelList").innerHTML = catalog.slice(0, 40).map(m => `
+        <div class="model-item">
+          <div><strong>${m.name || m.id}</strong><div class="key-meta">${m.id} · ${m.source || ""}</div></div>
+          <span class="pill">${m.tier || m.cortex_tier_hint || "?"}</span>
+        </div>`).join("");
+    }
+
+    document.getElementById("addKeyBtn").addEventListener("click", async () => {
+      if (!apiMode) return;
+      const body = {
+        label: document.getElementById("keyLabel").value || "untitled",
+        provider: document.getElementById("keyProvider").value,
+        role: document.getElementById("keyRole").value,
+        priority: Number(document.getElementById("keyPriority").value || 100),
+        base_url: document.getElementById("keyBase").value || "",
+        secret: document.getElementById("keySecret").value || ""
+      };
+      const res = await fetch("/api/keys", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+      document.getElementById("vaultMsg").textContent = res.ok
+        ? "Key stored encrypted in ~/.openvault"
+        : "Failed to store key";
+      document.getElementById("keySecret").value = "";
+      await refreshVault();
+    });
+
+    document.getElementById("precheckAllBtn").addEventListener("click", async () => {
+      if (!apiMode) return;
+      document.getElementById("vaultMsg").textContent = "Prechecking all keys…";
+      await fetch("/api/keys/precheck-all", { method: "POST" });
+      await refreshVault();
+      document.getElementById("vaultMsg").textContent = "Precheck complete.";
+    });
+
+    document.getElementById("saveSelection").addEventListener("click", async () => {
+      if (!apiMode) return;
+      const body = {
+        primary_model: document.getElementById("primaryModel").value || "",
+        fallback_models: [],
+        cortex_tier: document.getElementById("cortexTier").value,
+        engine_id: document.getElementById("engineId").value,
+        notes: ""
+      };
+      const res = await fetch("/api/orchestration/selection", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+      document.getElementById("selectionMsg").textContent = res.ok
+        ? "Selection saved — OpenVault will prefer this model for orchestration."
+        : "Save failed";
+    });
+
+    document.getElementById("refreshCortex").addEventListener("click", refreshEngine);
+    document.getElementById("copyEndpoint").addEventListener("click", async () => {
+      await navigator.clipboard.writeText(document.getElementById("endpointUrl").textContent);
+    });
 
     document.querySelectorAll("nav.tabs button").forEach(btn => {
       btn.addEventListener("click", () => {
@@ -868,10 +1299,21 @@
         document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
         btn.classList.add("active");
         document.getElementById("panel-" + btn.dataset.tab).classList.add("active");
+        if (btn.dataset.tab === "vault") refreshVault();
+        if (btn.dataset.tab === "engine") refreshEngine();
       });
     });
 
-    loadData().then(render);
+    loadData().then(async (data) => {
+      render(data);
+      if (apiMode) {
+        await refreshVault();
+        await refreshEngine();
+        setInterval(async () => {
+          try { await refreshVault(); } catch (_) {}
+        }, 30000);
+      }
+    });
   </script>
 </body>
 </html>
