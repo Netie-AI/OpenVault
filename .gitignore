@@ -25,6 +25,11 @@ dist/
 
 # Environment files
 .env
+openvault.local.json
+
+# Local OpenVault runtime (keys, mesh, connect pack)
+.openvault/
+**/.openvault/
 
 # Local reports
 reports/
