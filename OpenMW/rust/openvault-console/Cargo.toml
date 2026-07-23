@@ -1,0 +1,31 @@
+[package]
+name = "openvault-console"
+version = "0.1.0"
+edition = "2021"
+description = "OpenVault Rust console — passkey auth, custody, OmniRoute, OpenShip, vaults"
+license = "Apache-2.0"
+rust-version = "1.75"
+
+[dependencies]
+argon2 = "0.5"
+axum = { version = "0.7", features = ["macros"] }
+base64 = "0.22"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std", "serde"] }
+ed25519-dalek = { version = "2", features = ["rand_core"] }
+hex = "0.4"
+rand = "0.8"
+rusqlite = { version = "0.32", features = ["bundled"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+thiserror = "1"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "fs"] }
+tower-http = { version = "0.5", features = ["cors", "fs", "trace"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+
+[dev-dependencies]
+tempfile = "3"
+tower = { version = "0.5", features = ["util"] }
+http-body-util = "0.1"

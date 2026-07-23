@@ -65,7 +65,8 @@ flowchart TB
 | Playwright smoke gate + artifacts | **Shipped** — dry/httpx or real Playwright when installed |
 | Slurm / K8s server orchestration | Deferred |
 | Full OmniRoute 250-provider clone | Deferred (patterns only) |
-| Live Google OAuth handshake | Deferred (provider recorded; email supplied) |
+| Live Google OAuth handshake | Deferred (Gmail used as verify channel; provider recorded) |
+| Rust passkey console (auth + vault + OmniRoute + OpenShip UI) | **Shipped** — `OpenMW/rust/openvault-console` → `:5055` |
 
 ## Cortex / AirGPT contract
 

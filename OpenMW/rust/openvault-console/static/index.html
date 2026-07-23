@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OpenVault — Custody Console</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #10231c;
+      --muted: #5a7268;
+      --paper: #e8f0ea;
+      --panel: rgba(255,255,255,0.72);
+      --line: rgba(16,35,28,0.12);
+      --accent: #0f7a57;
+      --accent-2: #c45c26;
+      --good: #1a8f5c;
+      --warn: #b7791f;
+      --bad: #b42318;
+      --serif: "Fraunces", Georgia, serif;
+      --sans: "IBM Plex Sans", system-ui, sans-serif;
+      --mono: "IBM Plex Mono", ui-monospace, monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--sans);
+      color: var(--ink);
+      min-height: 100vh;
+      background:
+        radial-gradient(900px 480px at 10% -10%, rgba(15,122,87,0.18), transparent 55%),
+        radial-gradient(700px 420px at 90% 0%, rgba(196,92,38,0.14), transparent 50%),
+        linear-gradient(165deg, #f4faf6 0%, var(--paper) 45%, #dfeae3 100%);
+    }
+    body::before {
+      content: "";
+      position: fixed; inset: 0; pointer-events: none; opacity: 0.35;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+    }
+    .wrap { position: relative; max-width: 1180px; margin: 0 auto; padding: 28px 20px 64px; }
+    header {
+      display: flex; justify-content: space-between; align-items: end; gap: 16px;
+      margin-bottom: 22px; animation: rise 0.6s ease both;
+    }
+    .brand h1 {
+      font-family: var(--serif); font-weight: 600; font-size: clamp(2rem, 4vw, 2.8rem);
+      letter-spacing: -0.03em; line-height: 1.05;
+    }
+    .brand p { color: var(--muted); margin-top: 6px; max-width: 36ch; }
+    .pill {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 8px 12px; border: 1px solid var(--line); border-radius: 999px;
+      background: var(--panel); backdrop-filter: blur(10px); font-size: 0.8rem;
+      animation: rise 0.7s ease both 0.1s;
+    }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--good); box-shadow: 0 0 0 3px rgba(26,143,92,0.15); }
+    nav {
+      display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px;
+      animation: rise 0.7s ease both 0.15s;
+    }
+    nav button {
+      border: 1px solid var(--line); background: transparent; color: var(--ink);
+      padding: 10px 14px; border-radius: 999px; cursor: pointer; font: inherit; font-weight: 500;
+    }
+    nav button.active, nav button:hover { background: var(--ink); color: #f5fbf7; }
+    .panel { display: none; animation: rise 0.45s ease both; }
+    .panel.active { display: block; }
+    .grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 16px; }
+    @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+    .card {
+      background: var(--panel); border: 1px solid var(--line); border-radius: 18px;
+      padding: 18px 18px 16px; backdrop-filter: blur(12px);
+    }
+    .card h2 { font-family: var(--serif); font-size: 1.35rem; font-weight: 550; margin-bottom: 4px; }
+    .card .sub { color: var(--muted); font-size: 0.88rem; margin-bottom: 14px; }
+    label { display: block; font-size: 0.78rem; color: var(--muted); margin: 10px 0 4px; }
+    input, select {
+      width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line);
+      background: rgba(255,255,255,0.85); font: inherit; color: var(--ink);
+    }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    @media (max-width: 600px) { .row { grid-template-columns: 1fr; } }
+    .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+    .btn, .btn-ghost {
+      border: none; border-radius: 999px; padding: 10px 14px; cursor: pointer; font: inherit; font-weight: 600;
+    }
+    .btn { background: var(--accent); color: white; }
+    .btn-ghost { background: transparent; border: 1px solid var(--line); color: var(--ink); }
+    .btn.danger { background: var(--bad); }
+    .msg { margin-top: 12px; font-size: 0.85rem; color: var(--muted); min-height: 1.2em; white-space: pre-wrap; }
+    .msg.ok { color: var(--good); }
+    .msg.bad { color: var(--bad); }
+    .list { display: flex; flex-direction: column; gap: 8px; max-height: 420px; overflow: auto; }
+    .item {
+      display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start;
+      padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 0.9rem;
+    }
+    .tag {
+      font-family: var(--mono); font-size: 0.72rem; padding: 3px 8px; border-radius: 999px;
+      border: 1px solid var(--line); background: rgba(255,255,255,0.7); white-space: nowrap;
+    }
+    .tag.ok { color: var(--good); }
+    .tag.warn { color: var(--warn); }
+    .tag.bad { color: var(--bad); }
+    code, .mono { font-family: var(--mono); font-size: 0.82rem; }
+    .session {
+      margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: rgba(15,122,87,0.08);
+      border: 1px dashed rgba(15,122,87,0.25); font-size: 0.85rem;
+    }
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <h1>OpenVault</h1>
+        <p>Username signup · Gmail + phone verify · passkey laptop login · OmniRoute · OpenShip · vaults</p>
+      </div>
+      <div class="pill"><span class="dot"></span><span id="healthLabel">Connecting…</span></div>
+    </header>
+
+    <nav>
+      <button type="button" class="active" data-tab="auth">Auth / Passkeys</button>
+      <button type="button" data-tab="accounts">Accounts</button>
+      <button type="button" data-tab="vault">Password Vault</button>
+      <button type="button" data-tab="omni">OmniRoute</button>
+      <button type="button" data-tab="ship">OpenShip</button>
+    </nav>
+
+    <section id="panel-auth" class="panel active">
+      <div class="grid">
+        <div class="card">
+          <h2>Register</h2>
+          <p class="sub">Default: username + password (argon2id). We assign <span class="mono">username@netie.ai</span>.</p>
+          <label>Username (key)</label>
+          <input id="regUser" placeholder="acmeops" />
+          <label>Password (hashed hard; not used after passkey)</label>
+          <input id="regPass" type="password" placeholder="min 8 chars" />
+          <div class="actions">
+            <button class="btn" id="regBtn" type="button">Create account</button>
+          </div>
+          <div class="msg" id="regMsg"></div>
+
+          <h2 style="margin-top:22px">Verify</h2>
+          <p class="sub">Gmail for verification only, then phone. Stored with username.</p>
+          <label>Account ID</label>
+          <input id="acctId" placeholder="filled after register" />
+          <label>Gmail (verification only)</label>
+          <input id="gmail" placeholder="you@gmail.com" />
+          <div class="actions">
+            <button class="btn-ghost" id="gmailStart" type="button">Send Gmail code</button>
+          </div>
+          <label>Gmail code</label>
+          <input id="gmailCode" placeholder="6 digits" />
+          <div class="actions">
+            <button class="btn" id="gmailConfirm" type="button">Confirm Gmail</button>
+          </div>
+          <label>Phone</label>
+          <input id="phone" placeholder="+1…" />
+          <div class="actions">
+            <button class="btn-ghost" id="phoneStart" type="button">Send phone code</button>
+          </div>
+          <label>Phone code</label>
+          <input id="phoneCode" placeholder="6 digits" />
+          <div class="actions">
+            <button class="btn" id="phoneConfirm" type="button">Confirm phone → activate</button>
+          </div>
+          <div class="msg" id="verifyMsg"></div>
+        </div>
+
+        <div class="card">
+          <h2>Passkey on this laptop</h2>
+          <p class="sub">Default login. Password stays argon2-hashed backup only.</p>
+          <label>Username</label>
+          <input id="pkUser" placeholder="acmeops" />
+          <div class="actions">
+            <button class="btn" id="pkRegister" type="button">Register laptop passkey</button>
+            <button class="btn" id="pkLogin" type="button">Sign in with passkey</button>
+          </div>
+          <div class="msg" id="pkMsg"></div>
+          <div class="session" id="sessionBox">Not signed in</div>
+
+          <h2 style="margin-top:22px">Password backup login</h2>
+          <label>Password</label>
+          <input id="pwPass" type="password" />
+          <div class="actions">
+            <button class="btn-ghost" id="pwLogin" type="button">Login with password</button>
+          </div>
+          <div class="msg" id="pwMsg"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="panel-accounts" class="panel">
+      <div class="card">
+        <h2>Stored accounts</h2>
+        <p class="sub">Username key · netie email · gmail · phone · verify flags · passkey default</p>
+        <div class="actions"><button class="btn-ghost" id="refreshAccts" type="button">Refresh</button></div>
+        <div class="list" id="acctList" style="margin-top:12px"></div>
+      </div>
+    </section>
+
+    <section id="panel-vault" class="panel">
+      <div class="grid">
+        <div class="card">
+          <h2>Password / API vault</h2>
+          <p class="sub">Secrets sealed under the local vault master. Sign in first.</p>
+          <label>Label</label>
+          <input id="vLabel" placeholder="OpenAI work" />
+          <div class="row">
+            <div>
+              <label>Provider</label>
+              <select id="vProvider">
+                <option>openai</option><option>anthropic</option><option>openrouter</option>
+                <option>groq</option><option>google</option><option>custom</option>
+              </select>
+            </div>
+            <div>
+              <label>Role</label>
+              <select id="vRole">
+                <option>primary</option><option selected>backup</option><option>cheap</option><option>free</option>
+              </select>
+            </div>
+          </div>
+          <label>Secret</label>
+          <input id="vSecret" type="password" placeholder="sk-…" />
+          <div class="actions">
+            <button class="btn" id="vSave" type="button">Store secret</button>
+            <button class="btn-ghost" id="vRefresh" type="button">Refresh</button>
+            <button class="btn danger" id="vIncident" type="button">Kill all secrets</button>
+          </div>
+          <div class="msg" id="vMsg"></div>
+        </div>
+        <div class="card">
+          <h2>Vault contents</h2>
+          <p class="sub">Masked by default — reveal or revoke per item</p>
+          <div class="list" id="vList"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="panel-omni" class="panel">
+      <div class="card">
+        <h2>OmniRoute catalog</h2>
+        <p class="sub">Curated free/local/paid hops · primary → backup → cheap → free</p>
+        <div id="fallbackBox" class="session" style="margin-bottom:12px"></div>
+        <div class="list" id="provList"></div>
+      </div>
+    </section>
+
+    <section id="panel-ship" class="panel">
+      <div class="grid">
+        <div class="card">
+          <h2>OpenShip deploy</h2>
+          <p class="sub">Full in-repo clone surface: detect · DNS · TLS · mail · build · apps · smoke · roll</p>
+          <label>Project path</label>
+          <input id="shipPath" placeholder="/path/to/app" />
+          <label>Subdomain</label>
+          <input id="shipHost" placeholder="app.example.com" />
+          <div class="actions">
+            <button class="btn" id="shipPlan" type="button">Build plan</button>
+            <button class="btn-ghost" id="shipExec" type="button">Simulate execute</button>
+          </div>
+          <div class="msg" id="shipMsg"></div>
+        </div>
+        <div class="card">
+          <h2>Gate steps</h2>
+          <div class="list" id="shipSteps"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const state = {
+      token: localStorage.getItem("ov_token") || "",
+      username: localStorage.getItem("ov_user") || "",
+      accountId: localStorage.getItem("ov_account") || "",
+      passkey: null,
+    };
+
+    function loadPasskey(username) {
+      try { return JSON.parse(localStorage.getItem("ov_passkey_" + username) || "null"); }
+      catch { return null; }
+    }
+    function savePasskey(username, pk) {
+      localStorage.setItem("ov_passkey_" + username, JSON.stringify(pk));
+    }
+
+    async function api(path, opts = {}) {
+      const headers = Object.assign({ "Content-Type": "application/json" }, opts.headers || {});
+      if (state.token) headers.Authorization = "Bearer " + state.token;
+      const res = await fetch(path, Object.assign({}, opts, { headers }));
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || res.statusText);
+      return data;
+    }
+
+    function setMsg(id, text, ok) {
+      const el = document.getElementById(id);
+      el.textContent = text || "";
+      el.className = "msg " + (ok === true ? "ok" : ok === false ? "bad" : "");
+    }
+
+    function renderSession(account, method) {
+      if (!account) {
+        document.getElementById("sessionBox").textContent = "Not signed in";
+        return;
+      }
+      document.getElementById("sessionBox").innerHTML =
+        `<strong>${account.username}</strong> · ${account.netie_email}<br/>` +
+        `gmail=${account.gmail || "—"} · phone=${account.phone || "—"} · status=${account.status}<br/>` +
+        `auth=${method || "session"} · passkey_default=${account.passkey_default}`;
+    }
+
+    document.querySelectorAll("nav button").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll("nav button").forEach(b => b.classList.remove("active"));
+        document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+        btn.classList.add("active");
+        document.getElementById("panel-" + btn.dataset.tab).classList.add("active");
+        if (btn.dataset.tab === "accounts") refreshAccounts();
+        if (btn.dataset.tab === "vault") refreshVault();
+        if (btn.dataset.tab === "omni") refreshProviders();
+      });
+    });
+
+    document.getElementById("regBtn").onclick = async () => {
+      try {
+        const data = await api("/api/auth/register", {
+          method: "POST",
+          body: JSON.stringify({
+            username: document.getElementById("regUser").value,
+            password: document.getElementById("regPass").value
+          })
+        });
+        state.accountId = data.account.id;
+        state.username = data.account.username;
+        localStorage.setItem("ov_account", state.accountId);
+        localStorage.setItem("ov_user", state.username);
+        document.getElementById("acctId").value = state.accountId;
+        document.getElementById("pkUser").value = state.username;
+        setMsg("regMsg", `Created ${data.account.netie_email} · next: verify Gmail`, true);
+      } catch (e) { setMsg("regMsg", e.message, false); }
+    };
+
+    document.getElementById("gmailStart").onclick = async () => {
+      try {
+        const data = await api("/api/auth/verify/gmail/start", {
+          method: "POST",
+          body: JSON.stringify({
+            account_id: document.getElementById("acctId").value || state.accountId,
+            gmail: document.getElementById("gmail").value
+          })
+        });
+        if (data.demo_code) document.getElementById("gmailCode").value = data.demo_code;
+        setMsg("verifyMsg", `Gmail code sent${data.demo_code ? " (demo: " + data.demo_code + ")" : ""}`, true);
+      } catch (e) { setMsg("verifyMsg", e.message, false); }
+    };
+
+    document.getElementById("gmailConfirm").onclick = async () => {
+      try {
+        const data = await api("/api/auth/verify/gmail/confirm", {
+          method: "POST",
+          body: JSON.stringify({
+            account_id: document.getElementById("acctId").value || state.accountId,
+            code: document.getElementById("gmailCode").value
+          })
+        });
+        setMsg("verifyMsg", "Gmail verified · next: phone", true);
+        renderSession(data.account, "verify");
+      } catch (e) { setMsg("verifyMsg", e.message, false); }
+    };
+
+    document.getElementById("phoneStart").onclick = async () => {
+      try {
+        const data = await api("/api/auth/verify/phone/start", {
+          method: "POST",
+          body: JSON.stringify({
+            account_id: document.getElementById("acctId").value || state.accountId,
+            phone: document.getElementById("phone").value
+          })
+        });
+        if (data.demo_code) document.getElementById("phoneCode").value = data.demo_code;
+        setMsg("verifyMsg", `Phone code sent${data.demo_code ? " (demo: " + data.demo_code + ")" : ""}`, true);
+      } catch (e) { setMsg("verifyMsg", e.message, false); }
+    };
+
+    document.getElementById("phoneConfirm").onclick = async () => {
+      try {
+        const data = await api("/api/auth/verify/phone/confirm", {
+          method: "POST",
+          body: JSON.stringify({
+            account_id: document.getElementById("acctId").value || state.accountId,
+            code: document.getElementById("phoneCode").value
+          })
+        });
+        setMsg("verifyMsg", "Phone verified · account active · register laptop passkey", true);
+        renderSession(data.account, "verify");
+      } catch (e) { setMsg("verifyMsg", e.message, false); }
+    };
+
+    document.getElementById("pkRegister").onclick = async () => {
+      try {
+        const username = document.getElementById("pkUser").value || state.username;
+        const begin = await api("/api/auth/passkey/register/begin", {
+          method: "POST", body: JSON.stringify({ username })
+        });
+        // Laptop key material stays in browser localStorage (demo / device binding).
+        const pk = {
+          credential_id: begin.demo_credential_id,
+          public_key_b64: begin.demo_public_key,
+          private_key_b64: begin.demo_private_key,
+          device_label: navigator.userAgent.slice(0, 48)
+        };
+        const finish = await api("/api/auth/passkey/register/finish", {
+          method: "POST",
+          body: JSON.stringify({
+            challenge_id: begin.challenge_id,
+            credential_id: pk.credential_id,
+            public_key_b64: pk.public_key_b64,
+            device_label: pk.device_label,
+            signature_b64: begin.demo_signature
+          })
+        });
+        savePasskey(username, pk);
+        state.username = username;
+        localStorage.setItem("ov_user", username);
+        setMsg("pkMsg", "Passkey registered on this laptop. Use Sign in with passkey next time.", true);
+        console.log(finish);
+      } catch (e) { setMsg("pkMsg", e.message, false); }
+    };
+
+    document.getElementById("pkLogin").onclick = async () => {
+      try {
+        const username = document.getElementById("pkUser").value || state.username;
+        const pk = loadPasskey(username);
+        if (!pk) throw new Error("No passkey on this laptop for " + username);
+        const begin = await api("/api/auth/passkey/login/begin", {
+          method: "POST", body: JSON.stringify({ username })
+        });
+        const signed = await api("/api/auth/demo/sign", {
+          method: "POST",
+          body: JSON.stringify({ private_key_b64: pk.private_key_b64, challenge: begin.challenge })
+        });
+        const data = await api("/api/auth/passkey/login/finish", {
+          method: "POST",
+          body: JSON.stringify({
+            challenge_id: begin.challenge_id,
+            credential_id: pk.credential_id,
+            signature_b64: signed.signature_b64
+          })
+        });
+        state.token = data.token;
+        state.username = data.account.username;
+        state.accountId = data.account.id;
+        localStorage.setItem("ov_token", state.token);
+        localStorage.setItem("ov_user", state.username);
+        localStorage.setItem("ov_account", state.accountId);
+        setMsg("pkMsg", "Signed in with passkey — no password used.", true);
+        renderSession(data.account, "passkey");
+      } catch (e) { setMsg("pkMsg", e.message, false); }
+    };
+
+    document.getElementById("pwLogin").onclick = async () => {
+      try {
+        const data = await api("/api/auth/login/password", {
+          method: "POST",
+          body: JSON.stringify({
+            username: document.getElementById("pkUser").value || state.username,
+            password: document.getElementById("pwPass").value
+          })
+        });
+        state.token = data.token;
+        localStorage.setItem("ov_token", state.token);
+        setMsg("pwMsg", data.warning || "Logged in", true);
+        renderSession(data.account, data.auth_method);
+      } catch (e) { setMsg("pwMsg", e.message, false); }
+    };
+
+    async function refreshAccounts() {
+      const data = await api("/api/accounts");
+      document.getElementById("acctList").innerHTML = (data.accounts || []).map(a => `
+        <div class="item">
+          <span class="tag ${a.status === "active" ? "ok" : "warn"}">${a.status}</span>
+          <div>
+            <strong>${a.username}</strong> · <span class="mono">${a.netie_email}</span><br/>
+            <span style="color:var(--muted);font-size:0.82rem">
+              gmail=${a.gmail || "—"} · phone=${a.phone || "—"} ·
+              email_ok=${a.email_verified} · phone_ok=${a.phone_verified} · passkey=${a.passkey_default}
+            </span>
+          </div>
+        </div>`).join("") || "<p class='msg'>No accounts yet</p>";
+    }
+    document.getElementById("refreshAccts").onclick = () => refreshAccounts().catch(e => alert(e.message));
+
+    async function refreshVault() {
+      if (!state.token) { document.getElementById("vList").innerHTML = "<p class='msg'>Sign in first</p>"; return; }
+      const data = await api("/api/vault/secrets");
+      document.getElementById("vList").innerHTML = (data.secrets || []).map(s => `
+        <div class="item">
+          <span class="tag ${s.revoked ? "bad" : "ok"}">${s.revoked ? "revoked" : s.role}</span>
+          <div>
+            <strong>${s.label}</strong> · ${s.provider} · <span class="mono">${s.masked}</span>
+            <div class="actions">
+              <button class="btn-ghost" data-reveal="${s.id}" type="button">Reveal</button>
+              <button class="btn-ghost" data-revoke="${s.id}" type="button">Revoke</button>
+            </div>
+          </div>
+        </div>`).join("") || "<p class='msg'>Vault empty</p>";
+      document.querySelectorAll("[data-reveal]").forEach(btn => btn.onclick = async () => {
+        try {
+          const r = await api(`/api/vault/secrets/${btn.dataset.reveal}/reveal`);
+          setMsg("vMsg", "Revealed: " + r.secret, true);
+        } catch (e) { setMsg("vMsg", e.message, false); }
+      });
+      document.querySelectorAll("[data-revoke]").forEach(btn => btn.onclick = async () => {
+        await api(`/api/vault/secrets/${btn.dataset.revoke}/revoke`, { method: "POST", body: "{}" });
+        refreshVault();
+      });
+    }
+    document.getElementById("vSave").onclick = async () => {
+      try {
+        await api("/api/vault/secrets", {
+          method: "POST",
+          body: JSON.stringify({
+            label: document.getElementById("vLabel").value,
+            provider: document.getElementById("vProvider").value,
+            role: document.getElementById("vRole").value,
+            secret: document.getElementById("vSecret").value,
+            kind: "api_key"
+          })
+        });
+        document.getElementById("vSecret").value = "";
+        setMsg("vMsg", "Secret stored sealed", true);
+        refreshVault();
+      } catch (e) { setMsg("vMsg", e.message, false); }
+    };
+    document.getElementById("vRefresh").onclick = () => refreshVault().catch(e => setMsg("vMsg", e.message, false));
+    document.getElementById("vIncident").onclick = async () => {
+      if (!confirm("Kill all vault secrets for this account?")) return;
+      try {
+        const data = await api("/api/vault/incident", { method: "POST", body: "{}" });
+        setMsg("vMsg", `Killed ${data.revoked} secrets`, true);
+        refreshVault();
+      } catch (e) { setMsg("vMsg", e.message, false); }
+    };
+
+    async function refreshProviders() {
+      const data = await api("/api/providers");
+      document.getElementById("fallbackBox").textContent =
+        "Fallback: " + (data.fallback.role_order || []).join(" → ") + " — " + data.fallback.note;
+      document.getElementById("provList").innerHTML = (data.providers || []).map(p => `
+        <div class="item">
+          <span class="tag">${p.tier}</span>
+          <div>
+            <strong>${p.name}</strong> · role ${p.default_role}<br/>
+            <span style="color:var(--muted);font-size:0.82rem">${p.free_notes} ·
+              <a href="${p.register_url}" target="_blank" rel="noopener">register</a>
+              · needed by ${(p.needed_by || []).join(", ")}
+            </span>
+          </div>
+        </div>`).join("");
+    }
+
+    function renderShip(plan) {
+      document.getElementById("shipSteps").innerHTML = (plan.steps || []).map(s => `
+        <div class="item">
+          <span class="tag ${s.status === "pass" || s.status === "simulated" ? "ok" : s.status === "fail" ? "bad" : "warn"}">${s.status}</span>
+          <div><strong>${s.title}</strong><div class="mono" style="color:var(--muted)">${s.detail}</div></div>
+        </div>`).join("");
+    }
+    document.getElementById("shipPlan").onclick = async () => {
+      try {
+        const plan = await api("/api/openship/plan", {
+          method: "POST",
+          body: JSON.stringify({
+            project_path: document.getElementById("shipPath").value,
+            subdomain: document.getElementById("shipHost").value,
+            execute: false
+          })
+        });
+        setMsg("shipMsg", `Plan ${plan.ship_id} ready=${plan.ready}`, true);
+        renderShip(plan);
+      } catch (e) { setMsg("shipMsg", e.message, false); }
+    };
+    document.getElementById("shipExec").onclick = async () => {
+      try {
+        const plan = await api("/api/openship/plan", {
+          method: "POST",
+          body: JSON.stringify({
+            project_path: document.getElementById("shipPath").value,
+            subdomain: document.getElementById("shipHost").value,
+            execute: true
+          })
+        });
+        setMsg("shipMsg", `Executed ${plan.ship_id} (simulate)`, true);
+        renderShip(plan);
+      } catch (e) { setMsg("shipMsg", e.message, false); }
+    };
+
+    // bootstrap
+    document.getElementById("acctId").value = state.accountId;
+    document.getElementById("pkUser").value = state.username;
+    document.getElementById("regUser").value = state.username;
+    api("/api/healthz").then(h => {
+      document.getElementById("healthLabel").textContent = "Rust console · " + (h.features || []).join(" · ");
+    }).catch(() => {
+      document.getElementById("healthLabel").textContent = "API offline";
+    });
+    if (state.token) {
+      api("/api/auth/me").then(d => renderSession(d.account, "session")).catch(() => {
+        state.token = ""; localStorage.removeItem("ov_token");
+      });
+    }
+  </script>
+</body>
+</html>
