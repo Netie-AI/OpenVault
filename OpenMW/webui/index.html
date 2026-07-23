@@ -755,6 +755,7 @@
       <button type="button" data-tab="performance">Middleware Gain</button>
       <button type="button" data-tab="vault">Vault</button>
       <button type="button" data-tab="engine">Engine</button>
+      <button type="button" data-tab="deploy">Deploy</button>
     </nav>
 
     <!-- DETECTION -->
@@ -954,6 +955,37 @@
           <p id="selectionMsg" style="margin-top:12px;font-size:0.8rem;color:var(--text-muted)"></p>
           <h3 style="font-family:var(--serif);font-weight:500;margin:18px 0 8px">Model catalog</h3>
           <div class="model-list" id="modelList" style="padding:0;max-height:320px;overflow:auto"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- DEPLOY -->
+    <section id="panel-deploy" class="panel">
+      <h2 class="section-title">Deploy to Web</h2>
+      <p class="section-sub">Cortex / AirGPT handoff · auto-detect stack · gate checklist · OpenShip-scale roll</p>
+      <div class="vault-layout">
+        <div class="glass vault-form">
+          <label for="deployPath">Project path</label>
+          <input id="deployPath" placeholder="/path/to/app" />
+          <label for="deploySubdomain">Subdomain</label>
+          <input id="deploySubdomain" placeholder="app.example.com" />
+          <label for="deploySource">Source</label>
+          <select id="deploySource">
+            <option value="airgpt">airgpt</option>
+            <option value="cortex">cortex</option>
+            <option value="manual" selected>manual</option>
+          </select>
+          <div class="actions">
+            <button type="button" class="btn" id="runDetectBtn">Auto-detect</button>
+            <button type="button" class="btn" id="runDeployBtn">Run gates</button>
+          </div>
+          <p id="deployMsg" style="margin-top:12px;font-size:0.8rem;color:var(--text-muted)"></p>
+          <div id="detectResult" style="margin-top:14px;font-size:0.85rem;color:var(--text-muted)"></div>
+        </div>
+        <div class="glass vault-list">
+          <h3 style="font-family:var(--serif);font-weight:500;margin-bottom:8px">Gate pipeline</h3>
+          <div id="gateList"></div>
+          <p id="readyScale" style="margin-top:14px;font-size:0.85rem"></p>
         </div>
       </div>
     </section>
@@ -1293,14 +1325,71 @@
       await navigator.clipboard.writeText(document.getElementById("endpointUrl").textContent);
     });
 
+    async function runDetect() {
+      if (!apiMode) return;
+      const project_path = document.getElementById("deployPath").value;
+      const res = await fetch("/api/detect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ project_path })
+      });
+      const data = await res.json();
+      document.getElementById("detectResult").textContent =
+        `${data.primary} · confidence ${data.confidence} · signals: ${(data.signals || []).join(", ")}`;
+    }
+
+    async function runDeployGates() {
+      if (!apiMode) return;
+      document.getElementById("deployMsg").textContent = "Running merge gates…";
+      const res = await fetch("/api/deploy/from-cortex", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          project_path: document.getElementById("deployPath").value,
+          subdomain: document.getElementById("deploySubdomain").value,
+          source: document.getElementById("deploySource").value,
+          intent: "deploy_to_web",
+          open_console: true
+        })
+      });
+      const data = await res.json();
+      document.getElementById("deployMsg").textContent =
+        res.ok ? (`Plan ${data.deploy_id} saved`) : "Deploy plan failed";
+      if (data.stack) {
+        document.getElementById("detectResult").textContent =
+          `${data.stack.primary} · confidence ${data.stack.confidence}`;
+      }
+      document.getElementById("gateList").innerHTML = (data.gates || []).map(g => `
+        <div class="hop-status">
+          <span class="pill ${pillClass(g.status === "pass" ? "ok" : g.status === "fail" ? "bad" : "unknown")}">${g.status}</span>
+          <strong>${g.title}</strong>
+          <div class="key-meta">${g.detail || ""}</div>
+        </div>`).join("");
+      document.getElementById("readyScale").textContent = data.ready_to_scale
+        ? "Ready to scale-only deploy apps + services"
+        : "Blocked — fix failing/pending blocker gates first";
+      document.getElementById("readyScale").style.color =
+        data.ready_to_scale ? "var(--success)" : "var(--warn)";
+    }
+
+    document.getElementById("runDetectBtn").addEventListener("click", runDetect);
+    document.getElementById("runDeployBtn").addEventListener("click", runDeployGates);
+
+    function activateTab(name) {
+      const btn = document.querySelector(`nav.tabs button[data-tab="${name}"]`);
+      if (!btn) return;
+      document.querySelectorAll("nav.tabs button").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+      btn.classList.add("active");
+      document.getElementById("panel-" + name).classList.add("active");
+      if (name === "vault") refreshVault();
+      if (name === "engine") refreshEngine();
+    }
+
     document.querySelectorAll("nav.tabs button").forEach(btn => {
       btn.addEventListener("click", () => {
-        document.querySelectorAll("nav.tabs button").forEach(b => b.classList.remove("active"));
-        document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
-        btn.classList.add("active");
-        document.getElementById("panel-" + btn.dataset.tab).classList.add("active");
-        if (btn.dataset.tab === "vault") refreshVault();
-        if (btn.dataset.tab === "engine") refreshEngine();
+        activateTab(btn.dataset.tab);
+        if (btn.dataset.tab === "deploy") history.replaceState(null, "", "#deploy");
       });
     });
 
@@ -1313,6 +1402,7 @@
           try { await refreshVault(); } catch (_) {}
         }, 30000);
       }
+      if (location.hash.replace("#", "") === "deploy") activateTab("deploy");
     });
   </script>
 </body>

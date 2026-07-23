@@ -16,6 +16,8 @@ from pydantic import BaseModel, Field
 
 from openmw.demo_payload import bundled_webui_dir
 from openmw.openvault.cortex_client import CortexClient
+from openmw.openvault.deploy import build_deploy_plan, list_plans, load_plan
+from openmw.openvault.detect import detect_project
 from openmw.openvault.fallback import FallbackConfig, FallbackManager
 from openmw.openvault.health import bottleneck_payload, devices_payload
 from openmw.openvault.orchestration import OrchestrationSelection, load_selection, save_selection
@@ -66,6 +68,20 @@ class ChatBody(BaseModel):
     temperature: float | None = None
     max_tokens: int | None = None
     stream: bool | None = False
+
+
+class DeployFromCortex(BaseModel):
+    project_path: str
+    subdomain: str = ""
+    intent: str = "deploy_to_web"
+    source: str = "cortex"
+    open_console: bool = True
+    sending_ip: str | None = None
+    console_base: str = "http://127.0.0.1:5000"
+
+
+class DetectBody(BaseModel):
+    project_path: str
 
 
 def create_app(
@@ -225,6 +241,39 @@ def create_app(
             )
         )
         return asdict(saved)
+
+    @app.post("/api/detect")
+    def api_detect(body: DetectBody) -> dict[str, Any]:
+        return detect_project(body.project_path).to_dict()
+
+    @app.post("/api/deploy/from-cortex")
+    async def deploy_from_cortex(body: DeployFromCortex) -> dict[str, Any]:
+        st = await cortex.status()
+        plan = build_deploy_plan(
+            project_path=body.project_path,
+            subdomain=body.subdomain,
+            intent=body.intent,
+            source=body.source,
+            vault=state_vault,
+            fallback=fallback,
+            cortex_online=st.online,
+            sending_ip=body.sending_ip,
+            console_base=body.console_base,
+        )
+        payload = plan.to_dict()
+        payload["open_console"] = body.open_console
+        return payload
+
+    @app.get("/api/deploy/{deploy_id}")
+    def get_deploy(deploy_id: str) -> dict[str, Any]:
+        plan = load_plan(deploy_id)
+        if plan is None:
+            raise HTTPException(status_code=404, detail="deploy plan not found")
+        return plan.to_dict()
+
+    @app.get("/api/deploy")
+    def get_deploys() -> dict[str, Any]:
+        return {"deploys": list_plans()}
 
     @app.post("/v1/chat/completions")
     async def v1_chat(body: ChatBody) -> JSONResponse:

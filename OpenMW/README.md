@@ -53,3 +53,4 @@ Starts the liquid-glass **OpenVault** console with:
 Point Cursor / tools at the `/v1` endpoint. Cortex URL defaults to `http://127.0.0.1:8000` (`--cortex-url`).
 
 See [`docs/openvault-cortex.md`](../docs/openvault-cortex.md).
+Scale-merge map (Cortex deploy-to-web → OpenShip gates): [`docs/OPENVAULT_SCALE_MERGE.md`](../docs/OPENVAULT_SCALE_MERGE.md).

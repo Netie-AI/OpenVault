@@ -45,3 +45,8 @@ This selection is what OpenVault uses to **pick and assign the best model** for 
 - Agent skill scaling
 - Slurm / Kubernetes multi-server orchestration
 - Rust hot-path gateway inside Cortex
+- Live OpenShip executor + Playwright MCP fail→debug loop
+
+## Scale merge
+
+See [`OPENVAULT_SCALE_MERGE.md`](OPENVAULT_SCALE_MERGE.md) for Cortex/AirGPT → OpenVault → OpenShip-style deploy gates.
