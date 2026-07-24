@@ -216,8 +216,8 @@ class TestCache:
 
 class TestHardwareProbeTimeout:
     """PART 12: a hung native call (e.g. Windows DeviceIoControl with no timeout
-    or overlapped I/O) must not block detect() indefinitely. See MASTER_HANDOFF.md
-    PART 12 hang investigation — confirmed root cause was an unbounded ctypes call."""
+    or overlapped I/O) must not block detect() indefinitely. Root cause was an
+    unbounded ctypes call (see PARKINGLOT.md timeout notes)."""
 
     def test_with_timeout_returns_default_on_hang(self) -> None:
         import time

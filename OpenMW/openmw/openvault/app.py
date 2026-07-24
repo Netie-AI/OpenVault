@@ -9,25 +9,27 @@ from dataclasses import asdict
 from typing import Any, Literal
 
 import structlog
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from openmw.demo_payload import bundled_webui_dir
-from openmw.openvault.accounts import AccountStore, AuthProvider
-from openmw.openvault.cortex_client import CortexClient
-from openmw.openvault.deploy import (
-    build_deploy_plan,
-    execute_deploy,
-    list_plans,
-    load_plan,
-    run_deploy_smoke,
+from openmw.openvault.cloud.firewall import evaluate_action, list_rules
+from openmw.openvault.cloud.lan_discover import discover_lan_devices
+from openmw.openvault.cloud.multiplayer import (
+    create_session,
+    get_session,
+    join_session,
+    list_sessions,
+    post_event,
 )
-from openmw.openvault.detect import detect_project
-from openmw.openvault.fallback import FallbackConfig, FallbackManager
-from openmw.openvault.health import bottleneck_payload, devices_payload
-from openmw.openvault.local_mesh import (
+from openmw.openvault.cloud.share_store import ShareStore
+from openmw.openvault.control.actions import run_control_action
+from openmw.openvault.control.capabilities import probe_control_capabilities
+from openmw.openvault.health.devices import devices_payload
+from openmw.openvault.mesh.cortex_client import CortexClient
+from openmw.openvault.mesh.local_mesh import (
     announce_peer,
     build_connect_pack,
     decide_handshake,
@@ -36,24 +38,49 @@ from openmw.openvault.local_mesh import (
     refresh_mesh,
     save_mesh,
 )
-from openmw.openvault.openship import (
+from openmw.openvault.mesh.orchestration import (
+    OrchestrationSelection,
+    load_selection,
+    save_selection,
+)
+from openmw.openvault.mesh.slots import list_slots
+from openmw.openvault.observe.path import bottleneck_payload, observe_path_payload
+from openmw.openvault.ship.deploy import (
+    build_deploy_plan,
+    execute_deploy,
+    list_plans,
+    load_plan,
+    run_deploy_smoke,
+)
+from openmw.openvault.ship.detect import detect_project
+from openmw.openvault.ship.gate import check_gate
+from openmw.openvault.ship.openship import (
     build_openship_plan,
     execute_openship_plan,
     list_ship_plans,
     load_ship_plan,
 )
-from openmw.openvault.orchestration import OrchestrationSelection, load_selection, save_selection
-from openmw.openvault.playwright_smoke import load_smoke, run_playwright_smoke
-from openmw.openvault.precheck import PrecheckLoop, precheck_all, precheck_one
-from openmw.openvault.providers import (
+from openmw.openvault.ship.playwright_smoke import load_smoke, run_playwright_smoke
+from openmw.openvault.vault.accounts import AccountStore, AuthProvider
+from openmw.openvault.vault.airgpt_keyvault import keyvault_snapshot, upsert_env_secret
+from openmw.openvault.vault.fallback import FallbackConfig, FallbackManager
+from openmw.openvault.vault.precheck import PrecheckLoop, precheck_all, precheck_one
+from openmw.openvault.vault.providers import (
     catalog_coverage_report,
     check_provider_downtime,
     get_provider,
     list_catalog,
 )
-from openmw.openvault.proxy import chat_completions
-from openmw.openvault.seed import seed_essentials
-from openmw.openvault.vault import KeyRole, KeyVault, ProviderKind
+from openmw.openvault.vault.proxy import chat_completions
+from openmw.openvault.vault.ratelimit import (
+    DEFAULT_MAX_OUTPUT_TOKENS,
+    DEFAULT_TIER,
+    TokenBudgetLimiter,
+    estimate_prompt_tokens,
+    usage_total_tokens,
+)
+from openmw.openvault.vault.seed import seed_essentials
+from openmw.openvault.vault.store import KeyRole, KeyVault, ProviderKind
 
 log = structlog.get_logger()
 
@@ -204,6 +231,80 @@ class MeshConfigUpdate(BaseModel):
     rust_console_url: str | None = None
 
 
+class ControlActionBody(BaseModel):
+    action: str
+    dry_run: bool = True
+    confirm: bool = False
+    percent: int = 50
+
+
+class GateCheckBody(BaseModel):
+    action: Literal["retrieve", "run", "deploy", "leave", "connect"] = "run"
+    project_path: str = ""
+    destination: str = ""
+    required_providers: list[str] = Field(default_factory=list)
+    # Client bypass flags — always denied by firewall (never honored).
+    bypass: bool = False
+    bypass_gate: bool = False
+    force: bool = False
+    skip_rules: bool = False
+
+
+class CloudShareBody(BaseModel):
+    title: str
+    slug: str = ""
+    summary: str = ""
+    source_path: str = ""
+    owner: str = "local"
+    visibility: Literal["lan", "loopback", "invite"] = "lan"
+    peers_allowed: list[str] = Field(default_factory=list)
+    env_edge: dict[str, str] = Field(default_factory=dict)
+    peer_ip: str = ""
+    bypass: bool = False
+    force: bool = False
+
+
+class CloudFirewallBody(BaseModel):
+    action: str
+    destination: str = ""
+    peer_ip: str = ""
+    bypass: bool = False
+    bypass_gate: bool = False
+    force: bool = False
+    skip_rules: bool = False
+    gate_allowed: bool | None = None
+
+
+class CloudSessionBody(BaseModel):
+    title: str
+    owner: str = "local"
+    share_id: str = ""
+    bypass: bool = False
+
+
+class CloudJoinBody(BaseModel):
+    user: str = "guest"
+    peer_ip: str = ""
+    bypass: bool = False
+    force: bool = False
+
+
+class CloudEventBody(BaseModel):
+    user: str = "guest"
+    event_type: str = "note"
+    detail: str = ""
+
+
+class KeyvaultUpsertBody(BaseModel):
+    env_key: str = ""
+    secret: str = ""
+    label: str = ""
+    base_url: str = ""
+    provider: str = ""
+    # Optional batch: {ENV_KEY: secret, ...}
+    secrets: dict[str, str] = Field(default_factory=dict)
+
+
 def create_app(
     *,
     vault: KeyVault | None = None,
@@ -217,6 +318,7 @@ def create_app(
     state_vault = vault if vault is not None else KeyVault()
     state_accounts = accounts if accounts is not None else AccountStore()
     fallback = FallbackManager(state_vault)
+    limiter = TokenBudgetLimiter()
     cortex = CortexClient(cortex_url)
     loop_holder: dict[str, PrecheckLoop | None] = {"loop": None}
     task_holder: dict[str, asyncio.Task[None] | None] = {"task": None}
@@ -264,6 +366,27 @@ def create_app(
     @app.get("/api/health/bottleneck")
     def health_bottleneck() -> dict[str, Any]:
         return bottleneck_payload()
+
+    @app.get("/api/observe/path")
+    def observe_path() -> dict[str, Any]:
+        return observe_path_payload(prefer_live=True)
+
+    @app.get("/api/slots")
+    async def slots_registry() -> dict[str, Any]:
+        return await list_slots(cortex)
+
+    @app.get("/api/control/capabilities")
+    def control_capabilities() -> dict[str, Any]:
+        return probe_control_capabilities()
+
+    @app.post("/api/control/action")
+    def control_action(body: ControlActionBody) -> dict[str, Any]:
+        return run_control_action(
+            body.action,
+            dry_run=body.dry_run,
+            confirm=body.confirm,
+            percent=body.percent,
+        )
 
     # --- Local mesh: OpenVault ↔ Cortex ↔ OpenIDE ---
 
@@ -404,6 +527,179 @@ def create_app(
     @app.get("/api/keys")
     def list_keys(account_id: str | None = None) -> dict[str, Any]:
         return {"keys": [asdict(k) for k in state_vault.list_keys(account_id=account_id)]}
+
+    @app.get("/api/keyvault/snapshot")
+    def api_keyvault_snapshot() -> dict[str, Any]:
+        """AirGPT/OpenIDE Key Vault UI — OpenVault is SoT (PRODUCT_ROLES)."""
+        return keyvault_snapshot(state_vault, openvault_url="http://127.0.0.1:5000")
+
+    @app.post("/api/keyvault/upsert")
+    def api_keyvault_upsert(body: KeyvaultUpsertBody) -> dict[str, Any]:
+        results: list[dict[str, Any]] = []
+        batch = dict(body.secrets or {})
+        if body.env_key and body.secret:
+            batch[body.env_key] = body.secret
+        if not batch:
+            raise HTTPException(status_code=400, detail="env_key+secret or secrets required")
+        for env_key, secret in batch.items():
+            results.append(
+                upsert_env_secret(
+                    state_vault,
+                    env_key=env_key,
+                    secret=secret,
+                    label=body.label if len(batch) == 1 else env_key,
+                    base_url=body.base_url if len(batch) == 1 else "",
+                    provider_hint=body.provider if len(batch) == 1 else "",
+                )
+            )
+        ok = all(r.get("ok") for r in results)
+        return {"ok": ok, "results": results, "snapshot": keyvault_snapshot(state_vault)}
+
+    @app.post("/api/gate/check")
+    def api_gate_check(body: GateCheckBody) -> dict[str, Any]:
+        """Cortex/apps ask; OpenVault alone allows retrieve/run/deploy/leave."""
+        # Hard-block bypass attempts before vault logic
+        fw = evaluate_action(
+            "bypass_gate"
+            if (body.bypass or body.bypass_gate or body.force or body.skip_rules)
+            else "run_local",
+            destination=body.destination,
+            client_flags={
+                "bypass": body.bypass,
+                "bypass_gate": body.bypass_gate,
+                "force": body.force,
+                "skip_rules": body.skip_rules,
+            },
+        )
+        if not fw.allowed and (body.bypass or body.bypass_gate or body.force or body.skip_rules):
+            return {
+                "allowed": False,
+                "action": body.action,
+                "reasons": fw.reasons,
+                "keys_ready": False,
+                "locate": {},
+                "required_providers": body.required_providers,
+                "firewall": fw.to_dict(),
+            }
+        decision = check_gate(
+            action=body.action,
+            vault=state_vault,
+            fallback=fallback,
+            project_path=body.project_path,
+            destination=body.destination,
+            required_providers=body.required_providers or None,
+        )
+        out = decision.to_dict()
+        out["firewall"] = fw.to_dict()
+        return out
+
+    # --- Small Software LAN cloud ---
+    state_shares = ShareStore()
+
+    @app.get("/api/cloud/rules")
+    def cloud_rules() -> dict[str, Any]:
+        return {"ok": True, "rules": list_rules()}
+
+    @app.get("/api/cloud/devices")
+    def cloud_devices() -> dict[str, Any]:
+        return discover_lan_devices()
+
+    @app.post("/api/cloud/firewall/check")
+    def cloud_firewall_check(body: CloudFirewallBody) -> dict[str, Any]:
+        decision = evaluate_action(
+            body.action,
+            destination=body.destination,
+            peer_ip=body.peer_ip,
+            client_flags={
+                "bypass": body.bypass,
+                "bypass_gate": body.bypass_gate,
+                "force": body.force,
+                "skip_rules": body.skip_rules,
+            },
+            gate_allowed=body.gate_allowed,
+        )
+        return decision.to_dict()
+
+    @app.get("/api/cloud/shares")
+    def cloud_list_shares() -> dict[str, Any]:
+        return {"ok": True, "shares": [s.to_dict() for s in state_shares.list_shares()]}
+
+    @app.post("/api/cloud/shares")
+    def cloud_publish_share(body: CloudShareBody) -> dict[str, Any]:
+        fw = evaluate_action(
+            "share_lan",
+            destination=body.source_path or "lan",
+            peer_ip=body.peer_ip,
+            client_flags={"bypass": body.bypass, "force": body.force},
+        )
+        if not fw.allowed:
+            raise HTTPException(status_code=403, detail=fw.to_dict())
+        app_share = state_shares.publish(
+            title=body.title,
+            slug=body.slug,
+            summary=body.summary,
+            source_path=body.source_path,
+            owner=body.owner,
+            visibility=body.visibility,
+            peers_allowed=body.peers_allowed,
+            env_edge=body.env_edge,
+        )
+        return {"ok": True, "share": app_share.to_dict(), "firewall": fw.to_dict()}
+
+    @app.get("/api/cloud/shares/{share_id}")
+    def cloud_get_share(share_id: str) -> dict[str, Any]:
+        row = state_shares.get(share_id) or state_shares.get_by_code(share_id)
+        if row is None:
+            raise HTTPException(status_code=404, detail="share not found")
+        return {"ok": True, "share": row.to_dict()}
+
+    @app.get("/api/cloud/sessions")
+    def cloud_list_sessions() -> dict[str, Any]:
+        return {"ok": True, "sessions": [s.to_dict() for s in list_sessions()]}
+
+    @app.post("/api/cloud/sessions")
+    def cloud_create_session(body: CloudSessionBody) -> dict[str, Any]:
+        fw = evaluate_action(
+            "join_session",
+            client_flags={"bypass": body.bypass},
+        )
+        if not fw.allowed:
+            raise HTTPException(status_code=403, detail=fw.to_dict())
+        sess = create_session(title=body.title, owner=body.owner, share_id=body.share_id)
+        return {"ok": True, "session": sess.to_dict(), "firewall": fw.to_dict()}
+
+    @app.get("/api/cloud/sessions/{session_id}")
+    def cloud_get_session(session_id: str) -> dict[str, Any]:
+        sess = get_session(session_id)
+        if sess is None:
+            raise HTTPException(status_code=404, detail="session not found")
+        return {"ok": True, "session": sess.to_dict()}
+
+    @app.post("/api/cloud/sessions/{session_id}/join")
+    def cloud_join_session(session_id: str, body: CloudJoinBody) -> dict[str, Any]:
+        fw = evaluate_action(
+            "join_session",
+            peer_ip=body.peer_ip or "127.0.0.1",
+            client_flags={"bypass": body.bypass, "force": body.force},
+        )
+        if not fw.allowed:
+            raise HTTPException(status_code=403, detail=fw.to_dict())
+        sess = join_session(session_id, user=body.user, peer_ip=body.peer_ip)
+        if sess is None:
+            raise HTTPException(status_code=404, detail="session not found")
+        return {"ok": True, "session": sess.to_dict(), "firewall": fw.to_dict()}
+
+    @app.post("/api/cloud/sessions/{session_id}/events")
+    def cloud_session_event(session_id: str, body: CloudEventBody) -> dict[str, Any]:
+        sess = post_event(
+            session_id,
+            user=body.user,
+            event_type=body.event_type,
+            detail=body.detail,
+        )
+        if sess is None:
+            raise HTTPException(status_code=404, detail="session not found")
+        return {"ok": True, "session": sess.to_dict()}
 
     @app.post("/api/keys")
     def create_key(body: KeyCreate) -> dict[str, Any]:
@@ -687,16 +983,56 @@ def create_app(
             include_local_placeholders=body.include_local_placeholders,
         )
 
+    @app.get("/api/openfree/ratelimit")
+    def openfree_ratelimit(identity: str = "local", tier: str = DEFAULT_TIER) -> dict[str, Any]:
+        """OpenFree token-budget snapshot for a caller (tiers + remaining)."""
+        return limiter.status(identity, tier=tier)
+
     @app.post("/v1/chat/completions")
-    async def v1_chat(body: ChatBody) -> JSONResponse:
+    async def v1_chat(body: ChatBody, request: Request) -> JSONResponse:
         if body.stream:
             return JSONResponse(
                 status_code=400,
                 content={"error": {"message": "stream not supported yet", "type": "unsupported"}},
             )
+        client_host = request.client.host if request.client is not None else "local"
+        identity = request.headers.get("x-openfree-identity") or client_host
+        tier = request.headers.get("x-openfree-tier") or DEFAULT_TIER
+        # Reserve request + (prompt + max_tokens) budget up front (denial-of-wallet guard).
+        prompt_tokens = estimate_prompt_tokens(body.messages)
+        max_tokens = body.max_tokens if body.max_tokens is not None else DEFAULT_MAX_OUTPUT_TOKENS
+        decision = limiter.reserve(
+            identity, tier=tier, prompt_tokens=prompt_tokens, max_tokens=max_tokens
+        )
+        if not decision.allowed:
+            return JSONResponse(
+                status_code=429,
+                content={
+                    "error": {
+                        "message": "OpenFree token budget exceeded; retry later",
+                        "type": "rate_limited",
+                        "limited_by": decision.limited_by,
+                    }
+                },
+                headers=decision.headers(),
+            )
         payload = body.model_dump(exclude_none=True)
         status, result = await chat_completions(state_vault, fallback, payload)
-        return JSONResponse(status_code=status, content=result)
+        # Refund the reservation down to actual usage (0 on upstream failure).
+        actual = usage_total_tokens(result) if 200 <= status < 300 else 0
+        if actual is None:
+            actual = decision.reserved_tokens
+        limiter.settle(
+            identity,
+            tier=tier,
+            reserved_tokens=decision.reserved_tokens,
+            actual_tokens=actual,
+        )
+        return JSONResponse(
+            status_code=status,
+            content=result,
+            headers=limiter.headers_for(identity, tier=tier),
+        )
 
     webui = bundled_webui_dir()
     if webui.is_dir():

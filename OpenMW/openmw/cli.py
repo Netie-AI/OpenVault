@@ -1,7 +1,7 @@
 """OpenMW CLI — front door for hardware profile, model routing, and session orchestration.
 
 Free tier: ``doctor`` (hardware + bottleneck report) and ``route`` (model fit, no coding).
-Stubs (not yet implemented): ``train`` and ``infer`` — see MASTER_HANDOFF PART 12.
+Stubs (not yet implemented): ``train`` and ``infer`` — see STATUS.md / PARKINGLOT.md.
 """
 
 from __future__ import annotations
@@ -133,12 +133,12 @@ def train_cmd(
 ) -> None:
     """[Not yet implemented] Hardware-aware training launch via Unsloth bridge.
 
-    Blocked on training_router.py — see MASTER_HANDOFF PART 12, item #2.
+    Blocked on training_router.py — see STATUS.md next priorities.
     Today, training_config.py is static defaults with no DeviceProfile awareness.
     """
     typer.echo(
         "openmw train is not yet implemented: training_router.py does not exist.\n"
-        "See MASTER_HANDOFF.md PART 12 for the planned hardware-aware training formula.",
+        "See STATUS.md for the planned hardware-aware training formula.",
         err=True,
     )
     raise typer.Exit(code=2)
@@ -153,8 +153,8 @@ def infer_cmd(
     Blocked on OpenMW-Plan PART 9 — hardware-gated on Linux + native NVMe passthrough.
     """
     typer.echo(
-        "openmw infer is not yet implemented: VIP runtime connector is OpenMW-Plan PART 9.\n"
-        "See MASTER_HANDOFF.md PART 9 pre-flight gate.",
+        "openmw infer is not yet implemented: VIP runtime connector is hardware-gated.\n"
+        "See STATUS.md / PARKINGLOT.md for the wear PRE-FLIGHT gate.",
         err=True,
     )
     raise typer.Exit(code=2)

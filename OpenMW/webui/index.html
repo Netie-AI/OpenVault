@@ -371,6 +371,33 @@
       box-shadow: 0 0 24px rgba(255, 107, 107, 0.25);
     }
 
+    .flow-node.hot .flow-icon {
+      border-color: rgba(255, 60, 60, 0.85);
+      background: rgba(255, 40, 40, 0.22);
+      animation: hotPulse 1.2s ease infinite;
+      color: #ff8a8a;
+    }
+
+    @keyframes hotPulse {
+      0%, 100% { box-shadow: 0 0 12px rgba(255, 60, 60, 0.35); }
+      50% { box-shadow: 0 0 32px rgba(255, 40, 40, 0.7); }
+    }
+
+    .hop-row.hot .hop-bar {
+      background: linear-gradient(90deg, rgba(255, 40, 40, 0.65), rgba(255, 120, 80, 1));
+      box-shadow: 0 0 12px rgba(255, 60, 60, 0.45);
+    }
+
+    .hop-reach {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      grid-column: 1 / -1;
+      margin-top: -6px;
+      margin-bottom: 8px;
+    }
+
+    .hop-reach.hot { color: var(--danger); font-weight: 600; }
+
     .flow-node.active .flow-icon {
       border-color: rgba(110, 181, 255, 0.5);
       animation: flowGlow 1.8s ease infinite;
@@ -1024,7 +1051,7 @@
     <!-- ENGINE -->
     <section id="panel-engine" class="panel">
       <h2 class="section-title">Netie Engine · Cortex</h2>
-      <p class="section-sub">Show available engines and models · pick the best for orchestration</p>
+      <p class="section-sub">All model slots acknowledged here · pick primary for orchestration</p>
       <div class="engine-layout">
         <div class="glass engine-card">
           <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px">
@@ -1037,6 +1064,8 @@
           <p id="cortexDetail" style="font-size:0.85rem;color:var(--text-muted);margin-bottom:16px"></p>
           <h3 style="font-family:var(--serif);font-weight:500;margin-bottom:8px">Engines</h3>
           <div id="engineList"></div>
+          <h3 style="font-family:var(--serif);font-weight:500;margin:16px 0 8px">Acknowledged slots</h3>
+          <div id="slotList"></div>
         </div>
         <div class="glass engine-card">
           <h3 style="font-family:var(--serif);font-weight:500;margin-bottom:8px">Assign best model</h3>
@@ -1182,6 +1211,27 @@
         const res = await fetch("/api/health/devices", { cache: "no-store" });
         if (!res.ok) throw new Error("health devices failed");
         const data = await res.json();
+        try {
+          const obs = await fetch("/api/observe/path", { cache: "no-store" }).then(r => r.json());
+          data.path_trace = {
+            hop_timeline: obs.hop_timeline || [],
+            bottleneck_hop: obs.bottleneck_hop,
+            bottleneck_label: obs.bottleneck_label,
+            gpu_idle_pct_waiting_on_io: obs.gpu_idle_pct_waiting_on_io,
+            source: obs.source
+          };
+          data.observe_source = obs.source;
+          if (obs.hop_timeline && obs.hop_timeline.length) {
+            data.data_flow = obs.hop_timeline.map(h => ({
+              id: h.hop_id,
+              label: h.label,
+              duration_ms: h.duration_ms,
+              is_bottleneck: h.is_bottleneck,
+              severity: h.severity,
+              reach: h.reach
+            }));
+          }
+        } catch (_) { /* keep demo path_trace from devices payload */ }
         document.getElementById("endpointStrip").hidden = false;
         document.getElementById("endpointUrl").textContent =
           window.location.origin + "/v1";
@@ -1236,28 +1286,50 @@
       const nodes = data.data_flow || [];
       flow.innerHTML = nodes.map((n, i) => {
         const icon = ICONS[n.id] || "•";
-        const cls = [n.is_bottleneck ? "bottleneck" : "", "active"].filter(Boolean).join(" ");
+        const sev = n.severity || (n.is_bottleneck ? "hot" : "ok");
+        const cls = [sev === "hot" || n.is_bottleneck ? "hot bottleneck" : "", sev === "warn" ? "bottleneck" : "", "active"].filter(Boolean).join(" ");
         const conn = i < nodes.length - 1 ? '<div class="flow-connector"></div>' : "";
+        const reach = n.reach ? `<div class="flow-ms">${n.reach}</div>` : "";
         return `<div class="flow-node ${cls}">
           <div class="flow-icon">${icon}</div>
           <div class="flow-label">${n.label}</div>
           <div class="flow-ms">${n.duration_ms} ms</div>
+          ${reach}
         </div>${conn}`;
       }).join("");
 
       const hops = data.path_trace?.hop_timeline || [];
       const maxMs = Math.max(...hops.map(h => h.duration_ms), 1);
-      document.getElementById("waterfall").innerHTML = hops.map(h => `
-        <div class="hop-row ${h.is_bottleneck ? "bottleneck" : ""}">
+      document.getElementById("waterfall").innerHTML = hops.map(h => {
+        const sev = h.severity || (h.is_bottleneck ? "hot" : "ok");
+        const rowCls = sev === "hot" || h.is_bottleneck ? "hop-row bottleneck hot" : (sev === "warn" ? "hop-row bottleneck" : "hop-row");
+        const reach = h.reach || "";
+        return `
+        <div class="${rowCls}">
           <div class="hop-label">${h.label}</div>
           <div class="hop-bar-wrap"><div class="hop-bar" style="width:${(h.duration_ms / maxMs) * 100}%"></div></div>
           <div class="hop-ms">${h.duration_ms} ms</div>
-        </div>`).join("");
+          ${reach ? `<div class="hop-reach ${sev}">${reach}</div>` : ""}
+        </div>`;
+      }).join("");
 
       document.getElementById("bottleneckLabel").textContent =
         data.path_trace?.bottleneck_label || data.path_trace?.bottleneck_hop || "—";
       document.getElementById("gpuIdle").textContent =
         (data.path_trace?.gpu_idle_pct_waiting_on_io ?? "—") + "%";
+      const src = data.path_trace?.source || data.observe_source;
+      if (src) {
+        const callout = document.querySelector(".bottleneck-callout");
+        if (callout && !document.getElementById("observeSource")) {
+          const span = document.createElement("div");
+          span.id = "observeSource";
+          span.style.cssText = "font-size:0.72rem;color:var(--text-muted)";
+          span.textContent = "source: " + src;
+          callout.appendChild(span);
+        } else if (document.getElementById("observeSource")) {
+          document.getElementById("observeSource").textContent = "source: " + src;
+        }
+      }
 
       const mc = data.middleware_comparison || {};
       document.getElementById("baselineTok").textContent = mc.baseline_tok_s ?? "—";
@@ -1347,11 +1419,12 @@
           "Start openmw console to talk to Cortex and assign models.";
         return;
       }
-      const [st, engines, models, selection] = await Promise.all([
+      const [st, engines, models, selection, slots] = await Promise.all([
         fetch("/api/cortex/status").then(r => r.json()),
         fetch("/api/cortex/engines").then(r => r.json()),
         fetch("/api/cortex/models").then(r => r.json()),
-        fetch("/api/orchestration/selection").then(r => r.json())
+        fetch("/api/orchestration/selection").then(r => r.json()),
+        fetch("/api/slots").then(r => r.json()).catch(() => ({ slots: [] }))
       ]);
       document.getElementById("cortexStatusLabel").textContent =
         st.online ? "Online" : "Offline";
@@ -1367,8 +1440,28 @@
         return `<div class="hop-status"><span class="pill">${engines.source || "local"}</span><strong>${name}</strong> <span style="color:var(--text-muted)">· ${id}</span></div>`;
       }).join("") || "<p style='color:var(--text-muted)'>No engines.</p>";
 
+      const slotItems = slots.slots || [];
+      document.getElementById("slotList").innerHTML = slotItems.length
+        ? slotItems.slice(0, 40).map(s => `
+          <div class="model-item">
+            <div>
+              <strong>${s.name || s.id}</strong>
+              <div class="key-meta">${s.origin || s.source || ""} · ${s.id}</div>
+            </div>
+            <div>
+              <span class="pill ${s.online ? "ok" : "warn"}">${s.online ? "online" : "offline"}</span>
+              ${s.selected ? '<span class="pill ok">selected</span>' : ""}
+              ${s.acknowledged ? '<span class="pill">ack</span>' : ""}
+            </div>
+          </div>`).join("")
+        : "<p style='color:var(--text-muted)'>No slots yet.</p>";
+
       const modelSelect = document.getElementById("primaryModel");
-      const catalog = models.models || [];
+      const catalog = (slotItems.length ? slotItems : (models.models || [])).map(m => ({
+        id: m.id,
+        name: m.name || m.id,
+        tier: m.tier || m.cortex_tier_hint || "?"
+      }));
       modelSelect.innerHTML = catalog.map(m =>
         `<option value="${m.id}">${m.name || m.id} (${m.tier || "?"})</option>`
       ).join("");
@@ -1378,8 +1471,8 @@
 
       document.getElementById("modelList").innerHTML = catalog.slice(0, 40).map(m => `
         <div class="model-item">
-          <div><strong>${m.name || m.id}</strong><div class="key-meta">${m.id} · ${m.source || ""}</div></div>
-          <span class="pill">${m.tier || m.cortex_tier_hint || "?"}</span>
+          <div><strong>${m.name || m.id}</strong><div class="key-meta">${m.id}</div></div>
+          <span class="pill">${m.tier || "?"}</span>
         </div>`).join("");
     }
 

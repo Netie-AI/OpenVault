@@ -1,4 +1,4 @@
-"""OpenVault unit tests — vault, fallback, API smoke."""
+﻿"""OpenVault unit tests — vault, fallback, API smoke."""
 
 from __future__ import annotations
 
@@ -9,10 +9,10 @@ from cryptography.fernet import Fernet
 from fastapi.testclient import TestClient
 
 from openmw.openvault.app import create_app
-from openmw.openvault.crypto import Seal, mask_secret
-from openmw.openvault.fallback import FallbackManager
-from openmw.openvault.orchestration import OrchestrationSelection, load_selection, save_selection
-from openmw.openvault.vault import KeyVault
+from openmw.openvault.vault.crypto import Seal, mask_secret
+from openmw.openvault.vault.fallback import FallbackManager
+from openmw.openvault.mesh.orchestration import OrchestrationSelection, load_selection, save_selection
+from openmw.openvault.vault.store import KeyVault
 
 
 @pytest.fixture()
@@ -90,6 +90,32 @@ def test_fallback_opens_circuit(vault: KeyVault) -> None:
     status = mgr.status()
     primary_hop = next(h for h in status.hops if h["key_id"] == primary.id)
     assert primary_hop["circuit"] == "open"
+
+
+def test_gate_blocks_deploy_without_keys(vault: KeyVault) -> None:
+    from openmw.openvault.ship.gate import check_gate
+
+    denied = check_gate(action="deploy", vault=vault)
+    assert denied.allowed is False
+    vault.create(
+        label="groq",
+        provider="groq",
+        secret="gsk-test-aaaaaaaaaaaa",
+        role="free",
+    )
+    allowed = check_gate(action="deploy", vault=vault, required_providers=["groq"])
+    assert allowed.allowed is True
+
+
+def test_keyvault_snapshot_and_upsert(vault: KeyVault) -> None:
+    from openmw.openvault.vault.airgpt_keyvault import keyvault_snapshot, upsert_env_secret
+
+    up = upsert_env_secret(vault, env_key="GROQ_API_KEY", secret="gsk-test-bbbbbbbbbbbb")
+    assert up["ok"] is True
+    snap = keyvault_snapshot(vault)
+    assert snap["source"] == "openvault"
+    groq = next(p for p in snap["providers"] if p["id"] == "groq")
+    assert groq["configured"] is True
 
 
 def test_orchestration_selection_roundtrip(tmp_path: Path) -> None:

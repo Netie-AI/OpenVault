@@ -1,4 +1,4 @@
-"""Provider catalog + seed + downtime API tests."""
+﻿"""Provider catalog + seed + downtime API tests."""
 
 from __future__ import annotations
 
@@ -9,10 +9,10 @@ from cryptography.fernet import Fernet
 from fastapi.testclient import TestClient
 
 from openmw.openvault.app import create_app
-from openmw.openvault.crypto import Seal
-from openmw.openvault.providers import catalog_coverage_report, get_provider, list_catalog
-from openmw.openvault.seed import seed_essentials
-from openmw.openvault.vault import KeyVault
+from openmw.openvault.vault.crypto import Seal
+from openmw.openvault.vault.providers import catalog_coverage_report, get_provider, list_catalog
+from openmw.openvault.vault.seed import seed_essentials
+from openmw.openvault.vault.store import KeyVault
 
 
 def test_catalog_has_openrouter_ollama_litellm() -> None:
@@ -27,7 +27,7 @@ def test_catalog_has_openrouter_ollama_litellm() -> None:
 
 
 def test_essentials_for_cortex_airgpt() -> None:
-    from openmw.openvault.providers import essentials_for
+    from openmw.openvault.vault.providers import essentials_for
 
     rows = essentials_for("cortex", "airgpt")
     ids = {r["id"] for r in rows}

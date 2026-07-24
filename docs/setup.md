@@ -67,11 +67,10 @@ uv run nvme-sentinel smart --device /dev/nvme0
 uv run nvme-sentinel collect --device /dev/nvme0 --output reports/nvme0.json
 ```
 
-### Real-hardware docs
-- [Test matrix](real-hardware-test-matrix.md)
-- [External TB/USB4 bench](external-test-bench.md)
-- [VM host-proxy](vm-host-proxy.md)
-- [DIY PCB probe concept](pcb-probe-concept.md)
+### Related docs
+- Current state: [`STATUS.md`](../STATUS.md)
+- Deferred backlog: [`PARKINGLOT.md`](../PARKINGLOT.md)
+- Design tradeoffs: [`design-decisions.md`](design-decisions.md)
 
 ## Docker (any host)
 ```bash

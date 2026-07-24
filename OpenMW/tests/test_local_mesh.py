@@ -1,4 +1,4 @@
-"""Local mesh — OpenVault ↔ Cortex ↔ OpenIDE handshake + connect pack."""
+﻿"""Local mesh — OpenVault ↔ Cortex ↔ OpenIDE handshake + connect pack."""
 
 from __future__ import annotations
 
@@ -9,8 +9,8 @@ from cryptography.fernet import Fernet
 from fastapi.testclient import TestClient
 
 from openmw.openvault.app import create_app
-from openmw.openvault.crypto import Seal
-from openmw.openvault.vault import KeyVault
+from openmw.openvault.vault.crypto import Seal
+from openmw.openvault.vault.store import KeyVault
 
 
 @pytest.fixture()

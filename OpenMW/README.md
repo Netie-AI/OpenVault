@@ -42,19 +42,20 @@ uv sync
 uv run openmw console --port 5000 --mock-health
 ```
 
+Package tiers under `openmw/openvault/`: `health` · `observe` · `vault` · `ship` · `mesh` · `control`.
+
 Starts the liquid-glass **OpenVault** console with:
 
+- Path observe + red hotspots (`GET /api/observe/path`)
+- Acknowledged model slots (`GET /api/slots`)
 - Continuous API-key precheck + primary→backup→cheap→free fallback
 - Encrypted vault under `~/.openvault` (override with `OPENVAULT_HOME`)
 - Secure local endpoint `http://127.0.0.1:5000/v1/chat/completions`
 - Cortex / Netie Engine status + model catalog selection
-- Provider catalog (OpenRouter / Ollama / LiteLLM / Groq / …) with free-tier register links + downtime checks
-- `POST /api/vault/seed-essentials` so Cortex/AirGPT coverage is explicit
-- Hardware detection / bottleneck panels
-- Deploy-to-web gate pipeline (`POST /api/deploy/from-cortex`)
+- Gated control (`GET /api/control/capabilities`, `POST /api/control/action`)
+- Provider catalog + deploy-to-web gate (`POST /api/deploy/from-cortex`)
+- Local mesh (`#mesh`) toward Cortex `:8000` / OpenIDE `:5100`
 
 Point Cursor / tools at the `/v1` endpoint. Cortex URL defaults to `http://127.0.0.1:8000` (`--cortex-url`).
 
-See [`docs/openvault-cortex.md`](../docs/openvault-cortex.md).
-Scale-merge map: [`docs/OPENVAULT_SCALE_MERGE.md`](../docs/OPENVAULT_SCALE_MERGE.md).
-Provider catalog: [`docs/openvault-provider-catalog.md`](../docs/openvault-provider-catalog.md).
+See monorepo [`STATUS.md`](../STATUS.md) and [`PARKINGLOT.md`](../PARKINGLOT.md).

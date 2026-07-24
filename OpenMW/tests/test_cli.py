@@ -97,7 +97,7 @@ def test_infer_stub_exits_two() -> None:
 
     assert result.exit_code == 2
     assert "not yet implemented" in result.output
-    assert "PART 9" in result.output
+    assert "STATUS.md" in result.output or "PARKINGLOT" in result.output
 
 
 def test_help_lists_all_commands() -> None:

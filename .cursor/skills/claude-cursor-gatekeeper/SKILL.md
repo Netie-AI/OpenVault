@@ -119,24 +119,27 @@ Cursor should not:
 
 7. **Update continuity notes**
 
-   Before ending substantial work, update the project memory anchor. In this repo that is
-   `MASTER_HANDOFF.md`. Record only evidence-backed state: completed work, commands run,
-   artifacts produced, open risks, and next actions. Do not record guesses as facts.
+   Before ending substantial work, update the project memory anchors. In this repo that is
+   `STATUS.md` (current state / next priorities) and `PARKINGLOT.md` (deferred backlog).
+   Record only evidence-backed state: completed work, commands run, artifacts produced,
+   open risks, and next actions. Do not record guesses as facts.
 
 ## Continuity anchor
 
-Use `MASTER_HANDOFF.md` as the durable cross-session source of truth for project state.
+Use `STATUS.md` as the durable cross-session source of truth for project state.
+Use `PARKINGLOT.md` for deferred / research items.
 Use chat todos/status only as short-term working memory.
 
-Update `MASTER_HANDOFF.md` when:
+Update `STATUS.md` when:
 
-- A PART or milestone is completed, corrected, or invalidated.
+- A milestone is completed, corrected, or invalidated.
 - Claude/Cursor made a decision future agents need to respect.
 - Verification evidence changes project status.
-- A blocker, hypothesis, or hardware-only follow-up must survive a new window.
-- Short-term work reveals a long-term backlog item.
+- Next priorities change.
 
-Use this entry shape:
+Move long-horizon / research items into `PARKINGLOT.md` instead of bloating STATUS.
+
+Use this entry shape in STATUS (next priorities) or PARKINGLOT:
 
 ```markdown
 ### Open item #N — <title> (<date>, <status>)
@@ -152,7 +155,7 @@ Use this entry shape:
 ```
 
 If the update is only temporary working state, keep it in the response or todo list instead
-of editing `MASTER_HANDOFF.md`.
+of editing `STATUS.md` / `PARKINGLOT.md`.
 
 ## Gate levels
 
@@ -319,8 +322,8 @@ Before accepting a change, check:
 When working in this repo:
 
 - Read `implementation_plan.md` before coding (static spec; NVMe protocol refs in section 4).
-- Read `MASTER_HANDOFF.md` for current state, PART entries, decisions, short-term goals, and long-term goals.
-- Update `MASTER_HANDOFF.md` when closing substantial work; if it disagrees with code, trust code and record the doc correction.
+- Read `STATUS.md` for current state and next priorities; `PARKINGLOT.md` for deferred backlog.
+- Update `STATUS.md` / `PARKINGLOT.md` when closing substantial work; if docs disagree with code, trust code and record the doc correction.
 - Use `uv run <cmd>` for tests, mypy, ruff, and CLI runs.
 - Do not use pip, poetry, or conda.
 - Preserve Python 3.10 compatibility.

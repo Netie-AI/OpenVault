@@ -65,7 +65,7 @@ The HAL surface is **~8 methods**: `open`, `close`, `admin_passthru`, `nvm_passt
 nvme-sentinel/
 ├── pyproject.toml
 ├── .python-version              # pinned 3.12 for local dev
-├── .cursorrules                 # agent guardrails (see task.md)
+├── .cursorrules                 # agent guardrails
 ├── .pre-commit-config.yaml
 ├── .github/
 │   └── workflows/ci.yml
@@ -365,4 +365,4 @@ If they ask *"how would you extend this for Gen5 / CXL / zoned namespaces?"* —
 
 ---
 
-**End of implementation_plan.md.** Next: `task.md` — the atomic, paste-ready prompts for Cursor/Windsurf.
+**End of implementation_plan.md.** Current state: `STATUS.md`. Deferred backlog: `PARKINGLOT.md`.

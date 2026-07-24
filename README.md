@@ -1,68 +1,43 @@
-# nvme-sentinel
+# OpenVault
 
-> Cross-platform NVMe SSD validation and health inspection using native OS passthrough paths.
+> One local control plane: **see bottleneck → acknowledge model slots → hold keys → ship → mesh into Cortex → gated fix**.
 
----
+**Product roles:** OpenVault = keys + gate + connect + deploy/host. Cortex = brains. AirGPT = shell. OpenIDE = coding. See [`PRODUCT_ROLES.md`](PRODUCT_ROLES.md) — do not grow a second key vault or a third orchestrator.
 
-## What nvme-sentinel is
-
-`nvme-sentinel` is a Python framework that sends NVMe Admin commands through platform-native
-interfaces, parses typed protocol responses, and exposes them through a consistent command layer.
-
-The project is optimized for two realities:
-
-- real lab usage on Linux and Windows devices
-- CI reliability with zero NVMe hardware, via a deterministic byte-accurate mock adapter
+Libraries for measurement stay at the repo root; the operator console lives in OpenMW.
 
 ---
 
-## Current implemented scope
+## Product flow
 
-### CLI commands
-
-- `nvme-sentinel list-devices` - OS storage inventory + suggested telemetry paths
-- `nvme-sentinel info` - Identify Controller summary
-- `nvme-sentinel smart` - SMART/Health log read (labels telemetry source), optional HTML output
-- `nvme-sentinel collect` - read-only JSON snapshot for baselines and VM host-proxy
-- `nvme-sentinel nas discover|collect|report` - Unraid SSH telemetry (NVMe + HDD)
-- `nvme-sentinel demo` - end-to-end mock run showing protocol path + generated report
-
-### Platform behavior
-
-- **Linux**: native `ioctl(NVME_IOCTL_ADMIN_CMD)` path (`ctypes` + `fcntl`)
-- **Windows**: native `DeviceIoControl(IOCTL_STORAGE_PROTOCOL_COMMAND)` path
-- **Windows fallback**: if passthrough is unavailable (permission denied or driver reports
-  `ERROR_INVALID_FUNCTION`), the CLI falls back to WMI reliability counters
-- **Mock mode**: fixture-backed deterministic adapter used by tests and demo
+1. **See** — NVMe → PCIe → DRAM → VRAM → GPU path with red hotspots (`/api/observe/path`, Bottleneck tab)
+2. **Slots** — every local + Cortex model acknowledged (`/api/slots`)
+3. **Keys** — encrypted vault + fallback proxy
+4. **Ship** — OpenShip / deploy gates / email DNS checks
+5. **Mesh** — OpenVault `:5000` ↔ Cortex `:8000` ↔ OpenIDE `:5100` ↔ Rust `:5055`
+6. **Fix** — GPU/CPU/fan control with `dry_run` default (`/api/control/*`)
 
 ---
 
-## Architecture at a glance
+## Layout
 
-The HAL keeps a small interface boundary while command parsing and reporting stay shared:
+| Path | What |
+|------|------|
+| `nvme_sentinel/` | NVMe HAL, SMART, BenchRunReport (library) |
+| `Profiler/` | PathTrace + capability probe (library) |
+| `OpenMW/openmw/openvault/` | App tiers: `health/` `observe/` `vault/` `ship/` `mesh/` `control/` |
+| `OpenMW/webui/` | Liquid-glass console on `:5000` |
+| `docs/` | Setup, design decisions, architecture diagram |
+| `scripts/windows/` | `Clone-OpenVault.ps1`, `Start-LocalMesh.ps1` |
+| `openvault.local.example.json` | Copy to `openvault.local.json` |
 
-- **HAL**: `StorageInterface` + `BaseAdapter` (timing, retry behavior)
-- **Adapters**: `LinuxNvmeAdapter`, `WindowsStorageAdapter`, `MockNvmeAdapter`
-- **Commands**: Identify + Log Page command builders
-- **Models**: typed parsers for Identify, SMART, Error Log, Firmware Slot
-- **Reporting**: HTML output from parsed SMART data
+Peer (not in this repo): Cortex at `D:\Cortex` → `http://127.0.0.1:8000` (URL wiring only).
 
-The same command/model code runs against all adapters, which is what makes the project portable.
-
----
-
-## Technical highlights
-
-- Raw admin passthrough on both OSes, not shell-only wrappers
-- Correct Windows IOCTL constant:
-  `IOCTL_STORAGE_PROTOCOL_COMMAND = 0x002DD3C8`
-- SMART parser handles NVMe 128-bit counters with Python arbitrary precision `int`
-- Structured exceptions for capability, permission, protocol status, and device errors
-- Strict static/type/test quality gates (`mypy`, `ruff`, `pytest`, coverage gate)
+Three separate `uv sync` roots today: repo root (sentinel), `OpenMW/`, `Profiler/`.
 
 ---
 
-## Quickstart
+## nvme-sentinel quickstart
 
 ```bash
 uv sync
@@ -70,42 +45,41 @@ uv run nvme-sentinel demo
 ```
 
 ```bash
-# Linux (real device)
-uv run nvme-sentinel smart --device /dev/nvme0n1
-
-# Windows (real device, admin shell recommended)
-uv run nvme-sentinel smart --device \\.\PhysicalDrive0
-```
-
----
-
-## Validation commands
-
-```bash
 uv run mypy nvme_sentinel
 uv run pytest tests/unit tests/integration -q
 ```
 
-Containerized Linux test path:
+---
+
+## Local mesh
+
+```
+OpenIDE :5100  ──handshake──►  OpenVault :5000  ◄──engines──  Cortex :8000
+                                  │
+                                  └── passkeys ──► Rust :5055
+```
+
+1. Start Cortex on `:8000` yourself (e.g. from `D:\Cortex`).
+2. `powershell -ExecutionPolicy Bypass -File scripts\windows\Start-LocalMesh.ps1` (optional `-WithRustAuth`).
+3. Open http://127.0.0.1:5000/#mesh and approve peers.
+4. Connect pack: `.openvault/connect_pack.json`.
 
 ```bash
-docker compose build test
-docker compose run --rm test
+cd OpenMW && uv sync
+uv run openmw console --cortex-url http://127.0.0.1:8000 --openide-url http://127.0.0.1:5100
 ```
 
 ---
 
 ## Documentation
 
-- Setup and troubleshooting: [`docs/setup.md`](docs/setup.md)
-- Real-hardware test matrix: [`docs/real-hardware-test-matrix.md`](docs/real-hardware-test-matrix.md)
-- External Thunderbolt/USB4 bench: [`docs/external-test-bench.md`](docs/external-test-bench.md)
-- VM host-proxy workflow: [`docs/vm-host-proxy.md`](docs/vm-host-proxy.md)
-- DIY PCB probe concept: [`docs/pcb-probe-concept.md`](docs/pcb-probe-concept.md)
-- Design tradeoffs: [`docs/design-decisions.md`](docs/design-decisions.md)
-- Long-term observability vision (post-P6): [`docs/VISION.md`](docs/VISION.md)
-- Handoff / gated plan: [`MASTER_HANDOFF.md`](MASTER_HANDOFF.md)
-- Deep technical overview: [`PROJECT_DESCRIPTION.md`](PROJECT_DESCRIPTION.md)
+- Current state: [`STATUS.md`](STATUS.md)
+- Deferred backlog: [`PARKINGLOT.md`](PARKINGLOT.md)
+- Setup: [`docs/setup.md`](docs/setup.md)
+- Design: [`docs/design-decisions.md`](docs/design-decisions.md)
+- Architecture: [`docs/architecture.puml`](docs/architecture.puml)
+- Agent protocol plan: [`implementation_plan.md`](implementation_plan.md)
+- Subprojects: [`OpenMW/README.md`](OpenMW/README.md), [`Profiler/README.md`](Profiler/README.md)
 
 ---
 
