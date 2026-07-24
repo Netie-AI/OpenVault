@@ -34,6 +34,9 @@ Libraries (unchanged at repo root): `nvme_sentinel/`, `Profiler/`. Peer engine: 
 | `GET /api/slots` | All local + Cortex model slots acknowledged |
 | `GET /api/control/capabilities` | Honest capability probe |
 | `POST /api/control/action` | `dry_run` default; writes need `confirm: true` |
+| `GET /api/openfree/ratelimit` | OpenFree token-budget snapshot (tier, remaining, reset) |
+| `GET /api/vault/env-scan` | Which env vars can be auto-vaulted (masked values only) |
+| `POST /api/vault/ingest-env` | Auto-import env secrets into the vault (`dry_run` default) |
 
 Legacy: `GET /api/health/bottleneck` still works (aliases observe).
 
@@ -77,12 +80,36 @@ OpenIDE URL in mesh: **`http://127.0.0.1:8765`** (AirGPT), not stub `:5100`.
 
 ---
 
+## OpenFree gateway + auto-vault (2026-07-24)
+
+OpenVault owns free-gateway routing for **OpenFree** (PRODUCT_ROLES). The gateway
+now budgets cost, not just requests.
+
+| Piece | Status |
+|-------|--------|
+| Dual-bucket limiter (`vault/ratelimit.py`) | Done — request bucket (QPS) + token bucket (`prompt + max_tokens`) |
+| Smooth refill | Done — continuous refill, no fixed-window boundary burst |
+| Reserve → refund | Done — reserves `max_tokens` up front, refunds the unused remainder; failed upstream refunds in full |
+| Tiers | Done — `local` (unmetered loopback) / `free` / `pro`, via `X-OpenFree-Tier` |
+| `429` + `Retry-After` | Done on `POST /v1/chat/completions` |
+| `X-RateLimit-Tier/Limit/Remaining/Reset` | Done on every gateway response |
+| Auto-vault from env (`vault/env_ingest.py`) | Done — scans credential-shaped env vars, skips placeholders, stores encrypted; secrets never echoed |
+| Redis + Lua bucket store | **Not done** — `BucketStore` protocol is the seam; `InMemoryBucketStore` is single-node only |
+| Streaming (`stream: true`) | **Not done** — still `400`; reserve/refund logic is already stream-shaped |
+
+Identity comes from `X-OpenFree-Identity` (falls back to client host); budgets are
+per identity per tier.
+
+---
+
 ## Next priorities
 
-1. Small Software cloud UI tab in OpenVault console (devices + shares + live sessions).
-2. Live observe path from real admin timings + wear PRE-FLIGHT.
-3. `training_router.py` + wire `openmw train`.
-4. Control writes only after hardware-proven capability (see PARKINGLOT).
+1. Redis + Lua `BucketStore` so a cluster of gateways cannot double-spend a budget.
+2. Streaming `/v1/chat/completions` on top of the existing reserve/refund path.
+3. Small Software cloud UI tab in OpenVault console (devices + shares + live sessions).
+4. Live observe path from real admin timings + wear PRE-FLIGHT.
+5. `training_router.py` + wire `openmw train`.
+6. Control writes only after hardware-proven capability (see PARKINGLOT).
 
 ---
 

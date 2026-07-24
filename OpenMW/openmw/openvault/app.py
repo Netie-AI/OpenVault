@@ -63,6 +63,7 @@ from openmw.openvault.ship.openship import (
 from openmw.openvault.ship.playwright_smoke import load_smoke, run_playwright_smoke
 from openmw.openvault.vault.accounts import AccountStore, AuthProvider
 from openmw.openvault.vault.airgpt_keyvault import keyvault_snapshot, upsert_env_secret
+from openmw.openvault.vault.env_ingest import ingest_environment, scan_environment
 from openmw.openvault.vault.fallback import FallbackConfig, FallbackManager
 from openmw.openvault.vault.precheck import PrecheckLoop, precheck_all, precheck_one
 from openmw.openvault.vault.providers import (
@@ -157,6 +158,12 @@ class DetectBody(BaseModel):
 class SeedBody(BaseModel):
     consumers: list[str] = Field(default_factory=lambda: ["cortex", "airgpt", "openvault"])
     include_local_placeholders: bool = True
+
+
+class EnvIngestBody(BaseModel):
+    # dry_run default mirrors the control tier: never write until asked.
+    dry_run: bool = True
+    include_unknown: bool = False
 
 
 class AccountCreate(BaseModel):
@@ -981,6 +988,25 @@ def create_app(
             state_vault,
             consumers=tuple(body.consumers),
             include_local_placeholders=body.include_local_placeholders,
+        )
+
+    @app.get("/api/vault/env-scan")
+    def vault_env_scan(include_unknown: bool = False) -> dict[str, Any]:
+        """Read-only: which env vars could be auto-vaulted. Masked values only."""
+        candidates = scan_environment(include_unknown=include_unknown)
+        return {
+            "ok": True,
+            "count": len(candidates),
+            "candidates": [c.to_dict() for c in candidates],
+        }
+
+    @app.post("/api/vault/ingest-env")
+    def vault_ingest_env(body: EnvIngestBody) -> dict[str, Any]:
+        """Auto-retrieve provider secrets from the environment into the vault."""
+        return ingest_environment(
+            state_vault,
+            dry_run=body.dry_run,
+            include_unknown=body.include_unknown,
         )
 
     @app.get("/api/openfree/ratelimit")
