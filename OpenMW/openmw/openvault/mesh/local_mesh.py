@@ -27,9 +27,17 @@ PeerStatus = Literal["unknown", "online", "offline", "pending_approve", "approve
 DEFAULT_PORTS: dict[str, int] = {
     "openvault": 5000,
     "cortex": 8000,
-    "openide": 5100,
+    # OpenIDE is served by AirGPT on :8765 (PRODUCT_ROLES). :5100 is the legacy
+    # standalone stub (scripts/openide_stub.py) and is no longer the default.
+    "openide": 8765,
     "rust_console": 5055,
 }
+
+# Canonical loopback URLs — single source of truth for the mesh contract.
+DEFAULT_URLS: dict[str, str] = {
+    kind: f"http://127.0.0.1:{port}" for kind, port in DEFAULT_PORTS.items()
+}
+OPENIDE_DEFAULT_URL = DEFAULT_URLS["openide"]
 
 
 def mesh_path() -> Path:
@@ -328,7 +336,7 @@ def build_connect_pack(state: LocalMeshState | None = None) -> dict[str, Any]:
             "status": cortex.status if cortex else "unknown",
         },
         "openide": {
-            "base_url": openide.base_url if openide else "http://127.0.0.1:5100",
+            "base_url": openide.base_url if openide else OPENIDE_DEFAULT_URL,
             "announce": (
                 f"{(ov.base_url if ov else 'http://127.0.0.1:5000').rstrip('/')}"
                 "/api/local/handshake"
@@ -346,7 +354,7 @@ def build_connect_pack(state: LocalMeshState | None = None) -> dict[str, Any]:
         },
         "env": {
             "CORTEX_URL": cortex.base_url if cortex else "http://127.0.0.1:8000",
-            "OPENIDE_URL": openide.base_url if openide else "http://127.0.0.1:5100",
+            "OPENIDE_URL": openide.base_url if openide else OPENIDE_DEFAULT_URL,
             "OPENVAULT_URL": ov.base_url if ov else "http://127.0.0.1:5000",
             "OPENVAULT_RUST_URL": rust.base_url if rust else "http://127.0.0.1:5055",
         },

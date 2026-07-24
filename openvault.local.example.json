@@ -6,7 +6,7 @@
     "openvault": {
       "url": "http://127.0.0.1:5000",
       "v1": "http://127.0.0.1:5000/v1",
-      "start": "cd OpenMW && uv run openmw console --cortex-url http://127.0.0.1:8000 --openide-url http://127.0.0.1:5100"
+      "start": "cd OpenMW && uv run openmw console --cortex-url http://127.0.0.1:8000 --openide-url http://127.0.0.1:8765"
     },
     "rust_console": {
       "url": "http://127.0.0.1:5055",
@@ -22,7 +22,7 @@
       }
     },
     "openide": {
-      "url": "http://127.0.0.1:5100",
+      "url": "http://127.0.0.1:8765",
       "announce": "http://127.0.0.1:5000/api/local/handshake",
       "invoke": "http://127.0.0.1:5000/api/openide/invoke",
       "connect_pack": "http://127.0.0.1:5000/api/local/connect-pack"

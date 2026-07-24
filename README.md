@@ -14,7 +14,7 @@ Libraries for measurement stay at the repo root; the operator console lives in O
 2. **Slots** — every local + Cortex model acknowledged (`/api/slots`)
 3. **Keys** — encrypted vault + fallback proxy
 4. **Ship** — OpenShip / deploy gates / email DNS checks
-5. **Mesh** — OpenVault `:5000` ↔ Cortex `:8000` ↔ OpenIDE `:5100` ↔ Rust `:5055`
+5. **Mesh** — OpenVault `:5000` ↔ Cortex `:8000` ↔ OpenIDE `:8765` ↔ Rust `:5055`
 6. **Fix** — GPU/CPU/fan control with `dry_run` default (`/api/control/*`)
 
 ---
@@ -54,7 +54,7 @@ uv run pytest tests/unit tests/integration -q
 ## Local mesh
 
 ```
-OpenIDE :5100  ──handshake──►  OpenVault :5000  ◄──engines──  Cortex :8000
+OpenIDE :8765  ──handshake──►  OpenVault :5000  ◄──engines──  Cortex :8000
                                   │
                                   └── passkeys ──► Rust :5055
 ```
@@ -66,7 +66,7 @@ OpenIDE :5100  ──handshake──►  OpenVault :5000  ◄──engines──
 
 ```bash
 cd OpenMW && uv sync
-uv run openmw console --cortex-url http://127.0.0.1:8000 --openide-url http://127.0.0.1:5100
+uv run openmw console --cortex-url http://127.0.0.1:8000 --openide-url http://127.0.0.1:8765
 ```
 
 ---

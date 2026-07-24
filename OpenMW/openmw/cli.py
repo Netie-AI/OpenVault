@@ -170,9 +170,9 @@ def console_cmd(
         help="Cortex / Netie Engine base URL.",
     ),
     openide_url: str = typer.Option(
-        "http://127.0.0.1:5100",
+        "http://127.0.0.1:8765",
         "--openide-url",
-        help="OpenIDE local bridge base URL.",
+        help="OpenIDE local bridge base URL (AirGPT serves OpenIDE on :8765).",
     ),
     mock_health: bool = typer.Option(
         False,

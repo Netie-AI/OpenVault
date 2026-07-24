@@ -1022,7 +1022,7 @@
           <label for="meshCortex">Cortex URL</label>
           <input id="meshCortex" placeholder="http://127.0.0.1:8000" />
           <label for="meshOpenide">OpenIDE URL</label>
-          <input id="meshOpenide" placeholder="http://127.0.0.1:5100" />
+          <input id="meshOpenide" placeholder="http://127.0.0.1:8765" />
           <label for="meshRust">Rust auth console</label>
           <input id="meshRust" placeholder="http://127.0.0.1:5055" />
           <div class="actions">
@@ -1808,7 +1808,7 @@
       const data = await res.json();
       const peers = data.mesh?.peers || {};
       document.getElementById("meshCortex").value = peers.cortex?.base_url || "http://127.0.0.1:8000";
-      document.getElementById("meshOpenide").value = peers.openide?.base_url || "http://127.0.0.1:5100";
+      document.getElementById("meshOpenide").value = peers.openide?.base_url || "http://127.0.0.1:8765";
       document.getElementById("meshRust").value = peers.rust_console?.base_url || "http://127.0.0.1:5055";
       document.getElementById("meshPeers").innerHTML = Object.entries(peers).map(([k, p]) => `
         <div class="hop-status">

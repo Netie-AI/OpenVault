@@ -13,7 +13,7 @@
 param(
   [string]$Root = "D:\OpenVault",
   [string]$CortexUrl = "http://127.0.0.1:8000",
-  [string]$OpenIdeUrl = "http://127.0.0.1:5100",
+  [string]$OpenIdeUrl = "http://127.0.0.1:8765",
   [switch]$WithRustAuth,
   [switch]$SkipBrowser
 )

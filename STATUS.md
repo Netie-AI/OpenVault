@@ -44,7 +44,7 @@ Legacy: `GET /api/health/bottleneck` still works (aliases observe).
 
 ## Local mesh runbook
 
-Ports: OpenVault `5000` · Rust auth `5055` · Cortex `8000` · OpenIDE `5100`.
+Ports: OpenVault `5000` · Rust auth `5055` · Cortex `8000` · OpenIDE `8765` (AirGPT).
 
 1. Start Cortex yourself (e.g. from `D:\Cortex`) on `:8000`.
 2. `powershell -ExecutionPolicy Bypass -File scripts\windows\Start-LocalMesh.ps1` (optionally `-WithRustAuth`).
@@ -99,6 +99,30 @@ now budgets cost, not just requests.
 
 Identity comes from `X-OpenFree-Identity` (falls back to client host); budgets are
 per identity per tier.
+
+---
+
+## Layer contract conformance (2026-07-24)
+
+App layer (AirGPT `:8765` / OpenIDE) → custody layer (OpenVault `:5000`) →
+engine layer (Cortex `:8000`). Locked by `tests/test_contract.py`.
+
+**Fixed — contract drift:** the mesh defaulted OpenIDE to `:5100`, the legacy
+standalone stub, so the connect pack (the shared wiring doc every peer reads)
+published a dead URL. AirGPT serves OpenIDE on **`:8765`**. `DEFAULT_PORTS` /
+`OPENIDE_DEFAULT_URL` in `mesh/local_mesh.py` are now the single source of
+truth; `app.py`, `cli.py`, `Start-LocalMesh.ps1`, the example config, the webui
+and the docs all derive from it. `scripts/openide_stub.py` stays on `:5100` —
+it *is* the stub, and is now opt-in rather than the default.
+
+**Added — missing contract endpoint:** `GET /api/openide/ready` preflights
+OpenIDE Run (keys + mesh approval + gate) and states `keys_source_of_truth:
+openvault`, per the keys lock in PRODUCT_ROLES.
+
+`tests/test_contract.py` asserts: default ports match the cheat-sheet, every
+bridge/gate route is served, the connect pack pins `:8765`, `bypass` / `force` /
+`skip_rules` can never produce a silent allow on either the gate or the LAN
+firewall, and the keyvault snapshot still declares OpenVault the source.
 
 ---
 

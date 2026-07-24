@@ -30,6 +30,7 @@ from openmw.openvault.control.capabilities import probe_control_capabilities
 from openmw.openvault.health.devices import devices_payload
 from openmw.openvault.mesh.cortex_client import CortexClient
 from openmw.openvault.mesh.local_mesh import (
+    OPENIDE_DEFAULT_URL,
     announce_peer,
     build_connect_pack,
     decide_handshake,
@@ -317,7 +318,7 @@ def create_app(
     vault: KeyVault | None = None,
     accounts: AccountStore | None = None,
     cortex_url: str = "http://127.0.0.1:8000",
-    openide_url: str = "http://127.0.0.1:5100",
+    openide_url: str = OPENIDE_DEFAULT_URL,
     precheck_interval_s: float = 60.0,
     mock_health: bool = False,
     enable_precheck_loop: bool = True,
@@ -446,6 +447,38 @@ def create_app(
     @app.get("/api/local/connect-pack")
     def local_connect_pack() -> dict[str, Any]:
         return build_connect_pack(refresh_mesh())
+
+    @app.get("/api/openide/ready")
+    def openide_ready(required_providers: str = "") -> dict[str, Any]:
+        """Preflight OpenIDE Run: keys + mesh approval + gate, from the SoT.
+
+        Keys source of truth is OpenVault whenever it is online (PRODUCT_ROLES);
+        AirGPT's env.local is only an offline cache.
+        """
+        providers = [p.strip() for p in required_providers.split(",") if p.strip()]
+        state = refresh_mesh()
+        pack = build_connect_pack(state)
+        peer = state.peers.get("openide")
+        gate = check_gate(
+            action="run",
+            vault=state_vault,
+            fallback=fallback,
+            required_providers=providers or None,
+        ).to_dict()
+        keys_ready = bool(gate.get("keys_ready"))
+        return {
+            "ok": True,
+            "ready": keys_ready and bool(gate.get("allowed")),
+            "keys_ready": keys_ready,
+            "keys_source_of_truth": "openvault",
+            "openide": {
+                "base_url": pack["openide"]["base_url"],
+                "approved": bool(peer.approved) if peer is not None else False,
+                "status": peer.status if peer is not None else "unknown",
+            },
+            "gate": gate,
+            "perfect_local": pack["perfect_local"],
+        }
 
     @app.post("/api/openide/invoke")
     def api_openide_invoke(body: OpenIdeInvoke) -> dict[str, Any]:
