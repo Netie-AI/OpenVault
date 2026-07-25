@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 import structlog
 
@@ -27,7 +28,7 @@ except ImportError:
     pass
 
 
-class UnslothNotAvailable(RuntimeError):
+class UnslothNotAvailableError(RuntimeError):
     """Raised when Unsloth is not installed or failed to import."""
 
 
@@ -108,9 +109,9 @@ def is_unsloth_available() -> bool:
 
 
 def require_unsloth() -> None:
-    """Raise :class:`UnslothNotAvailable` when Unsloth is not installed."""
+    """Raise :class:`UnslothNotAvailableError` when Unsloth is not installed."""
     if not _UNSLOTH_AVAILABLE:
-        raise UnslothNotAvailable(
+        raise UnslothNotAvailableError(
             "Unsloth is not installed. Install the optional training extra "
             "(CUDA required): uv pip install unsloth"
         )
@@ -293,7 +294,7 @@ def unsloth_finetune(
         output_dir=resolved_output,
         sft_trainer_factory=sft_trainer_factory,
     )
-    train_result = getattr(trainer, "train")()
+    train_result = trainer.train()
     steps = int(getattr(train_result, "global_step", 0) or cfg.num_train_epochs)
     trained_session = UnslothSession(
         model_id=session.model_id, model=model, tokenizer=session.tokenizer
@@ -327,7 +328,7 @@ def export_gguf(
     output_path.parent.mkdir(parents=True, exist_ok=True)
     save_pretrained_gguf = getattr(session.model, "save_pretrained_gguf", None)
     if save_pretrained_gguf is None:
-        raise UnslothNotAvailable("loaded model lacks save_pretrained_gguf")
+        raise UnslothNotAvailableError("loaded model lacks save_pretrained_gguf")
 
     save_pretrained_gguf(str(output_path), session.tokenizer, quantization_method=quant)
     log.info(
@@ -351,7 +352,7 @@ def unsloth_to_vllm(
     output_path.mkdir(parents=True, exist_ok=True)
     save_pretrained_merged = getattr(session.model, "save_pretrained_merged", None)
     if save_pretrained_merged is None:
-        raise UnslothNotAvailable("loaded model lacks save_pretrained_merged")
+        raise UnslothNotAvailableError("loaded model lacks save_pretrained_merged")
 
     save_pretrained_merged(str(output_path), session.tokenizer, save_method=save_method)
     serve_command = f"vllm serve {output_path}"

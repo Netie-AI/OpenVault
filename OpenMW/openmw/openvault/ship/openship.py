@@ -1,4 +1,4 @@
-﻿"""OpenShip control plane — in-repo under OpenVault (not a separate AirGPT product).
+"""OpenShip control plane — in-repo under OpenVault (not a separate AirGPT product).
 
 OpenShip operator loop lives here so custody + deploy gate stay with OpenVault:
   subdomain → TLS plan → build → mail DNS → apps/services install|update → roll/rollback
@@ -20,9 +20,9 @@ from typing import Any, Literal
 
 import structlog
 
+from openmw.openvault.paths import ensure_home
 from openmw.openvault.ship.detect import DetectedStack, detect_project
 from openmw.openvault.ship.email_gates import check_email_auth
-from openmw.openvault.paths import ensure_home
 
 log = structlog.get_logger()
 
@@ -249,9 +249,7 @@ def load_ship_plan(ship_id: str) -> OpenShipPlan | None:
     stack = DetectedStack(**raw["stack"])
     steps = [ShipStep(**s) for s in raw.get("steps", [])]
     action_raw = raw.get("action", "install")
-    action: Action = (
-        action_raw if action_raw in ("install", "update", "rollback") else "install"
-    )
+    action: Action = action_raw if action_raw in ("install", "update", "rollback") else "install"
     return OpenShipPlan(
         ship_id=raw["ship_id"],
         project_path=raw["project_path"],

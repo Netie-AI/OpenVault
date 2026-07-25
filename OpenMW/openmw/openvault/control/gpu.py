@@ -40,7 +40,7 @@ def gpu_status() -> dict[str, Any]:
             )
         pynvml.nvmlShutdown()
         return {"ok": True, "capability": True, "devices": devices}
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return {"ok": False, "capability": False, "error": str(exc)}
 
 

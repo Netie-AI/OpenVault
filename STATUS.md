@@ -3,7 +3,7 @@
 > Canonical “what’s done / what’s next.” Deferred ideas: [`PARKINGLOT.md`](PARKINGLOT.md).
 > Protocol/architecture: [`implementation_plan.md`](implementation_plan.md).
 
-Last reconciled: 2026-07-23.
+Last reconciled: 2026-07-25.
 
 ---
 
@@ -126,14 +126,32 @@ firewall, and the keyvault snapshot still declares OpenVault the source.
 
 ---
 
+## CI lint recovery (2026-07-25)
+
+Root CI (`ruff check .` / `ruff format --check .` / `mypy nvme_sentinel tests`) was
+red on `main` after OpenVault/OpenMW landed with unused `noqa: BLE001` (BLE not
+selected), E501, RUF0xx unicode/import issues, and a mypy arg-type slip in
+`tests/unit/test_inventory.py`. Fixed on branch `cursor/fix-ci-ruff-lint-88c2`.
+
+**Public API rename (called out):** `UnslothNotAvailable` → `UnslothNotAvailableError`
+(N818). Registry field `ModelSpec.params_B` kept (JSON key); helper args renamed
+to `params_b`.
+
+**Evidence:** `uv run ruff check .` / `ruff format --check .` clean; mypy both
+scopes clean; `pytest -n auto tests/unit tests/integration` 93 passed; HAL+mock
+cov 96%; `nvme-sentinel demo` OK.
+
+---
+
 ## Next priorities
 
-1. Redis + Lua `BucketStore` so a cluster of gateways cannot double-spend a budget.
-2. Streaming `/v1/chat/completions` on top of the existing reserve/refund path.
-3. Small Software cloud UI tab in OpenVault console (devices + shares + live sessions).
-4. Live observe path from real admin timings + wear PRE-FLIGHT.
-5. `training_router.py` + wire `openmw train`.
-6. Control writes only after hardware-proven capability (see PARKINGLOT).
+1. Confirm CI green on `cursor/fix-ci-ruff-lint-88c2` / merge to `main`.
+2. Redis + Lua `BucketStore` so a cluster of gateways cannot double-spend a budget.
+3. Streaming `/v1/chat/completions` on top of the existing reserve/refund path.
+4. Small Software cloud UI tab in OpenVault console (devices + shares + live sessions).
+5. Live observe path from real admin timings + wear PRE-FLIGHT.
+6. `training_router.py` + wire `openmw train`.
+7. Control writes only after hardware-proven capability (see PARKINGLOT).
 
 ---
 

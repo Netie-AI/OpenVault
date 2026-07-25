@@ -23,7 +23,7 @@ def generate_rotation(d: int, seed: int | None = None) -> np.ndarray:
         seed: Random seed for reproducibility.
 
     Returns:
-        Orthogonal matrix Π ∈ ℝ^(d×d), dtype float32.
+        Orthogonal matrix Pi in R^(d x d), dtype float32.
     """
     rng = np.random.default_rng(seed)
     g = rng.standard_normal((d, d)).astype(np.float32)

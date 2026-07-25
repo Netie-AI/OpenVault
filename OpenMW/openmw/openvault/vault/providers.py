@@ -359,7 +359,10 @@ def catalog_coverage_report(vault_provider_ids: set[str] | frozenset[str]) -> di
             {"id": "litellm", "why": "self-hosted OpenAI-compatible proxy"},
             {"id": "ollama", "why": "local free forever OpenAI-compatible"},
             {"id": "portkey", "why": "gateway + guardrails (pattern only)"},
-            {"id": "omniroute", "why": "inspiration for OpenFree auto-fallback + free-tier aggregation"},
+            {
+                "id": "omniroute",
+                "why": "inspiration for OpenFree auto-fallback + free-tier aggregation",
+            },
             {"id": "openfree", "why": "our gateway brand — enable in AirGPT, route via OpenVault"},
         ],
     }

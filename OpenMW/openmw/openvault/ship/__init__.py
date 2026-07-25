@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from openmw.openvault.ship.detect import detect_project
 from openmw.openvault.ship.deploy import (
     build_deploy_plan,
     execute_deploy,
@@ -10,6 +9,7 @@ from openmw.openvault.ship.deploy import (
     load_plan,
     run_deploy_smoke,
 )
+from openmw.openvault.ship.detect import detect_project
 from openmw.openvault.ship.gate import GateDecision, check_gate
 from openmw.openvault.ship.openship import (
     build_openship_plan,

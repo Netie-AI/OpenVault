@@ -20,7 +20,10 @@ def test_build_demo_payload_mock_profile() -> None:
     assert len(payload["devices"]) == 3
     assert payload["routing"]["model_id"] == "llama-3.3-8b"
     assert payload["middleware_comparison"]["speedup_pct"] > 0
-    assert payload["middleware_comparison"]["optimized_tok_s"] > payload["middleware_comparison"]["baseline_tok_s"]
+    assert (
+        payload["middleware_comparison"]["optimized_tok_s"]
+        > payload["middleware_comparison"]["baseline_tok_s"]
+    )
     assert payload["path_trace"]["bottleneck_hop"]
 
 

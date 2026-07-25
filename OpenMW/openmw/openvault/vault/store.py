@@ -1,4 +1,4 @@
-﻿"""Encrypted SQLite vault for provider API keys."""
+"""Encrypted SQLite vault for provider API keys."""
 
 from __future__ import annotations
 
@@ -9,8 +9,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, cast
 
-from openmw.openvault.vault.crypto import Seal, mask_secret
 from openmw.openvault.paths import keys_db_path
+from openmw.openvault.vault.crypto import Seal, mask_secret
 
 ProviderKind = Literal[
     "openai",

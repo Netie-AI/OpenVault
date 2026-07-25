@@ -1,4 +1,4 @@
-﻿"""OpenAI-compatible chat proxy with OpenVault fallback chain."""
+"""OpenAI-compatible chat proxy with OpenVault fallback chain."""
 
 from __future__ import annotations
 

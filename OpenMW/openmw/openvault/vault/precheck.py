@@ -1,4 +1,4 @@
-﻿"""Continuous and on-demand API-key health prechecks."""
+"""Continuous and on-demand API-key health prechecks."""
 
 from __future__ import annotations
 

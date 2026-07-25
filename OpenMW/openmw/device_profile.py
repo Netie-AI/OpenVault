@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import platform
 import shutil
@@ -10,10 +11,11 @@ import sys
 import tempfile
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Callable, TypeVar
+from typing import TypeVar
 
 import psutil
 import structlog
@@ -158,14 +160,12 @@ def _probe_nvidia_gpu() -> tuple[str | None, float]:
         mem = pynvml.nvmlDeviceGetMemoryInfo(handle)
         vram_gb = float(mem.total) / (1024**3)
         return gpu_name, vram_gb
-    except Exception as exc:  # noqa: BLE001 — NVML errors vary by driver state
+    except Exception as exc:
         log.debug("nvml_probe_failed", error=str(exc))
         return None, 0.0
     finally:
-        try:
+        with contextlib.suppress(Exception):
             pynvml.nvmlShutdown()
-        except Exception:  # noqa: BLE001
-            pass
 
 
 def _run_cmd(argv: list[str], timeout: float = 15.0) -> tuple[int, str]:
@@ -257,7 +257,7 @@ def _estimate_endurance_tbw(device_path: str | None) -> float:
         bytes_written = smart.data_units_written * 512 * 1000
         rated_bytes = bytes_written / (smart.percentage_used / 100.0)
         return float(rated_bytes / 1e12)
-    except Exception as exc:  # noqa: BLE001 — hardware/mock paths vary
+    except Exception as exc:
         log.debug("endurance_probe_failed", device=device_path, error=str(exc))
         return 0.0
 
@@ -397,7 +397,7 @@ def _detect_uncached(
     log.info("detect_stage", stage="select_nvme_start")
     try:
         nvme_model, nvme_path = _select_primary_nvme(timeout_s=_HARDWARE_PROBE_TIMEOUT_S)
-    except Exception as exc:  # noqa: BLE001 — inventory paths vary by platform
+    except Exception as exc:
         log.debug("select_nvme_failed", error=str(exc))
         nvme_model, nvme_path = None, None
     log.info("detect_stage", stage="select_nvme_done", nvme_model=nvme_model)
