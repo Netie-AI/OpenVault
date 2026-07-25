@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager, suppress
 from dataclasses import asdict
@@ -10,7 +11,7 @@ from typing import Any, Literal
 
 import structlog
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -46,14 +47,40 @@ from openmw.openvault.mesh.orchestration import (
 )
 from openmw.openvault.mesh.slots import list_slots
 from openmw.openvault.observe.path import bottleneck_payload, observe_path_payload
+from openmw.openvault.ship.cicd import detect_cicd
+from openmw.openvault.ship.cloud_targets import (
+    BillBudget,
+    build_ship_blueprint,
+    list_targets,
+    load_bill_budget,
+    save_bill_budget,
+)
+from openmw.openvault.ship.aws_guide import build_aws_render_plan
 from openmw.openvault.ship.deploy import (
     build_deploy_plan,
     execute_deploy,
     list_plans,
     load_plan,
+    one_press_deploy,
     run_deploy_smoke,
 )
-from openmw.openvault.ship.detect import detect_project
+from openmw.openvault.ship.domain_guide import build_domain_guide
+from openmw.openvault.ship.engine import load_deployment, run_ship_engine
+from openmw.openvault.ship.github_auth import (
+    clear_pat,
+    connection_status,
+    list_branches,
+    list_repos,
+    save_pat,
+    start_gh_login,
+)
+from openmw.openvault.ship.library import (
+    create_upload_session,
+    inspect_folder,
+    inspect_github_url,
+    library_home,
+    scan_upload_session,
+)
 from openmw.openvault.ship.gate import check_gate
 from openmw.openvault.ship.openship import (
     build_openship_plan,
@@ -61,6 +88,7 @@ from openmw.openvault.ship.openship import (
     list_ship_plans,
     load_ship_plan,
 )
+from openmw.openvault.ship.openship_client import OpenShipClient, adapter_status
 from openmw.openvault.ship.playwright_smoke import load_smoke, run_playwright_smoke
 from openmw.openvault.vault.accounts import AccountStore, AuthProvider
 from openmw.openvault.vault.airgpt_keyvault import keyvault_snapshot, upsert_env_secret
@@ -81,6 +109,7 @@ from openmw.openvault.vault.ratelimit import (
     estimate_prompt_tokens,
     usage_total_tokens,
 )
+from openmw.openvault.vault.redis_store import try_make_redis_store
 from openmw.openvault.vault.seed import seed_essentials
 from openmw.openvault.vault.store import KeyRole, KeyVault, ProviderKind
 
@@ -150,6 +179,72 @@ class DeployFromCortex(BaseModel):
     console_base: str = "http://127.0.0.1:5000"
     smoke_url: str = ""
     run_smoke: bool = False
+
+
+class OnePressDeployBody(BaseModel):
+    project_path: str
+    subdomain: str = ""
+    intent: str = "deploy_to_web"
+    source: str = "manual"
+    open_console: bool = True
+    sending_ip: str | None = None
+    console_base: str = "http://127.0.0.1:5000"
+    smoke_url: str = ""
+    run_smoke: bool = False
+    simulate: bool = True
+    auto_execute: bool = True
+    target: Literal["openship_cloud", "vps_ssh", "aws_guide", "local_demo"] = "local_demo"
+    github_url: str = ""
+    vps_host: str = ""
+    cloud_tier: str = "low"
+    monthly_cap_usd: float | None = None
+
+
+class DomainGuideBody(BaseModel):
+    hostname: str
+    target_a: str = "<YOUR_SERVER_IP>"
+    target_cname: str = ""
+    include_www: bool = True
+    include_mail: bool = True
+
+
+class ShipBlueprintBody(BaseModel):
+    target: Literal["openship_cloud", "vps_ssh", "aws_guide", "local_demo"] = "openship_cloud"
+    project_path: str = ""
+    hostname: str = ""
+    github_url: str = ""
+    vps_host: str = ""
+    cloud_tier: str = "low"
+    monthly_cap_usd: float | None = None
+
+
+class BillBudgetBody(BaseModel):
+    monthly_cap_usd: float = 25.0
+    spent_usd_estimate: float | None = None
+    soft_warn_pct: float = 80.0
+    hard_stop: bool = True
+
+
+class GitHubPatBody(BaseModel):
+    token: str
+    note: str = ""
+
+
+class ShipEngineBody(BaseModel):
+    target: Literal["openship_cloud", "vps_ssh", "aws_guide", "local_demo"] = "local_demo"
+    project_path: str = ""
+    github_url: str = ""
+    hostname: str = ""
+    vps_host: str = ""
+    cloud_tier: str = "low"
+    monthly_cap_usd: float | None = None
+    run_build: bool = False
+    prefer_remote_openship: bool = False
+
+
+class LibraryInspectBody(BaseModel):
+    path: str = ""
+    github_url: str = ""
 
 
 class DetectBody(BaseModel):
@@ -326,7 +421,10 @@ def create_app(
     state_vault = vault if vault is not None else KeyVault()
     state_accounts = accounts if accounts is not None else AccountStore()
     fallback = FallbackManager(state_vault)
-    limiter = TokenBudgetLimiter()
+    redis_store = try_make_redis_store()
+    limiter = TokenBudgetLimiter(store=redis_store) if redis_store is not None else TokenBudgetLimiter()
+    if redis_store is not None:
+        log.info("openvault_ratelimit_backend", backend="RedisBucketStore")
     cortex = CortexClient(cortex_url)
     loop_holder: dict[str, PrecheckLoop | None] = {"loop": None}
     task_holder: dict[str, asyncio.Task[None] | None] = {"task": None}
@@ -358,6 +456,15 @@ def create_app(
                 await task
 
     app = FastAPI(title="OpenVault", version="0.1.0", lifespan=lifespan)
+
+    # Stage-3 integrator mount: routers own their paths; app.py only wires them.
+    from openmw.openvault.routers.route import router as route_router
+    from openmw.openvault.routers.sentinel import router as sentinel_router
+    from openmw.openvault.routers.ship import router as ship_router
+
+    app.include_router(ship_router)
+    app.include_router(sentinel_router)
+    app.include_router(route_router)
 
     @app.get("/api/healthz")
     def healthz() -> dict[str, Any]:
@@ -871,9 +978,7 @@ def create_app(
         )
         return asdict(saved)
 
-    @app.post("/api/detect")
-    def api_detect(body: DetectBody) -> dict[str, Any]:
-        return detect_project(body.project_path).to_dict()
+    # POST /api/detect lives on ship_router (empty/relative path → 400).
 
     @app.post("/api/deploy/from-cortex")
     async def deploy_from_cortex(body: DeployFromCortex) -> dict[str, Any]:
@@ -894,6 +999,193 @@ def create_app(
         payload = plan.to_dict()
         payload["open_console"] = body.open_console
         return payload
+
+    @app.post("/api/deploy/one-press")
+    async def deploy_one_press(body: OnePressDeployBody) -> dict[str, Any]:
+        """One-press via in-process ship engine (OpenShip concepts stolen locally)."""
+        st = await cortex.status()
+        engine = run_ship_engine(
+            target=body.target,
+            project_path=body.project_path,
+            github_url=body.github_url,
+            hostname=body.subdomain,
+            vps_host=body.vps_host,
+            cloud_tier=body.cloud_tier,
+            monthly_cap_usd=body.monthly_cap_usd,
+            run_build=False,
+            prefer_remote_openship=False,
+        )
+        if not engine.get("ok") and engine.get("error"):
+            return {**engine, "open_console": body.open_console, "cortex_online": st.online}
+
+        # Also keep custody gates artifact for vault/keys checklist
+        simulate = body.simulate or body.target in ("local_demo", "aws_guide")
+        if body.target == "openship_cloud" and not adapter_status().get("api_ready"):
+            simulate = True
+        work = (engine.get("deployment") or {}).get("project_path") or body.project_path
+        payload = one_press_deploy(
+            project_path=work or body.project_path or ".",
+            subdomain=body.subdomain,
+            intent=body.intent,
+            source=body.source,
+            vault=state_vault,
+            fallback=fallback,
+            cortex_online=st.online,
+            sending_ip=body.sending_ip,
+            console_base=body.console_base,
+            smoke_url=body.smoke_url,
+            run_smoke=body.run_smoke,
+            simulate=simulate,
+            auto_execute=body.auto_execute,
+        )
+        payload["open_console"] = body.open_console
+        payload["engine"] = engine
+        payload["blueprint"] = (engine.get("deployment") or {}).get("blueprint") or {}
+        payload["target"] = body.target
+        payload["github_url"] = body.github_url
+        payload["domain_guide"] = payload.get("domain_guide") or {}
+        if engine.get("deployment"):
+            payload["deployment_id"] = engine["deployment"].get("deployment_id")
+            payload["ship_steps"] = engine["deployment"].get("steps")
+        return payload
+
+    @app.get("/api/ship/library")
+    def ship_library() -> dict[str, Any]:
+        return library_home()
+
+    @app.post("/api/ship/pick-folder")
+    def ship_pick_folder() -> dict[str, Any]:
+        """Native OS dialog — web file inputs cannot return absolute paths."""
+        from openmw.openvault.ship.pick_folder import pick_local_folder
+
+        return pick_local_folder()
+
+    @app.post("/api/ship/library/inspect")
+    def ship_library_inspect(body: LibraryInspectBody) -> dict[str, Any]:
+        if body.github_url.strip():
+            return inspect_github_url(body.github_url)
+        if body.path.strip():
+            return inspect_folder(body.path)
+        raise HTTPException(status_code=400, detail="path or github_url required")
+
+    @app.post("/api/ship/library/upload-session")
+    def ship_upload_session() -> dict[str, Any]:
+        return create_upload_session().to_dict()
+
+    @app.post("/api/ship/library/upload-session/{session_id}/scan")
+    def ship_upload_scan(session_id: str) -> dict[str, Any]:
+        return scan_upload_session(session_id)
+
+    @app.get("/api/ship/github/status")
+    def ship_github_status() -> dict[str, Any]:
+        return connection_status().to_dict()
+
+    @app.post("/api/ship/github/connect")
+    def ship_github_connect() -> dict[str, Any]:
+        """Highest ship scopes via gh auth login (OpenShip local-auth steal)."""
+        return start_gh_login()
+
+    @app.post("/api/ship/github/pat")
+    def ship_github_pat(body: GitHubPatBody) -> dict[str, Any]:
+        return save_pat(body.token, note=body.note).to_dict()
+
+    @app.delete("/api/ship/github/pat")
+    def ship_github_pat_clear() -> dict[str, Any]:
+        clear_pat()
+        return connection_status().to_dict()
+
+    @app.get("/api/ship/github/repos")
+    def ship_github_repos() -> dict[str, Any]:
+        return list_repos()
+
+    @app.get("/api/ship/github/repos/{owner}/{repo}/branches")
+    def ship_github_branches(owner: str, repo: str) -> dict[str, Any]:
+        return list_branches(owner, repo)
+
+    @app.post("/api/ship/engine")
+    def ship_engine_run(body: ShipEngineBody) -> dict[str, Any]:
+        return run_ship_engine(
+            target=body.target,
+            project_path=body.project_path,
+            github_url=body.github_url,
+            hostname=body.hostname,
+            vps_host=body.vps_host,
+            cloud_tier=body.cloud_tier,
+            monthly_cap_usd=body.monthly_cap_usd,
+            run_build=body.run_build,
+            prefer_remote_openship=body.prefer_remote_openship,
+        )
+
+    @app.get("/api/ship/engine/{deployment_id}")
+    def ship_engine_get(deployment_id: str) -> dict[str, Any]:
+        dep = load_deployment(deployment_id)
+        if dep is None:
+            raise HTTPException(status_code=404, detail="deployment not found")
+        return dep.to_dict()
+
+    @app.get("/api/ship/targets")
+    def ship_targets() -> dict[str, Any]:
+        return list_targets()
+
+    @app.post("/api/ship/blueprint")
+    def ship_blueprint(body: ShipBlueprintBody) -> dict[str, Any]:
+        return build_ship_blueprint(
+            target=body.target,
+            project_path=body.project_path,
+            hostname=body.hostname,
+            github_url=body.github_url,
+            vps_host=body.vps_host,
+            cloud_tier=body.cloud_tier,
+            monthly_cap_usd=body.monthly_cap_usd,
+        )
+
+    @app.get("/api/ship/budget")
+    def ship_budget_get() -> dict[str, Any]:
+        return load_bill_budget().to_dict()
+
+    @app.put("/api/ship/budget")
+    def ship_budget_put(body: BillBudgetBody) -> dict[str, Any]:
+        current = load_bill_budget()
+        budget = BillBudget(
+            monthly_cap_usd=body.monthly_cap_usd,
+            spent_usd_estimate=(
+                float(body.spent_usd_estimate)
+                if body.spent_usd_estimate is not None
+                else current.spent_usd_estimate
+            ),
+            soft_warn_pct=body.soft_warn_pct,
+            hard_stop=body.hard_stop,
+        )
+        return save_bill_budget(budget).to_dict()
+
+    @app.get("/api/ship/openship/status")
+    def ship_openship_status() -> dict[str, Any]:
+        status = adapter_status()
+        client = OpenShipClient()
+        live: dict[str, Any] = {}
+        if client.available:
+            live["cloud"] = client.cloud_status()
+            live["billing"] = client.billing_state()
+            client.close()
+        return {**status, "live": live}
+
+    @app.post("/api/ship/aws-plan")
+    def ship_aws_plan(body: DomainGuideBody) -> dict[str, Any]:
+        return build_aws_render_plan(hostname=body.hostname).to_dict()
+
+    @app.post("/api/deploy/domain-guide")
+    def deploy_domain_guide(body: DomainGuideBody) -> dict[str, Any]:
+        return build_domain_guide(
+            body.hostname,
+            target_a=body.target_a,
+            target_cname=body.target_cname,
+            include_www=body.include_www,
+            include_mail=body.include_mail,
+        ).to_dict()
+
+    @app.post("/api/deploy/cicd")
+    def deploy_cicd_scan(body: DetectBody) -> dict[str, Any]:
+        return detect_cicd(body.project_path).to_dict()
 
     @app.get("/api/deploy/{deploy_id}")
     def get_deploy(deploy_id: str) -> dict[str, Any]:
@@ -1095,9 +1387,23 @@ def create_app(
 
     webui = bundled_webui_dir()
     if webui.is_dir():
+        app_url = os.environ.get("OPENVAULT_APP_URL", "http://127.0.0.1:3010/")
 
         @app.get("/")
-        def index() -> FileResponse:
+        def index() -> HTMLResponse:
+            # Prefer the Next/Electron OpenVault app — legacy HTML is /legacy
+            return HTMLResponse(
+                f"""<!doctype html><meta charset=utf-8>
+<title>OpenVault</title>
+<meta http-equiv="refresh" content="0;url={app_url}">
+<body style="font-family:system-ui;background:#0c0c0e;color:#eee;padding:40px">
+<p>OpenVault app → <a href="{app_url}">{app_url}</a></p>
+<p style="opacity:.6"><a href="/legacy">Legacy HTML console</a> (deprecated)</p>
+</body>"""
+            )
+
+        @app.get("/legacy")
+        def legacy_html() -> FileResponse:
             return FileResponse(webui / "index.html")
 
         app.mount("/static", StaticFiles(directory=str(webui)), name="static")
