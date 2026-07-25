@@ -137,9 +137,8 @@ selected), E501, RUF0xx unicode/import issues, and a mypy arg-type slip in
 (N818). Registry field `ModelSpec.params_B` kept (JSON key); helper args renamed
 to `params_b`.
 
-**Evidence:** `uv run ruff check .` / `ruff format --check .` clean; mypy both
-scopes clean; `pytest -n auto tests/unit tests/integration` 93 passed; HAL+mock
-cov 96%; `nvme-sentinel demo` OK.
+**Evidence:** local ruff/mypy/pytest/demo green; GH Actions run
+`30159498680` on PR #5 — lint + 6 matrix cells green.
 
 ---
 
