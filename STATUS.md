@@ -44,6 +44,9 @@ Legacy: `GET /api/health/bottleneck` still works (aliases observe).
 
 ## Local mesh runbook
 
+Linux/cloud: `bash scripts/start_local_mesh.sh` (starts OpenVault `:5000` + AirGPT demo shell `:8765` when real AirGPT is absent). Cortex must already be on `:8000`.
+
+
 Ports: OpenVault `5000` · Rust auth `5055` · Cortex `8000` · OpenIDE `8765` (AirGPT).
 
 1. Start Cortex yourself (e.g. from `D:\Cortex`) on `:8000`.
