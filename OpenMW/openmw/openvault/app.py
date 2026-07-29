@@ -458,6 +458,7 @@ def create_app(
     app = FastAPI(title="OpenVault", version="0.1.0", lifespan=lifespan)
 
     # Stage-3 integrator mount: routers own their paths; app.py only wires them.
+    from openmw.openvault.routers.keys import router as keys_router
     from openmw.openvault.routers.route import router as route_router
     from openmw.openvault.routers.sentinel import router as sentinel_router
     from openmw.openvault.routers.ship import router as ship_router
@@ -465,6 +466,7 @@ def create_app(
     app.include_router(ship_router)
     app.include_router(sentinel_router)
     app.include_router(route_router)
+    app.include_router(keys_router)
 
     @app.get("/api/healthz")
     def healthz() -> dict[str, Any]:
