@@ -1,14 +1,18 @@
-"""Tier — deploy / OpenShip / email gates."""
+"""Tier — deploy / FreeBuild / email gates."""
 
 from __future__ import annotations
 
-from openmw.openvault.ship.detect import detect_project
 from openmw.openvault.ship.deploy import (
     build_deploy_plan,
     execute_deploy,
     list_plans,
     load_plan,
     run_deploy_smoke,
+)
+from openmw.openvault.ship.detect import (
+    DetectedStack,
+    DetectionInputError,
+    detect_project,
 )
 from openmw.openvault.ship.gate import GateDecision, check_gate
 from openmw.openvault.ship.openship import (
@@ -19,6 +23,8 @@ from openmw.openvault.ship.openship import (
 )
 
 __all__ = [
+    "DetectedStack",
+    "DetectionInputError",
     "GateDecision",
     "build_deploy_plan",
     "build_openship_plan",

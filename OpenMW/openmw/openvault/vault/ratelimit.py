@@ -1,4 +1,4 @@
-"""Token-budget dual-bucket rate limiting for the OpenFree gateway.
+"""Token-budget dual-bucket rate limiting for the FreeRoute gateway.
 
 Two token buckets guard every gateway call:
 
@@ -298,7 +298,7 @@ def usage_total_tokens(result: dict[str, Any] | str) -> int | None:
 
 
 class TokenBudgetLimiter:
-    """Dual-bucket, tier-aware limiter for the OpenFree gateway."""
+    """Dual-bucket, tier-aware limiter for the FreeRoute gateway."""
 
     def __init__(
         self,
@@ -387,6 +387,9 @@ class TokenBudgetLimiter:
             "token_capacity": int(limits.token_capacity),
             "request_remaining": int(request_remaining),
             "token_remaining": int(token_remaining),
+            # Aliases for Cortex workflow_openvault.check_openfree_budget
+            "remaining": int(token_remaining),
+            "remaining_tokens": int(token_remaining),
             "reset_s": _reset_seconds(
                 token_remaining, limits.token_capacity, limits.token_refill_per_sec
             ),

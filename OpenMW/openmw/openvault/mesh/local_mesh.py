@@ -1,7 +1,7 @@
-"""Local mesh — OpenVault ↔ Cortex ↔ OpenIDE perfect localhost connection.
+"""Local mesh — OpenVault ↔ Cortex ↔ FreeIDE perfect localhost connection.
 
 Peers announce, OpenVault probes health, operator (or auto-approve on loopback)
-approves the connection pack used by OpenIDE and Cortex.
+approves the connection pack used by FreeIDE and Cortex.
 """
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ PeerStatus = Literal["unknown", "online", "offline", "pending_approve", "approve
 DEFAULT_PORTS: dict[str, int] = {
     "openvault": 5000,
     "cortex": 8000,
-    # OpenIDE is served by AirGPT on :8765 (PRODUCT_ROLES). :5100 is the legacy
+    # FreeIDE is served by AirGPT on :8765 (PRODUCT_ROLES). :5100 is the legacy
     # standalone stub (scripts/openide_stub.py) and is no longer the default.
     "openide": 8765,
     "rust_console": 5055,
@@ -122,7 +122,7 @@ def default_mesh() -> LocalMeshState:
     )
     state.peers["openide"] = Peer(
         kind="openide",
-        name="OpenIDE local bridge",
+        name="FreeIDE local bridge",
         base_url=openide.rstrip("/"),
         status="unknown",
     )
@@ -240,7 +240,7 @@ def announce_peer(
     capabilities: list[str] | None = None,
     auto_approve: bool | None = None,
 ) -> dict[str, Any]:
-    """OpenIDE / Cortex call this to join the local mesh."""
+    """FreeIDE / Cortex call this to join the local mesh."""
     state = load_mesh()
     caps = capabilities or []
     req_id = uuid.uuid4().hex[:12]
@@ -309,7 +309,7 @@ def decide_handshake(request_id: str, *, approve: bool, note: str = "") -> dict[
 
 
 def build_connect_pack(state: LocalMeshState | None = None) -> dict[str, Any]:
-    """Single JSON pack OpenIDE + Cortex paste/load for perfect local wiring."""
+    """Single JSON pack FreeIDE + Cortex paste/load for perfect local wiring."""
     state = state if state is not None else load_mesh()
     ov = state.peers.get("openvault")
     cortex = state.peers.get("cortex")
@@ -342,7 +342,7 @@ def build_connect_pack(state: LocalMeshState | None = None) -> dict[str, Any]:
                 "/api/local/handshake"
             ),
             "invoke_signin": (
-                f"{(ov.base_url if ov else 'http://127.0.0.1:5000').rstrip('/')}/api/openide/invoke"
+                f"{(ov.base_url if ov else 'http://127.0.0.1:5000').rstrip('/')}/api/freeide/invoke"
             ),
             "approved": bool(openide and openide.approved),
             "status": openide.status if openide else "unknown",
@@ -386,9 +386,9 @@ def _perfect_local(state: LocalMeshState) -> dict[str, Any]:
         "ready": ready and not any(m.endswith(":not_approved") for m in missing),
         "missing": missing,
         "message": (
-            "OpenVault ↔ Cortex ↔ OpenIDE approved and reachable on loopback"
+            "OpenVault ↔ Cortex ↔ FreeIDE approved and reachable on loopback"
             if ready and not missing
-            else "Approve peers and start Cortex + OpenIDE locally"
+            else "Approve peers and start Cortex + FreeIDE locally"
         ),
     }
 
@@ -399,13 +399,13 @@ def openide_invoke(
     username: str = "",
     payload: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """OpenIDE asks OpenVault to complete a local laptop action."""
+    """FreeIDE asks OpenVault to complete a local laptop action."""
     state = refresh_mesh()
     openide = state.peers.get("openide")
     if openide is None or not openide.approved:
         return {
             "ok": False,
-            "error": "OpenIDE not approved — POST /api/local/handshake first",
+            "error": "FreeIDE not approved — POST /api/local/handshake first",
             "connect_pack": build_connect_pack(state),
         }
     action = action.strip().lower()

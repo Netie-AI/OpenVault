@@ -1,4 +1,4 @@
-"""OpenFree token-budget rate limiter — unit + gateway tests."""
+"""FreeRoute token-budget rate limiter — unit + gateway tests."""
 
 from __future__ import annotations
 
@@ -146,7 +146,7 @@ def test_openfree_ratelimit_status_endpoint(
     monkeypatch.setenv("OPENVAULT_HOME", str(tmp_path / "home"))
     app = create_app(vault=vault, mock_health=True, enable_precheck_loop=False)
     client = TestClient(app)
-    resp = client.get("/api/openfree/ratelimit", params={"tier": "free", "identity": "x"})
+    resp = client.get("/api/freeroute/ratelimit", params={"tier": "free", "identity": "x"})
     assert resp.status_code == 200
     data = resp.json()
     assert data["tier"] == "free"

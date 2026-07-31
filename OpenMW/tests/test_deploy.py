@@ -86,3 +86,73 @@ def test_deploy_from_cortex_gates(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
 
     one = client.get(f"/api/deploy/{body['deploy_id']}")
     assert one.status_code == 200
+    assert "domain_guide" in body
+    assert body["domain_guide"]["apex"] == "example.com"
+    assert "cicd" in body
+    assert gate_ids["cicd"] in ("pass", "pending")
+    assert gate_ids["domain_guide"] == "pass"
+
+
+def test_domain_guide_and_cicd_and_one_press(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("OPENVAULT_HOME", str(tmp_path / "ovhome"))
+    monkeypatch.setenv("OPENSHIP_MODE", "simulate")
+    project = tmp_path / "app"
+    project.mkdir()
+    (project / "package.json").write_text('{"name":"demo"}', encoding="utf-8")
+    wf = project / ".github" / "workflows"
+    wf.mkdir(parents=True)
+    (wf / "ci.yml").write_text("name: ci\non: push\n", encoding="utf-8")
+
+    seal = Seal(Fernet.generate_key())
+    vault = KeyVault(db_path=tmp_path / "keys.db", seal=seal)
+    record = vault.create(
+        label="primary",
+        provider="openai",
+        secret="sk-test-aaaaaaaaaaaa",
+        role="primary",
+        base_url="https://api.openai.com/v1",
+    )
+    vault.set_precheck(record.id, status="ok", latency_ms=5.0, error=None)
+
+    app = create_app(
+        vault=vault,
+        mock_health=True,
+        enable_precheck_loop=False,
+        cortex_url="http://127.0.0.1:9",
+    )
+    client = TestClient(app)
+
+    guide = client.post(
+        "/api/deploy/domain-guide",
+        json={"hostname": "app.example.com", "target_a": "203.0.113.10"},
+    )
+    assert guide.status_code == 200
+    gbody = guide.json()
+    assert gbody["apex"] == "example.com"
+    assert gbody["records"]
+    assert any("DNS" in s or "dns" in s.lower() or "registrar" in s.lower() for s in gbody["steps"])
+
+    cicd = client.post("/api/deploy/cicd", json={"project_path": str(project)})
+    assert cicd.status_code == 200
+    assert cicd.json()["status"] == "present"
+    assert "github_actions" in cicd.json()["detected"]
+
+    press = client.post(
+        "/api/deploy/one-press",
+        json={
+            "project_path": str(project),
+            "subdomain": "app.example.com",
+            "source": "manual",
+            "simulate": True,
+            "auto_execute": True,
+        },
+    )
+    assert press.status_code == 200
+    pbody = press.json()
+    assert pbody["stack"]["primary"] == "node"
+    assert pbody["one_press"]["executed"] is True
+    assert pbody["ship_id"]
+    assert pbody["domain_guide"]["hostname"] == "app.example.com"
+    assert pbody["cicd"]["status"] == "present"

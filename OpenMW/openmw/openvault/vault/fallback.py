@@ -22,6 +22,8 @@ class HopCircuit:
     failures: int = 0
     opened_at: float | None = None
     last_error: str | None = None
+    park_until: float | None = None
+    park_reason: str | None = None
 
 
 @dataclass
@@ -93,6 +95,8 @@ class FallbackManager:
         if record.precheck_status in ("auth_fail",):
             return False
         circ = self._circuit(record.id)
+        if circ.park_until is not None and now < circ.park_until:
+            return False
         if circ.state == "open":
             if circ.opened_at is not None and now - circ.opened_at >= self._config.open_seconds:
                 circ.state = "half_open"
@@ -125,6 +129,8 @@ class FallbackManager:
         circ.state = "closed"
         circ.opened_at = None
         circ.last_error = None
+        circ.park_until = None
+        circ.park_reason = None
 
     def record_failure(self, key_id: str, error: str) -> None:
         circ = self._circuit(key_id)
@@ -133,6 +139,18 @@ class FallbackManager:
         if circ.state == "half_open" or circ.failures >= self._config.failure_threshold:
             circ.state = "open"
             circ.opened_at = time.time()
+
+    def record_park(self, key_id: str, cooldown_ms: int, reason: str) -> None:
+        """Temporarily hide a key without counting a circuit failure.
+
+        Rate limits and stale OAuth must not open the hop circuit — that is the
+        live bug fixed by DESIGN_TIERED_QUEUE_LB §1.1 / §4.2.
+        """
+        circ = self._circuit(key_id)
+        wait_s = max(0.0, float(cooldown_ms) / 1000.0)
+        circ.park_until = time.time() + wait_s
+        circ.park_reason = reason
+        circ.last_error = reason
 
     def status(self) -> FallbackStatus:
         hops: list[dict[str, object]] = []
@@ -150,6 +168,8 @@ class FallbackManager:
                     "failures": circ.failures,
                     "last_error": circ.last_error or record.last_error,
                     "last_latency_ms": record.last_latency_ms,
+                    "park_until": circ.park_until,
+                    "park_reason": circ.park_reason,
                 }
             )
         return FallbackStatus(

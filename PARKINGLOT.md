@@ -8,7 +8,9 @@
 
 | Item | Notes |
 |------|-------|
-| Three-pass mypy (linux / win32 / shared) | Isolate `cli.py` `windll` into `_windows_native.py`; only if interview narrative needs more than the documented `attr-defined` waiver |
+| Health sparklines / precheck history | Valuable; not the front door. Spec stays in `docs/CARD_HEALTH_HISTORY.md` until ClipDrop spine is boring. |
+| Streaming `/v1/chat/completions` | Reserve/refund path already stream-shaped; finish later. |
+| SSH VPS executor | Ship lane; after interface automation A1–A4. |
 | Native Win32 device enumeration | Replace PowerShell `Get-PhysicalDisk` spawn in discovery; `_windows_native.py` already proves the ctypes pattern |
 | `collect --yes` / non-interactive elevate | Skip `Auto-elevate?` for scripted two-collect sequences |
 | Timeout architecture polish | Align inner `subprocess.run(timeout=)` with outer probe budget; kill children on timeout (partially addressed; keep watching zombies) |

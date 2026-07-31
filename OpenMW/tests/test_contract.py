@@ -1,4 +1,4 @@
-"""Layer-contract conformance (PRODUCT_ROLES.md + the OpenIDE/OpenVault bridge).
+"""Layer-contract conformance (PRODUCT_ROLES.md + the FreeIDE/OpenVault bridge).
 
 These tests lock the cross-surface contract so it cannot drift silently:
 custody/gate/ship stay in OpenVault, the mesh hands out the canonical URLs,
@@ -19,7 +19,7 @@ from openmw.openvault.mesh.local_mesh import DEFAULT_PORTS, OPENIDE_DEFAULT_URL
 from openmw.openvault.vault.crypto import Seal
 from openmw.openvault.vault.store import KeyVault
 
-# Ports cheat-sheet from the contract. OpenIDE is served by AirGPT on :8765;
+# Ports cheat-sheet from the contract. FreeIDE is served by AirGPT on :8765;
 # :5100 is the legacy standalone stub and must not be the default.
 CONTRACT_PORTS = {
     "openvault": 5000,
@@ -35,8 +35,8 @@ CONTRACT_ROUTES = [
     ("PUT", "/api/local/mesh/config"),
     ("GET", "/api/local/connect-pack"),
     ("POST", "/api/local/handshake"),
-    ("POST", "/api/openide/invoke"),
-    ("GET", "/api/openide/ready"),
+    ("POST", "/api/freeide/invoke"),
+    ("GET", "/api/freeide/ready"),
     ("GET", "/api/keyvault/snapshot"),
     ("POST", "/api/keyvault/upsert"),
     ("POST", "/api/gate/check"),
@@ -112,7 +112,7 @@ def test_cloud_firewall_never_honors_bypass(app: FastAPI, flag: str) -> None:
 
 def test_openide_ready_preflights_from_openvault(app: FastAPI) -> None:
     with TestClient(app) as client:
-        res = client.get("/api/openide/ready")
+        res = client.get("/api/freeide/ready")
     assert res.status_code == 200
     body = res.json()
     # Keys SoT is OpenVault (AirGPT env.local is only an offline cache).
@@ -129,5 +129,16 @@ def test_keyvault_snapshot_declares_openvault_as_source(app: FastAPI) -> None:
         body = client.get("/api/keyvault/snapshot").json()
     assert body["source"] == "openvault"
     assert body["save_endpoint"] == "/api/keyvault/upsert"
-    # OpenFree is the free-gateway brand OpenVault routes for.
+    # FreeRoute is the free-gateway brand OpenVault routes for.
     assert "omniroute" in body["free_fallback_order"]
+
+
+def test_openfree_status_aliases_for_cortex(app: FastAPI) -> None:
+    """Cortex workflow_openvault.check_openfree_budget reads remaining_tokens."""
+    client = TestClient(app)
+    resp = client.get("/api/freeroute/ratelimit", params={"identity": "wf:test", "tier": "free"})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "token_remaining" in data
+    assert data["remaining_tokens"] == data["token_remaining"]
+    assert data["remaining"] == data["token_remaining"]

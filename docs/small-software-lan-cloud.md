@@ -7,7 +7,7 @@ Inspired by Pete Koomen (*A Cloud for Small Software*) and Aaron Epstein (*Multi
 ## Shape (v0)
 
 ```
-OpenIDE (create) ──share──▶ OpenVault cloud registry
+FreeIDE (create) ──share──▶ OpenVault cloud registry
        ▲                         │
        │                    firewall / extruder
        │                         │

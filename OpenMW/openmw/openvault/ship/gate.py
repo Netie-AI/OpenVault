@@ -16,7 +16,7 @@ GateAction = Literal["retrieve", "run", "deploy", "leave", "connect"]
 
 @dataclass
 class GateDecision:
-    """Allow/deny payload for Cortex / AirGPT / OpenIDE clients."""
+    """Allow/deny payload for Cortex / AirGPT / FreeIDE clients."""
 
     allowed: bool
     action: str

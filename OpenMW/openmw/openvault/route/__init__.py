@@ -1,5 +1,15 @@
 """Public exports for ``openmw.openvault.route``."""
 
+from openmw.openvault.route.attempt import (
+    AUTH_STALE_PARK_MS,
+    AttemptClass,
+    AttemptOutcome,
+    CandidateAction,
+    DEFAULT_RATE_LIMIT_PARK_MS,
+    JobAction,
+    QUOTA_PARK_MS,
+    classify_attempt,
+)
 from openmw.openvault.route.breaker import (
     CircuitBreaker,
     CircuitBreakerOpenError,
@@ -31,9 +41,16 @@ from openmw.openvault.route.window_limiter import AcquireResult, RateLimitWindow
 
 __all__ = [
     "ACCOUNT_DEACTIVATED_SIGNALS",
+    "AUTH_STALE_PARK_MS",
+    "AttemptClass",
+    "AttemptOutcome",
     "CONTEXT_OVERFLOW_PATTERNS",
     "CREDITS_EXHAUSTED_SIGNALS",
+    "CandidateAction",
+    "DEFAULT_RATE_LIMIT_PARK_MS",
+    "JobAction",
     "OAUTH_INVALID_TOKEN_SIGNALS",
+    "QUOTA_PARK_MS",
     "RATE_LIMIT_TEXT_PATTERNS",
     "SEMAPHORE_QUEUE_FULL",
     "STRATEGY_NAMES",
@@ -47,6 +64,7 @@ __all__ = [
     "StrategyName",
     "apply_strategy",
     "check_fallback_error",
+    "classify_attempt",
     "get_all_breaker_statuses",
     "get_circuit_breaker",
     "get_next_from_deck",

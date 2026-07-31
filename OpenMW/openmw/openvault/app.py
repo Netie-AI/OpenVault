@@ -11,11 +11,9 @@ from typing import Any, Literal
 
 import structlog
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel, Field
 
-from openmw.demo_payload import bundled_webui_dir
 from openmw.openvault.cloud.firewall import evaluate_action, list_rules
 from openmw.openvault.cloud.lan_discover import discover_lan_devices
 from openmw.openvault.cloud.multiplayer import (
@@ -47,6 +45,13 @@ from openmw.openvault.mesh.orchestration import (
 )
 from openmw.openvault.mesh.slots import list_slots
 from openmw.openvault.observe.path import bottleneck_payload, observe_path_payload
+from openmw.openvault.route.access import (
+    AccessIntent,
+    AccessKind,
+    registry_payload,
+    resolve_access,
+    uptime_payload,
+)
 from openmw.openvault.ship.cicd import detect_cicd
 from openmw.openvault.ship.cloud_targets import (
     BillBudget,
@@ -79,8 +84,10 @@ from openmw.openvault.ship.library import (
     inspect_folder,
     inspect_github_url,
     library_home,
+    receive_upload_bytes,
     scan_upload_session,
 )
+from openmw.openvault.ship.detect import detect_project
 from openmw.openvault.ship.gate import check_gate
 from openmw.openvault.ship.openship import (
     build_openship_plan,
@@ -110,10 +117,106 @@ from openmw.openvault.vault.ratelimit import (
     usage_total_tokens,
 )
 from openmw.openvault.vault.redis_store import try_make_redis_store
+from openmw.openvault.vault.secrets import SecretKind, SecretStore, SecretValidationError
 from openmw.openvault.vault.seed import seed_essentials
 from openmw.openvault.vault.store import KeyRole, KeyVault, ProviderKind
 
 log = structlog.get_logger()
+
+# Guards on the custody routes. See reveal_secret for the reasoning.
+_LOOPBACK_HOSTS = frozenset({"127.0.0.1", "::1", "localhost"})
+_REVEAL_INTENT_HEADER = "X-OpenVault-Reveal"
+
+
+def _write_secret_audit(entry: dict[str, Any]) -> None:
+    """Append one line to the secret-access audit log.
+
+    Best-effort by design: an audit write that fails must not deny the caller
+    an operation they are entitled to, but it must be loud. Kept separate from
+    control_audit.jsonl so custody access can be shipped or reviewed on its own.
+
+    Callers pass only identifiers and metadata. Nothing in ``entry`` may be
+    derived from a decrypted payload — the audit file is not a second place a
+    secret is allowed to exist, and tests pin that.
+    """
+    import json
+    from datetime import datetime, timezone
+
+    from openmw.openvault.paths import ensure_home
+
+    entry = {"ts": datetime.now(timezone.utc).isoformat(), **entry}
+    log.info(str(entry.get("event", "secret_event")), **{
+        k: v for k, v in entry.items() if k not in ("ts", "event", "user_agent")
+    })
+    try:
+        path = ensure_home() / "secret_audit.jsonl"
+        with path.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(entry) + "\n")
+    except OSError as exc:
+        log.error("secret_audit_write_failed", error=str(exc), entry_event=entry.get("event"))
+
+
+def _client_host(request: Request) -> str:
+    return request.client.host if request.client else ""
+
+
+def _require_loopback(request: Request, action: str) -> str:
+    """Reject anything that did not come from this machine.
+
+    Applied to every custody mutation, not just reveal. Deleting or rotating a
+    key is not a read, but it is just as final: a remote ``DELETE /api/keys/id``
+    destroys a credential the user may have no other copy of, and a remote
+    rotate silently swaps the secret every other surface is about to fetch.
+    The bind address defaults to 127.0.0.1, but a default is a preference, not
+    a control — this is the control.
+    """
+    host = _client_host(request)
+    if host not in _LOOPBACK_HOSTS:
+        log.warning("custody_request_rejected", reason="non_loopback", action=action, client=host)
+        raise HTTPException(status_code=403, detail=f"{action} is loopback-only")
+    return host
+
+
+def _require_reveal_intent(request: Request) -> None:
+    """Demand the custom intent header on any route that returns plaintext.
+
+    A browser cannot attach a custom header cross-origin without surviving a
+    preflight, so a page the user happens to have open cannot turn a drive-by
+    GET into an exfiltration. Reserved for plaintext reads; mutations get
+    loopback + audit but not this header, because the shipped consoles issue
+    them without it and a gate that breaks the only UI gets deleted.
+    """
+    if request.headers.get(_REVEAL_INTENT_HEADER, "").strip().lower() != "intentional":
+        raise HTTPException(
+            status_code=428,
+            detail=(
+                f"secret reveal requires the {_REVEAL_INTENT_HEADER}: intentional "
+                "header, sent from an explicit user action"
+            ),
+        )
+
+
+def _audit_secret_reveal(key_id: str, client_host: str, user_agent: str) -> None:
+    _write_secret_audit(
+        {
+            "event": "secret_reveal",
+            "key_id": key_id,
+            "client": client_host,
+            "user_agent": user_agent[:200],
+        }
+    )
+
+
+def _audit_custody(event: str, request: Request, **fields: Any) -> None:
+    """Audit a custody mutation (create / update / delete / revoke / rotate)."""
+    _write_secret_audit(
+        {
+            "event": event,
+            "client": _client_host(request),
+            "user_agent": request.headers.get("user-agent", "")[:200],
+            **fields,
+        }
+    )
 
 
 class KeyCreate(BaseModel):
@@ -144,6 +247,55 @@ class KeyRotate(BaseModel):
 
 
 class KeyRevoke(BaseModel):
+    reason: str = "operator_revoke"
+
+
+class AccessResolveBody(BaseModel):
+    kind: AccessKind
+    id: str
+    intent: AccessIntent = "read"
+    required_providers: list[str] = Field(default_factory=list)
+
+
+class PasswordCreate(BaseModel):
+    label: str
+    password: str
+    username: str = ""
+    url: str = ""
+    account_id: str | None = None
+
+
+class CardCreate(BaseModel):
+    label: str
+    pan: str
+    exp_month: int
+    exp_year: int
+    cardholder: str = ""
+    account_id: str | None = None
+    # Present so the refusal is explicit rather than a silently ignored field.
+    # See vault/secrets.create_card.
+    cvv: str | None = None
+
+
+class SecretUpdate(BaseModel):
+    label: str | None = None
+    username: str | None = None
+    url: str | None = None
+    cardholder: str | None = None
+    exp_month: int | None = None
+    exp_year: int | None = None
+    account_id: str | None = None
+
+
+class SecretRotate(BaseModel):
+    new_password: str | None = None
+    new_pan: str | None = None
+    exp_month: int | None = None
+    exp_year: int | None = None
+    label_suffix: str = "rotated"
+
+
+class SecretRevoke(BaseModel):
     reason: str = "operator_revoke"
 
 
@@ -193,7 +345,9 @@ class OnePressDeployBody(BaseModel):
     run_smoke: bool = False
     simulate: bool = True
     auto_execute: bool = True
-    target: Literal["openship_cloud", "vps_ssh", "aws_guide", "local_demo"] = "local_demo"
+    target: Literal[
+        "cloudflare_pages", "openship_cloud", "vps_ssh", "aws_guide", "local_demo"
+    ] = "local_demo"
     github_url: str = ""
     vps_host: str = ""
     cloud_tier: str = "low"
@@ -209,7 +363,9 @@ class DomainGuideBody(BaseModel):
 
 
 class ShipBlueprintBody(BaseModel):
-    target: Literal["openship_cloud", "vps_ssh", "aws_guide", "local_demo"] = "openship_cloud"
+    target: Literal[
+        "cloudflare_pages", "openship_cloud", "vps_ssh", "aws_guide", "local_demo"
+    ] = "cloudflare_pages"
     project_path: str = ""
     hostname: str = ""
     github_url: str = ""
@@ -231,7 +387,9 @@ class GitHubPatBody(BaseModel):
 
 
 class ShipEngineBody(BaseModel):
-    target: Literal["openship_cloud", "vps_ssh", "aws_guide", "local_demo"] = "local_demo"
+    target: Literal[
+        "cloudflare_pages", "openship_cloud", "vps_ssh", "aws_guide", "local_demo"
+    ] = "cloudflare_pages"
     project_path: str = ""
     github_url: str = ""
     hostname: str = ""
@@ -240,6 +398,17 @@ class ShipEngineBody(BaseModel):
     monthly_cap_usd: float | None = None
     run_build: bool = False
     prefer_remote_openship: bool = False
+
+
+class ShipPreflightBody(BaseModel):
+    target: Literal[
+        "cloudflare_pages", "openship_cloud", "vps_ssh", "aws_guide", "local_demo"
+    ] = "cloudflare_pages"
+
+
+class ShipRecommendBody(BaseModel):
+    project_path: str = ""
+    stack: dict[str, Any] = Field(default_factory=dict)
 
 
 class LibraryInspectBody(BaseModel):
@@ -412,6 +581,7 @@ def create_app(
     *,
     vault: KeyVault | None = None,
     accounts: AccountStore | None = None,
+    secrets: SecretStore | None = None,
     cortex_url: str = "http://127.0.0.1:8000",
     openide_url: str = OPENIDE_DEFAULT_URL,
     precheck_interval_s: float = 60.0,
@@ -420,6 +590,10 @@ def create_app(
 ) -> FastAPI:
     state_vault = vault if vault is not None else KeyVault()
     state_accounts = accounts if accounts is not None else AccountStore()
+    state_secrets = secrets if secrets is not None else SecretStore()
+    # Our own address, as the registry should advertise it. Matches how
+    # mesh/local_mesh.py builds the self peer, so the two never disagree.
+    self_url = f"http://127.0.0.1:{os.environ.get('OPENVAULT_PORT', '5000')}"
     fallback = FallbackManager(state_vault)
     redis_store = try_make_redis_store()
     limiter = TokenBudgetLimiter(store=redis_store) if redis_store is not None else TokenBudgetLimiter()
@@ -505,7 +679,7 @@ def create_app(
             percent=body.percent,
         )
 
-    # --- Local mesh: OpenVault ↔ Cortex ↔ OpenIDE ---
+    # --- Local mesh: OpenVault ↔ Cortex ↔ FreeIDE ---
 
     @app.get("/api/local/mesh")
     def local_mesh_status() -> dict[str, Any]:
@@ -557,9 +731,10 @@ def create_app(
     def local_connect_pack() -> dict[str, Any]:
         return build_connect_pack(refresh_mesh())
 
-    @app.get("/api/openide/ready")
-    def openide_ready(required_providers: str = "") -> dict[str, Any]:
-        """Preflight OpenIDE Run: keys + mesh approval + gate, from the SoT.
+    @app.get("/api/freeide/ready")
+    @app.get("/api/openide/ready", include_in_schema=False)
+    def freeide_ready(required_providers: str = "") -> dict[str, Any]:
+        """Preflight FreeIDE Run: keys + mesh approval + gate, from the SoT.
 
         Keys source of truth is OpenVault whenever it is online (PRODUCT_ROLES);
         AirGPT's env.local is only an offline cache.
@@ -589,8 +764,9 @@ def create_app(
             "perfect_local": pack["perfect_local"],
         }
 
-    @app.post("/api/openide/invoke")
-    def api_openide_invoke(body: OpenIdeInvoke) -> dict[str, Any]:
+    @app.post("/api/freeide/invoke")
+    @app.post("/api/openide/invoke", include_in_schema=False)
+    def api_freeide_invoke(body: OpenIdeInvoke) -> dict[str, Any]:
         return openide_invoke(
             action=body.action,
             username=body.username,
@@ -635,7 +811,10 @@ def create_app(
         return record.to_dict()
 
     @app.post("/api/accounts/{account_id}/keys")
-    def account_create_key(account_id: str, body: AccountKeyCreate) -> dict[str, Any]:
+    def account_create_key(
+        account_id: str, body: AccountKeyCreate, request: Request
+    ) -> dict[str, Any]:
+        _require_loopback(request, "key create")
         if state_accounts.get(account_id) is None:
             raise HTTPException(status_code=404, detail="account not found")
         record = state_vault.create(
@@ -647,10 +826,16 @@ def create_app(
             priority=body.priority,
             account_id=account_id,
         )
+        _audit_custody(
+            "key_create", request, key_id=record.id, provider=record.provider, account_id=account_id
+        )
         return asdict(record)
 
     @app.post("/api/accounts/{account_id}/incident")
-    def account_incident(account_id: str, body: IncidentBody) -> dict[str, Any]:
+    def account_incident(account_id: str, body: IncidentBody, request: Request) -> dict[str, Any]:
+        # Kills every key on the account in one call — the single most
+        # destructive custody route in the app, and until now the least guarded.
+        _require_loopback(request, "account incident kill")
         if state_accounts.get(account_id) is None:
             raise HTTPException(status_code=404, detail="account not found")
         result = state_vault.incident_kill(
@@ -669,6 +854,13 @@ def create_app(
             account = state_accounts.get(account_id)
         payload: dict[str, Any] = dict(result)
         payload["account"] = account.to_dict() if account is not None else None
+        _audit_custody(
+            "account_incident_kill",
+            request,
+            account_id=account_id,
+            reason=body.reason,
+            killed=len(result.get("killed", []) or []),
+        )
         return payload
 
     # --- Keys ---
@@ -679,11 +871,14 @@ def create_app(
 
     @app.get("/api/keyvault/snapshot")
     def api_keyvault_snapshot() -> dict[str, Any]:
-        """AirGPT/OpenIDE Key Vault UI — OpenVault is SoT (PRODUCT_ROLES)."""
+        """AirGPT/FreeIDE Key Vault UI — OpenVault is SoT (PRODUCT_ROLES)."""
         return keyvault_snapshot(state_vault, openvault_url="http://127.0.0.1:5000")
 
     @app.post("/api/keyvault/upsert")
-    def api_keyvault_upsert(body: KeyvaultUpsertBody) -> dict[str, Any]:
+    def api_keyvault_upsert(body: KeyvaultUpsertBody, request: Request) -> dict[str, Any]:
+        # Same custody write as POST /api/keys, reached by env_key instead of
+        # provider — so it gets the same gate. Otherwise it is a way around one.
+        _require_loopback(request, "keyvault upsert")
         results: list[dict[str, Any]] = []
         batch = dict(body.secrets or {})
         if body.env_key and body.secret:
@@ -702,7 +897,54 @@ def create_app(
                 )
             )
         ok = all(r.get("ok") for r in results)
+        # env_key names the slot, never the value.
+        _audit_custody("keyvault_upsert", request, env_keys=sorted(batch), ok=ok)
         return {"ok": ok, "results": results, "snapshot": keyvault_snapshot(state_vault)}
+
+    # --- Access routing: where does it live, and may this caller go there? ---
+    #
+    # The layer above /api/gate/check. The gate answers "may I do X"; this
+    # answers "where is X, who owns it, and may I". Deliberately not a store
+    # and not an orchestrator — memory belongs to Cortex, the agent loop belongs
+    # to Cortex, and this returns locations and verdicts, never content.
+    # See route/access.py and PRODUCT_ROLES.md locks 2, 3 and 5.
+
+    @app.get("/api/access/registry")
+    def api_access_registry(kind: AccessKind | None = None) -> dict[str, Any]:
+        """Everything OpenVault can route to, derived from live mesh + vault state."""
+        return registry_payload(vault=state_vault, kind=kind, openvault_url=self_url)
+
+    @app.post("/api/access/resolve")
+    def api_access_resolve(body: AccessResolveBody) -> dict[str, Any]:
+        """Locate one resource and gate it in a single answer.
+
+        Returns 200 with ``found: false`` for an unknown id rather than a 404:
+        a resolver that stays silent about what it does not know is one callers
+        learn to route around. The verdict is always present.
+        """
+        result = resolve_access(
+            vault=state_vault,
+            kind=body.kind,
+            resource_id=body.id,
+            intent=body.intent,
+            fallback=fallback,
+            openvault_url=self_url,
+            required_providers=list(body.required_providers) or None,
+        )
+        if not result.allowed:
+            log.info(
+                "access_denied",
+                kind=result.kind,
+                resource=result.id,
+                intent=result.intent,
+                reasons=result.reasons,
+            )
+        return result.to_dict()
+
+    @app.get("/api/access/uptime")
+    def api_access_uptime() -> dict[str, Any]:
+        """Uptime for this process and every mesh surface. ``up: null`` = unprobed."""
+        return uptime_payload()
 
     @app.post("/api/gate/check")
     def api_gate_check(body: GateCheckBody) -> dict[str, Any]:
@@ -851,7 +1093,8 @@ def create_app(
         return {"ok": True, "session": sess.to_dict()}
 
     @app.post("/api/keys")
-    def create_key(body: KeyCreate) -> dict[str, Any]:
+    def create_key(body: KeyCreate, request: Request) -> dict[str, Any]:
+        _require_loopback(request, "key create")
         if body.account_id and state_accounts.get(body.account_id) is None:
             raise HTTPException(status_code=404, detail="account not found")
         record = state_vault.create(
@@ -864,10 +1107,12 @@ def create_app(
             enabled=body.enabled,
             account_id=body.account_id,
         )
+        _audit_custody("key_create", request, key_id=record.id, provider=record.provider)
         return asdict(record)
 
     @app.patch("/api/keys/{key_id}")
-    def patch_key(key_id: str, body: KeyUpdate) -> dict[str, Any]:
+    def patch_key(key_id: str, body: KeyUpdate, request: Request) -> dict[str, Any]:
+        _require_loopback(request, "key update")
         record = state_vault.update(
             key_id,
             label=body.label,
@@ -881,37 +1126,220 @@ def create_app(
         )
         if record is None:
             raise HTTPException(status_code=404, detail="key not found")
+        # Whether the payload itself changed is the part that matters on review.
+        _audit_custody(
+            "key_update", request, key_id=key_id, secret_replaced=body.secret is not None
+        )
         return asdict(record)
 
     @app.delete("/api/keys/{key_id}")
-    def delete_key(key_id: str) -> dict[str, bool]:
+    def delete_key(key_id: str, request: Request) -> dict[str, bool]:
+        _require_loopback(request, "key delete")
         ok = state_vault.delete(key_id)
         if not ok:
             raise HTTPException(status_code=404, detail="key not found")
+        _audit_custody("key_delete", request, key_id=key_id)
         return {"deleted": True}
 
     @app.post("/api/keys/{key_id}/revoke")
-    def revoke_key(key_id: str, body: KeyRevoke) -> dict[str, Any]:
+    def revoke_key(key_id: str, body: KeyRevoke, request: Request) -> dict[str, Any]:
+        _require_loopback(request, "key revoke")
         record = state_vault.revoke(key_id, reason=body.reason)
         if record is None:
             raise HTTPException(status_code=404, detail="key not found")
+        _audit_custody("key_revoke", request, key_id=key_id, reason=body.reason)
         return asdict(record)
 
     @app.post("/api/keys/{key_id}/rotate")
-    def rotate_key(key_id: str, body: KeyRotate) -> dict[str, Any]:
+    def rotate_key(key_id: str, body: KeyRotate, request: Request) -> dict[str, Any]:
+        _require_loopback(request, "key rotate")
         record = state_vault.rotate(
             key_id, new_secret=body.new_secret, label_suffix=body.label_suffix
         )
         if record is None:
             raise HTTPException(status_code=404, detail="key not found")
+        _audit_custody("key_rotate", request, key_id=key_id, replaced_by=record.id)
         return asdict(record)
 
     @app.get("/api/keys/{key_id}/secret")
-    def reveal_secret(key_id: str) -> dict[str, str]:
+    def reveal_secret(key_id: str, request: Request) -> dict[str, str]:
+        """Return one decrypted secret. Loopback + explicit intent + audited.
+
+        This is the single most dangerous route in the process: it hands back
+        plaintext, and there is no authentication anywhere in this app. Three
+        cheap controls, none of which is a substitute for real auth:
+
+        1. Loopback only. A vault reachable from the LAN is not a vault.
+        2. A custom request header. Browsers cannot attach one cross-origin
+           without a preflight the caller must survive, so a drive-by GET from
+           a page the user happens to have open cannot exfiltrate keys.
+        3. An audit line per reveal. Hardware actions were already audited
+           while secret access was not, which is exactly backwards.
+
+        Tracked in docs/BACKEND_HONESTY_AUDIT.md section 1.
+        """
+        client_host = _require_loopback(request, "secret reveal")
+        _require_reveal_intent(request)
+
         secret = state_vault.get_secret(key_id)
         if secret is None:
             raise HTTPException(status_code=404, detail="key not found")
+
+        _audit_secret_reveal(key_id, client_host, request.headers.get("user-agent", ""))
         return {"id": key_id, "secret": secret}
+
+    # --- Passwords + payment cards (vault/secrets.py) ---
+    #
+    # Same custody, same master key, same gate pattern as /api/keys. Separate
+    # route family because these are not routable credentials: nothing in
+    # fallback, precheck, or the proxy should ever see a card.
+
+    @app.get("/api/secrets")
+    def list_secrets(
+        kind: SecretKind | None = None, account_id: str | None = None
+    ) -> dict[str, Any]:
+        """Masked list. Safe to poll — no decryption happens on this path."""
+        records = state_secrets.list_secrets(kind=kind, account_id=account_id)
+        return {"secrets": [asdict(s) for s in records]}
+
+    @app.post("/api/secrets/passwords")
+    def create_password(body: PasswordCreate, request: Request) -> dict[str, Any]:
+        _require_loopback(request, "password create")
+        if body.account_id and state_accounts.get(body.account_id) is None:
+            raise HTTPException(status_code=404, detail="account not found")
+        try:
+            record = state_secrets.create_password(
+                label=body.label,
+                password=body.password,
+                username=body.username,
+                url=body.url,
+                account_id=body.account_id,
+            )
+        except SecretValidationError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        _audit_custody("password_create", request, secret_id=record.id, label=record.label)
+        return asdict(record)
+
+    @app.post("/api/secrets/cards")
+    def create_card(body: CardCreate, request: Request) -> dict[str, Any]:
+        _require_loopback(request, "card create")
+        if body.account_id and state_accounts.get(body.account_id) is None:
+            raise HTTPException(status_code=404, detail="account not found")
+        try:
+            record = state_secrets.create_card(
+                label=body.label,
+                pan=body.pan,
+                exp_month=body.exp_month,
+                exp_year=body.exp_year,
+                cardholder=body.cardholder,
+                account_id=body.account_id,
+                cvv=body.cvv,
+            )
+        except SecretValidationError as exc:
+            # The PAN is in the request body; it must not reach the audit file
+            # or the log, so the rejection carries only the reason.
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        _audit_custody(
+            "card_create", request, secret_id=record.id, brand=record.brand, last4=record.last4
+        )
+        return asdict(record)
+
+    @app.patch("/api/secrets/{secret_id}")
+    def patch_secret(secret_id: str, body: SecretUpdate, request: Request) -> dict[str, Any]:
+        _require_loopback(request, "secret update")
+        try:
+            record = state_secrets.update(
+                secret_id,
+                label=body.label,
+                username=body.username,
+                url=body.url,
+                cardholder=body.cardholder,
+                exp_month=body.exp_month,
+                exp_year=body.exp_year,
+                account_id=body.account_id,
+            )
+        except SecretValidationError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        if record is None:
+            raise HTTPException(status_code=404, detail="secret not found")
+        _audit_custody("secret_update", request, secret_id=secret_id)
+        return asdict(record)
+
+    @app.delete("/api/secrets/{secret_id}")
+    def delete_secret(secret_id: str, request: Request) -> dict[str, bool]:
+        _require_loopback(request, "secret delete")
+        if not state_secrets.delete(secret_id):
+            raise HTTPException(status_code=404, detail="secret not found")
+        _audit_custody("secret_delete", request, secret_id=secret_id)
+        return {"deleted": True}
+
+    @app.post("/api/secrets/{secret_id}/revoke")
+    def revoke_secret(secret_id: str, body: SecretRevoke, request: Request) -> dict[str, Any]:
+        _require_loopback(request, "secret revoke")
+        record = state_secrets.revoke(secret_id, reason=body.reason)
+        if record is None:
+            raise HTTPException(status_code=404, detail="secret not found")
+        _audit_custody("secret_revoke", request, secret_id=secret_id, reason=body.reason)
+        return asdict(record)
+
+    @app.post("/api/secrets/{secret_id}/rotate")
+    def rotate_secret(secret_id: str, body: SecretRotate, request: Request) -> dict[str, Any]:
+        _require_loopback(request, "secret rotate")
+        try:
+            record = state_secrets.rotate(
+                secret_id,
+                new_password=body.new_password,
+                new_pan=body.new_pan,
+                exp_month=body.exp_month,
+                exp_year=body.exp_year,
+                label_suffix=body.label_suffix,
+            )
+        except SecretValidationError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        if record is None:
+            raise HTTPException(status_code=404, detail="secret not found")
+        _audit_custody("secret_rotate", request, secret_id=secret_id, replaced_by=record.id)
+        return asdict(record)
+
+    @app.get("/api/secrets/{secret_id}/reveal")
+    def reveal_secret_value(secret_id: str, request: Request) -> dict[str, Any]:
+        """Return one password or one full PAN. Loopback + intent + audited.
+
+        Identical gate to ``/api/keys/{id}/secret`` — see that route for why
+        each of the three controls exists. One addition specific to cards: the
+        response echoes ``kind`` and ``last4`` so a caller can confirm it got
+        the card it asked for without having to parse the PAN it just received,
+        and the audit line records ``last4`` only.
+        """
+        client_host = _require_loopback(request, "secret reveal")
+        _require_reveal_intent(request)
+
+        record = state_secrets.get(secret_id)
+        if record is None:
+            raise HTTPException(status_code=404, detail="secret not found")
+
+        plaintext = state_secrets.reveal(secret_id)
+        if plaintext is None:
+            raise HTTPException(status_code=404, detail="secret not found")
+
+        _write_secret_audit(
+            {
+                "event": "secret_reveal",
+                "secret_id": secret_id,
+                "kind": record.kind,
+                "last4": record.last4,
+                "lifecycle": record.lifecycle,
+                "client": client_host,
+                "user_agent": request.headers.get("user-agent", "")[:200],
+            }
+        )
+        return {
+            "id": secret_id,
+            "kind": record.kind,
+            "last4": record.last4,
+            "brand": record.brand,
+            "secret": plaintext,
+        }
 
     @app.post("/api/keys/{key_id}/precheck")
     async def key_precheck(key_id: str) -> dict[str, Any]:
@@ -1004,7 +1432,7 @@ def create_app(
 
     @app.post("/api/deploy/one-press")
     async def deploy_one_press(body: OnePressDeployBody) -> dict[str, Any]:
-        """One-press via in-process ship engine (OpenShip concepts stolen locally)."""
+        """One-press via in-process ship engine (FreeBuild concepts stolen locally)."""
         st = await cortex.status()
         engine = run_ship_engine(
             target=body.target,
@@ -1074,9 +1502,107 @@ def create_app(
     def ship_upload_session() -> dict[str, Any]:
         return create_upload_session().to_dict()
 
+    @app.post("/api/ship/library/upload-session/{session_id}/files")
+    async def ship_upload_files(session_id: str, request: Request) -> dict[str, Any]:
+        """Accept zip or file bytes into the staging dir (real upload path)."""
+        form = await request.form()
+        results: list[dict[str, Any]] = []
+        for _key, value in form.multi_items():
+            filename = getattr(value, "filename", None)
+            if not filename or not hasattr(value, "read"):
+                continue
+            data = await value.read()  # type: ignore[misc]
+            rel = str(form.get("relative_path") or "") if _key == "file" else ""
+            results.append(
+                receive_upload_bytes(
+                    session_id,
+                    filename=str(filename),
+                    data=bytes(data),
+                    relative_path=rel,
+                )
+            )
+        if not results:
+            raise HTTPException(status_code=400, detail="multipart file field required")
+        ok = all(r.get("ok") for r in results)
+        total = sum(int(r.get("files_written") or 0) for r in results)
+        return {"ok": ok, "files_written": total, "results": results}
+
     @app.post("/api/ship/library/upload-session/{session_id}/scan")
     def ship_upload_scan(session_id: str) -> dict[str, Any]:
         return scan_upload_session(session_id)
+
+    @app.post("/api/ship/preflight")
+    def ship_preflight(body: ShipPreflightBody) -> dict[str, Any]:
+        """Refuse before build when token/CLI missing — costs a second, not five minutes."""
+        if body.target == "cloudflare_pages":
+            from openmw.openvault.ship.hosts.cloudflare_pages import (
+                CloudflarePagesAdapter,
+                from_vault,
+            )
+
+            def _secret(provider: str) -> str | None:
+                for rec in state_vault.list_keys():
+                    if (
+                        rec.enabled
+                        and rec.lifecycle == "active"
+                        and (
+                            rec.provider == provider
+                            or provider in (rec.label or "").lower()
+                            or "cloudflare" in (rec.label or "").lower()
+                        )
+                    ):
+                        return state_vault.get_secret(rec.id)
+                return None
+
+            try:
+                adapter = from_vault(_secret)
+            except Exception:
+                adapter = CloudflarePagesAdapter(
+                    api_token=os.environ.get("CLOUDFLARE_API_TOKEN"),
+                    account_id=os.environ.get("CLOUDFLARE_ACCOUNT_ID"),
+                )
+            pre = adapter.preflight()
+            return {
+                "ok": pre.ready,
+                "ready": pre.ready,
+                "target": body.target,
+                "blocker": pre.blocker,
+                "facts": pre.facts,
+                "real_publish": True,
+            }
+        if body.target == "local_demo":
+            return {
+                "ok": True,
+                "ready": True,
+                "target": body.target,
+                "blocker": "",
+                "facts": {"mode": "demo"},
+                "real_publish": False,
+            }
+        return {
+            "ok": False,
+            "ready": False,
+            "target": body.target,
+            "blocker": (
+                f"{body.target} is not a real host adapter yet — use Cloudflare Pages "
+                "for a free first publish, or local_demo to simulate."
+            ),
+            "facts": {},
+            "real_publish": False,
+        }
+
+    @app.post("/api/ship/recommend")
+    def ship_recommend(body: ShipRecommendBody) -> dict[str, Any]:
+        from openmw.openvault.ship.cloud_targets import TARGET_CARDS
+        from openmw.openvault.ship.recommend import recommend_target
+
+        stack = dict(body.stack or {})
+        if body.project_path.strip() and not stack:
+            stack = detect_project(body.project_path.strip()).to_dict()
+        sponsored = {t.id for t in TARGET_CARDS if t.sponsored}
+        out = recommend_target(stack, sponsored_ids=sponsored)
+        out["stack"] = stack
+        return out
 
     @app.get("/api/ship/github/status")
     def ship_github_status() -> dict[str, Any]:
@@ -1084,7 +1610,7 @@ def create_app(
 
     @app.post("/api/ship/github/connect")
     def ship_github_connect() -> dict[str, Any]:
-        """Highest ship scopes via gh auth login (OpenShip local-auth steal)."""
+        """Highest ship scopes via gh auth login (FreeBuild local-auth steal)."""
         return start_gh_login()
 
     @app.post("/api/ship/github/pat")
@@ -1160,8 +1686,9 @@ def create_app(
         )
         return save_bill_budget(budget).to_dict()
 
-    @app.get("/api/ship/openship/status")
-    def ship_openship_status() -> dict[str, Any]:
+    @app.get("/api/ship/freebuild/status")
+    @app.get("/api/ship/openship/status", include_in_schema=False)
+    def ship_freebuild_status() -> dict[str, Any]:
         status = adapter_status()
         client = OpenShipClient()
         live: dict[str, Any] = {}
@@ -1216,10 +1743,19 @@ def create_app(
         updated = execute_deploy(plan, simulate=body.simulate)
         return updated.to_dict()
 
-    # --- OpenShip full clone surface ---
+    # --- FreeBuild full clone surface ---
 
-    @app.post("/api/openship/plan")
-    def openship_plan(body: OpenShipBody) -> dict[str, Any]:
+    # --- FreeBuild (formerly OpenShip) ---
+    #
+    # Canonical paths are /api/freebuild*. The /api/freebuild* paths stay
+    # registered and behave identically, hidden from the schema so the docs
+    # show one name while shipped clients keep working. Deleting them is a
+    # separate, announced change — a rename that breaks callers on the day it
+    # lands is how a rename gets reverted.
+
+    @app.post("/api/freebuild/plan")
+    @app.post("/api/openship/plan", include_in_schema=False)
+    def freebuild_plan(body: OpenShipBody) -> dict[str, Any]:
         plan = build_openship_plan(
             project_path=body.project_path,
             subdomain=body.subdomain,
@@ -1230,22 +1766,25 @@ def create_app(
             plan = execute_openship_plan(plan, simulate=body.simulate)
         return plan.to_dict()
 
-    @app.get("/api/openship")
-    def openship_list() -> dict[str, Any]:
+    @app.get("/api/freebuild")
+    @app.get("/api/openship", include_in_schema=False)
+    def freebuild_list() -> dict[str, Any]:
         return {"ships": list_ship_plans()}
 
-    @app.get("/api/openship/{ship_id}")
-    def openship_get(ship_id: str) -> dict[str, Any]:
+    @app.get("/api/freebuild/{ship_id}")
+    @app.get("/api/openship/{ship_id}", include_in_schema=False)
+    def freebuild_get(ship_id: str) -> dict[str, Any]:
         plan = load_ship_plan(ship_id)
         if plan is None:
-            raise HTTPException(status_code=404, detail="openship plan not found")
+            raise HTTPException(status_code=404, detail="freebuild plan not found")
         return plan.to_dict()
 
-    @app.post("/api/openship/{ship_id}/execute")
-    def openship_execute(ship_id: str, body: DeployExecuteBody) -> dict[str, Any]:
+    @app.post("/api/freebuild/{ship_id}/execute")
+    @app.post("/api/openship/{ship_id}/execute", include_in_schema=False)
+    def freebuild_execute(ship_id: str, body: DeployExecuteBody) -> dict[str, Any]:
         plan = load_ship_plan(ship_id)
         if plan is None:
-            raise HTTPException(status_code=404, detail="openship plan not found")
+            raise HTTPException(status_code=404, detail="freebuild plan not found")
         return execute_openship_plan(plan, simulate=body.simulate).to_dict()
 
     # --- Playwright smoke ---
@@ -1328,17 +1867,25 @@ def create_app(
         }
 
     @app.post("/api/vault/ingest-env")
-    def vault_ingest_env(body: EnvIngestBody) -> dict[str, Any]:
+    def vault_ingest_env(body: EnvIngestBody, request: Request) -> dict[str, Any]:
         """Auto-retrieve provider secrets from the environment into the vault."""
-        return ingest_environment(
+        _require_loopback(request, "env ingest")
+        result = ingest_environment(
             state_vault,
             dry_run=body.dry_run,
             include_unknown=body.include_unknown,
         )
+        if not body.dry_run:
+            _audit_custody("env_ingest", request, imported=result.get("imported", 0))
+        return result
 
-    @app.get("/api/openfree/ratelimit")
-    def openfree_ratelimit(identity: str = "local", tier: str = DEFAULT_TIER) -> dict[str, Any]:
-        """OpenFree token-budget snapshot for a caller (tiers + remaining)."""
+    @app.get("/api/freeroute/ratelimit")
+    @app.get("/api/openfree/ratelimit", include_in_schema=False)
+    def freeroute_ratelimit(identity: str = "local", tier: str = DEFAULT_TIER) -> dict[str, Any]:
+        """FreeRoute token-budget snapshot for a caller (tiers + remaining).
+
+        Formerly OpenFree; the old path stays as a hidden alias.
+        """
         return limiter.status(identity, tier=tier)
 
     @app.post("/v1/chat/completions")
@@ -1362,7 +1909,7 @@ def create_app(
                 status_code=429,
                 content={
                     "error": {
-                        "message": "OpenFree token budget exceeded; retry later",
+                        "message": "FreeRoute token budget exceeded; retry later",
                         "type": "rate_limited",
                         "limited_by": decision.limited_by,
                     }
@@ -1387,28 +1934,20 @@ def create_app(
             headers=limiter.headers_for(identity, tier=tier),
         )
 
-    webui = bundled_webui_dir()
-    if webui.is_dir():
-        app_url = os.environ.get("OPENVAULT_APP_URL", "http://127.0.0.1:3010/")
+    app_url = os.environ.get("OPENVAULT_APP_URL", "http://127.0.0.1:3010/")
 
-        @app.get("/")
-        def index() -> HTMLResponse:
-            # Prefer the Next/Electron OpenVault app — legacy HTML is /legacy
-            return HTMLResponse(
-                f"""<!doctype html><meta charset=utf-8>
+    @app.get("/")
+    def index() -> HTMLResponse:
+        """Custody API root — send humans to the Next app on :3010."""
+        return HTMLResponse(
+            f"""<!doctype html><meta charset=utf-8>
 <title>OpenVault</title>
 <meta http-equiv="refresh" content="0;url={app_url}">
 <body style="font-family:system-ui;background:#0c0c0e;color:#eee;padding:40px">
 <p>OpenVault app → <a href="{app_url}">{app_url}</a></p>
-<p style="opacity:.6"><a href="/legacy">Legacy HTML console</a> (deprecated)</p>
+<p style="opacity:.6">API health: <a href="/api/healthz">/api/healthz</a></p>
 </body>"""
-            )
-
-        @app.get("/legacy")
-        def legacy_html() -> FileResponse:
-            return FileResponse(webui / "index.html")
-
-        app.mount("/static", StaticFiles(directory=str(webui)), name="static")
+        )
 
     return app
 

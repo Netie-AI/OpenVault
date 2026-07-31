@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import TypedDict
@@ -38,15 +38,60 @@ _DEMO_FALLBACK_PROFILE = DeviceProfile(
 )
 
 
-class MiddlewareComparison(TypedDict):
-    baseline_tok_s: float
-    optimized_tok_s: float
-    speedup_pct: float
-    baseline_gpu_idle_pct: float
-    optimized_gpu_idle_pct: float
+class MiddlewareComparison(TypedDict, total=False):
+    """Honest shape: no invented speedup until an A/B harness exists."""
+
+    available: bool
+    reason: str
+    baseline_tok_s: float | None
+    optimized_tok_s: float | None
+    speedup_pct: float | None
+    baseline_gpu_idle_pct: float | None
+    optimized_gpu_idle_pct: float | None
     bottleneck_before: str
     bottleneck_after: str
     middleware_features: list[str]
+
+
+# Hops that are still hardcoded constants in the mock path-trace (not live SSD timings).
+_SYNTHETIC_HOPS = frozenset(
+    {
+        HopId.PCIE_LINK.value,
+        HopId.CPU_COPY.value,
+        HopId.HOST_RAM.value,
+        HopId.RAM_TO_VRAM.value,
+        HopId.GPU_COMPUTE.value,
+    }
+)
+
+
+def _middleware_comparison(
+    baseline_tok_s: float,
+    gpu_idle_pct: float,
+    bottleneck: str,
+) -> MiddlewareComparison:
+    """Do not invent a speedup percentage.
+
+    The old formula always produced ≈ +23.4% from constants. That looked like
+    telemetry. Until an A/B harness times the same prompt through baseline vs
+    optimised paths, Middleware Gain is unavailable — blank beats a false claim.
+    """
+    del baseline_tok_s, gpu_idle_pct, bottleneck  # unused until harness exists
+    return {
+        "available": False,
+        "reason": (
+            "Middleware Gain needs an A/B harness (same prompt, measured tokens "
+            "and wall time). No number is shown until then."
+        ),
+        "baseline_tok_s": None,
+        "optimized_tok_s": None,
+        "speedup_pct": None,
+        "baseline_gpu_idle_pct": None,
+        "optimized_gpu_idle_pct": None,
+        "bottleneck_before": "",
+        "bottleneck_after": "",
+        "middleware_features": [],
+    }
 
 
 def _profile_to_dict(profile: DeviceProfile) -> dict[str, object]:
@@ -104,44 +149,34 @@ def _device_cards(profile: DeviceProfile) -> list[dict[str, object]]:
     ]
 
 
-def _middleware_comparison(
-    baseline_tok_s: float,
-    gpu_idle_pct: float,
-    bottleneck: str,
-) -> MiddlewareComparison:
-    """Derive demo uplift from IO-wait reduction (prefetch + KV quant path)."""
-    idle_reduction = max(0.08, min(0.55, gpu_idle_pct / 100.0 * 0.62))
-    speed_factor = 1.0 + idle_reduction * 1.35
-    optimized_tok_s = round(baseline_tok_s * speed_factor, 1)
-    speedup_pct = round((optimized_tok_s / baseline_tok_s - 1.0) * 100.0, 1)
-    optimized_idle = round(max(4.0, gpu_idle_pct * (1.0 - idle_reduction)), 1)
-    return MiddlewareComparison(
-        baseline_tok_s=baseline_tok_s,
-        optimized_tok_s=optimized_tok_s,
-        speedup_pct=speedup_pct,
-        baseline_gpu_idle_pct=round(gpu_idle_pct, 1),
-        optimized_gpu_idle_pct=optimized_idle,
-        bottleneck_before=bottleneck,
-        bottleneck_after=HopId.GPU_COMPUTE.value,
-        middleware_features=[
-            "LMCache disk-backed KV offload",
-            "Naive prefetch (4 blocks)",
-            "KV quant recommendation",
-            "Bandwidth-aware layer split",
-        ],
-    )
-
-
 def build_demo_payload(
     *,
     model_id: str = "llama-3.3-8b",
     use_live_detect: bool = True,
     device_path: str = "/dev/nvme0n1",
 ) -> dict[str, object]:
-    """Assemble WebUI demo payload from live or fallback hardware + mock path trace."""
+    """Assemble WebUI payload from live or fallback hardware + mock path trace.
+
+    ``demo_mode`` reports whether the *profile actually served* is fabricated —
+    not merely which branch the caller asked for. Those are different questions
+    whenever live detection runs and comes back empty, and conflating them is
+    how a machine with an AMD iGPU and a Samsung SSD ended up rendering
+    "LIVE · GeForce RTX 4050 · Micron 3400". Substituted values must never
+    inherit a live badge.
+    """
     profile = detect() if use_live_detect else _DEMO_FALLBACK_PROFILE
+    substituted = False
     if profile.gpu_name is None and profile.nvme_model is None:
-        profile = _DEMO_FALLBACK_PROFILE
+        # Detection ran and learned nothing identifying. Keep the real numbers
+        # we *did* measure (RAM, cores) rather than swapping the whole profile
+        # for someone else's laptop.
+        profile = replace(
+            _DEMO_FALLBACK_PROFILE,
+            system_ram_gb=profile.system_ram_gb,
+            cpu_cores=profile.cpu_cores,
+            cpu_inference_mode=profile.cpu_inference_mode,
+        )
+        substituted = True
 
     path_report = build_mock_path_trace_report(
         device_path=profile.nvme_model or device_path,
@@ -162,6 +197,8 @@ def build_demo_payload(
             "bytes_moved": hop.bytes_moved,
             "notes": hop.notes or "",
             "is_bottleneck": hop.hop_id.value == bottleneck,
+            # GPU-side hops are still constants; SSD-side can become live later.
+            "is_synthetic": hop.hop_id.value in _SYNTHETIC_HOPS,
         }
         for hop in path_report.hop_timeline
     ]
@@ -173,6 +210,7 @@ def build_demo_payload(
             "duration_ms": hop["duration_ms"],
             "active": True,
             "is_bottleneck": hop["is_bottleneck"],
+            "is_synthetic": hop["is_synthetic"],
         }
         for hop in hop_timeline
     ]
@@ -182,7 +220,22 @@ def build_demo_payload(
     return {
         "schema_version": "1",
         "generated_at": datetime.now(timezone.utc).isoformat(),
-        "demo_mode": not use_live_detect,
+        "demo_mode": (not use_live_detect) or substituted,
+        # Why the payload is (or is not) trustworthy, so the UI can say so
+        # instead of showing a bare LIVE pill over substituted hardware.
+        "profile_source": (
+            "fallback_flag"
+            if not use_live_detect
+            else "fallback_substituted"
+            if substituted
+            else "live"
+        ),
+        "profile_degraded_reason": (
+            "Hardware detection returned no GPU and no NVMe identity, so the "
+            "displayed GPU/NVMe are placeholders. RAM and CPU cores are real."
+            if substituted
+            else None
+        ),
         "profile": _profile_to_dict(profile),
         "devices": _device_cards(profile),
         "path_trace": {
@@ -211,6 +264,7 @@ def write_demo_payload(
     return out_path
 
 
-def bundled_webui_dir() -> Path:
-    """Return path to packaged static WebUI assets."""
-    return Path(__file__).resolve().parent.parent / "webui"
+def openvault_app_dir() -> Path:
+    """Return path to the Next.js OpenVault app (``apps/web``)."""
+    # openmw/demo_payload.py → OpenMW/ → OpenVault/
+    return Path(__file__).resolve().parents[2] / "apps" / "web"

@@ -2,7 +2,7 @@
 
 > One local control plane: **see bottleneck → acknowledge model slots → hold keys → ship → mesh into Cortex → gated fix**.
 
-**Product roles:** OpenVault = keys + gate + connect + deploy/host. Cortex = brains. AirGPT = shell. OpenIDE = coding. See [`PRODUCT_ROLES.md`](PRODUCT_ROLES.md) — do not grow a second key vault or a third orchestrator.
+**Product roles:** OpenVault = keys + gate + connect + deploy/host. Cortex = brains. AirGPT = shell. FreeIDE = coding. See [`PRODUCT_ROLES.md`](PRODUCT_ROLES.md) — do not grow a second key vault or a third orchestrator.
 
 Libraries for measurement stay at the repo root; the operator console lives in OpenMW.
 
@@ -13,8 +13,8 @@ Libraries for measurement stay at the repo root; the operator console lives in O
 1. **See** — NVMe → PCIe → DRAM → VRAM → GPU path with red hotspots (`/api/observe/path`, Bottleneck tab)
 2. **Slots** — every local + Cortex model acknowledged (`/api/slots`)
 3. **Keys** — encrypted vault + fallback proxy
-4. **Ship** — OpenShip / deploy gates / email DNS checks
-5. **Mesh** — OpenVault `:5000` ↔ Cortex `:8000` ↔ OpenIDE `:8765` ↔ Rust `:5055`
+4. **Ship** — FreeBuild / deploy gates / email DNS checks
+5. **Mesh** — OpenVault `:5000` ↔ Cortex `:8000` ↔ FreeIDE `:8765` ↔ Rust `:5055`
 6. **Fix** — GPU/CPU/fan control with `dry_run` default (`/api/control/*`)
 
 ---
@@ -26,9 +26,10 @@ Libraries for measurement stay at the repo root; the operator console lives in O
 | `nvme_sentinel/` | NVMe HAL, SMART, BenchRunReport (library) |
 | `Profiler/` | PathTrace + capability probe (library) |
 | `OpenMW/openmw/openvault/` | App tiers: `health/` `observe/` `vault/` `ship/` `mesh/` `control/` |
-| `OpenMW/webui/` | Liquid-glass console on `:5000` |
+| `OpenMW/` | Custody API on `:5000` (redirects `/` → app) |
+| `apps/web/` | **OpenVault UI** on `:3010` |
 | `docs/` | Setup, design decisions, architecture diagram |
-| `scripts/windows/` | `Clone-OpenVault.ps1`, `Start-LocalMesh.ps1` |
+| `scripts/windows/` | `Start-OpenVaultDemo.ps1`, `Start-NetieStack.ps1`, `Start-LocalMesh.ps1` |
 | `openvault.local.example.json` | Copy to `openvault.local.json` |
 
 Peer (not in this repo): Cortex at `D:\Cortex` → `http://127.0.0.1:8000` (URL wiring only).
@@ -54,7 +55,7 @@ uv run pytest tests/unit tests/integration -q
 ## Local mesh
 
 ```
-OpenIDE :8765  ──handshake──►  OpenVault :5000  ◄──engines──  Cortex :8000
+FreeIDE :8765  ──handshake──►  OpenVault :5000  ◄──engines──  Cortex :8000
                                   │
                                   └── passkeys ──► Rust :5055
 ```

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Minimal OpenIDE local bridge stub for mesh bring-up / approval testing.
+"""Minimal FreeIDE local bridge stub for mesh bring-up / approval testing.
 
 Binds 127.0.0.1:5100, announces to OpenVault, exposes /api/healthz.
 """
@@ -35,7 +35,7 @@ def announce() -> None:
             f"{OPENVAULT}/api/local/handshake",
             {
                 "peer_kind": "openide",
-                "name": "OpenIDE stub",
+                "name": "FreeIDE stub",
                 "base_url": f"http://{HOST}:{PORT}",
                 "capabilities": ["signin", "passkey", "editor", "stub"],
                 "auto_approve": True,
@@ -83,7 +83,7 @@ class Handler(BaseHTTPRequestHandler):
 def main() -> None:
     announce()
     server = ThreadingHTTPServer((HOST, PORT), Handler)
-    print(f"OpenIDE stub on http://{HOST}:{PORT} → OpenVault {OPENVAULT}")
+    print(f"FreeIDE stub on http://{HOST}:{PORT} → OpenVault {OPENVAULT}")
     server.serve_forever()
 
 

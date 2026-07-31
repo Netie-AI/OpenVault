@@ -1,4 +1,4 @@
-"""AirGPT / OpenIDE Key Vault snapshot — OpenVault is SoT for keys.
+"""AirGPT / FreeIDE Key Vault snapshot — OpenVault is SoT for keys.
 
 Maps provider catalog + vault records into the AirGPT popup shape so shells
 stay thin clients (PRODUCT_ROLES.md).
@@ -99,24 +99,24 @@ def keyvault_snapshot(vault: KeyVault, *, openvault_url: str = "") -> dict[str, 
             }
         )
 
-    # Extra AirGPT cards not in OV catalog (CLI / OpenFree / OpenShip) as custom slots
+    # Extra AirGPT cards not in OV catalog (CLI / FreeRoute / FreeBuild) as custom slots
     extras = (
         (
             "omniroute",
-            "OpenFree",
+            "FreeRoute",
             "OMNIROUTE_API_KEY",
             "gateway",
-            "OpenFree (ours) — OmniRoute-inspired free gateway; AirGPT enables it, OpenVault routes/custody",
+            "FreeRoute (ours) — OmniRoute-inspired free gateway; AirGPT enables it, OpenVault routes/custody",
         ),
         (
             "openship",
-            "OpenShip (OpenVault)",
+            "FreeBuild (OpenVault)",
             "OPENSHIP_API_TOKEN",
             "deploy",
-            "OpenShip is implemented in OpenVault ship/ — optional external URL/token",
+            "FreeBuild is implemented in OpenVault ship/ — optional external URL/token",
         ),
         ("github_cli", "GitHub CLI token", "GH_TOKEN", "cli", "gh auth status / repo scope (login is out-of-band)"),
-        ("cursor", "Cursor SDK", "CURSOR_API_KEY", "cloud", "OpenIDE Cursor backends"),
+        ("cursor", "Cursor SDK", "CURSOR_API_KEY", "cloud", "FreeIDE Cursor backends"),
     )
     for pid, label, env_key, group, note in extras:
         rec = next(
@@ -154,7 +154,7 @@ def keyvault_snapshot(vault: KeyVault, *, openvault_url: str = "") -> dict[str, 
         "providers": providers,
         "policy": (
             "OpenVault Key Vault — single custody for keys, gateways, and CLI tokens. "
-            "AirGPT/OpenIDE link here; env.local is an offline cache only. "
+            "AirGPT/FreeIDE link here; env.local is an offline cache only. "
             "Account signup stays a human step."
         ),
         "product_name": "OpenVault Key Vault",

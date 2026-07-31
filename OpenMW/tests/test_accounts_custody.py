@@ -1,4 +1,4 @@
-﻿"""Account custody, key kill/rotate, OpenShip plan, Playwright smoke gate."""
+﻿"""Account custody, key kill/rotate, FreeBuild plan, Playwright smoke gate."""
 
 from __future__ import annotations
 
@@ -37,7 +37,9 @@ def client(home: Path) -> TestClient:
         enable_precheck_loop=False,
         cortex_url="http://127.0.0.1:9",
     )
-    return TestClient(app)
+    # Custody mutations are loopback-only; TestClient's default host is
+    # "testclient", which the guard correctly rejects. See test_secret_reveal_gate.
+    return TestClient(app, client=("127.0.0.1", 5555))
 
 
 def test_suggest_netie_email() -> None:
@@ -261,7 +263,7 @@ def test_deploy_smoke_and_execute_api(
     assert direct.json()["status"] == "pass"
 
     ship = client.post(
-        "/api/openship/plan",
+        "/api/freebuild/plan",
         json={
             "project_path": str(project),
             "subdomain": "app.example.com",

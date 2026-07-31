@@ -38,3 +38,13 @@ openmw_demo_ui/
 # IDE files
 .vscode/
 .idea/
+
+# Node / Next build output
+node_modules/
+.next/
+.turbo/
+*.tsbuildinfo
+
+# Upstream clones we build on top of (re-fetch with scripts/vendor-sync.ps1).
+# Code we actually keep lives in apps/, copied out of here deliberately.
+vendor/

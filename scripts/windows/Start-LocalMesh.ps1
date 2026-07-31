@@ -1,7 +1,7 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-  Start OpenVault (+ optional Rust auth) and wire Cortex / OpenIDE URLs on Windows.
+  Start OpenVault (+ optional Rust auth) and wire Cortex / FreeIDE URLs on Windows.
 
 .DESCRIPTION
   Expects repo at D:\OpenVault (or -Root). Starts Python OpenVault console on :5000,
@@ -15,7 +15,8 @@ param(
   [string]$CortexUrl = "http://127.0.0.1:8000",
   [string]$OpenIdeUrl = "http://127.0.0.1:8765",
   [switch]$WithRustAuth,
-  [switch]$SkipBrowser
+  [switch]$SkipBrowser,
+  [switch]$MockHealth
 )
 
 $ErrorActionPreference = "Stop"
@@ -46,9 +47,9 @@ $ovArgs = @(
   "--host", "127.0.0.1",
   "--port", "5000",
   "--cortex-url", $CortexUrl,
-  "--openide-url", $OpenIdeUrl,
-  "--mock-health"
+  "--openide-url", $OpenIdeUrl
 )
+if ($MockHealth) { $ovArgs += "--mock-health" }
 if ($SkipBrowser) { $ovArgs += "--no-open-browser" }
 
 Write-Host "==> Starting OpenVault Python console :5000" -ForegroundColor Cyan
@@ -77,7 +78,7 @@ for ($i = 0; $i -lt 40; $i++) {
 }
 if (-not $ok) { throw "OpenVault did not become healthy on :5000" }
 
-Write-Host "==> Approving Cortex + OpenIDE on mesh" -ForegroundColor Cyan
+Write-Host "==> Approving Cortex + FreeIDE on mesh" -ForegroundColor Cyan
 Invoke-RestMethod -Method PUT -Uri "http://127.0.0.1:5000/api/local/mesh/config" -ContentType "application/json" -Body (@{
   auto_approve_loopback = $true
   cortex_url = $CortexUrl
@@ -95,7 +96,7 @@ Invoke-RestMethod -Method POST -Uri "http://127.0.0.1:5000/api/local/handshake" 
 
 Invoke-RestMethod -Method POST -Uri "http://127.0.0.1:5000/api/local/handshake" -ContentType "application/json" -Body (@{
   peer_kind = "openide"
-  name = "OpenIDE local"
+  name = "FreeIDE local"
   base_url = $OpenIdeUrl
   capabilities = @("signin", "passkey", "editor")
   auto_approve = $true
@@ -113,5 +114,5 @@ Write-Host ""
 Write-Host "OpenVault UI:     http://127.0.0.1:5000/#mesh" -ForegroundColor Green
 Write-Host ("Connect pack:     " + $packPath)
 Write-Host ("Cortex should use OPENVAULT_URL=" + $ovBase)
-Write-Host ("OpenIDE should POST handshake to " + $ideAnnounce)
+Write-Host ("FreeIDE should POST handshake to " + $ideAnnounce)
 Write-Host ("Perfect local:    " + $perfectMsg)

@@ -1,0 +1,228 @@
+@import "tailwindcss";
+/* Vendor omits this; without it every `animate-in` / `fade-in` /
+   `slide-in-from-*` class in the copied primitives is a silent no-op. */
+@import "tw-animate-css";
+@import "../styles/theme.css";
+/* Skins layer AFTER theme.css and redefine the same --th-* names.
+   Equal specificity to theme.css's own [data-theme] blocks, so this
+   order is load-bearing — moving them above theme.css disables them. */
+@import "../styles/glass.css";
+@import "../styles/ink.css";
+
+/*
+ * Tailwind v4 - selector-based dark mode via data-theme.
+ *
+ * EVERY dark-based skin must be listed here. A skin that is dark but is
+ * missing from this selector makes every `dark:` utility in the primitives
+ * (Modal.tsx, DropdownMenu.tsx, …) compile to nothing — the theme then
+ * looks broken in a way that traces back to this one line and nowhere else.
+ */
+@custom-variant dark (&:where([data-theme="dark"],[data-theme="glass"],[data-theme="ink"], [data-theme="dark"] *,[data-theme="glass"] *,[data-theme="ink"] *));
+/* The neutral medium-dark stays its own variant — it is not dark-based. */
+@custom-variant dim (&:where([data-theme="dim"], [data-theme="dim"] *));
+/* Per-skin escape hatches, for the rare rule that must target one skin
+   only (e.g. dropping a shadow that cannot separate black from black). */
+@custom-variant glass (&:where([data-theme="glass"], [data-theme="glass"] *));
+@custom-variant ink (&:where([data-theme="ink"], [data-theme="ink"] *));
+
+/*
+ * Layout contract. The app has NO sidebar: one full-width fixed top bar is
+ * the nav AND the Electron drag region. ONLY PageContainer may apply top
+ * padding, and it reads this token. Any page that sets its own `pt-*` is a
+ * bug — that ad-hoc padding against a sticky bar is what left Detection
+ * double-padded on some routes and under-padded on others.
+ */
+:root {
+  --ov-topbar-h: 56px;
+  /* ClipDrop / interface motion — docs/CLIPDROP_CONTRACT.md §5 */
+  --ov-dur-fast: 140ms;
+  --ov-dur-enter: 220ms;
+  --ov-dur-exit: 160ms;
+  --ov-dur-pulse: 180ms;
+  --ov-ease-enter: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ov-ease-exit: ease-in;
+  --ov-ease-out: ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --ov-dur-fast: 1ms;
+    --ov-dur-enter: 1ms;
+    --ov-dur-exit: 1ms;
+    --ov-dur-pulse: 1ms;
+  }
+}
+
+/* ClipDrop causality motion — CLIPDROP_CONTRACT §5 */
+.ov-clipdrop {
+  transition:
+    border-color var(--ov-dur-fast) var(--ov-ease-out),
+    background-color var(--ov-dur-fast) var(--ov-ease-out),
+    transform var(--ov-dur-pulse) var(--ov-ease-out);
+}
+.ov-clipdrop[data-pulse="1"] {
+  transform: scale(1.02);
+  border-color: var(--th-bd-strong, currentColor);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ov-clipdrop[data-pulse="1"] {
+    transform: none;
+    border-color: var(--th-bd-strong, currentColor);
+  }
+}
+.ov-chip-in {
+  animation: ov-chip-in var(--ov-dur-fast) var(--ov-ease-out);
+}
+@keyframes ov-chip-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ov-chip-in {
+    animation: none;
+  }
+}
+
+/*
+ * Desktop (Electron) frameless title bar. `DesktopChrome` adds `.is-desktop`
+ * to <html> (only inside the app) and renders `.app-titlebar` — a full-width
+ * strip across the very top that IS the draggable title bar (like VS Code).
+ * All app content is pushed below it so nothing sits under the strip or the
+ * inlaid macOS traffic lights. `data-app-topinset` handles fixed top bars
+ * (e.g. the auth shell) that ignore the body padding. No effect on the web.
+ */
+.is-desktop {
+  /* Covers the inset traffic lights (trafficLightPosition y:22 + ~14px button)
+   * so they sit fully within this reserved strip, never over page content. */
+  --titlebar-h: 2.25rem;
+}
+/*
+ * The title bar is a fixed OVERLAY across the very top — it adds no layout
+ * gap. It sits over the naturally-empty top edge (the sidebar's margin, page
+ * top padding), so nothing important is under it, and macOS draws the traffic
+ * lights on top regardless. Interactive elements that already clear this strip
+ * stay clickable.
+ */
+.is-desktop .app-titlebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--titlebar-h);
+  z-index: 30;
+  -webkit-app-region: drag;
+}
+/* The auth shell's top bar is fixed at top:0, so its logo would sit under the
+ * strip — nudge just that bar's content down to clear the traffic lights. */
+.is-desktop [data-app-topinset] {
+  padding-top: var(--titlebar-h);
+}
+/* Carried over from vendor and currently inert: we do not copy their
+ * sidebar.tsx, the layout is top-bar-only. Kept so a later sidebar-shaped
+ * surface (a drawer, a split view) has the same traffic-light clearance. */
+.is-desktop .app-sidebar-header {
+  padding-top: calc(var(--titlebar-h) + 0.75rem);
+}
+
+/*
+ * Expose shadcn bridge vars as Tailwind utilities.
+ * "inline" keeps them as runtime var() refs so light/dark switching works.
+ */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Semantic status utilities (text-success, bg-success-bg, border-danger-border,
+     text-warning, text-info, …) — theme-aware via the --st-* tokens per theme. */
+  --color-success: var(--success);
+  --color-success-bg: var(--success-bg);
+  --color-success-border: var(--success-border);
+  --color-danger: var(--danger);
+  --color-danger-bg: var(--danger-bg);
+  --color-danger-border: var(--danger-border);
+  --color-warning: var(--warning);
+  --color-warning-bg: var(--warning-bg);
+  --color-warning-border: var(--warning-border);
+  --color-info: var(--info);
+  --color-info-bg: var(--info-bg);
+  --color-info-border: var(--info-border);
+  --color-neutral: var(--neutral);
+  --color-neutral-bg: var(--neutral-bg);
+  --color-neutral-border: var(--neutral-border);
+
+  /* Vivid solid fills (bg-success-solid, etc.) for bars/dots/solid buttons. */
+  --color-success-solid: var(--success-solid);
+  --color-danger-solid: var(--danger-solid);
+  --color-warning-solid: var(--warning-solid);
+  --color-info-solid: var(--info-solid);
+  --color-neutral-solid: var(--neutral-solid);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  /* Lets PageContainer write `pt-topbar` instead of `pt-[var(--ov-topbar-h)]`.
+     Both emit the same declaration; `inline` keeps it a live var() ref. */
+  --spacing-topbar: var(--ov-topbar-h);
+}
+
+@theme inline {
+  /* Vendor ships Gellix from cdn.oblien.com. We do not: unknown licence,
+     third-party host, and blocked by the Electron CSP. System stack instead. */
+  --font-sans: ui-sans-serif, system-ui, "Segoe UI Variable Text", "Segoe UI", sans-serif;
+}
+
+@layer base {
+  html { -webkit-font-smoothing: antialiased; }
+  body {
+    font-family: var(--font-sans);
+    background-color: var(--th-bg-page);
+    color: var(--th-text-body);
+  }
+}
+
+::-webkit-scrollbar {
+  display: none;
+}
+
+button {
+  cursor: pointer;
+}
+
+/* Slide-in from the right, used by the cloud power picker when it
+   appears next to the deploy-target column. Kept tiny on purpose —
+   long animations on layout-changing elements feel laggy, not delightful. */
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+.animate-slide-in-right {
+  animation: slideInRight 0.25s ease-out;
+}

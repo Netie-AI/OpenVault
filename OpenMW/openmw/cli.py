@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import logging
 import sys
+from contextlib import suppress
 from pathlib import Path
 
 import structlog
@@ -16,7 +17,7 @@ import typer
 from nvme_profiler.path_trace import build_mock_path_trace_report
 from nvme_profiler.report import save_path_trace_report
 
-from openmw.demo_payload import bundled_webui_dir, write_demo_payload
+from openmw.demo_payload import openvault_app_dir, write_demo_payload
 from openmw.device_profile import DeviceProfile, detect
 from openmw.model_router import ModelRouter
 
@@ -172,7 +173,7 @@ def console_cmd(
     openide_url: str = typer.Option(
         "http://127.0.0.1:8765",
         "--openide-url",
-        help="OpenIDE local bridge base URL (AirGPT serves OpenIDE on :8765).",
+        help="FreeIDE local bridge base URL (AirGPT serves FreeIDE on :8765).",
     ),
     mock_health: bool = typer.Option(
         False,
@@ -190,7 +191,7 @@ def console_cmd(
         help="Open the liquid-glass console in a browser.",
     ),
 ) -> None:
-    """Start OpenVault: secure /v1 proxy, key vault, precheck/fallback, Cortex+OpenIDE mesh."""
+    """Start OpenVault: secure /v1 proxy, key vault, precheck/fallback, Cortex+FreeIDE mesh."""
     import webbrowser
 
     import uvicorn
@@ -207,7 +208,7 @@ def console_cmd(
     typer.echo(f"OpenVault console at {url}")
     typer.echo(f"Secure API endpoint: {url}v1/chat/completions")
     typer.echo(f"Cortex URL: {cortex_url}")
-    typer.echo(f"OpenIDE URL: {openide_url}")
+    typer.echo(f"FreeIDE URL: {openide_url}")
     typer.echo(f"Local mesh: {url}api/local/mesh")
     typer.echo(f"Connect pack: {url}api/local/connect-pack")
     if open_browser and host in ("127.0.0.1", "localhost"):
@@ -221,7 +222,7 @@ def demo_ui_cmd(
         Path("openmw_demo_ui"),
         "--out",
         "-o",
-        help="Output directory for demo.json (index.html served from bundled webui/).",
+        help="Output directory for demo.json (API payload sample).",
     ),
     model_id: str = typer.Option(
         "llama-3.3-8b",
@@ -236,51 +237,71 @@ def demo_ui_cmd(
     serve: bool = typer.Option(
         True,
         "--serve/--no-serve",
-        help="Start local HTTP server and open the demo in a browser.",
+        help="Start custody API + Next app and open the browser.",
     ),
-    port: int = typer.Option(5000, "--port", help="HTTP port when --serve is set."),
+    port: int = typer.Option(5000, "--port", help="Custody API port when --serve is set."),
+    app_port: int = typer.Option(3010, "--app-port", help="Next.js app port."),
 ) -> None:
-    """Export schema-backed demo JSON and open the liquid-glass WebUI dashboard."""
+    """Export demo JSON and launch the real OpenVault app (``apps/web``)."""
+    import os
     import shutil
+    import subprocess
     import webbrowser
-    from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
-    webui_src = bundled_webui_dir()
-    if not webui_src.is_dir():
-        typer.echo(f"Bundled WebUI not found: {webui_src}", err=True)
+    app_dir = openvault_app_dir()
+    if not (app_dir / "package.json").is_file():
+        typer.echo(f"OpenVault app not found: {app_dir}", err=True)
         raise typer.Exit(code=1)
 
     out.mkdir(parents=True, exist_ok=True)
-    index_path = out / "index.html"
-    shutil.copy2(webui_src / "index.html", index_path)
     json_path = write_demo_payload(
         out,
         model_id=model_id,
         use_live_detect=not mock_profile,
     )
-
     typer.echo(f"Wrote {json_path}")
-    typer.echo(f"Wrote {index_path}")
+    typer.echo(f"UI: {app_dir}  →  http://127.0.0.1:{app_port}/")
 
     if not serve:
-        typer.echo(f"Open file://{index_path.resolve()} in a browser.")
         return
 
-    class _QuietHandler(SimpleHTTPRequestHandler):
-        def log_message(self, format: str, *args: object) -> None:
-            log.debug("demo_ui_http", message=format % args)
+    home = os.environ.get("OPENVAULT_HOME", str(Path.home() / ".openvault"))
+    env = os.environ.copy()
+    env["OPENVAULT_HOME"] = home
+    env["OPENVAULT_APP_URL"] = f"http://127.0.0.1:{app_port}/"
+    env["CORTEX_URL"] = env.get("CORTEX_URL", "http://127.0.0.1:8010")
 
-    handler = lambda *args, **kwargs: _QuietHandler(  # noqa: E731
-        *args, directory=str(out.resolve()), **kwargs
+    uv = shutil.which("uv") or "uv"
+    api = subprocess.Popen(
+        [
+            uv, "run", "openmw", "console",
+            "--host", "127.0.0.1",
+            "--port", str(port),
+            "--cortex-url", env["CORTEX_URL"],
+            "--no-open-browser",
+            "--mock-health",
+        ],
+        cwd=str(Path(__file__).resolve().parents[1]),
+        env=env,
     )
-    server = ThreadingHTTPServer(("127.0.0.1", port), handler)
-    url = f"http://127.0.0.1:{port}/"
-    typer.echo(f"Serving demo UI at {url}")
+    npm = shutil.which("npm") or ("npm.cmd" if os.name == "nt" else "npm")
+    if not (app_dir / "node_modules" / "next").is_dir():
+        typer.echo("Installing apps/web dependencies (npm)…")
+        subprocess.check_call([npm, "install", "--no-audit", "--no-fund"], cwd=str(app_dir))
+    web = subprocess.Popen([npm, "run", "dev"], cwd=str(app_dir), env=env)
+
+    url = f"http://127.0.0.1:{app_port}/"
+    typer.echo(f"Custody API  http://127.0.0.1:{port}/")
+    typer.echo(f"OpenVault App {url}")
     webbrowser.open(url)
     try:
-        server.serve_forever()
+        api.wait()
     except KeyboardInterrupt:
-        typer.echo("Demo UI server stopped.")
+        typer.echo("Demo stopped.")
+    finally:
+        for proc in (web, api):
+            with suppress(Exception):
+                proc.terminate()
 
 
 if __name__ == "__main__":

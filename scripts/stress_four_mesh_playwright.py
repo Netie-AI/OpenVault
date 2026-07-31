@@ -1,4 +1,4 @@
-"""Stress OpenVault + AirGPT OpenIDE buttons via Playwright.
+"""Stress OpenVault + AirGPT FreeIDE buttons via Playwright.
 
 Blocks/warns are asserted for bypass attempts.
 Requires: OpenVault :5000, AirGPT :8765, playwright installed.
@@ -90,6 +90,7 @@ def main() -> int:
             "Data Flow",
             "Bottleneck",
             "Middleware Gain",
+            "Routing",
             "Vault",
             "Accounts",
             "Local Mesh",

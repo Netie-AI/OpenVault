@@ -349,7 +349,7 @@ def catalog_coverage_report(vault_provider_ids: set[str] | frozenset[str]) -> di
         "free_or_local_catalog": free,
         "catalog_size": len(PROVIDER_CATALOG),
         "omniroute_absorb_notes": (
-            "OpenFree (AirGPT product name) absorbs OmniRoute patterns: 4-tier fallback, "
+            "FreeRoute (AirGPT product name) absorbs OmniRoute patterns: 4-tier fallback, "
             "free-tier surface, register links, downtime probes, circuit breaker. "
             "Not cloned: 250-provider matrix, compression engines, quota-share DRR. "
             "Custody + routing SoT stays OpenVault; AirGPT only enables the sidecar."
@@ -359,7 +359,7 @@ def catalog_coverage_report(vault_provider_ids: set[str] | frozenset[str]) -> di
             {"id": "litellm", "why": "self-hosted OpenAI-compatible proxy"},
             {"id": "ollama", "why": "local free forever OpenAI-compatible"},
             {"id": "portkey", "why": "gateway + guardrails (pattern only)"},
-            {"id": "omniroute", "why": "inspiration for OpenFree auto-fallback + free-tier aggregation"},
+            {"id": "omniroute", "why": "inspiration for FreeRoute auto-fallback + free-tier aggregation"},
             {"id": "openfree", "why": "our gateway brand — enable in AirGPT, route via OpenVault"},
         ],
     }

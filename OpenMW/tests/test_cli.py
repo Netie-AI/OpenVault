@@ -118,4 +118,7 @@ def test_demo_ui_writes_artifacts(tmp_path: Path) -> None:
     assert (out_dir / "index.html").exists()
     assert (out_dir / "demo.json").exists()
     payload = json.loads((out_dir / "demo.json").read_text(encoding="utf-8"))
-    assert payload["middleware_comparison"]["speedup_pct"] > 0
+    assert payload["middleware_comparison"]["available"] is False
+    assert payload["middleware_comparison"].get("speedup_pct") in (None, 0, 0.0) or (
+        payload["middleware_comparison"].get("available") is False
+    )

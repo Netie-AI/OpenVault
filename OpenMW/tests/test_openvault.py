@@ -142,7 +142,9 @@ def test_api_smoke(vault: KeyVault, monkeypatch: pytest.MonkeyPatch, tmp_path: P
         enable_precheck_loop=False,
         cortex_url="http://127.0.0.1:9",
     )
-    client = TestClient(app)
+    # Custody mutations are loopback-only; TestClient's default host is
+    # "testclient", which the guard correctly rejects.
+    client = TestClient(app, client=("127.0.0.1", 5555))
 
     z = client.get("/api/healthz")
     assert z.status_code == 200
@@ -175,8 +177,12 @@ def test_api_smoke(vault: KeyVault, monkeypatch: pytest.MonkeyPatch, tmp_path: P
     assert listed.status_code == 200
     assert len(listed.json()["keys"]) == 1
 
-    secret = client.get(f"/api/keys/{key_id}/secret")
-    assert secret.json()["secret"] == "local-no-auth"
+    # Revealing plaintext requires loopback *and* an explicit intent header.
+    # This client is loopback (custody mutations above need it), so the missing
+    # header is what bites here — 428. The off-loopback 403 and the full matrix
+    # live in test_secret_reveal_gate.py.
+    gated = client.get(f"/api/keys/{key_id}/secret")
+    assert gated.status_code == 428
 
     fb = client.get("/api/fallback/status")
     assert fb.status_code == 200
