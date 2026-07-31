@@ -13,6 +13,11 @@ Last reconciled: 2026-07-28.
 
 ---
 
+## Phase 0 note (2026-07-31) — branch vs main
+
+`feat/openfree-token-budget` (tip `d7f7ac6`) holds OpenShip / secrets / Netie apps and is **ahead of `main`**.
+Merge is deferred until a dedicated OpenVault smoke (`:5000` healthz + FreeRoute chat + JWKS) on a clean checkout of this branch succeeds against live Cortex `:8010`. Do not merge blind — `main` is also behind `origin/main`.
+
 ## One app
 
 OpenVault (`:5000`) is the local control plane:
