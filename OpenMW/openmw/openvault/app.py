@@ -12,7 +12,7 @@ from typing import Any, Literal
 import structlog
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from openmw.openvault.cloud.firewall import evaluate_action, list_rules
 from openmw.openvault.cloud.lan_discover import discover_lan_devices
@@ -346,11 +346,28 @@ class SelectionUpdate(BaseModel):
 
 
 class ChatBody(BaseModel):
+    """An OpenAI-shaped chat request.
+
+    `extra="allow"` is load-bearing. Pydantic drops undeclared fields silently, so
+    this model used to delete `tools` and `tool_choice` on the way through - a caller
+    could send 15 tool definitions, get a 200 back, and be told by the model that it
+    had no tools. Nothing logged it, because nothing knew it had happened.
+
+    A proxy has to be transparent about the fields it does not itself interpret;
+    `top_p`, `stop`, `response_format`, `seed` and everything OpenAI adds next were
+    being lost the same way. `tools` and `tool_choice` are also declared explicitly so
+    they appear in openapi.json rather than being invisible to schema consumers.
+    """
+
+    model_config = ConfigDict(extra="allow")
+
     model: str = "auto"
     messages: list[dict[str, Any]]
     temperature: float | None = None
     max_tokens: int | None = None
     stream: bool | None = False
+    tools: list[dict[str, Any]] | None = None
+    tool_choice: str | dict[str, Any] | None = None
 
 
 class DeployFromCortex(BaseModel):
