@@ -11,7 +11,7 @@ from typing import Any, Literal
 
 import structlog
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from openmw.openvault.cloud.firewall import evaluate_action, list_rules
@@ -108,7 +108,7 @@ from openmw.openvault.vault.providers import (
     get_provider,
     list_catalog,
 )
-from openmw.openvault.vault.proxy import chat_completions
+from openmw.openvault.vault.proxy import chat_completions, prepare_chat_stream
 from openmw.openvault.vault.ratelimit import (
     DEFAULT_MAX_OUTPUT_TOKENS,
     DEFAULT_TIER,
@@ -156,6 +156,38 @@ def _write_secret_audit(entry: dict[str, Any]) -> None:
         log.error("secret_audit_write_failed", error=str(exc), entry_event=entry.get("event"))
 
 
+def _normalise_host(host: str) -> str:
+    """Reduce a peer address to a bare hostname or IP for comparison.
+
+    Three forms all mean "this machine" and only one of them used to match:
+
+    * ``127.0.0.1`` / ``::1``  -- matched already.
+    * ``::ffff:127.0.0.1``     -- the IPv4-mapped IPv6 form. A dual-stack socket
+      reports this, and Node forwards it verbatim in ``X-Forwarded-For``, so
+      every mutation issued through the Next console arrived looking remote and
+      was refused. The console could list keys (reads are ungated) but could not
+      create, rotate or delete one.
+    * ``[::1]:5000`` / ``127.0.0.1:5000`` -- bracketed or port-suffixed.
+
+    This is deliberately the same normalisation the TypeScript guard already
+    performs in ``apps/web/src/server/authz/routeGuard.ts``. One rule, two
+    implementations, and they had drifted -- the drift *was* the bug.
+
+    Widening ``_LOOPBACK_HOSTS`` instead would be the wrong fix: it would have to
+    enumerate every spelling forever, and ``::ffff:1.2.3.4`` must still be
+    remote. Normalising first keeps the allowlist exact.
+    """
+    value = (host or "").strip()
+    if value.startswith("["):
+        end = value.find("]")
+        value = value[1:end] if end >= 0 else value[1:]
+    elif value.count(":") == 1:
+        value = value.split(":")[0]
+    if value.lower().startswith("::ffff:"):
+        value = value[len("::ffff:"):]
+    return value.lower()
+
+
 def _client_host(request: Request) -> str:
     return request.client.host if request.client else ""
 
@@ -171,7 +203,7 @@ def _require_loopback(request: Request, action: str) -> str:
     a control — this is the control.
     """
     host = _client_host(request)
-    if host not in _LOOPBACK_HOSTS:
+    if _normalise_host(host) not in _LOOPBACK_HOSTS:
         log.warning("custody_request_rejected", reason="non_loopback", action=action, client=host)
         raise HTTPException(status_code=403, detail=f"{action} is loopback-only")
     return host
@@ -475,6 +507,9 @@ class DeploySmokeBody(BaseModel):
 
 class DeployExecuteBody(BaseModel):
     simulate: bool | None = None
+    project_id: str | None = None
+    github_url: str | None = None
+    deploy_target: str = "cloud"
 
 
 class HandshakeBody(BaseModel):
@@ -632,6 +667,7 @@ def create_app(
     app = FastAPI(title="OpenVault", version="0.1.0", lifespan=lifespan)
 
     # Stage-3 integrator mount: routers own their paths; app.py only wires them.
+    from openmw.openvault.routers.health import build_health_router
     from openmw.openvault.routers.keys import router as keys_router
     from openmw.openvault.routers.route import router as route_router
     from openmw.openvault.routers.sentinel import router as sentinel_router
@@ -641,6 +677,7 @@ def create_app(
     app.include_router(sentinel_router)
     app.include_router(route_router)
     app.include_router(keys_router)
+    app.include_router(build_health_router(state_vault))
 
     @app.get("/api/healthz")
     def healthz() -> dict[str, Any]:
@@ -1651,6 +1688,37 @@ def create_app(
             raise HTTPException(status_code=404, detail="deployment not found")
         return dep.to_dict()
 
+    @app.get("/api/ship/engine/{deployment_id}/stream", response_model=None)
+    async def ship_engine_stream(
+        deployment_id: str,
+        request: Request,
+        lastEventId: int = 0,
+    ) -> StreamingResponse:
+        """SSE replay of a saved deployment — contract: apps/web/src/lib/sse/frames.ts."""
+        from openmw.openvault.ship.stream import stream_deployment
+
+        header_last = 0
+        raw = request.headers.get("last-event-id") or request.headers.get("Last-Event-ID")
+        if raw and raw.isdigit():
+            header_last = int(raw)
+        start_after = max(lastEventId, header_last)
+
+        async def _gen() -> AsyncIterator[bytes]:
+            async for chunk in stream_deployment(
+                deployment_id, last_event_id=start_after, pace_s=0.015
+            ):
+                yield chunk
+
+        return StreamingResponse(
+            _gen(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            },
+        )
+
     @app.get("/api/ship/targets")
     def ship_targets() -> dict[str, Any]:
         return list_targets()
@@ -1785,7 +1853,30 @@ def create_app(
         plan = load_ship_plan(ship_id)
         if plan is None:
             raise HTTPException(status_code=404, detail="freebuild plan not found")
-        return execute_openship_plan(plan, simulate=body.simulate).to_dict()
+        # Remote FreeBuild refuses without project_id — fail loud before HTTP round-trip.
+        from openmw.openvault.ship.openship import adapter_presence
+
+        adapter = adapter_presence()
+        force_sim = body.simulate if body.simulate is not None else False
+        if (
+            not force_sim
+            and adapter.get("api_ready")
+            and not (body.project_id or "").strip()
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "project_id required for remote FreeBuild execute — "
+                    "pass project_id or set simulate=true for local simulation"
+                ),
+            )
+        return execute_openship_plan(
+            plan,
+            simulate=body.simulate,
+            project_id=body.project_id,
+            github_url=body.github_url,
+            deploy_target=body.deploy_target,
+        ).to_dict()
 
     # --- Playwright smoke ---
 
@@ -1888,13 +1979,8 @@ def create_app(
         """
         return limiter.status(identity, tier=tier)
 
-    @app.post("/v1/chat/completions")
-    async def v1_chat(body: ChatBody, request: Request) -> JSONResponse:
-        if body.stream:
-            return JSONResponse(
-                status_code=400,
-                content={"error": {"message": "stream not supported yet", "type": "unsupported"}},
-            )
+    @app.post("/v1/chat/completions", response_model=None)
+    async def v1_chat(body: ChatBody, request: Request) -> JSONResponse | StreamingResponse:
         client_host = request.client.host if request.client is not None else "local"
         identity = request.headers.get("x-openfree-identity") or client_host
         tier = request.headers.get("x-openfree-tier") or DEFAULT_TIER
@@ -1917,6 +2003,47 @@ def create_app(
                 headers=decision.headers(),
             )
         payload = body.model_dump(exclude_none=True)
+        rate_headers = limiter.headers_for(identity, tier=tier)
+
+        if body.stream:
+            status, result = await prepare_chat_stream(state_vault, fallback, payload)
+            if isinstance(result, dict):
+                limiter.settle(
+                    identity,
+                    tier=tier,
+                    reserved_tokens=decision.reserved_tokens,
+                    actual_tokens=0,
+                )
+                return JSONResponse(
+                    status_code=status,
+                    content=result,
+                    headers=limiter.headers_for(identity, tier=tier),
+                )
+
+            async def _stream() -> Any:
+                try:
+                    async for chunk in result:
+                        yield chunk
+                finally:
+                    # Stream usage is usually absent; keep the reservation (no refund).
+                    limiter.settle(
+                        identity,
+                        tier=tier,
+                        reserved_tokens=decision.reserved_tokens,
+                        actual_tokens=decision.reserved_tokens,
+                    )
+
+            return StreamingResponse(
+                _stream(),
+                status_code=status,
+                media_type="text/event-stream",
+                headers={
+                    **rate_headers,
+                    "Cache-Control": "no-cache",
+                    "X-Accel-Buffering": "no",
+                },
+            )
+
         status, result = await chat_completions(state_vault, fallback, payload)
         # Refund the reservation down to actual usage (0 on upstream failure).
         actual = usage_total_tokens(result) if 200 <= status < 300 else 0
