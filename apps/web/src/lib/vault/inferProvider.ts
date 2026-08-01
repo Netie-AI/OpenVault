@@ -45,6 +45,10 @@ const RULES: readonly Rule[] = [
   { id: "groq", test: /^gsk_/, label: "Groq key prefix gsk_" },
   { id: "huggingface", test: /^hf_/, label: "Hugging Face token prefix hf_" },
   { id: "google", test: /^AIza[0-9A-Za-z_-]{10,}/, label: "Google API key prefix AIza" },
+  // Google AI Studio issues a second, newer shape alongside `AIza…`. Without
+  // this the console reports "Unrecognised key format" for a key it fully
+  // supports, and the user has to know to pick the provider by hand.
+  { id: "google", test: /^AQ\.[0-9A-Za-z_-]{16,}$/, label: "Google AI Studio key prefix AQ." },
   { id: "xai", test: /^xai-/i, label: "xAI key prefix xai-" },
   { id: "perplexity", test: /^pplx-/i, label: "Perplexity key prefix pplx-" },
   { id: "replicate", test: /^r8_/, label: "Replicate token prefix r8_" },
