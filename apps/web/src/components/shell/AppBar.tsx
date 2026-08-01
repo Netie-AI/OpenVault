@@ -5,6 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Activity,
+  Boxes,
+  GitBranch,
   KeyRound,
   LayoutDashboard,
   Network,
@@ -27,8 +29,10 @@ const NAV = [
   { href: "/", label: "Overview", icon: LayoutDashboard },
   { href: "/detect", label: "Detect", icon: Activity },
   { href: "/vault", label: "Vault", icon: KeyRound },
+  { href: "/providers", label: "Providers", icon: Boxes },
   { href: "/engine", label: "Engine", icon: Server },
   { href: "/ship", label: "Ship", icon: Rocket },
+  { href: "/ship/cicd", label: "CI/CD", icon: GitBranch },
   { href: "/proxy", label: "Route", icon: Route },
   { href: "/peers", label: "Peers", icon: Network },
   { href: "/gate", label: "Gate", icon: Shield },

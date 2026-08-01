@@ -62,7 +62,7 @@ FreeIDE :8765  ──handshake──►  OpenVault :5000  ◄──engines──
 
 1. Start Cortex on `:8000` yourself (e.g. from `D:\Cortex`).
 2. `powershell -ExecutionPolicy Bypass -File scripts\windows\Start-LocalMesh.ps1` (optional `-WithRustAuth`).
-3. Open http://127.0.0.1:5000/#mesh and approve peers.
+3. Open http://127.0.0.1:3010/peers and approve peers.
 4. Connect pack: `.openvault/connect_pack.json`.
 
 ```bash

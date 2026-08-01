@@ -34,8 +34,15 @@ export class NoRetryError extends Error {
 }
 
 /** Live build/deploy logs for one Ship engine run. */
-export const buildStreamUrl = (engineRunId: string): string =>
-  `${OPENVAULT_API}/api/ship/engine/${encodeURIComponent(engineRunId)}/stream`;
+export const buildStreamUrl = (engineRunId: string): string => {
+  // Browser: same-origin /ov-api rewrite (next.config.mjs) — avoids CORS on SSE.
+  // Server: hit the custody API origin directly.
+  const base =
+    typeof window !== "undefined"
+      ? "/ov-api"
+      : OPENVAULT_API.replace(/\/$/, "");
+  return `${base}/api/ship/engine/${encodeURIComponent(engineRunId)}/stream`;
+};
 
 /**
  * Attach to a running (or replayed) build stream.

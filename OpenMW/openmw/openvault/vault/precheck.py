@@ -5,16 +5,19 @@ from __future__ import annotations
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import cast
 
 import httpx
 import structlog
 
+from openmw.openvault.vault.health_store import HealthStore, HistoryStatus
 from openmw.openvault.vault.store import KeyRecord, KeyVault, PrecheckStatus
 
 log = structlog.get_logger()
 
 DEFAULT_PRECHECK_INTERVAL_S = 60.0
 DEFAULT_TIMEOUT_S = 8.0
+_HISTORY_STATUSES = frozenset({"ok", "auth_fail", "rate_limit", "error", "timeout"})
 
 
 @dataclass(frozen=True)
@@ -118,12 +121,37 @@ async def probe_key(
             await http.aclose()
 
 
+def _key_ref(key_id: str) -> str:
+    """Short correlator for logs — never the full vault UUID."""
+    return key_id[:8] if key_id else ""
+
+
 async def precheck_one(vault: KeyVault, key_id: str) -> PrecheckResult:
     record = vault.get(key_id)
     if record is None:
+        log.info(
+            "openvault_precheck",
+            key_ref=_key_ref(key_id),
+            label=None,
+            provider=None,
+            role=None,
+            status="error",
+            latency_ms=None,
+            error="key not found",
+        )
         return PrecheckResult(key_id, "error", None, "key not found")
     secret = vault.get_secret(key_id)
     if secret is None:
+        log.info(
+            "openvault_precheck",
+            key_ref=_key_ref(key_id),
+            label=record.label,
+            provider=record.provider,
+            role=record.role,
+            status="error",
+            latency_ms=None,
+            error="secret missing",
+        )
         return PrecheckResult(key_id, "error", None, "secret missing")
     result = await probe_key(record, secret)
     vault.set_precheck(
@@ -132,11 +160,23 @@ async def precheck_one(vault: KeyVault, key_id: str) -> PrecheckResult:
         latency_ms=result.latency_ms,
         error=result.error,
     )
+    if result.status in _HISTORY_STATUSES:
+        # Transition + 15m heartbeat; see docs/CARD_HEALTH_HISTORY.md H1.
+        HealthStore(db_path=vault.db_path).record(
+            key_id,
+            cast(HistoryStatus, result.status),
+            latency_ms=result.latency_ms,
+            error=result.error,
+        )
     log.info(
         "openvault_precheck",
-        key_id=key_id,
+        key_ref=_key_ref(key_id),
+        label=record.label,
+        provider=record.provider,
+        role=record.role,
         status=result.status,
         latency_ms=result.latency_ms,
+        error=result.error,
     )
     return result
 

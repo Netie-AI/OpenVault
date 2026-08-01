@@ -9,9 +9,12 @@
   - OpenVault custody/gate/ship on :5000 (cortex_url pinned to :8010)
   - AirGPT on :8765 backend only (no browser - Netie Space is the chat UI)
   - Netie Space desktop app (preview + file-named chats)
+  - Optional OpenVault Next UI on :3010 via -WithOpenVaultApp
 
 .EXAMPLE
   powershell -ExecutionPolicy Bypass -File scripts\windows\Start-NetieStack.ps1
+.EXAMPLE
+  powershell -ExecutionPolicy Bypass -File scripts\windows\Start-NetieStack.ps1 -WithOpenVaultApp
 #>
 param(
   [string]$OpenVaultRoot = "D:\OpenVault",
@@ -21,6 +24,7 @@ param(
   [int]$CortexPort = 8010,
   [switch]$SkipNetieUi,
   [switch]$SkipAirGpt,
+  [switch]$WithOpenVaultApp,
   [switch]$OpenBrowsers,
   [switch]$MockHealth
 )
@@ -178,9 +182,38 @@ if (-not $SkipNetieUi) {
   }
 }
 
+if ($WithOpenVaultApp) {
+  $webDir = Join-Path $OpenVaultRoot "apps\web"
+  Write-Host "==> Starting OpenVault app :3010 (-WithOpenVaultApp)" -ForegroundColor Cyan
+  if (-not (Test-HttpOk "http://127.0.0.1:3010/")) {
+    if (-not (Test-Path (Join-Path $webDir "node_modules\next"))) {
+      if (Get-Command npm -ErrorAction SilentlyContinue) {
+        Push-Location $webDir
+        npm install --no-audit --no-fund
+        Pop-Location
+      }
+    }
+    $npmCmd = Get-Command npm.cmd -ErrorAction SilentlyContinue
+    if (-not $npmCmd) { $npmCmd = Get-Command npm -ErrorAction SilentlyContinue }
+    if ($npmCmd) {
+      $env:PORT = "3010"
+      $env:OPENVAULT_API_URL = $OpenVaultUrl
+      Start-Process -FilePath $npmCmd.Source -ArgumentList @("run", "dev") -WorkingDirectory $webDir -WindowStyle Minimized
+      [void](Wait-HttpOk "http://127.0.0.1:3010/" 90 "OpenVault app")
+    } else {
+      Write-Host "npm not found - skip OpenVault app" -ForegroundColor Yellow
+    }
+  } else {
+    Write-Host "==> OpenVault app already listening on :3010" -ForegroundColor Green
+  }
+  if ($OpenBrowsers -or $WithOpenVaultApp) {
+    Start-Process "http://127.0.0.1:3010/"
+  }
+}
+
 if ($OpenBrowsers) {
   Start-Process $OpenVaultUrl
-  Start-Process $AirGptUrl
+  if (-not $SkipAirGpt) { Start-Process $AirGptUrl }
 }
 
 Write-Host ""
@@ -188,5 +221,6 @@ Write-Host "======== Ready ========" -ForegroundColor Green
 Write-Host "Netie Space = chat + files (front door)"
 Write-Host "AirGPT      = backend keys/RAG/sync only ($AirGptUrl)"
 Write-Host "OpenVault   = custody + gate ($OpenVaultUrl)"
+Write-Host "OpenVault UI= http://127.0.0.1:3010/  (use -WithOpenVaultApp)"
 Write-Host "Cortex      = brain ($CortexUrl)"
 Write-Host "File chat titles = file name; Add to chat syncs AirGPT chatspace when online."

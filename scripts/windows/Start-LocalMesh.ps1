@@ -6,15 +6,19 @@
 .DESCRIPTION
   Expects repo at D:\OpenVault (or -Root). Starts Python OpenVault console on :5000,
   optionally Rust auth console on :5055, then writes/approves the local connect pack.
+  Pass -WithApp to also start the Next UI on :3010 and open /peers.
 
 .EXAMPLE
   powershell -ExecutionPolicy Bypass -File scripts\windows\Start-LocalMesh.ps1
+.EXAMPLE
+  powershell -ExecutionPolicy Bypass -File scripts\windows\Start-LocalMesh.ps1 -WithApp
 #>
 param(
   [string]$Root = "D:\OpenVault",
   [string]$CortexUrl = "http://127.0.0.1:8000",
   [string]$OpenIdeUrl = "http://127.0.0.1:8765",
   [switch]$WithRustAuth,
+  [switch]$WithApp,
   [switch]$SkipBrowser,
   [switch]$MockHealth
 )
@@ -110,8 +114,44 @@ $ovBase = [string]$pack.openvault.base_url
 $ideAnnounce = [string]$pack.openide.announce
 $perfectMsg = [string]$pack.perfect_local.message
 
+# Optional Next app (:3010) — custody UI lives at /peers for mesh
+if ($WithApp) {
+  $webDir = Join-Path $Root "apps\web"
+  Write-Host "==> Starting OpenVault app :3010 (-WithApp)" -ForegroundColor Cyan
+  if (-not (Test-Path (Join-Path $webDir "node_modules\next"))) {
+    if (Get-Command npm -ErrorAction SilentlyContinue) {
+      Push-Location $webDir
+      npm install --no-audit --no-fund
+      Pop-Location
+    }
+  }
+  $npmCmd = Get-Command npm.cmd -ErrorAction SilentlyContinue
+  if (-not $npmCmd) { $npmCmd = Get-Command npm -ErrorAction SilentlyContinue }
+  if ($npmCmd) {
+    $env:PORT = "3010"
+    $env:OPENVAULT_API_URL = "http://127.0.0.1:5000"
+    Start-Process -FilePath $npmCmd.Source -ArgumentList @("run", "dev") -WorkingDirectory $webDir
+    $appOk = $false
+    for ($i = 0; $i -lt 60; $i++) {
+      try {
+        $r = Invoke-WebRequest -Uri "http://127.0.0.1:3010/" -UseBasicParsing -TimeoutSec 2
+        if ($r.StatusCode -ge 200 -and $r.StatusCode -lt 500) { $appOk = $true; break }
+      } catch { Start-Sleep -Seconds 1 }
+      Start-Sleep -Seconds 1
+    }
+    if ($appOk -and -not $SkipBrowser) {
+      Start-Process "http://127.0.0.1:3010/peers"
+    } elseif (-not $appOk) {
+      Write-Host "WARN: OpenVault app did not become ready on :3010" -ForegroundColor Yellow
+    }
+  } else {
+    Write-Host "npm not found - skip -WithApp (use: python apps\cli\openvault_cli.py up)" -ForegroundColor Yellow
+  }
+}
+
 Write-Host ""
-Write-Host "OpenVault UI:     http://127.0.0.1:5000/#mesh" -ForegroundColor Green
+Write-Host "OpenVault UI:     http://127.0.0.1:3010/peers  (start with -WithApp, or: python apps\cli\openvault_cli.py up)" -ForegroundColor Green
+Write-Host "OpenVault API:    http://127.0.0.1:5000/  (redirects to app when :3010 is up)" -ForegroundColor Green
 Write-Host ("Connect pack:     " + $packPath)
 Write-Host ("Cortex should use OPENVAULT_URL=" + $ovBase)
 Write-Host ("FreeIDE should POST handshake to " + $ideAnnounce)

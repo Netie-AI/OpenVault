@@ -68,6 +68,11 @@ class KeyVault:
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
         self._init_schema()
 
+    @property
+    def db_path(self) -> Path:
+        """Filesystem path of the SQLite vault (shared with precheck_history)."""
+        return self._db_path
+
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(str(self._db_path))
         conn.row_factory = sqlite3.Row
@@ -84,6 +89,7 @@ class KeyVault:
                   role TEXT NOT NULL,
                   base_url TEXT NOT NULL DEFAULT '',
                   secret_blob BLOB NOT NULL,
+                  masked TEXT NOT NULL DEFAULT '',
                   enabled INTEGER NOT NULL DEFAULT 1,
                   priority INTEGER NOT NULL DEFAULT 100,
                   precheck_status TEXT NOT NULL DEFAULT 'unknown',
@@ -105,18 +111,39 @@ class KeyVault:
                 conn.execute("ALTER TABLE keys ADD COLUMN lifecycle TEXT NOT NULL DEFAULT 'active'")
             if "replaced_by" not in cols:
                 conn.execute("ALTER TABLE keys ADD COLUMN replaced_by TEXT")
+            if "masked" not in cols:
+                conn.execute("ALTER TABLE keys ADD COLUMN masked TEXT NOT NULL DEFAULT ''")
+            # One-time backfill: persist masks so list_keys never decrypts plaintext.
+            for row in conn.execute(
+                "SELECT id, secret_blob, masked FROM keys WHERE masked IS NULL OR masked = ''"
+            ).fetchall():
+                secret = self._seal.decrypt(row["secret_blob"])
+                conn.execute(
+                    "UPDATE keys SET masked = ? WHERE id = ?",
+                    (mask_secret(secret), row["id"]),
+                )
             conn.commit()
 
     def _row_to_record(self, row: sqlite3.Row, *, include_secret: bool = False) -> KeyRecord:
-        secret = self._seal.decrypt(row["secret_blob"])
-        # Columns guaranteed by _init_schema migration.
+        keys = row.keys()
+        if include_secret:
+            secret = self._seal.decrypt(row["secret_blob"])
+            masked = secret
+        else:
+            stored = str(row["masked"]) if "masked" in keys and row["masked"] else ""
+            if stored:
+                masked = stored
+            else:
+                # Legacy row without mask — decrypt once; prefer schema backfill.
+                secret = self._seal.decrypt(row["secret_blob"])
+                masked = mask_secret(secret)
         return KeyRecord(
             id=row["id"],
             label=row["label"],
             provider=row["provider"],
             role=row["role"],
             base_url=row["base_url"],
-            masked_secret=secret if include_secret else mask_secret(secret),
+            masked_secret=masked,
             enabled=bool(row["enabled"]),
             priority=int(row["priority"]),
             precheck_status=row["precheck_status"],
@@ -176,13 +203,14 @@ class KeyVault:
         key_id = uuid.uuid4().hex
         now = time.time()
         blob = self._seal.encrypt(secret)
+        masked = mask_secret(secret)
         with self._connect() as conn:
             conn.execute(
                 """
                 INSERT INTO keys (
-                  id, label, provider, role, base_url, secret_blob, enabled, priority,
+                  id, label, provider, role, base_url, secret_blob, masked, enabled, priority,
                   precheck_status, created_at, updated_at, account_id, lifecycle
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'unknown', ?, ?, ?, 'active')
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'unknown', ?, ?, ?, 'active')
                 """,
                 (
                     key_id,
@@ -191,6 +219,7 @@ class KeyVault:
                     role,
                     base_url,
                     blob,
+                    masked,
                     1 if enabled else 0,
                     priority,
                     now,
@@ -245,6 +274,8 @@ class KeyVault:
         if secret is not None:
             fields.append("secret_blob = ?")
             values.append(self._seal.encrypt(secret))
+            fields.append("masked = ?")
+            values.append(mask_secret(secret))
             fields.append("precheck_status = ?")
             values.append("unknown")
         fields.append("updated_at = ?")

@@ -3,9 +3,13 @@
 > Canonical “what’s done / what’s next.” Deferred ideas: [`PARKINGLOT.md`](PARKINGLOT.md).
 > Protocol/architecture: [`implementation_plan.md`](implementation_plan.md).
 
-Last reconciled: 2026-07-28.
+Last reconciled: 2026-07-31.
 
-**UI:** Real app is `apps/web` on **`:3010`**. Old `OpenMW/webui/index.html` **deleted** — `:5000/` redirects to the app. Demo: `python apps\cli\openvault_cli.py demo` or `scripts\windows\Start-OpenVaultDemo.ps1`.
+**UI:** Real app is `apps/web` on **`:3010`**. Old `OpenMW/webui/index.html` **deleted** — `:5000/` redirects to the app. Demo/up: `python apps\cli\openvault_cli.py demo|up` (both open the browser by default; `--no-open-browser` to skip) or `scripts\windows\Start-OpenVaultDemo.ps1`. Mesh UI: **`http://127.0.0.1:3010/peers`** (not `#mesh`).
+
+**2026-07-31 one-stop B pass:** Precheck logs use `key_ref` + label/provider/error (no full vault UUID). `openvault up` auto-opens `:3010`. `Start-LocalMesh.ps1 -WithApp` and `Start-NetieStack.ps1 -WithOpenVaultApp` start the Next app. Vault shows failing key identity + Sync preview; Ship has GitHub connect panel; Providers in nav.
+
+**2026-07-31 next_plan execution:** Stored-mask (#6) · streaming `/v1` (#1) · Ship SSE + `/ship/deploy/[id]` (#3) · health history + vault sparklines (#2) · FreeBuild `/ship/cicd` (#4) · FreeBuild `project_id` 400 honesty (#5). Cortex `:8010` smoke OK when running — merge still operator-gated (#9). Still blocked: Netie DPAPI (#7), Q2 Claude Ask A (#8). Tracker: [`next_plan.md`](next_plan.md).
 
 **Agent split:** [`docs/AGENT_SPLIT.md`](docs/AGENT_SPLIT.md) · **Claude decisions:** [`docs/CLAUDE_DECISIONS.md`](docs/CLAUDE_DECISIONS.md)
 
@@ -13,10 +17,10 @@ Last reconciled: 2026-07-28.
 
 ---
 
-## Phase 0 note (2026-07-31) � branch vs main
+## Phase 0 note (2026-07-31) � branch vs main
 
 `feat/openfree-token-budget` (tip `d7f7ac6`) holds OpenShip / secrets / Netie apps and is **ahead of `main`**.
-Merge is deferred until a dedicated OpenVault smoke (`:5000` healthz + FreeRoute chat + JWKS) on a clean checkout of this branch succeeds against live Cortex `:8010`. Do not merge blind � `main` is also behind `origin/main`.
+Merge is deferred until a dedicated OpenVault smoke (`:5000` healthz + FreeRoute chat + JWKS) on a clean checkout of this branch succeeds against live Cortex `:8010`. Do not merge blind � `main` is also behind `origin/main`.
 
 ## One app
 
@@ -147,7 +151,7 @@ Ports: OpenVault `5000` · Rust auth `5055` · Cortex `8000` · FreeIDE `8765` (
 
 1. Start Cortex yourself (e.g. from `D:\Cortex`) on `:8000`.
 2. `powershell -ExecutionPolicy Bypass -File scripts\windows\Start-LocalMesh.ps1` (optionally `-WithRustAuth`).
-3. Open http://127.0.0.1:5000/#mesh → approve peers if needed.
+3. Open http://127.0.0.1:3010/peers → approve peers if needed.
 4. Connect pack: `.openvault/connect_pack.json`.
 
 `Start-LocalMesh` does **not** start Cortex/FreeIDE. Sync: `cd OpenMW && uv sync` (separate from root sentinel / Profiler syncs).

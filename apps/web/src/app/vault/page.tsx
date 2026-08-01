@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { PageContainer } from "@/components/ui/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ClipDropZone } from "@/components/vault/ClipDropZone";
-import { isApiError } from "@/lib/api/client";
+import { apiGet, isApiError } from "@/lib/api/client";
 import {
   deleteKey,
   ingestEnv,
@@ -33,10 +33,12 @@ import {
   updateKey,
   fetchCoverage,
   fetchOpenFreeBudget,
+  fetchKeyHealth,
   KEY_ROLES,
   type EnvCandidate,
   type KeyRole,
   type KeyRow,
+  type KeyHealth,
   type PrecheckStatus,
   type ProviderSpec,
   type CoverageReport,
@@ -47,6 +49,7 @@ import {
   rememberRegisterIntent,
   type RegisterIntent,
 } from "@/lib/vault/registerIntent";
+import { KeyHealthSpark } from "@/components/vault/KeyHealthSpark";
 import { AddKeyDialog } from "./AddKeyDialog";
 
 const ROLE_BLURB: Record<KeyRole, string> = {
@@ -82,6 +85,7 @@ export default function VaultPage() {
   const [pendingRegister, setPendingRegister] = useState<RegisterIntent | null>(null);
   const [coverage, setCoverage] = useState<CoverageReport | null>(null);
   const [budget, setBudget] = useState<OpenFreeBudget | null>(null);
+  const [healthById, setHealthById] = useState<Record<string, KeyHealth>>({});
 
   const refresh = useCallback(async () => {
     setKeys(await listKeys());
@@ -128,6 +132,33 @@ export default function VaultPage() {
   useEffect(() => {
     setPendingRegister(readRegisterIntent());
   }, [addOpen]);
+
+  useEffect(() => {
+    if (keys.length === 0) {
+      setHealthById({});
+      return;
+    }
+    const ac = new AbortController();
+    void (async () => {
+      const entries = await Promise.all(
+        keys.slice(0, 40).map(async (k) => {
+          try {
+            const h = await fetchKeyHealth(k.id, "24h", ac.signal);
+            return [k.id, h] as const;
+          } catch {
+            return null;
+          }
+        }),
+      );
+      if (ac.signal.aborted) return;
+      const next: Record<string, KeyHealth> = {};
+      for (const row of entries) {
+        if (row) next[row[0]] = row[1];
+      }
+      setHealthById(next);
+    })();
+    return () => ac.abort();
+  }, [keys]);
 
   function openAdd(secret?: string) {
     setClipSecret(secret ?? null);
@@ -284,6 +315,38 @@ export default function VaultPage() {
         </div>
       ) : null}
 
+      {failing > 0 ? (
+        <div
+          data-glass
+          className="mb-5 rounded-2xl border border-destructive/40 bg-destructive/10 p-4"
+        >
+          <p className="text-sm font-medium text-destructive">
+            {failing} key{failing === 1 ? "" : "s"} need attention
+          </p>
+          <ul className="mt-2 space-y-1.5 text-sm text-foreground">
+            {keys
+              .filter(
+                (k) =>
+                  k.precheck_status === "auth_fail" || k.precheck_status === "error",
+              )
+              .map((k) => (
+                <li key={k.id} className="flex flex-wrap gap-x-2 gap-y-0.5">
+                  <span className="font-medium">{k.label}</span>
+                  <span className="text-muted-foreground">({k.provider})</span>
+                  <span className="font-mono text-xs text-muted-foreground">
+                    {k.id.slice(0, 8)}…
+                  </span>
+                  {k.last_error ? (
+                    <span className="w-full text-xs text-destructive sm:w-auto">
+                      {k.last_error}
+                    </span>
+                  ) : null}
+                </li>
+              ))}
+          </ul>
+        </div>
+      ) : null}
+
       {/* The single highest-value action on the page: keys the user already
           has, imported without them hunting for them. */}
       {envCandidates.length > 0 ? (
@@ -342,6 +405,44 @@ export default function VaultPage() {
               disabled={busy === "all"}
             >
               {busy === "all" ? "Testing…" : "Test all"}
+            </Button>
+            <Button
+              variant="outline"
+              disabled={busy === "sync"}
+              onClick={() => {
+                void (async () => {
+                  setBusy("sync");
+                  setNotice("");
+                  try {
+                    const snap = await apiGet<{
+                      providers?: Array<{
+                        id?: string;
+                        label?: string;
+                        configured?: boolean;
+                      }>;
+                      source?: string;
+                      source_of_truth?: string;
+                    }>("/api/keyvault/snapshot");
+                    const configured = (snap.providers ?? []).filter((p) => p.configured);
+                    const names = configured
+                      .map((p) => p.label || p.id || "?")
+                      .slice(0, 8)
+                      .join(", ");
+                    const sot = snap.source_of_truth || snap.source || "openvault";
+                    setNotice(
+                      `Keyvault snapshot OK (${sot}): ${configured.length} configured` +
+                        (names ? ` — ${names}` : ""),
+                    );
+                    await refresh();
+                  } catch (err) {
+                    setNotice(isApiError(err) ? err.message : "Sync preview failed");
+                  } finally {
+                    setBusy(null);
+                  }
+                })();
+              }}
+            >
+              {busy === "sync" ? "Syncing…" : "Sync preview"}
             </Button>
             <div className="ml-auto flex flex-wrap gap-2 text-xs">
               <span className="rounded-full border border-border px-2.5 py-1 text-muted-foreground">
@@ -413,6 +514,8 @@ export default function VaultPage() {
                             </p>
                             <p className="truncate text-xs text-muted-foreground">
                               {key.provider}
+                              {" · "}
+                              <span className="font-mono">{key.id.slice(0, 8)}…</span>
                               {key.last_latency_ms != null
                                 ? ` · ${Math.round(key.last_latency_ms)} ms`
                                 : ""}
@@ -421,6 +524,21 @@ export default function VaultPage() {
                                 {revealed[key.id] ?? key.masked_secret ?? "••••"}
                               </span>
                             </p>
+                            {key.last_error &&
+                            (key.precheck_status === "auth_fail" ||
+                              key.precheck_status === "error" ||
+                              key.precheck_status === "rate_limit") ? (
+                              <p className="mt-1 break-words text-xs text-destructive">
+                                {key.last_error}
+                              </p>
+                            ) : null}
+                            {healthById[key.id] ? (
+                              <KeyHealthSpark
+                                samples={healthById[key.id].samples}
+                                uptimePct={healthById[key.id].uptime_pct}
+                                p95Ms={healthById[key.id].p95_latency_ms}
+                              />
+                            ) : null}
                           </div>
 
                           <span

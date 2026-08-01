@@ -1,9 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { FolderOpen, Rocket, Upload } from "lucide-react";
 import {
   LONG_TIMEOUT_MS,
+  apiFetch,
   apiGet,
   apiPost,
   isApiError,
@@ -51,9 +53,18 @@ type TargetCard = {
   sponsored?: boolean;
 };
 
+type GitHubStatus = {
+  connected?: boolean;
+  mode?: string;
+  login?: string | null;
+  scopes?: string[];
+  detail?: string;
+};
+
 const TARGETS_DEFAULT: TargetCard[] = [];
 
 export default function ShipPage() {
+  const router = useRouter();
   const [path, setPath] = useState("");
   const [hostname, setHostname] = useState("");
   const [stack, setStack] = useState<Stack | null>(null);
@@ -65,6 +76,10 @@ export default function ShipPage() {
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const [phase, setPhase] = useState("");
+  const [gh, setGh] = useState<GitHubStatus | null>(null);
+  const [ghBusy, setGhBusy] = useState(false);
+  const [ghNotice, setGhNotice] = useState("");
+  const [pat, setPat] = useState("");
 
   const loadTargets = useCallback(async () => {
     try {
@@ -75,9 +90,77 @@ export default function ShipPage() {
     }
   }, []);
 
+  const loadGitHub = useCallback(async () => {
+    try {
+      const data = await apiGet<GitHubStatus>("/api/ship/github/status");
+      setGh(data);
+    } catch {
+      setGh(null);
+    }
+  }, []);
+
   useEffect(() => {
     void loadTargets();
-  }, [loadTargets]);
+    void loadGitHub();
+  }, [loadTargets, loadGitHub]);
+
+  async function connectGhCli() {
+    setGhBusy(true);
+    setGhNotice("");
+    try {
+      const out = await apiPost<GitHubStatus & { ok?: boolean; detail?: string }>(
+        "/api/ship/github/connect",
+        {},
+        { timeoutMs: LONG_TIMEOUT_MS },
+      );
+      setGh(out);
+      setGhNotice(out.detail || (out.connected ? "GitHub connected via gh CLI" : "Connect finished"));
+      await loadGitHub();
+    } catch (e) {
+      setGhNotice(isApiError(e) ? e.message : String(e));
+    } finally {
+      setGhBusy(false);
+    }
+  }
+
+  async function saveGhPat() {
+    if (!pat.trim()) {
+      setGhNotice("Paste a GitHub PAT first");
+      return;
+    }
+    setGhBusy(true);
+    setGhNotice("");
+    try {
+      const out = await apiPost<GitHubStatus>("/api/ship/github/pat", {
+        token: pat.trim(),
+        note: "openvault-ui",
+      });
+      setPat("");
+      setGh(out);
+      setGhNotice(out.connected ? `Connected as ${out.login || "user"}` : out.detail || "PAT saved");
+      await loadGitHub();
+    } catch (e) {
+      setGhNotice(isApiError(e) ? e.message : String(e));
+    } finally {
+      setGhBusy(false);
+    }
+  }
+
+  async function clearGhPat() {
+    setGhBusy(true);
+    setGhNotice("");
+    try {
+      const out = await apiFetch<GitHubStatus>("/api/ship/github/pat", {
+        method: "DELETE",
+      });
+      setGh(out);
+      setGhNotice("GitHub PAT cleared");
+    } catch (e) {
+      setGhNotice(isApiError(e) ? e.message : String(e));
+    } finally {
+      setGhBusy(false);
+    }
+  }
 
   async function afterPath(projectPath: string, detected?: Stack) {
     setPath(projectPath);
@@ -224,6 +307,13 @@ export default function ShipPage() {
       if (out.ok === false) {
         setErr(String(out.error || "Deploy refused"));
       }
+      const dep = out.deployment as { deployment_id?: string } | undefined;
+      const depId =
+        (typeof dep?.deployment_id === "string" && dep.deployment_id) ||
+        (typeof out.deployment_id === "string" ? out.deployment_id : "");
+      if (depId) {
+        router.push(`/ship/deploy/${encodeURIComponent(depId)}`);
+      }
     } catch (e) {
       setErr(isApiError(e) ? e.message : String(e));
     } finally {
@@ -248,6 +338,63 @@ export default function ShipPage() {
         title="Ship"
         description="Your machine builds. Your cloud account hosts. Your domain points at it. One Deploy — we detect, pick the target, and preflight first."
       />
+
+      <div
+        data-glass
+        className="mb-5 rounded-2xl border border-border bg-card p-5"
+      >
+        <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-foreground">GitHub</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Connect via <code className="text-foreground">gh</code> CLI or a PAT so Ship can list repos and push workflows.
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={ghBusy}
+            onClick={() => void loadGitHub()}
+          >
+            Refresh
+          </Button>
+        </div>
+        <p className="mb-3 text-sm text-foreground">
+          {gh?.connected
+            ? `Connected (${gh.mode || "unknown"})${gh.login ? ` as ${gh.login}` : ""}`
+            : "Not connected"}
+          {gh?.detail ? (
+            <span className="text-muted-foreground"> — {gh.detail}</span>
+          ) : null}
+        </p>
+        <div className="flex flex-wrap items-end gap-2">
+          <Button disabled={ghBusy} onClick={() => void connectGhCli()}>
+            {ghBusy ? "Working…" : "Connect with gh CLI"}
+          </Button>
+          <div className="flex min-w-[220px] flex-1 flex-col gap-1">
+            <Label htmlFor="gh-pat">Or paste PAT</Label>
+            <Input
+              id="gh-pat"
+              type="password"
+              value={pat}
+              onChange={(e) => setPat(e.target.value)}
+              placeholder="ghp_…"
+              disabled={ghBusy}
+            />
+          </div>
+          <Button variant="outline" disabled={ghBusy} onClick={() => void saveGhPat()}>
+            Save PAT
+          </Button>
+          {gh?.connected ? (
+            <Button variant="ghost" disabled={ghBusy} onClick={() => void clearGhPat()}>
+              Disconnect
+            </Button>
+          ) : null}
+        </div>
+        {ghNotice ? (
+          <p className="mt-3 text-sm text-muted-foreground">{ghNotice}</p>
+        ) : null}
+      </div>
 
       <div data-glass className="rounded-2xl border border-border bg-card p-5">
         <div className="mb-4 flex flex-wrap gap-2">

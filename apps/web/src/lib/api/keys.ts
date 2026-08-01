@@ -36,6 +36,8 @@ export interface KeyRow {
   masked_secret?: string;
   base_url?: string | null;
   last_latency_ms?: number | null;
+  last_error?: string | null;
+  last_precheck_at?: number | null;
   last_checked_at?: string | null;
   account_id?: string | null;
 }
@@ -67,6 +69,35 @@ export interface EnvCandidate {
 export async function listKeys(signal?: AbortSignal): Promise<KeyRow[]> {
   const data = await apiGet<{ keys?: KeyRow[] }>("/api/keys", { signal });
   return data.keys ?? [];
+}
+
+export interface KeyHealthSample {
+  t: number;
+  status: string;
+  latency_ms?: number | null;
+}
+
+export interface KeyHealth {
+  key_id: string;
+  window: string;
+  samples: KeyHealthSample[];
+  uptime_pct: number | null;
+  p50_latency_ms: number | null;
+  p95_latency_ms: number | null;
+  current_status: string | null;
+  last_change_at: number | null;
+  rate_limit_count?: number;
+}
+
+export function fetchKeyHealth(
+  keyId: string,
+  window = "24h",
+  signal?: AbortSignal,
+): Promise<KeyHealth> {
+  return apiGet<KeyHealth>(`/api/keys/${encodeURIComponent(keyId)}/health`, {
+    signal,
+    query: { window },
+  });
 }
 
 export interface CreateKeyInput {

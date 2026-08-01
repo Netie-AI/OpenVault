@@ -651,10 +651,15 @@ export default function RoutePage() {
                     <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
                       <div className="min-w-0">
                         <h3 className="truncate text-sm font-semibold text-foreground">
-                          {hop.label || hop.key_id}
+                          {hop.label || hop.provider}
                         </h3>
                         <p className="mt-0.5 text-xs text-muted-foreground">
                           {hop.provider} · {hop.role} · priority {hop.priority}
+                          {" · "}
+                          <span className="font-mono">
+                            {(hop.key_id || "").slice(0, 8)}
+                            {hop.key_id ? "…" : ""}
+                          </span>
                         </p>
                       </div>
                       <div className="flex flex-wrap gap-1.5">
