@@ -8,7 +8,6 @@ from typing import Any
 
 def pick_local_folder(*, title: str = "Select project folder") -> dict[str, Any]:
     """Open a blocking native directory dialog (tkinter). Safe for local console."""
-    result: dict[str, Any] = {"ok": False, "path": "", "error": None}
     holder: list[str | None] = [None]
     err: list[BaseException | None] = [None]
 
@@ -26,7 +25,7 @@ def pick_local_folder(*, title: str = "Select project folder") -> dict[str, Any]
             path = filedialog.askdirectory(title=title, mustexist=True)
             holder[0] = path or None
             root.destroy()
-        except BaseException as exc:  # noqa: BLE001 — surface to API
+        except BaseException as exc:
             err[0] = exc
 
     thread = threading.Thread(target=_run, daemon=True)

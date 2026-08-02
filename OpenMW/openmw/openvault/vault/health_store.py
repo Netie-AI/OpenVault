@@ -216,9 +216,7 @@ class HealthStore:
                 should_write = latest is None
                 if not should_write and latest is not None:
                     last_at, last_status = latest
-                    if status != last_status:
-                        should_write = True
-                    elif (ts - last_at) >= HEARTBEAT_INTERVAL_S:
+                    if status != last_status or (ts - last_at) >= HEARTBEAT_INTERVAL_S:
                         should_write = True
             if should_write:
                 conn.execute(

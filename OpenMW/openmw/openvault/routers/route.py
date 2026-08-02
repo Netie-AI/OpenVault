@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 from openmw.openvault.route.breaker import get_all_breaker_statuses, reset_circuit_breaker
 from openmw.openvault.route.registry import get_route_state, set_strategy, set_targets
 from openmw.openvault.route.strategies import apply_strategy, normalize_strategy
-from openmw.openvault.route.types import RouteTarget, STRATEGY_NAMES
+from openmw.openvault.route.types import STRATEGY_NAMES, RouteTarget
 
 router = APIRouter(tags=["route"])
 

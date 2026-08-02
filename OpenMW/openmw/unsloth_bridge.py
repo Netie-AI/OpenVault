@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 import structlog
 
@@ -293,7 +294,7 @@ def unsloth_finetune(
         output_dir=resolved_output,
         sft_trainer_factory=sft_trainer_factory,
     )
-    train_result = getattr(trainer, "train")()
+    train_result = trainer.train()
     steps = int(getattr(train_result, "global_step", 0) or cfg.num_train_epochs)
     trained_session = UnslothSession(
         model_id=session.model_id, model=model, tokenizer=session.tokenizer

@@ -52,6 +52,7 @@ from openmw.openvault.route.access import (
     resolve_access,
     uptime_payload,
 )
+from openmw.openvault.ship.aws_guide import build_aws_render_plan
 from openmw.openvault.ship.cicd import detect_cicd
 from openmw.openvault.ship.cloud_targets import (
     BillBudget,
@@ -60,7 +61,6 @@ from openmw.openvault.ship.cloud_targets import (
     load_bill_budget,
     save_bill_budget,
 )
-from openmw.openvault.ship.aws_guide import build_aws_render_plan
 from openmw.openvault.ship.deploy import (
     build_deploy_plan,
     execute_deploy,
@@ -69,8 +69,10 @@ from openmw.openvault.ship.deploy import (
     one_press_deploy,
     run_deploy_smoke,
 )
+from openmw.openvault.ship.detect import detect_project
 from openmw.openvault.ship.domain_guide import build_domain_guide
 from openmw.openvault.ship.engine import load_deployment, run_ship_engine
+from openmw.openvault.ship.gate import check_gate
 from openmw.openvault.ship.github_auth import (
     clear_pat,
     connection_status,
@@ -87,8 +89,6 @@ from openmw.openvault.ship.library import (
     receive_upload_bytes,
     scan_upload_session,
 )
-from openmw.openvault.ship.detect import detect_project
-from openmw.openvault.ship.gate import check_gate
 from openmw.openvault.ship.openship import (
     build_openship_plan,
     execute_openship_plan,

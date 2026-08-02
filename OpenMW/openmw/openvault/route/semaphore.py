@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Callable
 
 SEMAPHORE_QUEUE_FULL = "SEMAPHORE_QUEUE_FULL"
 SEMAPHORE_TIMEOUT = "SEMAPHORE_TIMEOUT"

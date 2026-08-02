@@ -157,7 +157,7 @@ async def stream_deployment(
             "eventId": 1,
             "success": False,
         }
-        yield f"id: 1\ndata: {json.dumps(payload)}\n\n".encode("utf-8")
+        yield f"id: 1\ndata: {json.dumps(payload)}\n\n".encode()
         return
 
     for frame in deployment_frames(dep, last_event_id=last_event_id):

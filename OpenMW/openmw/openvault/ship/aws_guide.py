@@ -116,7 +116,7 @@ def build_aws_render_plan(*, hostname: str) -> AwsRenderPlan:
         ),
     ]
     steps = [
-        f"1. Register/login AWS → enable MFA → create IAM admin (not root day-to-day).",
+        "1. Register/login AWS → enable MFA → create IAM admin (not root day-to-day).",
         "2. Create Budget hard alert (match OpenVault monthly_cap_usd).",
         f"3. Request ACM cert for {host} (+ www).",
         "4. S3 bucket for static → CloudFront distribution (near edge).",

@@ -6,8 +6,9 @@ Wraps ``check_fallback_error`` into the two-axis policy from
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Literal, Mapping
+from typing import Literal
 
 from openmw.openvault.route.breaker import TRIP_STATUS_CODES
 from openmw.openvault.route.fallback_signals import check_fallback_error
@@ -181,11 +182,11 @@ def classify_attempt(
 
 __all__ = [
     "AUTH_STALE_PARK_MS",
+    "DEFAULT_RATE_LIMIT_PARK_MS",
+    "QUOTA_PARK_MS",
     "AttemptClass",
     "AttemptOutcome",
     "CandidateAction",
-    "DEFAULT_RATE_LIMIT_PARK_MS",
     "JobAction",
-    "QUOTA_PARK_MS",
     "classify_attempt",
 ]

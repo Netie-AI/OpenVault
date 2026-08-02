@@ -6,7 +6,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from openmw.openvault.route.registry import get_route_state, reset_route_state, set_targets
+from openmw.openvault.route.registry import reset_route_state, set_targets
 from openmw.openvault.route.rr_state import reset_decks
 from openmw.openvault.route.strategies import apply_strategy
 from openmw.openvault.route.types import ComboMetrics, RouteTarget

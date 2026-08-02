@@ -16,7 +16,7 @@ from typing import Any
 from openmw.openvault.paths import ensure_home
 
 _LOCK = threading.Lock()
-_SESSIONS: dict[str, "AgentSession"] = {}
+_SESSIONS: dict[str, AgentSession] = {}
 
 
 @dataclass

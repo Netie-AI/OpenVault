@@ -83,7 +83,7 @@ def main() -> int:
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
-        page.goto(f"http://127.0.0.1:3010/peers", wait_until="domcontentloaded", timeout=15000)
+        page.goto("http://127.0.0.1:3010/peers", wait_until="domcontentloaded", timeout=15000)
         page.wait_for_timeout(600)
         tabs = [
             "Detection",

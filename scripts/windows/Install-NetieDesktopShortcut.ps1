@@ -9,7 +9,7 @@
 #>
 param(
   [string]$OpenVaultRoot = "D:\OpenVault",
-  [string]$NetieSpaceRoot = "D:\Netie Space",
+  [string]$NetieSpaceRoot = "D:\Space",
   [string]$Desktop = [Environment]::GetFolderPath("Desktop")
 )
 

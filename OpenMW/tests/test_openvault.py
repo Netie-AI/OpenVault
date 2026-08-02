@@ -9,9 +9,13 @@ from cryptography.fernet import Fernet
 from fastapi.testclient import TestClient
 
 from openmw.openvault.app import create_app
+from openmw.openvault.mesh.orchestration import (
+    OrchestrationSelection,
+    load_selection,
+    save_selection,
+)
 from openmw.openvault.vault.crypto import Seal, mask_secret
 from openmw.openvault.vault.fallback import FallbackManager
-from openmw.openvault.mesh.orchestration import OrchestrationSelection, load_selection, save_selection
 from openmw.openvault.vault.store import KeyVault
 
 

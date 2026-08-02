@@ -8,11 +8,11 @@ import pytest
 from cryptography.fernet import Fernet
 from fastapi.testclient import TestClient
 
-from openmw.openvault.vault.accounts import AccountStore, suggest_netie_email
 from openmw.openvault.app import create_app
-from openmw.openvault.vault.crypto import Seal
 from openmw.openvault.ship.openship import build_openship_plan, execute_openship_plan
 from openmw.openvault.ship.playwright_smoke import run_playwright_smoke
+from openmw.openvault.vault.accounts import AccountStore, suggest_netie_email
+from openmw.openvault.vault.crypto import Seal
 from openmw.openvault.vault.store import KeyVault
 
 

@@ -2,12 +2,12 @@
 
 from openmw.openvault.route.attempt import (
     AUTH_STALE_PARK_MS,
+    DEFAULT_RATE_LIMIT_PARK_MS,
+    QUOTA_PARK_MS,
     AttemptClass,
     AttemptOutcome,
     CandidateAction,
-    DEFAULT_RATE_LIMIT_PARK_MS,
     JobAction,
-    QUOTA_PARK_MS,
     classify_attempt,
 )
 from openmw.openvault.route.breaker import (
@@ -30,38 +30,59 @@ from openmw.openvault.route.fallback_signals import (
     parse_retry_from_error_text,
     parse_upstream_retry_hint_ms,
 )
-from openmw.openvault.route.key_rotator import get_valid_api_key, record_key_failure, record_key_success
-from openmw.openvault.route.registry import get_route_state, record_target_result, reset_route_state, set_strategy, set_targets
+from openmw.openvault.route.key_rotator import (
+    get_valid_api_key,
+    record_key_failure,
+    record_key_success,
+)
+from openmw.openvault.route.registry import (
+    get_route_state,
+    record_target_result,
+    reset_route_state,
+    set_strategy,
+    set_targets,
+)
 from openmw.openvault.route.rr_state import get_next_from_deck, reset_decks
-from openmw.openvault.route.semaphore import SEMAPHORE_QUEUE_FULL, acquire as acquire_semaphore
-from openmw.openvault.route.sorters import order_by_p2c, select_weighted_target, sort_by_cost, sort_by_usage
+from openmw.openvault.route.semaphore import SEMAPHORE_QUEUE_FULL
+from openmw.openvault.route.semaphore import acquire as acquire_semaphore
+from openmw.openvault.route.sorters import (
+    order_by_p2c,
+    select_weighted_target,
+    sort_by_cost,
+    sort_by_usage,
+)
 from openmw.openvault.route.strategies import apply_strategy, normalize_strategy
 from openmw.openvault.route.types import STRATEGY_NAMES, ComboMetrics, RouteTarget, StrategyName
-from openmw.openvault.route.window_limiter import AcquireResult, RateLimitWindow, SlidingWindowLimiter
+from openmw.openvault.route.window_limiter import (
+    AcquireResult,
+    RateLimitWindow,
+    SlidingWindowLimiter,
+)
 
 __all__ = [
     "ACCOUNT_DEACTIVATED_SIGNALS",
     "AUTH_STALE_PARK_MS",
-    "AttemptClass",
-    "AttemptOutcome",
     "CONTEXT_OVERFLOW_PATTERNS",
     "CREDITS_EXHAUSTED_SIGNALS",
-    "CandidateAction",
     "DEFAULT_RATE_LIMIT_PARK_MS",
-    "JobAction",
     "OAUTH_INVALID_TOKEN_SIGNALS",
     "QUOTA_PARK_MS",
     "RATE_LIMIT_TEXT_PATTERNS",
     "SEMAPHORE_QUEUE_FULL",
     "STRATEGY_NAMES",
     "AcquireResult",
+    "AttemptClass",
+    "AttemptOutcome",
+    "CandidateAction",
     "CircuitBreaker",
     "CircuitBreakerOpenError",
     "ComboMetrics",
+    "JobAction",
     "RateLimitWindow",
     "RouteTarget",
     "SlidingWindowLimiter",
     "StrategyName",
+    "acquire_semaphore",
     "apply_strategy",
     "check_fallback_error",
     "classify_attempt",
@@ -83,7 +104,6 @@ __all__ = [
     "reset_circuit_breaker",
     "reset_decks",
     "reset_route_state",
-    "acquire_semaphore",
     "select_weighted_target",
     "set_strategy",
     "set_targets",

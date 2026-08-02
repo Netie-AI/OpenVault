@@ -3,7 +3,7 @@
 Netie is a thin client: OpenVault is the source of truth for keys
 (PRODUCT_ROLES ownership lock 1), and Netie's ``%LOCALAPPDATA%\\NetieSpace\\
 user.env`` is an offline cache of AI provider keys only. ``OpenVaultKeySync``
-in ``D:\\Netie Space\\src\\NetieSpace\\Services\\OpenVaultKeySync.cs`` does
+in ``D:\\Space\\src\\NetieSpace\\Services\\OpenVaultKeySync.cs`` does
 exactly three things, and each is pinned here:
 
 1. ``GET /api/healthz`` — soft-fail to local keys when the vault is down.

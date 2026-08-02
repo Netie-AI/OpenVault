@@ -12,14 +12,18 @@ from typing import Any, Literal
 
 import structlog
 
+from openmw.openvault.paths import ensure_home
 from openmw.openvault.ship.cicd import CicdReport, detect_cicd
 from openmw.openvault.ship.detect import DetectedStack, detect_project
 from openmw.openvault.ship.domain_guide import DomainGuide, build_domain_guide
 from openmw.openvault.ship.email_gates import check_email_auth
-from openmw.openvault.vault.fallback import FallbackManager
-from openmw.openvault.ship.openship import adapter_presence, build_openship_plan, execute_openship_plan
-from openmw.openvault.paths import ensure_home
+from openmw.openvault.ship.openship import (
+    adapter_presence,
+    build_openship_plan,
+    execute_openship_plan,
+)
 from openmw.openvault.ship.playwright_smoke import run_playwright_smoke
+from openmw.openvault.vault.fallback import FallbackManager
 from openmw.openvault.vault.store import KeyVault
 
 log = structlog.get_logger()

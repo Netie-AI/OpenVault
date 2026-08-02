@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import re
 import time
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Mapping
 
 # T06: permanent account deactivation signals
 ACCOUNT_DEACTIVATED_SIGNALS: tuple[str, ...] = (

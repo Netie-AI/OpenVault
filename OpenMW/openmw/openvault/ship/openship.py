@@ -19,10 +19,10 @@ from typing import Any, Literal
 
 import structlog
 
+from openmw.openvault.paths import ensure_home
 from openmw.openvault.ship.detect import DetectedStack, detect_project
 from openmw.openvault.ship.email_gates import check_email_auth
 from openmw.openvault.ship.openship_client import OpenShipClient, adapter_status
-from openmw.openvault.paths import ensure_home
 
 log = structlog.get_logger()
 

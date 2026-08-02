@@ -10,7 +10,6 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
-
 _CI_MARKERS: tuple[tuple[str, str], ...] = (
     (".github/workflows", "github_actions"),
     (".gitlab-ci.yml", "gitlab_ci"),

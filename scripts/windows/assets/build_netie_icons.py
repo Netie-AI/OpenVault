@@ -9,9 +9,9 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFilter
 
 OUT_OV = Path(__file__).resolve().parent
-SPACE_PNG = Path(r"D:\Netie Space\src\NetieSpace\Assets\netie-icon.png")
-SPACE_ICO = Path(r"D:\Netie Space\src\NetieSpace\Assets\netie.ico")
-DIST_ICO = Path(r"D:\Netie Space\dist\NetieSpace\Assets\netie.ico")
+SPACE_PNG = Path(r"D:\Space\src\NetieSpace\Assets\netie-icon.png")
+SPACE_ICO = Path(r"D:\Space\src\NetieSpace\Assets\netie.ico")
+DIST_ICO = Path(r"D:\Space\dist\NetieSpace\Assets\netie.ico")
 
 SIZES = [16, 24, 32, 48, 64, 128, 256]
 

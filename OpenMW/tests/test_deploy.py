@@ -9,8 +9,8 @@ from cryptography.fernet import Fernet
 from fastapi.testclient import TestClient
 
 from openmw.openvault.app import create_app
-from openmw.openvault.vault.crypto import Seal
 from openmw.openvault.ship.detect import detect_project
+from openmw.openvault.vault.crypto import Seal
 from openmw.openvault.vault.store import KeyVault
 
 

@@ -20,7 +20,7 @@ param(
   [string]$OpenVaultRoot = "D:\OpenVault",
   [string]$CortexRoot = "D:\Cortex",
   [string]$AirGptRoot = "D:\AirGPT",
-  [string]$NetieSpaceRoot = "D:\Netie Space",
+  [string]$NetieSpaceRoot = "D:\Space",
   [int]$CortexPort = 8010,
   [switch]$SkipNetieUi,
   [switch]$SkipAirGpt,
