@@ -32,6 +32,7 @@ from openmw.openvault.mesh.local_mesh import (
     OPENIDE_DEFAULT_URL,
     announce_peer,
     build_connect_pack,
+    cortex_base_url,
     decide_handshake,
     load_mesh,
     openide_invoke,
@@ -634,12 +635,14 @@ def create_app(
     vault: KeyVault | None = None,
     accounts: AccountStore | None = None,
     secrets: SecretStore | None = None,
-    cortex_url: str = "http://127.0.0.1:8000",
+    cortex_url: str | None = None,
     openide_url: str = OPENIDE_DEFAULT_URL,
     precheck_interval_s: float = 60.0,
     mock_health: bool = False,
     enable_precheck_loop: bool = True,
 ) -> FastAPI:
+    if cortex_url is None:
+        cortex_url = cortex_base_url()
     state_vault = vault if vault is not None else KeyVault()
     state_accounts = accounts if accounts is not None else AccountStore()
     state_secrets = secrets if secrets is not None else SecretStore()
@@ -2100,12 +2103,14 @@ def run_console(
     *,
     host: str = "127.0.0.1",
     port: int = 5000,
-    cortex_url: str = "http://127.0.0.1:8000",
+    cortex_url: str | None = None,
     mock_health: bool = False,
     precheck_interval_s: float = 60.0,
 ) -> None:
     import uvicorn
 
+    if cortex_url is None:
+        cortex_url = cortex_base_url()
     app = create_app(
         cortex_url=cortex_url,
         mock_health=mock_health,

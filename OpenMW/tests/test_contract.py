@@ -23,7 +23,7 @@ from openmw.openvault.vault.store import KeyVault
 # :5100 is the legacy standalone stub and must not be the default.
 CONTRACT_PORTS = {
     "openvault": 5000,
-    "cortex": 8000,
+    "cortex": 8010,
     "openide": 8765,
     "rust_console": 5055,
 }
@@ -89,7 +89,7 @@ def test_connect_pack_pins_openide_to_airgpt(app: FastAPI) -> None:
     assert pack["env"]["OPENIDE_URL"] == "http://127.0.0.1:8765"
     # OpenVault stays the custody + gate surface in the pack it publishes.
     assert pack["openvault"]["base_url"] == "http://127.0.0.1:5000"
-    assert pack["cortex"]["base_url"] == "http://127.0.0.1:8000"
+    assert pack["cortex"]["base_url"] == "http://127.0.0.1:8010"
 
 
 @pytest.mark.parametrize("flag", ["bypass", "bypass_gate", "force", "skip_rules"])

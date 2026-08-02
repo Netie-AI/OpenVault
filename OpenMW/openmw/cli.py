@@ -165,10 +165,10 @@ def infer_cmd(
 def console_cmd(
     host: str = typer.Option("127.0.0.1", "--host", help="Bind address (localhost default)."),
     port: int = typer.Option(5000, "--port", help="HTTP port for OpenVault console."),
-    cortex_url: str = typer.Option(
-        "http://127.0.0.1:8000",
+    cortex_url: str | None = typer.Option(
+        None,
         "--cortex-url",
-        help="Cortex / Netie Engine base URL.",
+        help="Cortex / Netie Engine base URL (default: CORTEX_URL or http://127.0.0.1:8010).",
     ),
     openide_url: str = typer.Option(
         "http://127.0.0.1:8765",
@@ -197,9 +197,11 @@ def console_cmd(
     import uvicorn
 
     from openmw.openvault.app import create_app
+    from openmw.openvault.mesh.local_mesh import cortex_base_url
 
+    resolved_cortex = cortex_url if cortex_url is not None else cortex_base_url()
     app = create_app(
-        cortex_url=cortex_url,
+        cortex_url=resolved_cortex,
         openide_url=openide_url,
         mock_health=mock_health,
         precheck_interval_s=precheck_interval,
@@ -207,7 +209,7 @@ def console_cmd(
     url = f"http://{host}:{port}/"
     typer.echo(f"OpenVault console at {url}")
     typer.echo(f"Secure API endpoint: {url}v1/chat/completions")
-    typer.echo(f"Cortex URL: {cortex_url}")
+    typer.echo(f"Cortex URL: {resolved_cortex}")
     typer.echo(f"FreeIDE URL: {openide_url}")
     typer.echo(f"Local mesh: {url}api/local/mesh")
     typer.echo(f"Connect pack: {url}api/local/connect-pack")
@@ -269,7 +271,9 @@ def demo_ui_cmd(
     env = os.environ.copy()
     env["OPENVAULT_HOME"] = home
     env["OPENVAULT_APP_URL"] = f"http://127.0.0.1:{app_port}/"
-    env["CORTEX_URL"] = env.get("CORTEX_URL", "http://127.0.0.1:8010")
+    from openmw.openvault.mesh.local_mesh import cortex_base_url
+
+    env["CORTEX_URL"] = env.get("CORTEX_URL") or cortex_base_url()
 
     uv = shutil.which("uv") or "uv"
     api = subprocess.Popen(

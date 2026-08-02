@@ -30,7 +30,7 @@ import time
 from dataclasses import asdict, dataclass, field
 from typing import Any, Literal
 
-from openmw.openvault.mesh.local_mesh import LocalMeshState, load_mesh
+from openmw.openvault.mesh.local_mesh import DEFAULT_CORTEX_URL, LocalMeshState, load_mesh
 from openmw.openvault.ship.gate import GateAction, GateDecision, check_gate
 from openmw.openvault.vault.fallback import FallbackManager
 from openmw.openvault.vault.store import KeyVault
@@ -131,7 +131,7 @@ def build_registry(
     lists things that are not there is worse than no registry.
     """
     state = state if state is not None else load_mesh()
-    cortex_url = _peer_url(state, "cortex", "http://127.0.0.1:8000")
+    cortex_url = _peer_url(state, "cortex", DEFAULT_CORTEX_URL)
     freeide_url = _peer_url(state, "openide", "http://127.0.0.1:8765")
     entries: list[AccessEntry] = []
 

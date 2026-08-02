@@ -26,7 +26,7 @@ PeerStatus = Literal["unknown", "online", "offline", "pending_approve", "approve
 
 DEFAULT_PORTS: dict[str, int] = {
     "openvault": 5000,
-    "cortex": 8000,
+    "cortex": 8010,
     # FreeIDE is served by AirGPT on :8765 (PRODUCT_ROLES). :5100 is the legacy
     # standalone stub (scripts/openide_stub.py) and is no longer the default.
     "openide": 8765,
@@ -37,7 +37,13 @@ DEFAULT_PORTS: dict[str, int] = {
 DEFAULT_URLS: dict[str, str] = {
     kind: f"http://127.0.0.1:{port}" for kind, port in DEFAULT_PORTS.items()
 }
+DEFAULT_CORTEX_URL = DEFAULT_URLS["cortex"]
 OPENIDE_DEFAULT_URL = DEFAULT_URLS["openide"]
+
+
+def cortex_base_url() -> str:
+    """Cortex base URL: CORTEX_URL env override, else shared mesh default (:8010)."""
+    return os.environ.get("CORTEX_URL", DEFAULT_CORTEX_URL).rstrip("/")
 
 
 def mesh_path() -> Path:
@@ -101,7 +107,7 @@ def _is_loopback(url: str) -> bool:
 
 def default_mesh() -> LocalMeshState:
     ov_port = int(os.environ.get("OPENVAULT_PORT", str(DEFAULT_PORTS["openvault"])))
-    cortex = os.environ.get("CORTEX_URL", f"http://127.0.0.1:{DEFAULT_PORTS['cortex']}")
+    cortex = cortex_base_url()
     openide = os.environ.get("OPENIDE_URL", f"http://127.0.0.1:{DEFAULT_PORTS['openide']}")
     rust = os.environ.get("OPENVAULT_RUST_URL", f"http://127.0.0.1:{DEFAULT_PORTS['rust_console']}")
     state = LocalMeshState()
@@ -330,8 +336,8 @@ def build_connect_pack(state: LocalMeshState | None = None) -> dict[str, Any]:
             "approved": bool(ov.approved) if ov else True,
         },
         "cortex": {
-            "base_url": cortex.base_url if cortex else "http://127.0.0.1:8000",
-            "health": f"{(cortex.base_url if cortex else 'http://127.0.0.1:8000').rstrip('/')}/health",
+            "base_url": cortex.base_url if cortex else DEFAULT_CORTEX_URL,
+            "health": f"{(cortex.base_url if cortex else DEFAULT_CORTEX_URL).rstrip('/')}/health",
             "approved": bool(cortex and cortex.approved),
             "status": cortex.status if cortex else "unknown",
         },
@@ -353,7 +359,7 @@ def build_connect_pack(state: LocalMeshState | None = None) -> dict[str, Any]:
             "status": rust.status if rust else "unknown",
         },
         "env": {
-            "CORTEX_URL": cortex.base_url if cortex else "http://127.0.0.1:8000",
+            "CORTEX_URL": cortex.base_url if cortex else DEFAULT_CORTEX_URL,
             "OPENIDE_URL": openide.base_url if openide else OPENIDE_DEFAULT_URL,
             "OPENVAULT_URL": ov.base_url if ov else "http://127.0.0.1:5000",
             "OPENVAULT_RUST_URL": rust.base_url if rust else "http://127.0.0.1:5055",
@@ -425,7 +431,7 @@ def openide_invoke(
             "urls": {
                 "rust_auth": rust.base_url if rust else "http://127.0.0.1:5055",
                 "openvault": ov.base_url,
-                "cortex": cortex_peer.base_url if cortex_peer else "http://127.0.0.1:8000",
+                "cortex": cortex_peer.base_url if cortex_peer else DEFAULT_CORTEX_URL,
             },
             "payload": payload or {},
         }
@@ -445,6 +451,6 @@ def openide_invoke(
                 "OpenVault keeps keys; Cortex reads models via approved mesh. "
                 "Use PUT /api/orchestration/selection then Cortex engine refresh."
             ),
-            "cortex_url": cortex_peer.base_url if cortex_peer else "http://127.0.0.1:8000",
+            "cortex_url": cortex_peer.base_url if cortex_peer else DEFAULT_CORTEX_URL,
         }
     return {"ok": False, "error": f"unknown action: {action}"}
