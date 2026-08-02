@@ -68,14 +68,17 @@ Libraries for measurement stay at the repo root; the operator console lives in O
 
 ## Layout
 
+Full tier map (incl. `cloud/` `route/` `routers/` `sentinel/`): [`docs/ACTIVE.md`](docs/ACTIVE.md).
+
 | Path | What |
 |------|------|
 | `nvme_sentinel/` | NVMe HAL, SMART, BenchRunReport (library) |
 | `Profiler/` | PathTrace + capability probe (library) |
-| `OpenMW/openmw/openvault/` | App tiers: `health/` `observe/` `vault/` `ship/` `mesh/` `control/` |
+| `OpenMW/openmw/openvault/` | App tiers: `health/` `observe/` `vault/` `ship/` `mesh/` `control/` + more, see `docs/ACTIVE.md` |
 | `OpenMW/` | Custody API on `:5000` (redirects `/` → app) |
 | `apps/web/` | **OpenVault UI** on `:3010` |
-| `docs/` | Setup, design decisions, architecture diagram |
+| `docs/reference/` | Setup, design decisions, architecture diagram, NVMe protocol spec |
+| `docs/decisions/` | Decision records (`DR-####-kebab-title.md`) |
 | `scripts/windows/` | `Start-OpenVaultDemo.ps1`, `Start-NetieStack.ps1`, `Start-LocalMesh.ps1` |
 | `openvault.local.example.json` | Copy to `openvault.local.json` |
 
@@ -121,12 +124,14 @@ uv run openmw console --cortex-url http://127.0.0.1:8000 --openide-url http://12
 
 ## Documentation
 
-- Current state: [`STATUS.md`](STATUS.md)
-- Deferred backlog: [`PARKINGLOT.md`](PARKINGLOT.md)
+- Law: [`CLAUDE.md`](CLAUDE.md) · Map: [`docs/ACTIVE.md`](docs/ACTIVE.md)
+- Current state: [`STATUS.md`](STATUS.md) · History: [`CHANGELOG.md`](CHANGELOG.md)
+- Deferred backlog: [`PARKING_LOT.md`](PARKING_LOT.md)
+- Decision records: [`docs/decisions/`](docs/decisions/)
 - Setup: [`docs/setup.md`](docs/setup.md)
 - Design: [`docs/design-decisions.md`](docs/design-decisions.md)
 - Architecture: [`docs/architecture.puml`](docs/architecture.puml)
-- Agent protocol plan: [`implementation_plan.md`](implementation_plan.md)
+- NVMe protocol spec (nvme-sentinel source of truth): [`docs/reference/nvme-sentinel-spec.md`](docs/reference/nvme-sentinel-spec.md)
 - Subprojects: [`OpenMW/README.md`](OpenMW/README.md), [`Profiler/README.md`](Profiler/README.md)
 
 ---

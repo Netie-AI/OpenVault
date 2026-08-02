@@ -1,3 +1,47 @@
+---
+status: accepted
+date: 2026-07-26
+decision-makers: Claude
+---
+
+# DR-0006 - Cursor work queue (C1-C12)
+
+## Context and Problem Statement
+
+DR-0008 set the Claude/Cursor division in principle; Cursor still needed a concrete,
+unambiguous queue of mechanical, no-judgment-required tasks it could execute
+independently without waiting on Claude per task.
+
+## Considered Options
+
+- Let Cursor pick tasks ad hoc from STATUS.md / PARKING_LOT.md
+- Hand Cursor one task at a time through chat, serially
+- Write an explicit C1-C12 queue up front, each item stating the exact file, change, and proof command
+
+## Decision Outcome
+
+Chosen option: "Explicit C1-C12 queue," under the rule "Cursor takes anything where the
+answer is already known and the work is typing" — anything needing a design decision or a
+"which of these three approaches" judgement stays out of the queue by construction.
+
+## Consequences
+
+- Good: Cursor executed independently without re-litigating design (STATUS.md later
+  recorded C10 and C4 as shipped); the exFAT/npm-only rule for `D:` was captured once
+  instead of re-explained per task.
+- Bad: the queue is a point-in-time snapshot with ordering dependencies (C1 blocked on
+  page migration) that aren't visible from STATUS.md alone once the queue itself is archived.
+
+## Confirmation
+
+No single test file confirms "the whole queue shipped" — it was a checklist, not a code
+invariant. Honest gap: verification was per-item proof commands (`next build`,
+`uv run pytest tests/ -q`) at the time, not preserved as a standing test.
+
+---
+
+## Original record (archived 2026-08-02, body preserved as-is)
+
 # Cursor work queue — mechanical tasks, no research required
 
 Split rule: **Cursor takes anything where the answer is already known and the

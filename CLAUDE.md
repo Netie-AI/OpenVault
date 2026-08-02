@@ -51,6 +51,59 @@ Read this before any edit.
 
 ## Hard rules
 
-_None recorded yet. Add the invariants that must never break in this repo - the ones
-where a violation is silent and expensive. If CI enforces one, name the job._
+Product boundaries (what OpenVault owns vs Cortex/AirGPT/FreeIDE) are canonical in
+[`PRODUCT_ROLES.md`](PRODUCT_ROLES.md) — read it before any cross-product change. Do not
+grow a second key vault or a third orchestrator.
+
+### Agent roles (Claude <-> Cursor)
+
+| Agent | Owns | Does not |
+|-------|------|----------|
+| **Cursor** | Execute patches, run `uv run pytest` / mypy, start console, paste evidence | Invent architecture without Claude when the plan is ambiguous |
+| **Claude** | Review diffs, plan next gates, architecture calls, `PARKING_LOT.md` prioritization | Rewrite Cursor's same files in parallel without coordinating first |
+
+No per-agent truth: both agents work from this file, `STATUS.md`, `CHANGELOG.md`, and
+`PARKING_LOT.md` — never a Claude-only or Cursor-only doc. (Formerly enforced by a
+`AGENT_LANES.md` hot-files lock table; retired 2026-08-02 — it had gone stale, with two
+lanes shown "active" a week and a half after anyone released them. See
+[`docs/decisions/DR-0008-agent-split-2026-07-26.md`](docs/decisions/DR-0008-agent-split-2026-07-26.md).)
+
+### Environment (whole repo)
+
+- Three separate `uv sync` roots: repo root (`nvme_sentinel`), `OpenMW/`, `Profiler/`.
+  Never invoke `pip`, `poetry`, or `conda` directly — `uv run <cmd>` / `uv add <pkg>`
+  (`uv add --dev` for dev deps) in the relevant root.
+- `D:` is exFAT (USB drive) — `bun`/`pnpm` cannot install there. `npm` only, in `apps/web`
+  and `apps/shell`.
+- Never delete an existing test to make a build pass. If a test is wrong, explain why and ask.
+- Before writing code on a task flagged HIGH_RISK, state the file paths you will create or
+  modify and wait for confirmation.
+- Do not rename public APIs silently — call it out if a rename is needed.
+- No `print()` for logging in Python — use `structlog`.
+
+### nvme_sentinel/ and Profiler/ — stricter rules
+
+These two are a validated hardware-protocol library; CI enforces `mypy --strict` +
+coverage on `hal`/`adapters` (`.github/workflows/ci.yml`, `Makefile` `ci` target).
+Protocol reference: [`docs/reference/nvme-sentinel-spec.md`](docs/reference/nvme-sentinel-spec.md)
+(cite `§4` in code comments for field offsets/opcodes/log page IDs — do not invent
+offsets; if uncertain, stop and ask).
+
+1. Python target: 3.10, 3.11, 3.12. No syntax introduced later (e.g. PEP 695 generics).
+2. Type-annotate every public function. `mypy --strict` must pass on `hal/`, `models/`, `commands/`.
+3. No `typing.Any` in public signatures. No unjustified `# type: ignore`.
+4. Flat package layout: `nvme_sentinel/` at repo root; tests in `tests/`.
+5. Hardware-dependent tests must be marked `@pytest.mark.requires_nvme` with a mock path provided.
+6. Linux ioctl structs: reference kernel uAPI `<linux/nvme_ioctl.h>`. `ctypes.Structure` with
+   `_pack_ = 1` where the native header uses `pragma pack 1`. Assert `ctypes.sizeof` at module load.
+7. Windows structs: reference `ntddstor.h` / `storport.h`. Same sizeof-assertion rule.
+8. Never use `os.system` or `subprocess.call` without `check=` and `timeout=`.
+9. No new top-level dependency without declaring it in the relevant `pyproject.toml` AND
+   explaining why an existing dep doesn't cover it.
+10. Reserve comments for NVMe protocol references and non-obvious intent — don't narrate
+    trivial code.
+
+_CI enforcement: `.github/workflows/ci.yml` runs `lint typecheck test coverage` for
+`nvme_sentinel` only. `OpenMW/` and `apps/web` have no CI job yet — verification there is
+manual (`clone-and-verify` in STATUS.md)._
 

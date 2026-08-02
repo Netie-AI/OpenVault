@@ -1,7 +1,7 @@
 """OpenMW CLI — front door for hardware profile, model routing, and session orchestration.
 
 Free tier: ``doctor`` (hardware + bottleneck report) and ``route`` (model fit, no coding).
-Stubs (not yet implemented): ``train`` and ``infer`` — see STATUS.md / PARKINGLOT.md.
+Stubs (not yet implemented): ``train`` and ``infer`` — see STATUS.md / PARKING_LOT.md.
 """
 
 from __future__ import annotations
@@ -155,7 +155,7 @@ def infer_cmd(
     """
     typer.echo(
         "openmw infer is not yet implemented: VIP runtime connector is hardware-gated.\n"
-        "See STATUS.md / PARKINGLOT.md for the wear PRE-FLIGHT gate.",
+        "See STATUS.md / PARKING_LOT.md for the wear PRE-FLIGHT gate.",
         err=True,
     )
     raise typer.Exit(code=2)

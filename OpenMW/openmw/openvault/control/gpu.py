@@ -51,5 +51,5 @@ def gpu_power_hint(*, confirm: bool, dry_run: bool) -> dict[str, Any]:
         "capability": False,
         "dry_run": dry_run,
         "confirm": confirm,
-        "error": "gpu power/clock write unsupported — see PARKINGLOT.md",
+        "error": "gpu power/clock write unsupported — see PARKING_LOT.md",
     }

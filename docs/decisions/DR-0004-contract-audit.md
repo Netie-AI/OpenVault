@@ -1,3 +1,46 @@
+---
+status: accepted
+date: 2026-07-25
+decision-makers: Claude
+---
+
+# DR-0004 - Cross-layer contract audit
+
+## Context and Problem Statement
+
+AirGPT, OpenVault, and Cortex were developed in parallel against PRODUCT_ROLES.md's
+contract without a step that actually verified the three layers still agreed with each
+other and with the contract.
+
+## Considered Options
+
+- Trust the docs as written, audit only when something breaks in the field
+- Write a full automated contract test suite from scratch before shipping more features
+- Manual evidence-based audit now, route by route, promoting the durable checks into an automated test
+
+## Decision Outcome
+
+Chosen option: "Manual evidence-based audit now," because it was cheap (one pass), found
+two real bugs immediately (Cortex's `workflow_openvault.ping` hit the wrong path; FreeRoute
+budget status was missing `remaining`/`remaining_tokens` aliases Cortex expected), and
+seeded `tests/test_contract.py` as the durable, ongoing guard instead of a one-time report.
+
+## Consequences
+
+- Good: two real cross-layer bugs fixed same-day; the audit's checks now run continuously
+  in `tests/test_contract.py` rather than needing to be re-run by hand.
+- Bad: a point-in-time snapshot — the "Remaining (honest)" section already listed 3 open
+  items (streaming `/v1`, per-runner gate-check spot audit, AWS MCP) at time of writing that
+  needed separate follow-up.
+
+## Confirmation
+
+`OpenMW/tests/test_contract.py` (exists).
+
+---
+
+## Original record (archived 2026-08-02, body preserved as-is)
+
 # Cross-layer contract audit — 2026-07-25
 
 > Evidence vs [`PRODUCT_ROLES.md`](PRODUCT_ROLES.md). App → Vault → Engine.

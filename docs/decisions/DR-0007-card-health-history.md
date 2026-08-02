@@ -1,3 +1,47 @@
+---
+status: accepted
+date: 2026-07-26
+decision-makers: Claude
+---
+
+# DR-0007 - Provider health history
+
+## Context and Problem Statement
+
+`PrecheckLoop` already probed every enabled key every 60s but discarded every result
+except the latest, so a key failing 1 probe in 10 looked identical to a healthy key — a
+diagnosability gap for a product pitched as a vault you can *check*.
+
+## Considered Options
+
+- Alert/notify on key failure (deferred — needs a decision about where an alert goes for a local-first app with no server)
+- Keep exposing only the latest precheck status (status quo)
+- Persist bounded precheck history and expose uptime/latency percentiles, sparkline, and fallback-chain deprioritization
+
+## Decision Outcome
+
+Chosen option: "Persist bounded precheck history," implemented as a pruned SQLite table
+(`precheck_history`, capped at 7 days / 2000 rows per key, write-on-transition plus a
+15-minute heartbeat), exposed via `GET /api/keys/{id}/health`, rendered as a sparkline, and
+used to deprioritize (never auto-disable) a key with 3-of-5 recent failures in the fallback
+chain.
+
+## Consequences
+
+- Good: users can see *why* a key looks unhealthy instead of a binary status; retention is
+  enforced by test, not left to grow unbounded; a single low-sample-count probe can never
+  render as a false "100% uptime."
+- Bad: adds a second SQLite table to maintain beside `keys.db`; alerting and per-key cost
+  tracking were deliberately deferred as separate cards, not covered here.
+
+## Confirmation
+
+`OpenMW/tests/test_health_store.py` and `OpenMW/tests/test_stored_mask.py` (both exist).
+
+---
+
+## Original record (archived 2026-08-02, body preserved as-is)
+
 # Cursor card — provider health history
 
 Designed by Claude; mechanical to build. Turns the vault from a store into

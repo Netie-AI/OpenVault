@@ -1,3 +1,54 @@
+---
+status: accepted
+date: 2026-07-24
+decision-makers: Claude, founder
+---
+
+# DR-0003 - OpenVault Desktop rebuild (fork vs embed)
+
+## Context and Problem Statement
+
+OpenVault needed a real desktop/web UI, and there were three existing UI codebases in
+play — FreeBuild's Next app (token system, UI primitives), OmniRoute's Electron shell, and
+OpenVault's own minimal legacy `webui/index.html` — none of them wired exclusively to
+OpenVault's FastAPI on `:5000`.
+
+## Considered Options
+
+- (a) Embed — wire OpenVault directly into an existing app's runtime (FreeBuild or OmniRoute)
+- (b) Fork — build one new Next 16 app at `apps/web`, wearing FreeBuild's UI primitives, running none of FreeBuild's or OmniRoute's stack, wired exclusively to `:5000`
+- (c) Hybrid — share significant code/runtime with FreeBuild or OmniRoute beyond just UI primitives
+
+## Decision Outcome
+
+Chosen option: "(b) fork, with a narrow (c) hybrid on data only" — one app at `apps/web`
+wired exclusively to OpenVault's existing API, running neither FreeBuild's nor OmniRoute's
+stack, with only FreeBuild's `packages/core` stack/language/workspace metadata tables
+ported into Python (pure data, no runtime dependency). See DR-0005 for the honesty audit
+that fed which backend routes the new UI was allowed to bind to.
+
+## Consequences
+
+- Good: single codebase with a single source of truth (`:5000`), no dependency on
+  FreeBuild's or OmniRoute's runtime; `apps/web` is confirmed as the live app in STATUS.md.
+- Bad: large one-time migration effort — the "2F files to delete outright" checklist below
+  was still not 100% complete 9 days later; 4 stragglers (`apps/web/src/app/proxy` and
+  `/providers` page.tsx, `apps/shell/electron/lib/resolveNodeHelper.js`,
+  `apps/shell/electron/README.md`) were found and swept during the 2026-08-02 cleanup. The
+  `proxy` and `providers` pages turned out to still be live in the nav (`AppBar.tsx`) and
+  were kept, not removed — this document's claim that they were dead was stale.
+
+## Confirmation
+
+No single automated test proves the whole rebuild decision. Closest guard:
+`OpenMW/tests/test_contract.py` (exists) pins the backend contract the frontend depends on.
+Honest gap: `.github/workflows/ci.yml` covers `nvme_sentinel` only — there is no CI job for
+`apps/web` (build or e2e).
+
+---
+
+## Original record (archived 2026-08-02, body preserved as-is)
+
 # OpenVault Desktop — Rebuild Plan (single, decisive)
 
 ---

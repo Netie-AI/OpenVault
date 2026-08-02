@@ -8,8 +8,7 @@
 
 | Item | Notes |
 |------|-------|
-| Health sparklines / precheck history | Valuable; not the front door. Spec stays in `docs/CARD_HEALTH_HISTORY.md` until ClipDrop spine is boring. |
-| Streaming `/v1/chat/completions` | Reserve/refund path already stream-shaped; finish later. |
+| Netie `user.env` DPAPI wrap | Out of this tree — `EnvLoader` fix lives in `D:\Netie Space`. Unlock: someone picks it up in that repo. |
 | SSH VPS executor | Ship lane; after interface automation A1–A4. |
 | Native Win32 device enumeration | Replace PowerShell `Get-PhysicalDisk` spawn in discovery; `_windows_native.py` already proves the ctypes pattern |
 | `collect --yes` / non-interactive elevate | Skip `Auto-elevate?` for scripted two-collect sequences |

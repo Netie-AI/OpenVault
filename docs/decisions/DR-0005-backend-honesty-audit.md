@@ -1,3 +1,49 @@
+---
+status: accepted
+date: 2026-07-25
+decision-makers: Claude
+---
+
+# DR-0005 - OpenVault backend honesty audit
+
+## Context and Problem Statement
+
+Before wiring a new UI (apps/web, see DR-0003) to "real" backend data, the team needed to
+know which routes and displayed values were genuinely live versus fabricated or
+unprotected — OpenVault's pitch is "a strong one-stop key vault," and at the time
+`GET /api/keys/{key_id}/secret` had no authentication at all.
+
+## Considered Options
+
+- Ship the new UI first, fix backend security gaps reactively as they're noticed
+- Full security rewrite (KDF, unseal state, RBAC) before any UI work
+- Route-by-route honesty audit first, gate the new UI to bind only to routes proven real, fix the worst gaps immediately
+
+## Decision Outcome
+
+Chosen option: "Route-by-route honesty audit first," because it directly fed DR-0003's "only
+bind to real things" rule and surfaced the worst gap (an unauthenticated plaintext-secret
+route) before a UI made it more reachable, not after.
+
+## Consequences
+
+- Good: found and closed the missing-access-audit gap for secrets mutation routes (loopback
+  + audit trail), now documented in the still-live `docs/SECRETS_CUSTODY.md`.
+- Bad: several findings remain open by the audit's own text — no KDF/DPAPI on the master
+  key, no unseal/lock state, GitHub PAT still bypasses the vault entirely. These are real,
+  not symbolic, gaps.
+
+## Confirmation
+
+`OpenMW/tests/test_secrets_custody.py` and `OpenMW/tests/test_secret_reveal_gate.py` (both
+exist) cover the closed item. The still-open items (master-key KDF, unseal state, PAT
+custody) have no confirming test because they have no fix yet — an honest gap, not a
+control.
+
+---
+
+## Original record (archived 2026-08-02, body preserved as-is)
+
 # OpenVault backend — honesty audit
 
 Traced against `OpenMW/openmw/openvault/` on 2026-07-25. Line numbers are the

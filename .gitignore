@@ -45,6 +45,7 @@ node_modules/
 .turbo/
 *.tsbuildinfo
 
-# Upstream clones we build on top of (re-fetch with scripts/vendor-sync.ps1).
-# Code we actually keep lives in apps/, copied out of here deliberately.
+# Upstream clones we build on top of (re-clone by hand into vendor/<name> when needed —
+# no vendor-sync script exists yet). Code we actually keep lives in apps/, copied out of
+# here deliberately.
 vendor/

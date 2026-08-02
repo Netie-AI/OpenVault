@@ -365,4 +365,4 @@ If they ask *"how would you extend this for Gen5 / CXL / zoned namespaces?"* —
 
 ---
 
-**End of implementation_plan.md.** Current state: `STATUS.md`. Deferred backlog: `PARKINGLOT.md`.
+**End of spec.** Current state: `STATUS.md`. Deferred backlog: `PARKING_LOT.md`.

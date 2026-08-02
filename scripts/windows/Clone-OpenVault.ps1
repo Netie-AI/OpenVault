@@ -47,4 +47,4 @@ Copy-Item -Force "openvault.local.example.json" "openvault.local.json" -ErrorAct
 Write-Host ""
 Write-Host "Clone ready." -ForegroundColor Green
 Write-Host "Next:  powershell -ExecutionPolicy Bypass -File scripts\windows\Start-LocalMesh.ps1"
-Write-Host "Docs:  README.md  STATUS.md  PARKINGLOT.md"
+Write-Host "Docs:  README.md  STATUS.md  PARKING_LOT.md"

@@ -58,4 +58,4 @@ Starts the liquid-glass **OpenVault** console with:
 
 Point Cursor / tools at the `/v1` endpoint. Cortex URL defaults to `http://127.0.0.1:8000` (`--cortex-url`).
 
-See monorepo [`STATUS.md`](../STATUS.md) and [`PARKINGLOT.md`](../PARKINGLOT.md).
+See monorepo [`STATUS.md`](../STATUS.md) and [`PARKING_LOT.md`](../PARKING_LOT.md).
