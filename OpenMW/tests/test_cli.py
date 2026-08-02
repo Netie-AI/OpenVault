@@ -109,15 +109,16 @@ def test_help_lists_all_commands() -> None:
 
 
 def test_demo_ui_writes_artifacts(tmp_path: Path) -> None:
+    """demo-ui --no-serve writes demo.json; UI lives in apps/web (no bundled index.html)."""
     out_dir = tmp_path / "ui_out"
     result = runner.invoke(
         app,
         ["demo-ui", "--out", str(out_dir), "--mock-profile", "--no-serve"],
     )
     assert result.exit_code == 0, result.output
-    assert (out_dir / "index.html").exists()
     assert (out_dir / "demo.json").exists()
     payload = json.loads((out_dir / "demo.json").read_text(encoding="utf-8"))
+    assert "middleware_comparison" in payload
     assert payload["middleware_comparison"]["available"] is False
     assert payload["middleware_comparison"].get("speedup_pct") in (None, 0, 0.0) or (
         payload["middleware_comparison"].get("available") is False

@@ -256,7 +256,7 @@ def write_demo_payload(
     model_id: str = "llama-3.3-8b",
     use_live_detect: bool = True,
 ) -> Path:
-    """Write demo.json beside the bundled WebUI index.html."""
+    """Write demo.json sample payload to ``output_dir``."""
     output_dir.mkdir(parents=True, exist_ok=True)
     payload = build_demo_payload(model_id=model_id, use_live_detect=use_live_detect)
     out_path = output_dir / "demo.json"
