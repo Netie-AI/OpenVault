@@ -19,6 +19,7 @@ ProviderKind = Literal[
     "groq",
     "google",
     "mistral",
+    "nvidia",
     "deepseek",
     "together",
     "fireworks",
@@ -29,6 +30,7 @@ ProviderKind = Literal[
     "litellm",
     "github_models",
     "siliconflow",
+    "deepgram",
     "custom",
 ]
 KeyRole = Literal["primary", "backup", "cheap", "free"]

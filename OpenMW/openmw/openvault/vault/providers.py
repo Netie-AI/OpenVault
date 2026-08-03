@@ -133,29 +133,41 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
     ProviderSpec(
         id="google",
         name="Google AI Studio",
-        base_url="https://generativelanguage.googleapis.com/v1beta",
+        # OpenAI-compat base so FreeRoute proxy can keep Bearer + /chat/completions.
+        # Native /v1beta rejects Bearer (expects x-goog-api-key) and has no
+        # /chat/completions path — that mismatch was the false 401 on healthy keys.
+        # Docs: https://ai.google.dev/gemini-api/docs/openai
+        base_url="https://generativelanguage.googleapis.com/v1beta/openai",
         default_role="free",
         tier="freemium",
         register_url="https://aistudio.google.com/apikey",
-        docs_url="https://ai.google.dev/gemini-api/docs",
+        docs_url="https://ai.google.dev/gemini-api/docs/openai",
         health_path="/models",
-        free_notes="Gemini free tier via AI Studio",
+        free_notes="Gemini free tier via AI Studio (OpenAI-compat endpoint)",
         needed_by=("cortex", "airgpt"),
-        # Verified live against /v1beta/models (generateContent). Gemini flash models
-        # are natively multimodal, so vision_models mirrors chat_models rather than
-        # naming a separate vision-only endpoint.
+        # Ordered by live probe 2026-08-03 against OpenAI-compat chat.
+        # gemini-2.5-flash / -lite return 404 "no longer available to new users".
         chat_models=(
-            "gemini-3.6-flash",
             "gemini-3.5-flash",
-            "gemini-2.5-flash",
-            "gemini-2.5-flash-lite",
-            "gemini-2.0-flash",
+            "gemini-3.6-flash",
+            "gemini-3-flash-preview",
+            "gemini-flash-latest",
+            "gemini-3.1-flash-lite",
         ),
         vision_models=(
-            "gemini-3.6-flash",
             "gemini-3.5-flash",
-            "gemini-2.5-flash",
-            "gemini-2.0-flash",
+            "gemini-3.6-flash",
+            "gemini-3-flash-preview",
+            "gemini-flash-latest",
+        ),
+        # Gemini 3.x often spends the completion budget on thought signatures before
+        # content (observed: max_tokens=32 -> empty message, finish_reason=length).
+        reasoning_models=(
+            "gemini-3.5-flash",
+            "gemini-3.6-flash",
+            "gemini-3-flash-preview",
+            "gemini-flash-latest",
+            "gemini-3.1-flash-lite",
         ),
     ),
     ProviderSpec(
@@ -169,6 +181,33 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
         health_path="/models",
         free_notes="Experiment / free credits on signup",
         needed_by=("cortex",),
+        chat_models=(
+            "mistral-small-latest",
+            "ministral-8b-latest",
+            "open-mistral-nemo",
+        ),
+        vision_models=("mistral-small-latest",),
+    ),
+    ProviderSpec(
+        id="nvidia",
+        name="NVIDIA NIM",
+        base_url="https://integrate.api.nvidia.com/v1",
+        default_role="cheap",
+        tier="freemium",
+        register_url="https://build.nvidia.com/",
+        docs_url="https://docs.api.nvidia.com/",
+        health_path="/models",
+        free_notes="build.nvidia.com / NIM OpenAI-compatible; keys typically nvapi-…",
+        needed_by=("airgpt", "cortex"),
+        chat_models=(
+            "meta/llama-3.1-8b-instruct",
+            "meta/llama-3.1-70b-instruct",
+            "mistralai/mistral-nemotron",
+            "nvidia/llama-3.1-nemotron-70b-instruct",
+        ),
+        reasoning_models=(
+            "nvidia/llama-3.1-nemotron-70b-instruct",
+        ),
     ),
     ProviderSpec(
         id="deepseek",
@@ -216,6 +255,13 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
         health_path="/models",
         free_notes="High-speed free tier for Llama/Qwen",
         needed_by=("airgpt",),
+        # From D:\Netie\Free APIs for OpenVault Free\Free API.txt (2026-08).
+        chat_models=(
+            "gpt-oss-120b",
+            "llama-3.3-70b",
+            "llama3.1-8b",
+        ),
+        reasoning_models=("gpt-oss-120b",),
     ),
     ProviderSpec(
         id="huggingface",
@@ -246,7 +292,7 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
     ProviderSpec(
         id="cortex",
         name="Netie Cortex",
-        base_url="http://127.0.0.1:8000",
+        base_url="http://127.0.0.1:8010",
         default_role="primary",
         tier="local",
         register_url="https://github.com/Netie-AI/Cortex",
@@ -281,6 +327,20 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
         health_path="/models",
         free_notes="Free tier via GitHub token for many models",
         needed_by=("airgpt",),
+    ),
+    ProviderSpec(
+        id="deepgram",
+        name="Deepgram",
+        base_url="https://api.deepgram.com/v1",
+        default_role="primary",
+        tier="paid",
+        register_url="https://console.deepgram.com/",
+        docs_url="https://developers.deepgram.com/",
+        health_path="/projects",
+        openai_compatible=False,
+        free_notes="Speech-to-text (Nova-3 streaming). Not a chat provider - no chat_models.",
+        needed_by=("openwillow",),
+        status_page="https://status.deepgram.com/",
     ),
     ProviderSpec(
         id="siliconflow",
