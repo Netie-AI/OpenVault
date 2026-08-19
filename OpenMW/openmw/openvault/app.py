@@ -134,7 +134,7 @@ from openmw.openvault.vault.redis_store import try_make_redis_store
 from openmw.openvault.vault.secrets import SecretKind, SecretStore, SecretValidationError
 from openmw.openvault.vault.usage_store import HopTrace, UsageEvent, UsageStore
 from openmw.openvault.vault.seed import seed_essentials
-from openmw.openvault.vault.store import KeyRole, KeyVault, ProviderKind
+from openmw.openvault.vault.store import KeyCustody, KeyRole, KeyVault, ProviderKind
 
 log = structlog.get_logger()
 
@@ -393,6 +393,10 @@ class KeyCreate(BaseModel):
     priority: int = 100
     enabled: bool = True
     account_id: str | None = None
+    #: "pooled" (default) is a key OpenVault owns and the metered gateway may
+    #: spend. "tenant" is somebody else's; it is stored but never walked by the
+    #: fallback pool, so no metered caller can spend it (#36).
+    custody: KeyCustody = "pooled"
 
 
 class KeyUpdate(BaseModel):
@@ -1385,8 +1389,15 @@ def create_app(
             priority=body.priority,
             enabled=body.enabled,
             account_id=body.account_id,
+            custody=body.custody,
         )
-        _audit_custody("key_create", request, key_id=record.id, provider=record.provider)
+        _audit_custody(
+            "key_create",
+            request,
+            key_id=record.id,
+            provider=record.provider,
+            custody=record.custody,
+        )
         return asdict(record)
 
     @app.patch("/api/keys/{key_id}")

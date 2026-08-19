@@ -37,6 +37,18 @@ KeyRole = Literal["primary", "backup", "cheap", "free"]
 PrecheckStatus = Literal["unknown", "ok", "auth_fail", "rate_limit", "timeout", "error"]
 KeyLifecycle = Literal["active", "revoked", "rotated", "compromised"]
 
+#: Who owns the provider account behind this key, and therefore who pays.
+#:
+#: ``pooled`` is OpenVault's own key: the metered gateway may spend it, and we
+#: carry the provider cost and the provider ToS exposure (DR-0009 option (a)).
+#: ``tenant`` is a key somebody else uploaded. It is stored and it is usable by
+#: its owner's own explicit operations, but it never enters the fallback pool,
+#: so no metered caller can ever spend it.
+#:
+#: Existing rows backfill to ``pooled`` because before this column every key in
+#: the vault was the operator's own.
+KeyCustody = Literal["pooled", "tenant"]
+
 
 @dataclass(frozen=True)
 class KeyRecord:
@@ -59,6 +71,7 @@ class KeyRecord:
     account_id: str | None = None
     lifecycle: KeyLifecycle = "active"
     replaced_by: str | None = None
+    custody: KeyCustody = "pooled"
 
 
 class KeyVault:
@@ -107,7 +120,8 @@ class KeyVault:
                   updated_at REAL NOT NULL,
                   account_id TEXT,
                   lifecycle TEXT NOT NULL DEFAULT 'active',
-                  replaced_by TEXT
+                  replaced_by TEXT,
+                  custody TEXT NOT NULL DEFAULT 'pooled'
                 )
                 """
             )
@@ -118,6 +132,13 @@ class KeyVault:
                 conn.execute("ALTER TABLE keys ADD COLUMN lifecycle TEXT NOT NULL DEFAULT 'active'")
             if "replaced_by" not in cols:
                 conn.execute("ALTER TABLE keys ADD COLUMN replaced_by TEXT")
+            if "custody" not in cols:
+                # Backfill 'pooled': every key that predates this column was the
+                # operator's own. Defaulting the other way would silently empty
+                # the fallback pool on upgrade and 503 every route.
+                conn.execute(
+                    "ALTER TABLE keys ADD COLUMN custody TEXT NOT NULL DEFAULT 'pooled'"
+                )
             if "masked" not in cols:
                 conn.execute("ALTER TABLE keys ADD COLUMN masked TEXT NOT NULL DEFAULT ''")
             # One-time backfill: persist masks so list_keys never decrypts plaintext.
@@ -167,6 +188,10 @@ class KeyVault:
             account_id=row["account_id"],
             lifecycle=cast(KeyLifecycle, row["lifecycle"]),
             replaced_by=row["replaced_by"],
+            custody=cast(
+                KeyCustody,
+                (str(row["custody"]) if "custody" in keys and row["custody"] else "pooled"),
+            ),
         )
 
     def list_keys(self, *, account_id: str | None = None) -> list[KeyRecord]:
@@ -212,6 +237,7 @@ class KeyVault:
         enabled: bool = True,
         account_id: str | None = None,
         key_id: str | None = None,
+        custody: KeyCustody = "pooled",
     ) -> KeyRecord:
         key_id = key_id or uuid.uuid4().hex
         now = time.time()
@@ -222,8 +248,8 @@ class KeyVault:
                 """
                 INSERT INTO keys (
                   id, label, provider, role, base_url, secret_blob, masked, enabled, priority,
-                  precheck_status, created_at, updated_at, account_id, lifecycle
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'unknown', ?, ?, ?, 'active')
+                  precheck_status, created_at, updated_at, account_id, lifecycle, custody
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'unknown', ?, ?, ?, 'active', ?)
                 """,
                 (
                     key_id,
@@ -238,6 +264,7 @@ class KeyVault:
                     now,
                     now,
                     account_id,
+                    custody,
                 ),
             )
             conn.commit()
@@ -435,4 +462,24 @@ class KeyVault:
             conn.commit()
 
     def enabled_ordered(self) -> list[KeyRecord]:
+        """Every enabled, active key regardless of who owns it.
+
+        Not the spend path. Anything that selects a key to *spend* wants
+        :meth:`pooled_ordered` — see the note there.
+        """
         return [k for k in self.list_keys() if k.enabled and k.lifecycle == "active"]
+
+    def pooled_ordered(self) -> list[KeyRecord]:
+        """Enabled, active keys OpenVault itself owns and may spend.
+
+        The metered gateway authenticates third-party callers with issued
+        ``ov_`` keys, and every one of them walks this same list. Before the
+        custody tag existed there was no owner filter at all, so tenant A's
+        request could select a key tenant B had uploaded — latent with one
+        operator and one pool, real the moment a second tenant holds a key.
+
+        Per DR-0009 the gateway spends OpenVault's own pooled keys and carries
+        the provider cost, so a key marked ``tenant`` is excluded here and can
+        never be reached by a metered request.
+        """
+        return [k for k in self.enabled_ordered() if k.custody == "pooled"]

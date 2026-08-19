@@ -3,9 +3,9 @@
 > Canonical "what's true right now." History: [`CHANGELOG.md`](CHANGELOG.md). Deferred:
 > [`PARKING_LOT.md`](PARKING_LOT.md). Map: [`docs/ACTIVE.md`](docs/ACTIVE.md).
 
-Last reconciled: 2026-08-19 (**HUMAN_STOP** still in force. The two unrouted founder-ask waves
-are now committed and retro-routed under #33. #34 and #35 verified and closed; every remaining
-open item is a human gate or a founder decision, so no agent-closeable ticket is left).
+Last reconciled: 2026-08-19 (**HUMAN_STOP** still in force. #34, #35 and #36 closed. Custody is
+decided: the gateway spends OpenVault's own pooled keys - [`DR-0009`](docs/decisions/DR-0009-pooled-key-custody.md).
+Everything still open is a human gate (HT1-HT5) or a founder call - no agent-closeable ticket is left).
 
 **UI:** `:3010` / `:5000`. Scripted demo:
 `cd OpenMW && uv run --no-sync python scripts/one_seat_demo.py`
@@ -44,12 +44,12 @@ Auto-orch loop **stopped**. Founder clears https://github.com/Netie-AI/OpenVault
 | # | Status |
 |---|--------|
 | #18 DEMO epic | Awaits your HT1–HT5 |
-| #33 EPIC host+meter | Open — children #34/#35 closed; blocked on #36 and on #18 HT1 |
+| #33 EPIC host+meter | Open — all three children closed; now blocked only on #18 HT1 |
 | #34 console proxy | **CLOSED** 2026-08-19 — verified, gate mutation-checked |
 | #35 detect→build→ship | **CLOSED** 2026-08-19 — verified, gate mutation-checked |
-| #36 per-tenant custody | **NEEDS-YOU.** Whose key does a metered caller spend — ours or theirs? |
+| #36 per-tenant custody | **CLOSED** 2026-08-19 — you chose (a) pooled; tenant keys never enter the pool |
 | **Skills library** | **NEEDS-YOU.** A skill store here is a **PRODUCT_ROLES amendment** across four repos, not a ticket |
-| Pricing | Deferred by you 2026-08-07. Metering is in; no rate exists anywhere in code |
+| Pricing | **NEEDS-YOU.** DR-0009 (a) means we carry provider cost — pricing is now live, not deferred |
 | Serving-engine selection | OpenVault owns it per PRODUCT_ROLES. Not moved — cross-repo |
 | Multi-node LB / Route53 | Not built. One box, one Caddy — see PARKING_LOT |
 

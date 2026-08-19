@@ -52,6 +52,37 @@ def _is_multimodal(body: dict[str, Any]) -> bool:
     return False
 
 
+def _no_candidates_refusal(vault: KeyVault) -> dict[str, Any]:
+    """Say which kind of empty pool this is.
+
+    "no healthy API keys" is a lie when the vault is holding keys it simply may
+    not spend: since #36 the gateway walks pooled keys only, so an operator who
+    has uploaded nothing but tenant-custody keys would otherwise be told their
+    vault was empty and go looking in the wrong place (R-0011).
+    """
+    try:
+        held = [k for k in vault.enabled_ordered() if k.custody != "pooled"]
+    except Exception:  # pragma: no cover - a sealed or unreadable vault
+        held = []
+    if held:
+        return {
+            "error": {
+                "message": (
+                    "no pooled OpenVault key is available to serve this request; "
+                    f"{len(held)} enabled key(s) are tenant-custody and are never "
+                    "spent by the metered gateway"
+                ),
+                "type": "openvault_no_pooled_keys",
+            }
+        }
+    return {
+        "error": {
+            "message": "no healthy API keys in OpenVault fallback pool",
+            "type": "openvault_no_keys",
+        }
+    }
+
+
 def affinity_key_for(body: dict[str, Any], *, tenant: str = "") -> str:
     """Stable identifier for this conversation, or "" when there is nothing to pin.
 
@@ -186,12 +217,7 @@ async def chat_completions(
     trace = trace if trace is not None else HopTrace()
     candidates = fallback.ordered_candidates(affinity_key=affinity_key_for(body, tenant=tenant))
     if not candidates:
-        return 503, {
-            "error": {
-                "message": "no healthy API keys in OpenVault fallback pool",
-                "type": "openvault_no_keys",
-            }
-        }
+        return 503, _no_candidates_refusal(vault)
 
     # Fail closed before hop walk: metadata may still be listed while sealed.
     # Walking then decrypting yields VaultSealedError -> dishonest 500 / exhausted.
@@ -380,12 +406,7 @@ async def prepare_chat_stream(
     trace = trace if trace is not None else HopTrace()
     candidates = fallback.ordered_candidates(affinity_key=affinity_key_for(body, tenant=tenant))
     if not candidates:
-        return 503, {
-            "error": {
-                "message": "no healthy API keys in OpenVault fallback pool",
-                "type": "openvault_no_keys",
-            }
-        }
+        return 503, _no_candidates_refusal(vault)
 
     if vault.seal.is_sealed:
         log.warning("freeroute_refused", reason="vault_sealed", path="prepare_chat_stream")

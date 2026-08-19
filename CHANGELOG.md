@@ -2,6 +2,30 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-08-19 - Key custody decided: the gateway spends our own pooled keys (#36)
+
+- **The founder chose (a).** [`DR-0009`](docs/decisions/DR-0009-pooled-key-custody.md). OpenVault's
+  metered gateway spends OpenVault's own keys and carries the provider cost and ToS exposure. Keys a
+  tenant uploads are stored but never enter the fallback pool.
+- **The hole that closes.** `fallback.ordered_candidates` applied no owner filter at all, so with
+  issued `ov_` keys authenticating third parties, tenant A's request walked the same pool as everyone
+  else and could select a key tenant B uploaded. Latent with one operator; real on the second tenant.
+- **Two controls, because this is custody code.** A `custody` tag (`pooled` | `tenant`) on
+  `KeyRecord`. `KeyVault.pooled_ordered()` is what the walk, the hop dashboard and the deploy gate all
+  source from - `enabled_ordered()` keeps its meaning and is no longer a spend path. And
+  `FallbackManager._is_available` refuses a non-pooled record *before* it checks health, so a future
+  caller who sources from the wrong list still cannot reach a tenant key. Custody is checked ahead of
+  priority: a tenant key at priority 0 loses to a pooled key at 100.
+- **Upgrades keep working.** The migration backfills `pooled`, because before this column every key in
+  the vault was the operator's own. Defaulting the other way would have 503'd every route on upgrade.
+- **The refusal stopped lying** (R-0011). No pooled key while tenant keys are held is now typed
+  `openvault_no_pooled_keys` and says how many are held; `openvault_no_keys` still means an empty vault.
+  "No healthy API keys" while the vault visibly holds keys sends an operator looking in the wrong place.
+- Asserted at the layer the customer receives (R-0001): `GET /api/usage` `vault_key_id`, not the
+  manager object. Mutation matrix run on both controls independently plus together - the first draft of
+  the suite could not detect removal of the availability guard at all, which is why the walk test exists.
+- **Pricing is no longer deferrable.** (a) means we carry provider cost on every metered request.
+
 ## 2026-08-07 — Detect→build→ship completed; console proxy closed; work retro-routed (#33–#36)
 
 - **#35 the end-to-end path.** "Auto-detect, build, ship online" worked for one of four real

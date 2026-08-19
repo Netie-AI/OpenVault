@@ -174,7 +174,8 @@ def build_deploy_plan(
     key_detail = "no vault"
     key_status: GateStatus = "pending"
     if vault is not None:
-        enabled = vault.enabled_ordered()
+        # Pooled only: the gate reports what a deploy could actually spend.
+        enabled = vault.pooled_ordered()
         ok = [k for k in enabled if k.precheck_status == "ok"]
         if not enabled:
             key_status = "fail"

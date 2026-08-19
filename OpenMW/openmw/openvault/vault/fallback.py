@@ -109,6 +109,12 @@ class FallbackManager:
         return self._circuits[key_id]
 
     def _is_available(self, record: KeyRecord, now: float) -> bool:
+        # Custody first, before health: a tenant's key is not ours to spend no
+        # matter how healthy it looks. This is the chokepoint every selection
+        # path runs through, so a future caller that forgets to source from
+        # pooled_ordered() still cannot reach a tenant key (DR-0009, #36).
+        if record.custody != "pooled":
+            return False
         if not record.enabled:
             return False
         if record.precheck_status in ("auth_fail",):
@@ -137,7 +143,7 @@ class FallbackManager:
         now = time.time()
         by_role: dict[str, list[KeyRecord]] = {r: [] for r in self._config.role_order}
         extras: list[KeyRecord] = []
-        for record in self._vault.enabled_ordered():
+        for record in self._vault.pooled_ordered():
             if record.role in by_role:
                 by_role[record.role].append(record)
             else:
@@ -180,7 +186,7 @@ class FallbackManager:
 
     def status(self) -> FallbackStatus:
         hops: list[dict[str, object]] = []
-        for record in self._vault.enabled_ordered():
+        for record in self._vault.pooled_ordered():
             circ = self._circuit(record.id)
             hops.append(
                 {
