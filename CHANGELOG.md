@@ -2,6 +2,22 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-08-20 - Launchers get a gate, because both startup bugs were unguarded code
+
+- `tests/test_launcher_contract.py`. Two assertions over the real launcher files, not copies:
+  every `openmw <command>` a launcher spawns must be a command Typer registers, and every launcher
+  Python runs must encode under cp1252. Both incidents this week were the same class - a launcher is
+  executable code that no test executed - and neither fix had anything stopping it regressing.
+- Mutation-checked, both halves independently (R-0007): putting `serve` back in the Electron spawn
+  fails the first; putting the U+2192 arrow back in the CLI fails the second. Either one would have
+  caught its original bug before it shipped.
+- **The gate was broken on its own first run.** The `serve` mutation passed, because a comment sits
+  between `"openmw",` and `"console",` in the argv, so the regex found nothing there and matched a
+  valid command name in unrelated prose further down the file instead - passing while guarding
+  nothing. Line comments are now stripped before scanning. Worth remembering: a green mutation run is
+  the only reason this was noticed, and the failure mode was the exact one the test's own assertion
+  message warns about.
+
 ## 2026-08-20 - The intermittent-startup class: the desktop app never started a backend
 
 - **`openvault app` spawned a command that does not exist.** `main-openvault.js` ran
