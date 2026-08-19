@@ -1,7 +1,7 @@
-"""OpenMW CLI — front door for hardware profile, model routing, and session orchestration.
+"""OpenMW CLI - front door for hardware profile, model routing, and session orchestration.
 
 Free tier: ``doctor`` (hardware + bottleneck report) and ``route`` (model fit, no coding).
-Stubs (not yet implemented): ``train`` and ``infer`` — see STATUS.md / PARKING_LOT.md.
+Stubs (not yet implemented): ``train`` and ``infer`` - see STATUS.md / PARKING_LOT.md.
 """
 
 from __future__ import annotations
@@ -134,7 +134,7 @@ def train_cmd(
 ) -> None:
     """[Not yet implemented] Hardware-aware training launch via Unsloth bridge.
 
-    Blocked on training_router.py — see STATUS.md next priorities.
+    Blocked on training_router.py - see STATUS.md next priorities.
     Today, training_config.py is static defaults with no DeviceProfile awareness.
     """
     typer.echo(
@@ -151,7 +151,7 @@ def infer_cmd(
 ) -> None:
     """[Not yet implemented] VIP runtime connector (vLLM / llama.cpp / LMCache).
 
-    Blocked on OpenMW-Plan PART 9 — hardware-gated on Linux + native NVMe passthrough.
+    Blocked on OpenMW-Plan PART 9 - hardware-gated on Linux + native NVMe passthrough.
     """
     typer.echo(
         "openmw infer is not yet implemented: VIP runtime connector is hardware-gated.\n"
@@ -262,7 +262,7 @@ def demo_ui_cmd(
         use_live_detect=not mock_profile,
     )
     typer.echo(f"Wrote {json_path}")
-    typer.echo(f"UI: {app_dir}  →  http://127.0.0.1:{app_port}/")
+    typer.echo(f"UI: {app_dir}  ->  http://127.0.0.1:{app_port}/")
 
     if not serve:
         return
@@ -290,7 +290,7 @@ def demo_ui_cmd(
     )
     npm = shutil.which("npm") or ("npm.cmd" if os.name == "nt" else "npm")
     if not (app_dir / "node_modules" / "next").is_dir():
-        typer.echo("Installing apps/web dependencies (npm)…")
+        typer.echo("Installing apps/web dependencies (npm)...")
         subprocess.check_call([npm, "install", "--no-audit", "--no-fund"], cwd=str(app_dir))
     web = subprocess.Popen([npm, "run", "dev"], cwd=str(app_dir), env=env)
 

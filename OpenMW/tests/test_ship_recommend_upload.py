@@ -5,10 +5,48 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from cryptography.fernet import Fernet
 from fastapi.testclient import TestClient
 
 from openmw.openvault.app import create_app
 from openmw.openvault.ship.recommend import recommend_target
+
+#: Cleared so these tests do not read the developer's shell. Note the honest
+#: scope: preflight resolves the Cloudflare/Netlify *token* from the vault via
+#: ``from_vault``, not from the environment, so clearing these is not what makes
+#: the assertions hold - the empty vault below is. What the environment does
+#: still feed is ``CLOUDFLARE_ACCOUNT_ID`` (cloudflare_pages.py:332) and the
+#: OpenShip settings, which is reason enough to start from a known-empty shell.
+_HOST_CREDENTIALS = (
+    "CLOUDFLARE_API_TOKEN",
+    "CLOUDFLARE_ACCOUNT_ID",
+    "NETLIFY_AUTH_TOKEN",
+    "NETLIFY_SITE_ID",
+    "COOLIFY_TOKEN",
+    "COOLIFY_URL",
+    "COOLIFY_APP_UUID",
+    "OPENSHIP_TOKEN",
+)
+
+
+@pytest.fixture(autouse=True)
+def isolated_environment(tmp_path, monkeypatch):
+    """Point every test in this module at an empty vault and a clean shell.
+
+    ``create_app()`` with no vault argument opens whatever ``OPENVAULT_HOME``
+    points at - in a developer shell, their real key store. These four
+    preflight tests assert that a host credential is *absent*, so any row the
+    vault happens to hold for that provider inverts the assertion: same commit,
+    different machine, opposite result.
+
+    Latent rather than live at the time of writing - neither vault on this
+    machine holds a cloudflare/netlify/coolify row - which is exactly why it
+    was worth pinning before someone vaults one and spends an afternoon on it.
+    """
+    monkeypatch.setenv("OPENVAULT_HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("OPENVAULT_KEY", Fernet.generate_key().decode())
+    for name in _HOST_CREDENTIALS:
+        monkeypatch.delenv(name, raising=False)
 
 
 def test_recommend_static_next() -> None:

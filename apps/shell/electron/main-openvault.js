@@ -179,7 +179,17 @@ function startApiServer() {
     ],
     {
       cwd: OPENMW_DIR,
-      env: { ...process.env },
+      // Pin the vault home. Without it paths.py falls back to
+      // ~/.openvault while every other launcher pins <repo>/.openvault, so
+      // the desktop app silently talks to a *different* key store than the
+      // PowerShell scripts - and which one you get depends on who won :5000
+      // first. Start-NetieStack.ps1 has pinned this since it was written; the
+      // pin was simply never copied here.
+      env: {
+        ...process.env,
+        OPENVAULT_HOME:
+          process.env.OPENVAULT_HOME || path.join(REPO_ROOT, ".openvault"),
+      },
       stdio: "pipe",
       windowsHide: true,
       shell: USE_SHELL,
@@ -188,8 +198,17 @@ function startApiServer() {
   attachProcessLogging(apiServer, "api");
 }
 
+function npmScriptUsed() {
+  return process.env.OPENVAULT_PROD === "1" ? "start" : "dev";
+}
+
 function startWebServer() {
-  const npmScript = process.env.OPENVAULT_DEV === "1" ? "dev" : "start";
+  // `dev` by default. This used to be `start`, i.e. `next start`, which needs
+  // a prior `next build` - and no code path in this repo ever runs one. On any
+  // machine without leftover .next/ the web child died instantly, and the
+  // window opened on a dead port anyway. Opt into the production server with
+  // OPENVAULT_PROD=1 once something actually builds it.
+  const npmScript = npmScriptUsed();
   console.log("[OpenVault] Starting Next.js on", WEB_URL, `(${npmScript})`);
   sendToRenderer("server-status", { status: "starting", service: "web", port: WEB_PORT });
 
@@ -446,7 +465,24 @@ app.whenReady().then(async () => {
     );
   }
 
-  await waitForServer(WEB_URL, 120000);
+  const webReady = await waitForServer(WEB_URL, 120000);
+  if (!webReady) {
+    // Same reasoning as the api branch above: the return value was previously
+    // discarded and the window opened on a dead port, so a hard start-up
+    // failure looked like a blank app rather than a failure (R-0011).
+    const code = lastProcessExit.web;
+    dialog.showErrorBox(
+      "OpenVault console did not start",
+      [
+        `Nothing is answering ${WEB_URL}.`,
+        code ? `The web process exited with code ${code}.` : "The web process never became ready.",
+        "",
+        "Start it by hand to see the real error:",
+        `  npm --prefix ${WEB_DIR} run ${npmScriptUsed()}`,
+      ].join("\n")
+    );
+    return;
+  }
   sendToRenderer("server-status", { status: "running", service: "web", port: WEB_PORT });
 
   createWindow();

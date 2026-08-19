@@ -39,6 +39,12 @@ LAUNCHERS = (
 ASCII_CRITICAL = (
     "apps/cli/openvault_cli.py",
     "OpenMW/scripts/one_seat_demo.py",
+    # The `openmw console` entry point. Every launcher spawns this one with its
+    # stdout redirected to a log file, which is exactly the condition that
+    # selects cp1252 - and the first version of this list left it out while
+    # cli.py still carried a U+2192 and a U+2026. The gate has to cover the
+    # process that actually gets redirected, not just the one that redirects it.
+    "OpenMW/openmw/cli.py",
 )
 
 #: `openmw` followed by the next bare word, across quotes, commas and newlines

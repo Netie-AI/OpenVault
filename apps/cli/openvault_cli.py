@@ -144,7 +144,14 @@ def _start_api(env: dict[str, str], *, mock_health: bool = False) -> subprocess.
 def _start_web(env: dict[str, str], *, prod: bool = False) -> subprocess.Popen:
     _ensure_web_deps()
     script = "start" if prod else "dev"
-    return _popen([_npm(), "run", script], WEB, {**env, "PORT": str(WEB_PORT)})
+    # Log to a file like the API child does. Without this the web server's
+    # stdout and stderr went to DEVNULL, so `next start` failing with "Could
+    # not find a production build" left no trace anywhere, and the user was
+    # told to run `openvault doctor` - which did not check for a build either.
+    log_path = Path(env["OPENVAULT_HOME"]) / "logs" / "web.up.log"
+    return _popen(
+        [_npm(), "run", script], WEB, {**env, "PORT": str(WEB_PORT)}, log_path=log_path
+    )
 
 
 def _base_env() -> dict[str, str]:
@@ -206,6 +213,13 @@ def cmd_doctor(_: argparse.Namespace) -> int:
         )
         line("volume", f"{drive}: {fs} {note}".rstrip(), True)
 
+    build_id = WEB / ".next" / "BUILD_ID"
+    line(
+        "web prod build",
+        "present" if build_id.is_file() else "missing - `--prod` will fail, plain `up` is fine",
+        True,
+    )
+
     print(" ports")
     line(f"custody API :{API_PORT}", "listening" if _port_busy(API_PORT) else "free")
     line(f"web app :{WEB_PORT}", "listening" if _port_busy(WEB_PORT) else "free")
@@ -242,7 +256,20 @@ def _run_stack(args: argparse.Namespace, *, mock_health: bool, open_browser: boo
     print(f"OpenVault API  http://127.0.0.1:{API_PORT}/")
     print(f"OpenVault App  http://127.0.0.1:{WEB_PORT}/   <- use this")
     if not _wait(f"http://127.0.0.1:{WEB_PORT}/", 120):
-        print("Web app did not come up within 120s. Run `openvault doctor`.")
+        print("Web app did not come up within 120s.")
+        web_log = Path(env["OPENVAULT_HOME"]) / "logs" / "web.up.log"
+        if web_log.is_file():
+            print(f"--- last 40 lines of {web_log} ---")
+            try:
+                lines = web_log.read_text(encoding="utf-8", errors="replace").splitlines()
+                print("\n".join(lines[-40:]))
+            except OSError as exc:
+                print(f"(could not read log: {exc})")
+        if getattr(args, "prod", False) and not (WEB / ".next" / "BUILD_ID").is_file():
+            print(
+                "\n--prod runs `next start`, which needs a production build that does "
+                "not exist here.\nRun:  npm --prefix apps/web run build   (or drop --prod)"
+            )
         for p in procs:
             p.terminate()
         return 1

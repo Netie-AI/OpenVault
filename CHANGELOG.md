@@ -2,6 +2,36 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-08-20 - Five more intermittent-startup causes, found by a completed adversarial sweep
+
+The first sweep lost 24 of 31 agents to a session limit. Re-run whole: 5 confirmed (two verifiers
+each), 5 refuted - three of those killed because the behaviour was deterministic rather than
+intermittent, which is the distinction that makes this class findable at all.
+
+- **The two-vault mystery, solved.** The Electron shell spawned the custody API with
+  `env: { ...process.env }` and never set `OPENVAULT_HOME`, so `paths.py` fell back to
+  `~/.openvault` while every other launcher pins `<repo>/.openvault`. Which key store the desktop
+  app talked to depended on who won `:5000` first. `Start-NetieStack.ps1` has pinned this since it
+  was written and even has a "wrong vault home - restarting" branch; the pin was never copied here.
+- **`next start` with nothing that builds.** The shell defaulted to the production server, and no
+  code path in the repo runs `next build`. On any machine without leftover `.next/` the web child
+  died instantly - and the readiness result was discarded, so the window opened on a dead port
+  anyway. Defaults to `dev` now (`OPENVAULT_PROD=1` opts in), and the web branch got the same
+  refuse-to-open dialog the API branch already had. That asymmetry was ours from the previous
+  commit: the API branch was fixed and the web branch ten lines below was left alone.
+- **The error was thrown away and the diagnostic could not see it.** `_start_web` sent stdout and
+  stderr to `DEVNULL`, so `next start`'s real message vanished, and the user was pointed at
+  `openvault doctor` - which checked ports, node and npm but never `.next/BUILD_ID`. Web now logs
+  to `web.up.log`, its tail prints on timeout like the API's does, and doctor reports the build.
+- **`openmw/cli.py` still carried U+2192 and U+2026.** This is the process every launcher spawns
+  *with its stdout redirected*, which is precisely the condition that selects cp1252. The gate added
+  hours earlier covered the launcher and not the thing being launched. Fixed and added to the gate.
+- **Preflight tests read whatever the ambient vault held.** `create_app()` with no vault argument
+  opens the developer's real key store, and four tests assert a host credential is *absent*. Pinned
+  to an empty vault. Latent rather than live - neither vault here holds a matching row - and the
+  first version of that fix claimed an environment leak that mutation-checking disproved: the token
+  comes from the vault via `from_vault`, not the shell. The comment now says what is actually true.
+
 ## 2026-08-20 - Launchers get a gate, because both startup bugs were unguarded code
 
 - `tests/test_launcher_contract.py`. Two assertions over the real launcher files, not copies:
