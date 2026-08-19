@@ -93,6 +93,12 @@ function setClipboardWatchEnabled(enabled) {
   return clipboardWatchEnabled;
 }
 
+//: label -> non-zero exit code, for the readiness dialog. sendToRenderer cannot
+//: carry this: mainWindow is still null while the servers start, so a start-up
+//: failure is dropped on the floor, and nothing in apps/web subscribes to
+//: "server-status" anyway.
+const lastProcessExit = {};
+
 function sendToRenderer(channel, data) {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send(channel, data);
@@ -144,6 +150,7 @@ function attachProcessLogging(proc, label) {
   });
   proc.on("exit", (code) => {
     console.log(`[OpenVault] ${label} exited with code:`, code);
+    if (code) lastProcessExit[label] = code;
     sendToRenderer("server-status", { status: "stopped", service: label, code });
   });
 }
@@ -159,11 +166,16 @@ function startApiServer() {
       "--directory",
       OPENMW_DIR,
       "openmw",
-      "serve",
+      // `console`, not `serve`: the Typer app registers console/demo-ui/doctor/
+      // infer/route/train and nothing else, so `serve` exited 2 on every cold
+      // start. Electron is the browser here, so keep the CLI from opening a
+      // second one.
+      "console",
       "--host",
       API_HOST,
       "--port",
       String(API_PORT),
+      "--no-open-browser",
     ],
     {
       cwd: OPENMW_DIR,
@@ -414,6 +426,24 @@ app.whenReady().then(async () => {
   const apiReady = await waitForServer(API_HEALTH_URL);
   if (apiReady) {
     sendToRenderer("server-status", { status: "running", service: "api", port: API_PORT });
+  } else {
+    // Do not open a window that silently cannot work. Every panel proxies
+    // /ov-api/* to the custody API, so without it the app paints fine and then
+    // fails on every action - which reads as "the backend is flaky today"
+    // rather than "the backend was never started" (R-0011).
+    const code = lastProcessExit.api;
+    dialog.showErrorBox(
+      "OpenVault custody API did not start",
+      [
+        `Nothing is answering ${API_HEALTH_URL}.`,
+        code ? `The API process exited with code ${code}.` : "The API process never became ready.",
+        "",
+        "Every panel in this app talks to that API, so it would open unable to do anything.",
+        "Start it by hand to see the real error:",
+        `  cd ${OPENMW_DIR}`,
+        `  uv run --no-sync openmw console --host ${API_HOST} --port ${API_PORT}`,
+      ].join("\n")
+    );
   }
 
   await waitForServer(WEB_URL, 120000);
