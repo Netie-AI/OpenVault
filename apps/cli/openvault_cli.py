@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""OpenVault CLI — run the real app stack (apps/web + custody API).
+"""OpenVault CLI - run the real app stack (apps/web + custody API).
 
   openvault up          # OpenMW custody API (:5000) + Next OpenVault app (:3010) + browser
-  openvault app         # Electron desktop shell → wraps the same two processes
+  openvault app         # Electron desktop shell -> wraps the same two processes
   openvault doctor      # environment preflight (filesystem, node, npm, ports)
   openvault demo        # mock-health demo: API + app + open browser
-  openvault demo-path   # scripted vault→FreeRoute refuse→ship allow→deny (mocks only)
+  openvault demo-path   # scripted vault->FreeRoute refuse->ship allow->deny (mocks only)
 
 Topology is deliberately two processes. The vendor trees under ``vendor/`` are
 upstream *sources we copied from*, not services we run.
@@ -85,13 +85,13 @@ def _npm() -> str:
 def _ensure_web_deps() -> None:
     if (WEB / "node_modules" / "next").is_dir():
         return
-    print(f"Installing {WEB} dependencies (npm)…")
+    print(f"Installing {WEB} dependencies (npm)...")
     subprocess.check_call([_npm(), "install", "--no-audit", "--no-fund"], cwd=str(WEB))
 
 
 def _start_api(env: dict[str, str], *, mock_health: bool = False) -> subprocess.Popen | None:
     if _port_busy(API_PORT):
-        print(f"Custody API already listening on :{API_PORT} — reusing it.")
+        print(f"Custody API already listening on :{API_PORT} - reusing it.")
         return None
     uv = shutil.which("uv") or str(Path.home() / ".local" / "bin" / "uv.exe")
     # --no-sync avoids Windows file locks on openmw.exe during rebuild mid-flight.
@@ -106,7 +106,7 @@ def _start_api(env: dict[str, str], *, mock_health: bool = False) -> subprocess.
     if mock_health:
         args.append("--mock-health")
     log_path = Path(env["OPENVAULT_HOME"]) / "logs" / "console.up.log"
-    print(f"Custody API log → {log_path}")
+    print(f"Custody API log -> {log_path}")
     return _popen(args, OPENMW, env, log_path=log_path)
 
 
@@ -149,7 +149,7 @@ def cmd_doctor(_: argparse.Namespace) -> int:
     line("npm", npm or "not found", bool(npm))
     line(
         "web node_modules",
-        "present" if (WEB / "node_modules" / "next").is_dir() else "missing — run `openvault up`",
+        "present" if (WEB / "node_modules" / "next").is_dir() else "missing - run `openvault up`",
         (WEB / "node_modules" / "next").is_dir(),
     )
 
@@ -169,7 +169,7 @@ def cmd_doctor(_: argparse.Namespace) -> int:
         except Exception:
             fs = "unknown"
         note = (
-            "npm only — no hardlinks/symlinks, bun & pnpm cannot install here"
+            "npm only - no hardlinks/symlinks, bun & pnpm cannot install here"
             if fs.upper() == "EXFAT"
             else ""
         )
@@ -179,7 +179,7 @@ def cmd_doctor(_: argparse.Namespace) -> int:
     line(f"custody API :{API_PORT}", "listening" if _port_busy(API_PORT) else "free")
     line(f"web app :{WEB_PORT}", "listening" if _port_busy(WEB_PORT) else "free")
 
-    print("\n" + ("All good." if ok else "Some checks failed — see FAIL lines above."))
+    print("\n" + ("All good." if ok else "Some checks failed - see FAIL lines above."))
     return 0 if ok else 1
 
 
@@ -204,7 +204,7 @@ def _run_stack(args: argparse.Namespace, *, mock_health: bool, open_browser: boo
         return 1
 
     if _port_busy(WEB_PORT):
-        print(f"Web app already listening on :{WEB_PORT} — reusing it.")
+        print(f"Web app already listening on :{WEB_PORT} - reusing it.")
     else:
         procs.append(_start_web(env, prod=getattr(args, "prod", False)))
 
@@ -238,23 +238,23 @@ def cmd_up(args: argparse.Namespace) -> int:
 
 def cmd_demo(args: argparse.Namespace) -> int:
     """Demo mode: mock device health so the UI always has numbers to show."""
-    print("Demo mode — mock health devices, live vault/ship/gate APIs.")
+    print("Demo mode - mock health devices, live vault/ship/gate APIs.")
     open_browser = not getattr(args, "no_open_browser", False)
     return _run_stack(args, mock_health=True, open_browser=open_browser)
 
 
 def cmd_demo_path(args: argparse.Namespace) -> int:
-    """Auto-safe one-seat path: vault → FreeRoute refuse → ship allow → gate deny.
+    """Auto-safe one-seat path: vault -> FreeRoute refuse -> ship allow -> gate deny.
 
     In-process mocks/simulate only. Does not start the UI stack and does not
-    claim HT1–HT5. See docs/ONE_SEAT_DEMO.md.
+    claim HT1-HT5. See docs/ONE_SEAT_DEMO.md.
     """
     uv = shutil.which("uv") or str(Path.home() / ".local" / "bin" / "uv.exe")
     script = OPENMW / "scripts" / "one_seat_demo.py"
     cmd = [uv, "run", "--no-sync", "python", str(script)]
     if getattr(args, "out", None):
         cmd.extend(["--out", str(Path(args.out))])
-    print("One-seat demo-path — mocks/simulate ONLY (no live hosts / paid keys).")
+    print("One-seat demo-path - mocks/simulate ONLY (no live hosts / paid keys).")
     return subprocess.call(cmd, cwd=str(OPENMW))
 
 
@@ -288,7 +288,7 @@ def main() -> int:
 
     demo_path = sub.add_parser(
         "demo-path",
-        help="Scripted one-seat path (vault→FreeRoute refuse→ship allow→deny); mocks only",
+        help="Scripted one-seat path (vault->FreeRoute refuse->ship allow->deny); mocks only",
     )
     demo_path.add_argument(
         "--out",
