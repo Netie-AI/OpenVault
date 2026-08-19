@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --port 3010",
+    "dev": "next dev -H 127.0.0.1 --port 3010",
     "build": "next build",
-    "start": "next start --port 3010",
+    "start": "next start -H 127.0.0.1 --port 3010",
     "lint": "next lint",
     "clean": "cmd /c rmdir /s /q .next"
   },
