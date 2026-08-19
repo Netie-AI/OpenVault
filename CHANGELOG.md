@@ -2,6 +2,27 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-08-20 - The intermittent-startup class: the desktop app never started a backend
+
+- **`openvault app` spawned a command that does not exist.** `main-openvault.js` ran
+  `uv run --directory OpenMW openmw serve`; the Typer app registers console, demo-ui, doctor, infer,
+  route and train. `serve` exited 2 immediately on every cold start. Nothing stopped: `waitForServer`
+  polled a dead port for 180s, warned "showing window anyway", and `createWindow()` ran regardless
+  because the readiness check had no else branch. The console painted on :3010 and every panel then
+  502'd, because next.config rewrites `/ov-api/*` to the custody API that was never started.
+- **Why it read as random.** `openvault up`, `Start-NetieStack.ps1` and `Start-LocalMesh.ps1` all
+  leave a long-lived `openmw console` on :5000, each with an explicit "already listening - reusing it"
+  branch. Run any of those first and the desktop shell is perfect, because readiness succeeds on its
+  first poll against somebody else's process. Cold machine: three-minute stall, then a dead window.
+- Fixed: spawn `console --no-open-browser`, and a failed readiness check now says so with the exit
+  code and the command to reproduce it. A window that paints and then fails on every action is a
+  silent fallback, and a silent fallback is a lie (R-0011). The exit code had to be tracked
+  separately - `sendToRenderer` no-ops while `mainWindow` is null, which it always is during
+  start-up, and nothing in `apps/web` subscribes to "server-status" at all.
+- **R-0012 was fixed on a branch that does not ship.** The laptop-ASCII fix for `openvault_cli.py`
+  lived only on `fix/r0012-ascii-cli-output`; the integration branch still carried 15 non-ASCII lines
+  and still died under cp1252. Cherry-picked. A fix that is not on the branch that merges is not a fix.
+
 ## 2026-08-19 - Key custody decided: the gateway spends our own pooled keys (#36)
 
 - **The founder chose (a).** [`DR-0009`](docs/decisions/DR-0009-pooled-key-custody.md). OpenVault's
