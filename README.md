@@ -80,6 +80,7 @@ Full tier map (incl. `cloud/` `route/` `routers/` `sentinel/`): [`docs/ACTIVE.md
 | `docs/reference/` | Setup, design decisions, architecture diagram, NVMe protocol spec |
 | `docs/decisions/` | Decision records (`DR-####-kebab-title.md`) |
 | `scripts/windows/` | `Start-OpenVaultDemo.ps1`, `Start-NetieStack.ps1`, `Start-LocalMesh.ps1` |
+| `docs/ONE_SEAT_DEMO.md` | Buyer one-seat path (mocks/simulate; HT1–HT5 human-only) |
 | `openvault.local.example.json` | Copy to `openvault.local.json` |
 
 Peer (not in this repo): Cortex at `D:\Cortex` → `http://127.0.0.1:8000` (URL wiring only).

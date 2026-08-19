@@ -6,7 +6,8 @@ title Netie stack
 echo.
 echo  Starting Netie stack...
 echo.
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0Start-NetieStack.ps1" %*
+REM Default: also bring up OpenVault Next UI on :3010 (pass args to override).
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0Start-NetieStack.ps1" -WithOpenVaultApp %*
 set ERR=%ERRORLEVEL%
 echo.
 if not "%ERR%"=="0" (

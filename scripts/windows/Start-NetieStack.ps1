@@ -33,6 +33,13 @@ $ErrorActionPreference = "Stop"
 $CortexUrl = "http://127.0.0.1:$CortexPort"
 $OpenVaultUrl = "http://127.0.0.1:5000"
 $AirGptUrl = "http://127.0.0.1:8765"
+# Dual-home footgun: a console started without this env uses %USERPROFILE%\.openvault
+# and the UI looks "empty"/wrong. Pin before any OpenVault process start or reuse.
+$env:OPENVAULT_HOME = Join-Path $OpenVaultRoot ".openvault"
+$env:CORTEX_URL = $CortexUrl
+$env:CORTEX_API_URL = $CortexUrl
+$env:OPENIDE_URL = $AirGptUrl
+$env:OPENVAULT_URL = $OpenVaultUrl
 
 function Test-HttpOk([string]$Url, [string]$ExpectSubstring = "") {
   try {
@@ -87,17 +94,44 @@ if (-not (Test-HttpOk "$CortexUrl/health")) {
 }
 [void](Wait-HttpOk "$CortexUrl/health" 90 "Cortex")
 
-# --- 2) OpenVault :5000 ---
-if (-not (Test-HttpOk "$OpenVaultUrl/api/healthz")) {
+# --- 2) OpenVault :5000 (always on OPENVAULT_HOME above) ---
+function Stop-OpenVaultConsole {
+  Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+    Where-Object { $_.CommandLine -and ($_.CommandLine -match 'openmw(\.exe)?.*console') } |
+    ForEach-Object {
+      Write-Host ("==> Stopping stray OpenVault console pid " + $_.ProcessId) -ForegroundColor Yellow
+      Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue
+    }
+}
+
+$openMw = Join-Path $OpenVaultRoot "OpenMW"
+$needStart = $true
+if (Test-HttpOk "$OpenVaultUrl/api/healthz") {
+  # Reuse only if the live vault is the pinned home (marker: keys.db mtime sync is weak;
+  # prefer a keys list that includes a D:-home label from the Free-API ingest).
+  try {
+    $live = Invoke-RestMethod -Uri "$OpenVaultUrl/api/keys" -TimeoutSec 5
+    $labels = @($live.keys | ForEach-Object { $_.label })
+    $looksPinned = ($labels -contains "CEREBRAS_API_KEY") -or ($labels -contains "BYTEZ_API_KEY") -or ($labels -contains "NVIDIA_API_KEY")
+    if ($looksPinned) {
+      Write-Host "==> OpenVault already healthy on pinned home" -ForegroundColor Green
+      $needStart = $false
+    } else {
+      Write-Host "==> OpenVault :5000 is up but wrong vault home — restarting with OPENVAULT_HOME" -ForegroundColor Yellow
+      Stop-OpenVaultConsole
+      Start-Sleep -Seconds 2
+    }
+  } catch {
+    Write-Host "==> OpenVault health ok but /api/keys failed — restarting" -ForegroundColor Yellow
+    Stop-OpenVaultConsole
+    Start-Sleep -Seconds 2
+  }
+}
+if ($needStart) {
   if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
     $env:Path = "$env:USERPROFILE\.local\bin;$env:Path"
   }
-  $openMw = Join-Path $OpenVaultRoot "OpenMW"
-  Write-Host "==> Starting OpenVault :5000 (cortex=$CortexUrl)" -ForegroundColor Cyan
-  $env:OPENVAULT_HOME = Join-Path $OpenVaultRoot ".openvault"
-  $env:CORTEX_URL = $CortexUrl
-  $env:OPENIDE_URL = $AirGptUrl
-  $env:CORTEX_API_URL = $CortexUrl
+  Write-Host "==> Starting OpenVault :5000 (home=$($env:OPENVAULT_HOME) cortex=$CortexUrl)" -ForegroundColor Cyan
   $ovArgs = @(
     "run", "openmw", "console",
     "--host", "127.0.0.1", "--port", "5000",
@@ -107,8 +141,6 @@ if (-not (Test-HttpOk "$OpenVaultUrl/api/healthz")) {
   )
   if ($MockHealth) { $ovArgs += "--mock-health" }
   Start-Process -FilePath "uv" -ArgumentList $ovArgs -WorkingDirectory $openMw -WindowStyle Minimized
-} else {
-  Write-Host "==> OpenVault already healthy" -ForegroundColor Green
 }
 [void](Wait-HttpOk "$OpenVaultUrl/api/healthz" 90 "OpenVault")
 

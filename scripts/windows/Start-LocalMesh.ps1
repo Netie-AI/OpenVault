@@ -15,7 +15,7 @@
 #>
 param(
   [string]$Root = "D:\OpenVault",
-  [string]$CortexUrl = "http://127.0.0.1:8000",
+  [string]$CortexUrl = "http://127.0.0.1:8010",
   [string]$OpenIdeUrl = "http://127.0.0.1:8765",
   [switch]$WithRustAuth,
   [switch]$WithApp,
@@ -56,7 +56,7 @@ $ovArgs = @(
 if ($MockHealth) { $ovArgs += "--mock-health" }
 if ($SkipBrowser) { $ovArgs += "--no-open-browser" }
 
-Write-Host "==> Starting OpenVault Python console :5000" -ForegroundColor Cyan
+Write-Host "==> Starting OpenVault Python console :5000 (home=$($env:OPENVAULT_HOME))" -ForegroundColor Cyan
 Start-Process -FilePath "uv" -ArgumentList $ovArgs -WorkingDirectory (Join-Path $Root "OpenMW")
 
 if ($WithRustAuth) {

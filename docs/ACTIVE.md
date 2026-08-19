@@ -13,10 +13,11 @@ What exists in this repo and where. Update when structure changes, not when stat
 | `OpenMW/` | Custody API on `:5000` (redirects `/` to the app) |
 | `OpenMW/rust/openvault-console/` | Optional Rust auth on `:5055`, skipped when `cargo` missing |
 | `apps/web/` | OpenVault UI on `:3010` (Next 16, wired exclusively to `:5000` — see `docs/decisions/DR-0003-openship-app-plan.md`) |
-| `apps/cli/` | `openvault_cli.py` — `up` / `demo` / `app` / `doctor` |
+| `apps/cli/` | `openvault_cli.py` — `up` / `demo` / `demo-path` / `app` / `doctor` |
+| `OpenMW/scripts/one_seat_demo.py` | Auto-safe one-seat evidence path (vault → FreeRoute refuse → ship allow → deny); see [`ONE_SEAT_DEMO.md`](ONE_SEAT_DEMO.md) |
 | `apps/shell/` | Electron desktop shell |
 | `docs/reference/` | Protocol/technical reference docs still live and current |
-| `docs/decisions/` | Decision records, `DR-####-kebab-title.md`, MADR format (see `docs/decisions/0001-record-decisions-in-this-repo.md`) |
+| `docs/decisions/` | Decision records, `DR-####-kebab-title.md`, MADR format (see `docs/decisions/DR-0001-record-decisions.md`) |
 | `scripts/windows/` | `Start-OpenVaultDemo.ps1`, `Start-NetieStack.ps1`, `Start-LocalMesh.ps1` |
 | `bin/` | Quarantine — dead/orphaned files pending the founder's final review and removal |
 
@@ -26,7 +27,7 @@ What exists in this repo and where. Update when structure changes, not when stat
 |------|---------|------|
 | Health | `health/` | Laptop device inventory |
 | Observe | `observe/` | PathTrace hops + severity (`hot` = red) |
-| Vault | `vault/` | Encrypted keys, accounts, proxy, FreeRoute gateway |
+| Vault | `vault/` | Encrypted keys, accounts, proxy, FreeRoute gateway. Metering trio: `api_keys.py` (issued `ov_` credentials) · `auth.py` (who is calling — never a header) · `usage_store.py` (one durable row per request) · `budget.py` (output ceiling + context refusal) |
 | Ship | `ship/` (+ `ship/hosts/`) | Deploy / FreeBuild / email gates |
 | Mesh | `mesh/` | Local mesh + Cortex client + `/api/slots` |
 | Control | `control/` | GPU/CPU/fan remediation (dry_run default) |
@@ -50,4 +51,5 @@ uv run openmw console --cortex-url http://127.0.0.1:8000 --openide-url http://12
 ```
 
 Local mesh, Netie one-click stack, and API tables: see [`STATUS.md`](../STATUS.md).
+Buyer one-seat demo (mocks only): [`ONE_SEAT_DEMO.md`](ONE_SEAT_DEMO.md).
 Setup detail: [`setup.md`](setup.md). Architecture diagram: [`architecture.puml`](architecture.puml).

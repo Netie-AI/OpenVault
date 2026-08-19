@@ -34,6 +34,8 @@ openvault.local.json
 # Local reports
 reports/
 openmw_demo_ui/
+.demo_evidence/
+**/.demo_evidence/
 
 # IDE files
 .vscode/

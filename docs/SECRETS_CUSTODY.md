@@ -63,18 +63,40 @@ control.
 
 ### Gaps found and NOT fixed (deliberate, tracked)
 
-- **`KeyVault.list_keys` decrypts every secret to compute a mask.** `GET
-  /api/keys` therefore holds every plaintext credential in process memory on
-  every list — and Netie polls this on startup. Fixing it means storing the mask
-  as a column and migrating existing rows. Worth doing; larger than this change.
 - **`crypto.mask_secret` shows the first 4 characters** (`sk-a…********`), never
   the last 4. Netie's Setup UI shows `first4…last4`, which it derives from the
   plaintext it already holds in `user.env`, not from this API. Nothing to change
   in OpenVault; noted so the two masks are not confused for the same thing.
-- **Everything in `BACKEND_HONESTY_AUDIT.md` §1 items 2, 3, 5, 6, 7** — no KDF
-  on the master key, no unseal/re-lock state, GitHub PAT outside the vault,
-  precheck egress, precheck treating 404 as `ok`. Item 4 ("no access audit for
-  secrets") is now closed for keys, passwords, and cards.
+- **precheck egress / 404-as-ok** remain open in `BACKEND_HONESTY_AUDIT.md` §1.
+  Item 2/3 (no KDF / no unseal) are closed by the sealed-state rows below when a
+  passphrase is configured. Item 5 (GitHub PAT plaintext `pat.json`) is closed:
+  the ship PAT is a sealed KeyVault row (`github-ship-pat`); legacy `pat.json` is
+  migrated once then deleted. DPAPI alone still auto-unseals on process start —
+  that is intentional until an operator sets a passphrase.
+
+---
+
+## 1b. Sealed-state gates (passphrase unseal)
+
+When `master.key` is wrapped with `passphrase-scrypt`, the process starts
+**sealed**: the Fernet master key is not in memory. DPAPI/`plain` wraps without
+a passphrase keep the previous auto-unseal behaviour (copy-protection only).
+
+| Route | Gate when passphrase configured |
+|-------|----------------------------------|
+| `GET /api/vault/status` | open — reports `sealed`, `passphrase_configured`, `wrap_method` |
+| `POST /api/vault/passphrase` | loopback + unsealed (rewraps live master key) |
+| `POST /api/vault/unseal` | loopback — loads key; wrong passphrase → 401 |
+| `POST /api/vault/lock` | loopback — drops in-process key material |
+| `GET /api/keys/{id}/secret` | loopback + intent + **unsealed** + audit |
+| `GET /api/secrets/{id}/reveal` | loopback + intent + **unsealed** + audit |
+| `POST/PATCH/DELETE` keys + secrets + keyvault upsert + account incident | loopback + **unsealed** + audit |
+| `POST /api/vault/ingest-env` (non-dry-run) | loopback + **unsealed** + audit |
+| `POST/DELETE /api/ship/github/pat` | loopback + **unsealed** (PAT in KeyVault row `github-ship-pat`; no `pat.json` token) |
+| `GET /api/keys`, `GET /api/secrets` | open, masks only — no decrypt when masks are stored |
+
+While sealed, reveal/mutate return **403** with an honest `vault is sealed…`
+detail — they do not attempt decrypt and do not return plaintext.
 
 ---
 
@@ -149,7 +171,14 @@ One file, `~/.openvault/secret_audit.jsonl`, one JSON object per line. Events:
 `secret_reveal`, `key_create`, `key_update`, `key_delete`, `key_revoke`,
 `key_rotate`, `account_incident_kill`, `keyvault_upsert`, `env_ingest`,
 `password_create`, `card_create`, `secret_update`, `secret_delete`,
-`secret_revoke`, `secret_rotate`.
+`secret_revoke`, `secret_rotate`, `gate_denied`, `gate_bypass_attempt`,
+`ship_inject`, `ship_inject_refused`.
+
+Gate deny events (`gate_denied` from `/api/gate/check` or leave-machine execute
+refusals; `gate_bypass_attempt` when the client sends `bypass` / `bypass_gate` /
+`force` / `skip_rules` / `ignore_gate`) record action, reason class, and client
+host only — never secret material. `ship_inject` records env names + source ids
+only (OpenVault#28); values never enter the audit file.
 
 Writes are best-effort by design: a failed audit write must not deny the user an
 operation they are entitled to, but it logs at `error`. The audit file is not a
@@ -158,7 +187,31 @@ second place a secret is allowed to exist — card events record `brand` and
 
 ---
 
-## 3. Netie Space retrieve contract
+## 3. Offline key piles (import staging)
+
+OpenVault is SoT. A desktop folder of pasted keys is **not** a second vault —
+it is a temporary import source, same class as process env (`vault/env_ingest.py`).
+
+| Location | Role |
+|----------|------|
+| `OPENVAULT_HOME/keys.db` | Encrypted custody (live SoT) |
+| `OPENVAULT_HOME/import/*.keys.env` | Operator staging only; path is under `.openvault/` so git ignores it |
+| AirGPT `env.local` / Netie `user.env` | Offline **cache** synced *from* OpenVault — never the paste target for a new pile |
+| Provider doc scrapes (`Free API.txt`, etc.) | Catalog notes only — never live secrets |
+
+Paste format for the next pile: env-style lines (`PROVIDER_API_KEY=...`). A
+human-readable template lives with the operator notes at
+`D:\Netie\Free APIs for OpenVault Free\KEYS_PILE_FORMAT.md` (outside this repo).
+After ingest + precheck `ok`, delete the staging `.env`. Do not leave secrets in
+curl examples or markdown tables.
+
+Bulk UI ingest (`POST /api/keys/ingest`) stays gated on AirGPT ClipDrop —
+[`CLIPDROP_CONTRACT.md`](CLIPDROP_CONTRACT.md). Until that ships, loopback
+`POST /api/keyvault/upsert` / `POST /api/keys` is the supported path.
+
+---
+
+## 4. Netie Space retrieve contract
 
 Netie is a thin client. `OpenVaultKeySync.SyncApiKeysAsync` does exactly three
 things, all pinned by `tests/test_netie_thin_client_sync.py`:
@@ -182,7 +235,7 @@ that is never written to disk. Not `user.env`.
 
 ---
 
-## 4. Threat notes
+## 5. Threat notes
 
 ### 4.1 The `127.0.0.1:5000` trust boundary
 
@@ -242,7 +295,7 @@ secret — PRODUCT_ROLES ownership lock 3.
 
 ---
 
-## 5. Tests
+## 6. Tests
 
 | File | Pins |
 |------|------|

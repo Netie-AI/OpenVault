@@ -66,7 +66,7 @@ No per-agent truth: both agents work from this file, `STATUS.md`, `CHANGELOG.md`
 `PARKING_LOT.md` — never a Claude-only or Cursor-only doc. (Formerly enforced by a
 `AGENT_LANES.md` hot-files lock table; retired 2026-08-02 — it had gone stale, with two
 lanes shown "active" a week and a half after anyone released them. See
-[`docs/decisions/DR-0008-agent-split-2026-07-26.md`](docs/decisions/DR-0008-agent-split-2026-07-26.md).)
+[`docs/decisions/DR-0008-agent-split.md`](docs/decisions/DR-0008-agent-split.md).)
 
 ### Environment (whole repo)
 
