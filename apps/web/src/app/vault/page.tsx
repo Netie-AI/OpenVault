@@ -50,6 +50,7 @@ import {
   type RegisterIntent,
 } from "@/lib/vault/registerIntent";
 import { KeyHealthSpark } from "@/components/vault/KeyHealthSpark";
+import { SecretsPanel } from "@/components/vault/SecretsPanel";
 import { AddKeyDialog } from "./AddKeyDialog";
 
 const ROLE_BLURB: Record<KeyRole, string> = {
@@ -619,6 +620,8 @@ export default function VaultPage() {
             );
           })}
       </div>
+
+      <SecretsPanel />
 
       <AddKeyDialog
         isOpen={addOpen}

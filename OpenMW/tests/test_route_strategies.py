@@ -63,7 +63,7 @@ def test_route_api_strategy_roundtrip() -> None:
     reset_route_state()
     app = FastAPI()
     app.include_router(route_router)
-    client = TestClient(app)
+    client = TestClient(app, client=("127.0.0.1", 5555))
 
     put = client.put("/api/route/strategy", json={"strategy": "cost-optimized"})
     assert put.status_code == 200
@@ -78,7 +78,7 @@ def test_route_api_breakers_empty() -> None:
     reset_route_state()
     app = FastAPI()
     app.include_router(route_router)
-    client = TestClient(app)
+    client = TestClient(app, client=("127.0.0.1", 5555))
     resp = client.get("/api/route/breakers")
     assert resp.status_code == 200
     assert "breakers" in resp.json()

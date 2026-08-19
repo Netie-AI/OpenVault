@@ -63,6 +63,15 @@ class HostAdapter(Protocol):
     name: str
     #: Which vault provider holds this adapter's credential.
     credential_provider: str
+    #: True when ``deploy`` uploads a directory this machine has to build first.
+    #:
+    #: Every caller used to decide this for itself and two of the three got it
+    #: wrong: ``/api/deploy/one-press`` hardcoded ``run_build=False``, so a
+    #: Cloudflare Pages or Netlify deploy could never finish through it -- the
+    #: host step refused with "nothing was built" and the user saw a dead end
+    #: with no way to fix it from the UI. The adapter is the only thing that
+    #: actually knows, so it says.
+    needs_local_build: bool
 
     def preflight(self) -> Preflight:
         """Check credentials and tooling without mutating anything."""

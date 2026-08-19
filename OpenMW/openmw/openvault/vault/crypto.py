@@ -1,9 +1,11 @@
 """Local sealing for OpenVault secrets (Fernet + machine master key).
 
 The master key is stored wrapped — see ``vault/keywrap.py``. On Windows that
-means DPAPI user scope, so copying ``master.key`` + ``keys.db`` to another
-machine or another account no longer recovers the secrets. Legacy plaintext
-keys are migrated on first open.
+means DPAPI user scope by default, so copying ``master.key`` + ``keys.db`` to
+another machine or another account no longer recovers the secrets. When an
+operator sets a passphrase, the on-disk wrap becomes ``passphrase-scrypt`` and
+the process starts **sealed** until an explicit unseal. Legacy plaintext keys
+are migrated on first open.
 """
 
 from __future__ import annotations
@@ -24,7 +26,17 @@ class VaultCryptoError(RuntimeError):
     """Raised when ciphertext cannot be decrypted."""
 
 
-def _write_key_file(key_path: Path, key: bytes) -> str:
+class VaultSealedError(VaultCryptoError):
+    """Raised when the vault is locked / never unsealed after restart."""
+
+
+def _write_key_file(
+    key_path: Path,
+    key: bytes,
+    *,
+    method: str | None = None,
+    passphrase: str | None = None,
+) -> str:
     """Write the wrapped key and verify it reads back before trusting it.
 
     The read-back is not paranoia: if wrapping succeeds but unwrapping fails
@@ -32,8 +44,8 @@ def _write_key_file(key_path: Path, key: bytes) -> str:
     file with an unreadable one and made every stored secret unrecoverable.
     Verifying before the caller proceeds keeps that failure recoverable.
     """
-    blob = keywrap.wrap(key)
-    round_tripped, method = keywrap.unwrap(blob)
+    blob = keywrap.wrap(key, method=method, passphrase=passphrase)
+    round_tripped, used = keywrap.unwrap(blob, passphrase=passphrase)
     if round_tripped != key:
         raise VaultCryptoError(
             "master key failed to round-trip through the platform key wrapper; "
@@ -43,7 +55,7 @@ def _write_key_file(key_path: Path, key: bytes) -> str:
     key_path.write_bytes(blob)
     with contextlib.suppress(OSError):
         key_path.chmod(0o600)
-    return method
+    return used
 
 
 def _migrate_plaintext_key(key_path: Path, key: bytes) -> None:
@@ -69,11 +81,22 @@ def _migrate_plaintext_key(key_path: Path, key: bytes) -> None:
 
 
 def _load_or_create_master_key(path: Path | None = None) -> bytes:
+    """Load (or create) a master key that can be unwrapped without a passphrase.
+
+    Passphrase-wrapped keys must not go through this path — use
+    :meth:`Seal.unseal` instead. Calling here on a passphrase file raises
+    :class:`VaultSealedError`.
+    """
     key_path = path if path is not None else master_key_path()
 
     if key_path.is_file():
         blob = key_path.read_bytes()
         if keywrap.is_wrapped(blob):
+            method = keywrap.peek_method(blob)
+            if method == keywrap.METHOD_PASSPHRASE:
+                raise VaultSealedError(
+                    "vault master key is passphrase-wrapped; call unseal with the passphrase"
+                )
             try:
                 key, _method = keywrap.unwrap(blob)
             except keywrap.KeyWrapError as exc:
@@ -98,20 +121,134 @@ def _load_or_create_master_key(path: Path | None = None) -> bytes:
 
 
 class Seal:
-    """Encrypt/decrypt vault payloads with a local Fernet master key."""
+    """Encrypt/decrypt vault payloads with a local Fernet master key.
+
+    When the on-disk wrap is ``passphrase-scrypt``, construction leaves the
+    seal **sealed** (no key in memory) until :meth:`unseal`. DPAPI/plain wraps
+    auto-unseal on load so existing vaults keep working.
+    """
 
     def __init__(self, master_key: bytes | None = None, *, key_path: Path | None = None) -> None:
-        raw = master_key if master_key is not None else _load_or_create_master_key(key_path)
-        self._fernet = Fernet(raw)
+        self._key_path = key_path if key_path is not None else master_key_path()
+        self._master_key: bytes | None = None
+        self._fernet: Fernet | None = None
+        self._wrap_method: str | None = None
+
+        if master_key is not None:
+            self._activate(master_key, wrap_method=None)
+            return
+
+        if self._key_path.is_file():
+            blob = self._key_path.read_bytes()
+            if keywrap.is_wrapped(blob):
+                method = keywrap.peek_method(blob)
+                self._wrap_method = method
+                if method == keywrap.METHOD_PASSPHRASE:
+                    # Stay sealed until unseal(passphrase).
+                    return
+            # DPAPI / plain / legacy: load into memory now.
+            raw = _load_or_create_master_key(self._key_path)
+            method = (
+                keywrap.peek_method(self._key_path.read_bytes())
+                if self._key_path.is_file()
+                else keywrap.preferred_method()
+            )
+            self._activate(raw, wrap_method=method)
+            return
+
+        raw = _load_or_create_master_key(self._key_path)
+        method = keywrap.peek_method(self._key_path.read_bytes())
+        self._activate(raw, wrap_method=method)
+
+    def _activate(self, key: bytes, *, wrap_method: str | None) -> None:
+        self._master_key = key
+        self._fernet = Fernet(key)
+        if wrap_method is not None:
+            self._wrap_method = wrap_method
+
+    @property
+    def is_sealed(self) -> bool:
+        return self._fernet is None
+
+    @property
+    def passphrase_configured(self) -> bool:
+        return self._wrap_method == keywrap.METHOD_PASSPHRASE
+
+    @property
+    def wrap_method(self) -> str | None:
+        return self._wrap_method
+
+    def status(self) -> dict[str, object]:
+        return {
+            "sealed": self.is_sealed,
+            "passphrase_configured": self.passphrase_configured,
+            "wrap_method": self._wrap_method,
+        }
+
+    def _require_open(self) -> Fernet:
+        if self._fernet is None:
+            raise VaultSealedError(
+                "vault is sealed; POST /api/vault/unseal with the passphrase first"
+            )
+        return self._fernet
 
     def encrypt(self, plaintext: str) -> bytes:
-        return self._fernet.encrypt(plaintext.encode("utf-8"))
+        return self._require_open().encrypt(plaintext.encode("utf-8"))
 
     def decrypt(self, token: bytes) -> str:
         try:
-            return self._fernet.decrypt(token).decode("utf-8")
+            return self._require_open().decrypt(token).decode("utf-8")
         except InvalidToken as exc:
             raise VaultCryptoError("unable to decrypt vault secret") from exc
+
+    def unseal(self, passphrase: str = "") -> None:
+        """Load the master key into memory.
+
+        Passphrase-wrapped vaults require the passphrase. DPAPI/plain vaults
+        ignore it and re-load from disk (used after :meth:`lock`).
+        """
+        if self._fernet is not None:
+            return
+
+        if not self._key_path.is_file():
+            raise VaultCryptoError("no master key file to unseal")
+
+        blob = self._key_path.read_bytes()
+        method = keywrap.peek_method(blob) if keywrap.is_wrapped(blob) else keywrap.METHOD_PLAIN
+        try:
+            if method == keywrap.METHOD_PASSPHRASE:
+                key, used = keywrap.unwrap(blob, passphrase=passphrase)
+            else:
+                key, used = keywrap.unwrap(blob)
+        except keywrap.KeyWrapError as exc:
+            raise VaultCryptoError(str(exc)) from exc
+        self._activate(key, wrap_method=used)
+        log.info("vault_unsealed", wrap_method=used)
+
+    def lock(self) -> None:
+        """Drop in-process key material. Passphrase vaults stay sealed until unseal."""
+        if self._master_key is not None:
+            # Best-effort zeroize; Python strings/bytes are immutable so this is
+            # advisory only, but it stops casual retention via the attribute.
+            self._master_key = b"\x00" * len(self._master_key)
+        self._master_key = None
+        self._fernet = None
+        log.info("vault_locked", passphrase_configured=self.passphrase_configured)
+
+    def set_passphrase(self, passphrase: str) -> None:
+        """Rewrap the live master key under a passphrase. Vault must be unsealed."""
+        if self.is_sealed or self._master_key is None:
+            raise VaultSealedError("cannot set passphrase while the vault is sealed")
+        if not passphrase:
+            raise VaultCryptoError("passphrase must be non-empty")
+        method = _write_key_file(
+            self._key_path,
+            self._master_key,
+            method=keywrap.METHOD_PASSPHRASE,
+            passphrase=passphrase,
+        )
+        self._wrap_method = method
+        log.info("vault_passphrase_configured", wrap_method=method)
 
 
 def mask_secret(secret: str, *, visible: int = 4) -> str:

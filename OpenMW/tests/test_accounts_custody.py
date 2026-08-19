@@ -227,6 +227,18 @@ def test_deploy_smoke_and_execute_api(
 
     monkeypatch.setattr("httpx.Client", _Client)
 
+    # Leave-machine execute calls check_gate — seed a cloud key so the gate opens.
+    seeded = client.post(
+        "/api/keys",
+        json={
+            "label": "groq",
+            "provider": "groq",
+            "secret": "gsk-test-accounts-execute",
+            "role": "free",
+        },
+    )
+    assert seeded.status_code == 200, seeded.text
+
     plan = client.post(
         "/api/deploy/from-cortex",
         json={

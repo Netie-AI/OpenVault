@@ -193,3 +193,46 @@ def test_proxy_429_then_backup_succeeds(vault: KeyVault) -> None:
     assert circ.failures == 0
     assert circ.park_until is not None
     assert mgr._circuit(backup.id).state == "closed"
+
+
+def test_proxy_auto_does_not_skip_openai_for_empty_catalog(vault: KeyVault) -> None:
+    """model=auto used to append 'no catalogued model' for openai and exhaust the pool."""
+    import asyncio
+
+    key = vault.create(
+        label="openai-byok",
+        provider="openai",
+        secret="sk-test-openai-auto",
+        role="primary",
+        priority=1,
+        base_url="https://api.openai.com/v1",
+    )
+    vault.set_precheck(key.id, status="ok", latency_ms=10.0, error=None)
+    mgr = FallbackManager(vault)
+
+    resp_ok = MagicMock()
+    resp_ok.status_code = 200
+    resp_ok.text = '{"id":"chatcmpl-auto"}'
+    resp_ok.headers = {}
+    resp_ok.json = MagicMock(return_value={"id": "chatcmpl-auto", "choices": []})
+
+    mock_client = MagicMock()
+    mock_client.post = AsyncMock(return_value=resp_ok)
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=None)
+
+    with patch("openmw.openvault.vault.proxy.httpx.AsyncClient", return_value=mock_client):
+        status, payload = asyncio.run(
+            chat_completions(
+                vault,
+                mgr,
+                {"model": "auto", "messages": [{"role": "user", "content": "hi"}]},
+            )
+        )
+
+    assert status == 200
+    assert payload.get("id") == "chatcmpl-auto"
+    posted = mock_client.post.await_args
+    assert posted is not None
+    assert posted.kwargs["json"]["model"] == "gpt-5.6-sol"
+    assert "no catalogued model" not in str(payload)

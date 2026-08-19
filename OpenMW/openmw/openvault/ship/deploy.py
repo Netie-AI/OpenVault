@@ -477,7 +477,13 @@ def run_deploy_smoke(plan: DeployPlan, *, url: str | None = None) -> DeployPlan:
     return plan
 
 
-def execute_deploy(plan: DeployPlan, *, simulate: bool | None = None) -> DeployPlan:
+def execute_deploy(
+    plan: DeployPlan,
+    *,
+    simulate: bool | None = None,
+    env_vars: dict[str, str] | None = None,
+    secrets_injected: list[str] | None = None,
+) -> DeployPlan:
     """Run the FreeBuild executor for this deploy and mark roll gate."""
     if not plan.ship_id:
         ship_plan = build_openship_plan(
@@ -497,7 +503,12 @@ def execute_deploy(plan: DeployPlan, *, simulate: bool | None = None) -> DeployP
         )
         plan.ship_id = ship_plan.ship_id
 
-    executed = execute_openship_plan(ship_plan, simulate=simulate)
+    executed = execute_openship_plan(
+        ship_plan,
+        simulate=simulate,
+        env_vars=env_vars,
+        secrets_injected=secrets_injected,
+    )
     plan.openship = {
         **plan.openship,
         **executed.adapter,

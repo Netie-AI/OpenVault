@@ -82,7 +82,7 @@ def test_contract_routes_are_served(app: FastAPI) -> None:
 
 def test_connect_pack_pins_openide_to_airgpt(app: FastAPI) -> None:
     """The connect pack is the shared wiring doc — it must not hand out the stub."""
-    with TestClient(app) as client:
+    with TestClient(app, client=("127.0.0.1", 5555)) as client:
         pack = client.get("/api/local/connect-pack").json()
     assert pack["schema"] == "openvault.local.connect_pack/v1"
     assert pack["openide"]["base_url"] == "http://127.0.0.1:8765"
@@ -92,9 +92,11 @@ def test_connect_pack_pins_openide_to_airgpt(app: FastAPI) -> None:
     assert pack["cortex"]["base_url"] == "http://127.0.0.1:8010"
 
 
-@pytest.mark.parametrize("flag", ["bypass", "bypass_gate", "force", "skip_rules"])
+@pytest.mark.parametrize(
+    "flag", ["bypass", "bypass_gate", "force", "skip_rules", "ignore_gate"]
+)
 def test_gate_never_silently_allows_bypass(app: FastAPI, flag: str) -> None:
-    with TestClient(app) as client:
+    with TestClient(app, client=("127.0.0.1", 5555)) as client:
         res = client.post("/api/gate/check", json={"action": "deploy", flag: True})
     assert res.status_code == 200
     body = res.json()
@@ -104,14 +106,14 @@ def test_gate_never_silently_allows_bypass(app: FastAPI, flag: str) -> None:
 
 @pytest.mark.parametrize("flag", ["bypass", "force", "skip_rules"])
 def test_cloud_firewall_never_honors_bypass(app: FastAPI, flag: str) -> None:
-    with TestClient(app) as client:
+    with TestClient(app, client=("127.0.0.1", 5555)) as client:
         res = client.post("/api/cloud/firewall/check", json={"action": "share_lan", flag: True})
     assert res.status_code == 200
     assert res.json()["allowed"] is False
 
 
 def test_openide_ready_preflights_from_openvault(app: FastAPI) -> None:
-    with TestClient(app) as client:
+    with TestClient(app, client=("127.0.0.1", 5555)) as client:
         res = client.get("/api/freeide/ready")
     assert res.status_code == 200
     body = res.json()
@@ -125,7 +127,7 @@ def test_openide_ready_preflights_from_openvault(app: FastAPI) -> None:
 
 
 def test_keyvault_snapshot_declares_openvault_as_source(app: FastAPI) -> None:
-    with TestClient(app) as client:
+    with TestClient(app, client=("127.0.0.1", 5555)) as client:
         body = client.get("/api/keyvault/snapshot").json()
     assert body["source"] == "openvault"
     assert body["save_endpoint"] == "/api/keyvault/upsert"
@@ -135,7 +137,7 @@ def test_keyvault_snapshot_declares_openvault_as_source(app: FastAPI) -> None:
 
 def test_openfree_status_aliases_for_cortex(app: FastAPI) -> None:
     """Cortex workflow_openvault.check_openfree_budget reads remaining_tokens."""
-    client = TestClient(app)
+    client = TestClient(app, client=("127.0.0.1", 5555))
     resp = client.get("/api/freeroute/ratelimit", params={"identity": "wf:test", "tier": "free"})
     assert resp.status_code == 200
     data = resp.json()

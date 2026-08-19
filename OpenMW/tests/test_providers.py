@@ -65,7 +65,7 @@ def test_providers_api(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         enable_precheck_loop=False,
         cortex_url="http://127.0.0.1:9",
     )
-    client = TestClient(app)
+    client = TestClient(app, client=("127.0.0.1", 5555))
 
     cat = client.get("/api/providers/catalog")
     assert cat.status_code == 200

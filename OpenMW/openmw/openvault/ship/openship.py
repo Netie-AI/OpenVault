@@ -22,6 +22,7 @@ import structlog
 from openmw.openvault.paths import ensure_home
 from openmw.openvault.ship.detect import DetectedStack, detect_project
 from openmw.openvault.ship.email_gates import check_email_auth
+from openmw.openvault.ship.inject import scrub_mapping
 from openmw.openvault.ship.openship_client import OpenShipClient, adapter_status
 
 log = structlog.get_logger()
@@ -304,10 +305,16 @@ def execute_openship_plan(
     cloud_tier: str = "low",
     server_id: str | None = None,
     github_url: str | None = None,
+    env_vars: dict[str, str] | None = None,
+    secrets_injected: list[str] | None = None,
 ) -> OpenShipPlan:
     """Execute via FreeBuild HTTP API, CLI, or local simulator.
 
     Prefer ``OPENSHIP_URL`` + ``OPENSHIP_TOKEN`` → ``POST /deployments/build/access``.
+
+    ``env_vars`` are vault-resolved secrets for the host only. They must never
+    appear in step detail, adapter JSON, logs, or the returned plan dict.
+    ``secrets_injected`` is the name-only summary for UI/audit.
     """
     adapter = adapter_presence()
     mode = str(adapter.get("effective") or adapter.get("mode") or "simulate")
@@ -316,13 +323,15 @@ def execute_openship_plan(
         if simulate is not None
         else (mode == "simulate" or not (adapter.get("api_ready") or adapter.get("cli_found")))
     )
+    inject_names = list(secrets_injected or (list(env_vars.keys()) if env_vars else []))
+    inject_values = list(env_vars.values()) if env_vars else []
 
     if not force_sim and adapter.get("api_ready"):
         client = OpenShipClient()
         body: dict[str, Any] = {
             "branch": branch,
             "deployTarget": deploy_target if deploy_target in ("local", "server", "cloud") else "cloud",
-            "envVars": {},
+            "envVars": dict(env_vars) if env_vars else {},
         }
         if project_id:
             body["projectId"] = project_id
@@ -339,7 +348,7 @@ def execute_openship_plan(
             for step in plan.steps:
                 if step.id == "detect":
                     step.status = "pass" if prep.get("ok", True) else "fail"
-                    step.detail = json.dumps(prep)[:2000]
+                    step.detail = json.dumps(scrub_mapping(prep, inject_values))[:2000]
         result = client.build_access(body) if project_id else {
             "ok": False,
             "error": (
@@ -349,6 +358,7 @@ def execute_openship_plan(
             "prepare_hint": github_url or plan.project_path,
         }
         client.close()
+        safe_result = scrub_mapping(result, inject_values)
         dep_id = result.get("deployment_id") or result.get("deploymentId")
         status = int(result.get("http_status", 500) or 500)
         ok = bool(dep_id) or (
@@ -358,12 +368,25 @@ def execute_openship_plan(
             if step.status == "fail":
                 continue
             step.status = "pass" if ok else "fail"
-            step.detail = (json.dumps(result) if isinstance(result, dict) else str(result))[:2000]
+            step.detail = (
+                json.dumps(safe_result) if isinstance(safe_result, dict) else str(safe_result)
+            )[:2000]
         plan.executed = True
         plan.ready = ok
-        plan.adapter = {**adapter, "last_result": result, "deployment_id": dep_id}
+        plan.adapter = {
+            **adapter,
+            "last_result": safe_result if isinstance(safe_result, dict) else {"ok": ok},
+            "deployment_id": dep_id,
+            "secrets_injected": inject_names,
+        }
         save_ship_plan(plan)
-        log.info("openship_execute_api", ship_id=plan.ship_id, ready=plan.ready, deployment_id=dep_id)
+        log.info(
+            "openship_execute_api",
+            ship_id=plan.ship_id,
+            ready=plan.ready,
+            deployment_id=dep_id,
+            secrets_injected=len(inject_names),
+        )
         return plan
 
     for step in plan.steps:
@@ -376,7 +399,7 @@ def execute_openship_plan(
         if adapter.get("cli_found") and step.command:
             ok, detail = _run_checked(step.command.split(), timeout=180.0)
             step.status = "pass" if ok else "fail"
-            step.detail = detail[:2000]
+            step.detail = str(scrub_mapping(detail, inject_values))[:2000]
         elif adapter.get("api_url"):
             step.status = "pending"
             step.detail = "Set OPENSHIP_TOKEN — API URL alone cannot authenticate"
@@ -386,12 +409,22 @@ def execute_openship_plan(
 
     plan.executed = True
     plan.ready = all(s.status in ("pass", "simulated", "skipped") for s in plan.steps)
-    plan.adapter = adapter
+    simulated = force_sim or mode == "simulate" or any(
+        s.status == "simulated" for s in plan.steps
+    )
+    # Simulate is a valid local path — label it; never invent a live host URL here.
+    plan.adapter = {
+        **adapter,
+        "non_production": simulated,
+        "public_url": "",
+        "secrets_injected": inject_names,
+    }
     save_ship_plan(plan)
     log.info(
         "openship_execute",
         ship_id=plan.ship_id,
         ready=plan.ready,
-        simulated=force_sim,
+        simulated=simulated,
+        secrets_injected=len(inject_names),
     )
     return plan

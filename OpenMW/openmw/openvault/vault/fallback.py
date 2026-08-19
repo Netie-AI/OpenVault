@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import time
 from dataclasses import dataclass, field
@@ -39,6 +40,24 @@ class FallbackConfig:
 class FallbackStatus:
     hops: list[dict[str, object]]
     config: dict[str, object]
+
+
+def rendezvous_score(affinity_key: str, key_id: str) -> int:
+    """Highest-random-weight score for one (prompt prefix, key) pair.
+
+    Rendezvous hashing rather than modulo: adding or removing a key remaps only
+    that key's share of traffic instead of reshuffling everything, so growing
+    the pool does not cold-start every conversation at once.
+    """
+    digest = hashlib.sha256(f"{affinity_key}\x00{key_id}".encode()).hexdigest()
+    return int(digest[:16], 16)
+
+
+def _rank_band(records: list[KeyRecord], affinity_key: str) -> list[KeyRecord]:
+    """Sort one priority band, using affinity only to break exact-priority ties."""
+    if not affinity_key:
+        return sorted(records, key=lambda r: r.priority)
+    return sorted(records, key=lambda r: (r.priority, -rendezvous_score(affinity_key, r.id), r.id))
 
 
 class FallbackManager:
@@ -104,7 +123,17 @@ class FallbackManager:
             return False
         return True
 
-    def ordered_candidates(self) -> list[KeyRecord]:
+    def ordered_candidates(self, *, affinity_key: str = "") -> list[KeyRecord]:
+        """Healthy hops, best first.
+
+        ``affinity_key`` makes the order deterministic for a repeated prompt
+        prefix. Without it, a pool of several keys scatters the same
+        conversation across accounts and every upstream prompt cache stays cold
+        — the caller pays full input price on every turn. The re-order happens
+        strictly *within* a priority band, so health, park windows, role order
+        and the operator's own priorities all still win; affinity only breaks
+        ties that were previously broken by insertion order.
+        """
         now = time.time()
         by_role: dict[str, list[KeyRecord]] = {r: [] for r in self._config.role_order}
         extras: list[KeyRecord] = []
@@ -115,12 +144,9 @@ class FallbackManager:
                 extras.append(record)
         ordered: list[KeyRecord] = []
         for role in self._config.role_order:
-            for rec in sorted(by_role.get(role, []), key=lambda r: r.priority):
-                if self._is_available(rec, now):
-                    ordered.append(rec)
-        for rec in extras:
-            if self._is_available(rec, now):
-                ordered.append(rec)
+            available = [r for r in by_role.get(role, []) if self._is_available(r, now)]
+            ordered.extend(_rank_band(available, affinity_key))
+        ordered.extend(_rank_band([r for r in extras if self._is_available(r, now)], affinity_key))
         return ordered
 
     def record_success(self, key_id: str) -> None:

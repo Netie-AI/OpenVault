@@ -67,6 +67,8 @@ export default function ShipPage() {
   const router = useRouter();
   const [path, setPath] = useState("");
   const [hostname, setHostname] = useState("");
+  // Only the vps_ssh target uses this — the box we manage on the user's behalf.
+  const [vpsHost, setVpsHost] = useState("");
   const [stack, setStack] = useState<Stack | null>(null);
   const [recommend, setRecommend] = useState<Recommend | null>(null);
   const [target, setTarget] = useState("cloudflare_pages");
@@ -269,7 +271,10 @@ export default function ShipPage() {
     setBusy(true);
     setPhase("Preflight…");
     try {
-      const pre = await apiPost<Preflight>("/api/ship/preflight", { target: next });
+      const pre = await apiPost<Preflight>("/api/ship/preflight", {
+        target: next,
+        vps_host: vpsHost.trim(),
+      });
       setPreflight(pre);
     } catch (e) {
       setPreflight(null);
@@ -299,7 +304,12 @@ export default function ShipPage() {
           target,
           project_path: path.trim(),
           hostname: hostname.trim(),
-          run_build: target === "cloudflare_pages",
+          vps_host: vpsHost.trim(),
+          // The engine asks the adapter whether this machine has to build.
+          // This used to be `target === "cloudflare_pages"`, which left Netlify
+          // -- which also uploads a built directory -- permanently unable to
+          // publish from here.
+          run_build: false,
         },
         { timeoutMs: LONG_TIMEOUT_MS },
       );
@@ -456,6 +466,27 @@ export default function ShipPage() {
             />
           </div>
         </div>
+
+        {target === "vps_ssh" ? (
+          <div className="mt-4 space-y-2">
+            <Label htmlFor="ship-vps">Your server (IP or hostname)</Label>
+            <Input
+              id="ship-vps"
+              value={vpsHost}
+              onChange={(e) => setVpsHost(e.target.value)}
+              onBlur={() => {
+                if (vpsHost.trim()) void changeTarget("vps_ssh");
+              }}
+              placeholder="203.0.113.10"
+              disabled={busy}
+            />
+            <p className="text-xs text-muted-foreground">
+              SSH key auth as root (or a sudo user). We install Docker and Caddy, build
+              your app there, run replicas behind a load balancer, and get the
+              certificate once your domain points at this address.
+            </p>
+          </div>
+        ) : null}
 
         {recommend ? (
           <div className="mt-5 rounded-xl border border-border bg-background/50 p-4">

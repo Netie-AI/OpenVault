@@ -58,7 +58,7 @@ def test_ship_engine_stream_endpoint(vault: KeyVault, monkeypatch: pytest.Monkey
     )
     save_deployment(dep)
     app = create_app(vault=vault, mock_health=True, enable_precheck_loop=False)
-    client = TestClient(app)
+    client = TestClient(app, client=("127.0.0.1", 5555))
     with client.stream("GET", f"/api/ship/engine/{dep.deployment_id}/stream") as resp:
         assert resp.status_code == 200
         assert "text/event-stream" in (resp.headers.get("content-type") or "")

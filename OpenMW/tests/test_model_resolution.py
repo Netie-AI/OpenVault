@@ -30,7 +30,7 @@ def test_none_is_treated_as_auto() -> None:
 
 def test_known_id_is_honoured_unchanged() -> None:
     assert resolve_model("groq", "llama-3.1-8b-instant") == "llama-3.1-8b-instant"
-    assert resolve_model("google", "gemini-2.5-flash") == "gemini-2.5-flash"
+    assert resolve_model("google", "gemini-3.5-flash") == "gemini-3.5-flash"
 
 
 def test_other_providers_id_falls_back_rather_than_404ing() -> None:
@@ -40,37 +40,49 @@ def test_other_providers_id_falls_back_rather_than_404ing() -> None:
     unmeetable preference downgrades to this provider's best model.
     """
     assert resolve_model("groq", "gpt-4o") == "openai/gpt-oss-120b"
-    assert resolve_model("google", "openai/gpt-oss-120b") == "gemini-3.6-flash"
+    assert resolve_model("google", "openai/gpt-oss-120b") == "gemini-3.5-flash"
 
 
 def test_multimodal_uses_vision_pool() -> None:
     assert resolve_model("groq", "auto", multimodal=True) == "qwen/qwen3.6-27b"
-    assert resolve_model("google", "auto", multimodal=True) == "gemini-3.6-flash"
+    assert resolve_model("google", "auto", multimodal=True) == "gemini-3.5-flash"
 
 
 def test_text_only_provider_refuses_multimodal_instead_of_dropping_the_image() -> None:
     """Returning a text model here would silently discard the image."""
-    assert get_provider("mistral") is not None
-    assert models_for("mistral", multimodal=True) == ()
-    assert resolve_model("mistral", "auto", multimodal=True) is None
+    assert get_provider("deepseek") is not None
+    assert models_for("deepseek", multimodal=True) == ()
+    assert resolve_model("deepseek", "auto", multimodal=True) is None
 
 
 def test_uncatalogued_provider_passes_a_concrete_id_through() -> None:
-    """Most of the catalog has no model list yet.
+    """Providers without a catalogued pool still honour a caller-supplied id.
 
-    Skipping those outright would make the proxy unusable for openai, anthropic,
-    mistral, ollama and every custom endpoint, so a caller-supplied id is
-    authoritative and goes upstream untouched.
+    Skipping those outright would make the proxy unusable for anthropic (Messages
+    API, out of scope), speech-only entries, and every custom endpoint, so a
+    concrete id goes upstream untouched.
     """
-    assert resolve_model("mistral", "mistral-large-latest") == "mistral-large-latest"
     assert resolve_model("openai", "gpt-4o-mini") == "gpt-4o-mini"
-    assert resolve_model("mistral", "any-model", multimodal=True) == "any-model"
+    assert resolve_model("deepseek", "deepseek-v4-flash") == "deepseek-v4-flash"
+    assert resolve_model("deepseek", "any-model", multimodal=True) == "any-model"
+    assert resolve_model("anthropic", "claude-opus-4") == "claude-opus-4"
 
 
-def test_alias_to_uncatalogued_provider_is_skipped_not_guessed() -> None:
+def test_core_byok_auto_resolves_concrete_model() -> None:
+    """FreeRoute buyer path uses model=auto; empty chat_models used to skip the hop."""
+    for provider in ("openai", "ollama", "deepseek", "litellm", "cortex"):
+        resolved = resolve_model(provider, "auto")
+        assert resolved is not None, f"{provider} auto must not skip"
+        assert resolved == models_for(provider)[0]
+        assert resolve_model(provider, "") == resolved
+        assert resolve_model(provider, None) == resolved
+
+
+def test_alias_without_catalogued_pool_is_skipped_not_guessed() -> None:
     """"auto" with nothing catalogued is exactly the case that 404'd upstream."""
-    assert resolve_model("mistral", "auto") is None
-    assert resolve_model("openai", "") is None
+    assert resolve_model("anthropic", "auto") is None
+    assert resolve_model("together", "") is None
+    assert resolve_model("mistral", "auto") == "mistral-small-latest"
 
 
 def test_unknown_provider_keeps_a_concrete_id_but_never_invents_one() -> None:

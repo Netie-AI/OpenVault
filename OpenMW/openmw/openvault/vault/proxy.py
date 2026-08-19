@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 from collections.abc import AsyncIterator
 from typing import Any
 
@@ -10,12 +12,26 @@ import structlog
 
 from openmw.openvault.route.attempt import AttemptOutcome, classify_attempt
 from openmw.openvault.route.breaker import get_circuit_breaker
+from openmw.openvault.vault.budget import estimate_tokens_for_body, prepare_hop_body
 from openmw.openvault.vault.fallback import FallbackManager
 from openmw.openvault.vault.precheck import _default_base_url
-from openmw.openvault.vault.providers import budget_for, resolve_model
+from openmw.openvault.vault.providers import resolve_model
 from openmw.openvault.vault.store import KeyVault
+from openmw.openvault.vault.usage_store import HopTrace
 
 log = structlog.get_logger()
+
+_SEALED_MESSAGE = "vault is sealed; POST /api/vault/unseal with the passphrase first"
+
+
+def _sealed_refusal() -> tuple[int, dict[str, Any]]:
+    """Typed FreeRoute refusal when decrypt is impossible (never HTTP 500)."""
+    return 403, {
+        "error": {
+            "message": _SEALED_MESSAGE,
+            "type": "openvault_vault_sealed",
+        }
+    }
 
 
 def _is_multimodal(body: dict[str, Any]) -> bool:
@@ -34,6 +50,82 @@ def _is_multimodal(body: dict[str, Any]) -> bool:
             if isinstance(part, dict) and part.get("type") in ("image_url", "input_image", "image"):
                 return True
     return False
+
+
+def affinity_key_for(body: dict[str, Any], *, tenant: str = "") -> str:
+    """Stable identifier for this conversation, or "" when there is nothing to pin.
+
+    Upstream prompt caches key on an exact prefix, so keeping a conversation on
+    one account is worth real money — cached input runs about a tenth of list
+    price.
+
+    The key is the **fixed head** of the conversation: the leading system
+    messages plus the first user turn. An earlier version hashed
+    ``messages[:-1]``, which grows by two messages every turn — so turn 3 and
+    turn 4 produced different keys and the conversation hopped accounts anyway,
+    which is the exact thing this is supposed to prevent. The head is the part
+    that is byte-identical on every turn, which is also the part the upstream
+    cache actually matches on.
+
+    Returns "" for a single-turn request: pinning one-shot traffic would
+    concentrate unrelated calls onto one key and trade a cache we would have
+    missed for a rate limit we would hit.
+    """
+    explicit = body.get("prompt_cache_key")
+    if isinstance(explicit, str) and explicit.strip():
+        # Namespaced by tenant: two callers who both send "default" must not
+        # land on the same vault key just because they picked the same string.
+        return f"{tenant}\x00{explicit.strip()[:4096]}"
+
+    messages = body.get("messages")
+    if not isinstance(messages, list) or len(messages) < 2:
+        return ""
+
+    head: list[Any] = []
+    for message in messages:
+        role = message.get("role") if isinstance(message, dict) else None
+        head.append(message)
+        if role not in ("system", "developer"):
+            # Stop at the first non-system turn: system prompt + first user
+            # message is the stable prefix every later turn repeats.
+            break
+
+    # json.dumps rather than an f-string join: "user:a\nuser:b" from two
+    # messages and a single message whose content is "a\nuser:b" produced
+    # byte-identical input before, so different conversations shared a hop.
+    payload = json.dumps(head, sort_keys=True, default=str)
+    if not _has_content(head):
+        return ""
+    return hashlib.sha256(f"{tenant}\x00{payload}".encode()).hexdigest()
+
+
+def _has_content(messages: list[Any]) -> bool:
+    """True when any message carries actual content, not just a role label."""
+    for message in messages:
+        if not isinstance(message, dict):
+            return True
+        content = message.get("content")
+        if isinstance(content, str) and content.strip():
+            return True
+        if isinstance(content, list) and content:
+            return True
+        if content not in (None, "", [], {}):
+            return True
+    return False
+
+
+def _context_refusal(errors: list[str]) -> tuple[int, dict[str, Any]]:
+    """No hop could fit this prompt — say so without spending a single call."""
+    return 400, {
+        "error": {
+            "message": (
+                "prompt is longer than the context window of every model OpenVault "
+                "could route it to"
+            ),
+            "type": "openvault_context_length_exceeded",
+            "details": errors,
+        }
+    }
 
 
 def _apply_outcome(
@@ -82,12 +174,17 @@ async def chat_completions(
     body: dict[str, Any],
     *,
     timeout_s: float = 60.0,
+    trace: HopTrace | None = None,
+    tenant: str = "",
 ) -> tuple[int, dict[str, Any] | str]:
     """Try each healthy hop until one succeeds.
 
-    Returns ``(status_code, payload)``.
+    Returns ``(status_code, payload)``. Pass ``trace`` to learn which hop
+    actually served — the usage ledger cannot attribute spend without it, and
+    the return tuple is unpacked by four test modules that do not want it.
     """
-    candidates = fallback.ordered_candidates()
+    trace = trace if trace is not None else HopTrace()
+    candidates = fallback.ordered_candidates(affinity_key=affinity_key_for(body, tenant=tenant))
     if not candidates:
         return 503, {
             "error": {
@@ -96,9 +193,20 @@ async def chat_completions(
             }
         }
 
+    # Fail closed before hop walk: metadata may still be listed while sealed.
+    # Walking then decrypting yields VaultSealedError -> dishonest 500 / exhausted.
+    if vault.seal.is_sealed:
+        log.warning("freeroute_refused", reason="vault_sealed", path="chat_completions")
+        trace.error_type = "openvault_vault_sealed"
+        return _sealed_refusal()
+
     errors: list[str] = []
+    prompt_estimate = estimate_tokens_for_body(body)
+    context_blocked = 0
+    considered = 0
     async with httpx.AsyncClient(timeout=timeout_s) as client:
         for record in candidates:
+            considered += 1
             breaker = get_circuit_breaker(record.provider)
             if not breaker.acquire_probe_slot():
                 errors.append(f"{record.label}: provider circuit open")
@@ -128,20 +236,40 @@ async def chat_completions(
                 why = "no vision model" if wants_images else "no catalogued model"
                 errors.append(f"{record.label}: {why} for provider {record.provider}")
                 continue
-            hop_body = {**body, "model": model}
-            raised = budget_for(record.provider, model, hop_body.get("max_tokens"))
-            if raised is not None:
+            decision = prepare_hop_body(
+                body,
+                provider=record.provider,
+                model=model,
+                prompt_tokens=prompt_estimate,
+            )
+            if decision.body is None:
+                # Not a hop failure — this model simply cannot hold the prompt,
+                # so it must not count against the key's health.
+                if decision.context_exceeded:
+                    context_blocked += 1
+                errors.append(f"{record.label}: {decision.refusal}")
+                continue
+            hop_body = decision.body
+            if decision.raised_to is not None:
                 # Never silently: a caller that asked for 32 and is billed for 512
                 # deserves to see why in the log.
                 log.info(
                     "openvault_reasoning_budget_raised",
                     provider=record.provider,
                     model=model,
-                    requested=hop_body.get("max_tokens"),
-                    sent=raised,
+                    requested=body.get("max_tokens"),
+                    sent=decision.raised_to,
                 )
-                hop_body["max_tokens"] = raised
+            if decision.clamped_to is not None:
+                log.info(
+                    "openvault_output_budget_clamped",
+                    provider=record.provider,
+                    model=model,
+                    requested=body.get("max_tokens"),
+                    sent=decision.clamped_to,
+                )
 
+            trace.note_attempt()
             try:
                 resp = await client.post(url, headers=headers, json=hop_body)
             except httpx.TimeoutException:
@@ -187,6 +315,9 @@ async def chat_completions(
                     provider=record.provider,
                     role=record.role,
                 )
+                trace.note_served(
+                    provider=record.provider, model=model, vault_key_id=record.id
+                )
                 try:
                     return resp.status_code, resp.json()
                 except Exception:
@@ -204,6 +335,7 @@ async def chat_completions(
             errors.append(f"{record.label}: {err} ({outcome.attempt_class})")
 
             if outcome.job == "dead":
+                trace.error_type = "openvault_non_retryable"
                 return 400, {
                     "error": {
                         "message": "request rejected by upstream (non-retryable)",
@@ -214,6 +346,13 @@ async def chat_completions(
                 }
             continue
 
+    if context_blocked and context_blocked == considered:
+        # Every candidate was refused for size and nothing was spent. Saying
+        # "all hops failed" here would blame the pool for the caller's prompt.
+        trace.error_type = "openvault_context_length_exceeded"
+        return _context_refusal(errors)
+
+    trace.error_type = "openvault_fallback_exhausted"
     return 502, {
         "error": {
             "message": "all OpenVault fallback hops failed",
@@ -229,6 +368,8 @@ async def prepare_chat_stream(
     body: dict[str, Any],
     *,
     timeout_s: float = 120.0,
+    trace: HopTrace | None = None,
+    tenant: str = "",
 ) -> tuple[int, dict[str, Any] | AsyncIterator[bytes]]:
     """Open a streaming upstream hop before returning bytes to the client.
 
@@ -236,7 +377,8 @@ async def prepare_chat_stream(
     ``(status, error_payload)`` so the gateway can still emit a JSON error
     with the correct HTTP status (streaming cannot change status mid-flight).
     """
-    candidates = fallback.ordered_candidates()
+    trace = trace if trace is not None else HopTrace()
+    candidates = fallback.ordered_candidates(affinity_key=affinity_key_for(body, tenant=tenant))
     if not candidates:
         return 503, {
             "error": {
@@ -245,9 +387,17 @@ async def prepare_chat_stream(
             }
         }
 
+    if vault.seal.is_sealed:
+        log.warning("freeroute_refused", reason="vault_sealed", path="prepare_chat_stream")
+        trace.error_type = "openvault_vault_sealed"
+        return _sealed_refusal()
+
     payload = dict(body)
     payload["stream"] = True
     errors: list[str] = []
+    prompt_estimate = estimate_tokens_for_body(body)
+    context_blocked = 0
+    considered = 0
     client = httpx.AsyncClient(timeout=timeout_s)
 
     async def _close_client() -> None:
@@ -255,6 +405,7 @@ async def prepare_chat_stream(
 
     try:
         for record in candidates:
+            considered += 1
             breaker = get_circuit_breaker(record.provider)
             if not breaker.acquire_probe_slot():
                 errors.append(f"{record.label}: provider circuit open")
@@ -288,18 +439,37 @@ async def prepare_chat_stream(
                 why = "no vision model" if wants_images else "no catalogued model"
                 errors.append(f"{record.label}: {why} for provider {record.provider}")
                 continue
-            hop_payload = {**payload, "model": model}
-            raised = budget_for(record.provider, model, hop_payload.get("max_tokens"))
-            if raised is not None:
+            decision = prepare_hop_body(
+                payload,
+                provider=record.provider,
+                model=model,
+                prompt_tokens=prompt_estimate,
+            )
+            if decision.body is None:
+                if decision.context_exceeded:
+                    context_blocked += 1
+                errors.append(f"{record.label}: {decision.refusal}")
+                continue
+            hop_payload = decision.body
+            hop_payload["stream"] = True
+            if decision.raised_to is not None:
                 log.info(
                     "openvault_reasoning_budget_raised",
                     provider=record.provider,
                     model=model,
-                    requested=hop_payload.get("max_tokens"),
-                    sent=raised,
+                    requested=body.get("max_tokens"),
+                    sent=decision.raised_to,
                 )
-                hop_payload["max_tokens"] = raised
+            if decision.clamped_to is not None:
+                log.info(
+                    "openvault_output_budget_clamped",
+                    provider=record.provider,
+                    model=model,
+                    requested=body.get("max_tokens"),
+                    sent=decision.clamped_to,
+                )
 
+            trace.note_attempt()
             try:
                 req = client.build_request("POST", url, headers=headers, json=hop_payload)
                 resp = await client.send(req, stream=True)
@@ -347,6 +517,7 @@ async def prepare_chat_stream(
                 errors.append(f"{record.label}: {err} ({outcome.attempt_class})")
                 if outcome.job == "dead":
                     await _close_client()
+                    trace.error_type = "openvault_non_retryable"
                     return 400, {
                         "error": {
                             "message": "request rejected by upstream (non-retryable)",
@@ -371,6 +542,7 @@ async def prepare_chat_stream(
                 provider=record.provider,
                 role=record.role,
             )
+            trace.note_served(provider=record.provider, model=model, vault_key_id=record.id)
 
             async def _byte_iter(
                 response: httpx.Response = resp,
@@ -389,6 +561,11 @@ async def prepare_chat_stream(
         raise
 
     await _close_client()
+    if context_blocked and context_blocked == considered:
+        trace.error_type = "openvault_context_length_exceeded"
+        return _context_refusal(errors)
+
+    trace.error_type = "openvault_fallback_exhausted"
     return 502, {
         "error": {
             "message": "all OpenVault fallback hops failed",

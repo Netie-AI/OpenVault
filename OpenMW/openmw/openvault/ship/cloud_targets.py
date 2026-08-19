@@ -26,7 +26,13 @@ from openmw.openvault.ship.openship_client import adapter_status
 # ship/hosts/ for the distinction and docs/BACKEND_HONESTY_AUDIT.md for why it
 # matters that the two are never conflated.
 ShipTarget = Literal[
-    "cloudflare_pages", "openship_cloud", "vps_ssh", "aws_guide", "local_demo"
+    "cloudflare_pages",
+    "coolify",
+    "netlify",
+    "openship_cloud",
+    "vps_ssh",
+    "aws_guide",
+    "local_demo",
 ]
 
 
@@ -123,6 +129,30 @@ TARGET_CARDS: tuple[TargetCard, ...] = (
         estimated_min_usd=0.0,
     ),
     TargetCard(
+        id="coolify",
+        title="Coolify",
+        blurb=(
+            "Real publish — your self-hosted Coolify instance. Vault a token + app UUID; "
+            "OpenVault triggers redeploy and returns only an observed FQDN. No OpenVault servers."
+        ),
+        instant_host=True,
+        needs=["COOLIFY_URL", "COOLIFY_TOKEN", "COOLIFY_APP_UUID"],
+        register_url="https://coolify.io/docs/api-reference/authorization",
+        estimated_min_usd=0.0,
+    ),
+    TargetCard(
+        id="netlify",
+        title="Netlify",
+        blurb=(
+            "Real publish — zip Direct Upload to your Netlify account. Vault a personal "
+            "access token; OpenVault returns only an observed ssl_url. No OpenVault servers."
+        ),
+        instant_host=True,
+        needs=["NETLIFY_AUTH_TOKEN", "NETLIFY_SITE_ID (optional)"],
+        register_url="https://app.netlify.com/user/applications#personal-access-tokens",
+        estimated_min_usd=0.0,
+    ),
+    TargetCard(
         id="openship_cloud",
         title="FreeBuild Cloud",
         blurb="One-stop like Render — free *.opsh.io, managed TLS, credit quota, sleep mode.",
@@ -133,8 +163,12 @@ TARGET_CARDS: tuple[TargetCard, ...] = (
     ),
     TargetCard(
         id="vps_ssh",
-        title="Any VPS (Hetzner / DO / AWS EC2 / …)",
-        blurb="SSH in → FreeBuild installs Docker + OpenResty + certbot. Same path for Hetzner.",
+        title="Your VPS — we manage it (Hetzner / DO / EC2 / …)",
+        blurb=(
+            "One box you rent, one domain you own. OpenVault installs Docker + Caddy, "
+            "detects the stack, builds it there, runs replicas behind a load balancer "
+            "with automatic TLS, and swaps traffic only after they answer."
+        ),
         instant_host=False,
         needs=["SSH host", "root/sudo user", "open ports 80/443"],
         register_url="https://www.hetzner.com/cloud",
@@ -211,6 +245,22 @@ def build_ship_blueprint(
             "Build on this machine → wrangler pages deploy (URL parsed from output)",
             f"Attach custom domain {hostname or 'your.domain'} (or paste CNAME if registrar is elsewhere)",
         ]
+    elif target == "coolify":
+        steps = [
+            "Add COOLIFY_URL + Coolify API token (vault provider `coolify` or COOLIFY_TOKEN)",
+            "Set COOLIFY_APP_UUID from Coolify → Application → Configuration",
+            "Preflight checks instance reachability + app UUID (never fakes ready)",
+            "POST /api/v1/deploy?uuid=… → poll deployment → return observed FQDN only",
+            f"Custom domain {hostname or 'your.domain'} is set on the Coolify app (Domains UI)",
+        ]
+    elif target == "netlify":
+        steps = [
+            "Add Netlify personal access token (vault provider `netlify` or NETLIFY_AUTH_TOKEN)",
+            "Optional: set NETLIFY_SITE_ID — else we look up/create a site by project name",
+            "Preflight verifies the token via GET /api/v1/user (never fakes ready)",
+            "Zip artifact → POST /sites/{id}/deploys → poll until ready → return observed ssl_url only",
+            f"Attach custom domain {hostname or 'your.domain'} (or paste CNAME if registrar is elsewhere)",
+        ]
     elif target == "openship_cloud":
         steps = [
             "Connect FreeBuild Cloud (openship.io) — set OPENSHIP_URL + OPENSHIP_TOKEN",
@@ -223,10 +273,11 @@ def build_ship_blueprint(
     elif target == "vps_ssh":
         steps = [
             f"Rent VPS (Hetzner CX22 etc.) → note IP {vps_host or '<VPS_IP>'}",
-            "FreeBuild: Add Server (SSH) → Test → Install Docker/OpenResty",
-            "Point DNS A record to VPS IP (see domain guide)",
-            "Deploy target=server with serverId — backend+frontend containers",
-            "Certbot issues TLS on the box",
+            "Put your SSH key on it (ssh-copy-id) — OpenVault never asks for a password",
+            f"Point the DNS A record for {hostname or 'your.domain'} at {vps_host or '<VPS_IP>'}",
+            "Preflight → OpenVault installs Docker + Caddy and creates /srv/openvault",
+            "Deploy → build on the box, health-check replicas, then the proxy switches",
+            "Caddy requests the TLS certificate on the first request to your domain",
         ]
     elif target == "aws_guide":
         steps = [
@@ -258,6 +309,8 @@ def build_ship_blueprint(
         "one_click_ready": (not blocked)
         and (
             target == "cloudflare_pages"
+            or target == "coolify"
+            or target == "netlify"
             or (target == "openship_cloud" and adapter_status()["api_ready"])
             or target == "local_demo"
             or (target == "vps_ssh" and bool(vps_host))

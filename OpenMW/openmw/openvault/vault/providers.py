@@ -37,6 +37,12 @@ class ProviderSpec:
     # Subset that accepts images. Empty means text-only, and a multimodal request
     # must skip this provider rather than silently drop the image.
     vision_models: tuple[str, ...] = ()
+    # Largest input this provider accepts, in tokens. 0 means UNKNOWN, and every
+    # reader treats unknown as "do not refuse" — an assumed window would reject
+    # work that would have succeeded (R-0005). Populate only from a cited source,
+    # the same discipline chat_models follows; operators can supply a table via
+    # OPENVAULT_CONTEXT_WINDOWS until one is verified here.
+    context_window: int = 0
     # Models that spend completion budget on reasoning tokens BEFORE writing content.
     # Measured on gpt-oss-120b: max_tokens=32 produced 30 reasoning tokens and an
     # empty string with finish_reason=length; the same prompt at 512 answered fine
@@ -67,6 +73,31 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
         health_path="/models",
         needed_by=("cortex", "airgpt", "openvault"),
         status_page="https://status.openai.com/",
+        # Pinned from https://developers.openai.com/api/docs/models (2026-08).
+        # gpt-5.6 is an alias for gpt-5.6-sol. gpt-4o* remain in API for callers
+        # that still name them; auto prefers the current frontier line.
+        chat_models=(
+            "gpt-5.6-sol",
+            "gpt-5.6-terra",
+            "gpt-5.6-luna",
+            "gpt-5.6",
+            "gpt-4o",
+            "gpt-4o-mini",
+        ),
+        vision_models=(
+            "gpt-5.6-sol",
+            "gpt-5.6-terra",
+            "gpt-5.6-luna",
+            "gpt-5.6",
+            "gpt-4o",
+            "gpt-4o-mini",
+        ),
+        reasoning_models=(
+            "gpt-5.6-sol",
+            "gpt-5.6-terra",
+            "gpt-5.6-luna",
+            "gpt-5.6",
+        ),
     ),
     ProviderSpec(
         id="anthropic",
@@ -220,6 +251,16 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
         health_path="/models",
         free_notes="Low-cost coding models; often used as cheap hop",
         needed_by=("cortex", "airgpt"),
+        # Legacy deepseek-chat / deepseek-reasoner retired 2026-07-24.
+        # Current ids: https://api-docs.deepseek.com/quick_start/pricing
+        chat_models=(
+            "deepseek-v4-pro",
+            "deepseek-v4-flash",
+        ),
+        reasoning_models=(
+            "deepseek-v4-pro",
+            "deepseek-v4-flash",
+        ),
     ),
     ProviderSpec(
         id="together",
@@ -288,6 +329,16 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
         free_notes="100% free local; api_key can be 'ollama'",
         needed_by=("cortex", "airgpt", "openvault"),
         placeholder_secret="ollama",
+        # Tags commonly served by a stock Ollama install. Missing pull -> real
+        # upstream 404, not a dishonest "no catalogued model" skip.
+        chat_models=(
+            "llama3.2",
+            "qwen2.5",
+            "llama3.1",
+            "mistral",
+            "llama3.2-vision",
+        ),
+        vision_models=("llama3.2-vision",),
     ),
     ProviderSpec(
         id="cortex",
@@ -302,6 +353,12 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
         free_notes="Local Netie Engine — BYOK via OpenVault",
         needed_by=("airgpt", "openvault"),
         placeholder_secret="cortex-local",
+        # Align with OpenMW model_manager tier defaults / models.json ids.
+        chat_models=(
+            "qwen3.5-9b",
+            "qwen2.5-14b",
+            "phi-4-mini",
+        ),
     ),
     ProviderSpec(
         id="litellm",
@@ -315,6 +372,17 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
         free_notes="Self-hosted OpenAI-compatible multi-provider proxy",
         needed_by=("cortex", "openvault"),
         placeholder_secret="sk-litellm",
+        # Common LiteLLM proxy aliases; operator config may remap. auto needs
+        # a concrete id so the hop is attempted rather than skipped.
+        chat_models=(
+            "gpt-4o-mini",
+            "gpt-4o",
+            "claude-3-5-sonnet",
+        ),
+        vision_models=(
+            "gpt-4o-mini",
+            "gpt-4o",
+        ),
     ),
     ProviderSpec(
         id="github_models",
@@ -515,12 +583,10 @@ def resolve_model(provider: str, requested: str | None, *, multimodal: bool = Fa
 
     pool = spec.vision_models if multimodal else spec.chat_models
     if not pool:
-        # Nothing catalogued for this provider yet. Most of the catalog is in this
-        # state (openai, anthropic, mistral, deepseek, ollama, custom endpoints), so
-        # skipping outright would make the proxy unusable for all of them. A concrete
-        # id from the caller is authoritative - pass it through untouched. Only an
-        # alias is unresolvable here, and guessing is what sent "auto" upstream as a
-        # model name in the first place.
+        # Nothing catalogued for this modality yet. Remaining empty entries
+        # (anthropic Messages API, speech-only, etc.) still need concrete caller
+        # ids to stay usable; only an alias is unresolvable here, and guessing
+        # is what sent "auto" upstream as a model name in the first place.
         want = (requested or "").strip()
         if want and want.lower() not in _AUTO_ALIASES:
             return want

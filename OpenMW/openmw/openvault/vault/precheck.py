@@ -39,10 +39,10 @@ def _default_base_url(provider: str, base_url: str) -> str:
     defaults = {
         "openai": "https://api.openai.com/v1",
         "anthropic": "https://api.anthropic.com",
-        "google": "https://generativelanguage.googleapis.com/v1beta",
+        "google": "https://generativelanguage.googleapis.com/v1beta/openai",
         "mistral": "https://api.mistral.ai/v1",
         "huggingface": "https://huggingface.co",
-        "cortex": "http://127.0.0.1:8000",
+        "cortex": "http://127.0.0.1:8010",
         "ollama": "http://127.0.0.1:11434/v1",
         "custom": "",
     }
@@ -87,6 +87,19 @@ async def probe_key(
                 "anthropic-version": "2023-06-01",
             }
             resp = await http.get(url, headers=headers)
+        elif record.provider == "google":
+            # Native /v1beta wants x-goog-api-key; OpenAI-compat /v1beta/openai
+            # wants Bearer. Prefer the stored/catalog base so both vault shapes work.
+            if "/openai" in base:
+                resp = await http.get(
+                    f"{base}/models",
+                    headers={"Authorization": f"Bearer {secret}"},
+                )
+            else:
+                resp = await http.get(
+                    f"{base}/models",
+                    headers={"x-goog-api-key": secret},
+                )
         elif record.provider == "cortex":
             resp = await http.get(f"{base}/health" if not base.endswith("/health") else base)
         elif record.provider == "ollama":

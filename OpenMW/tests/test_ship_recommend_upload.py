@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from openmw.openvault.app import create_app
@@ -40,7 +41,7 @@ def test_upload_zip_and_scan(tmp_path: Path, monkeypatch) -> None:  # type: igno
     ov_paths.clear_caches() if hasattr(ov_paths, "clear_caches") else None
 
     app = create_app(mock_health=True)
-    client = TestClient(app)
+    client = TestClient(app, client=("127.0.0.1", 5555))
     session = client.post("/api/ship/library/upload-session").json()
     sid = session["session_id"]
 
@@ -69,7 +70,7 @@ def test_upload_zip_and_scan(tmp_path: Path, monkeypatch) -> None:  # type: igno
 
 def test_preflight_local_demo() -> None:
     app = create_app(mock_health=True)
-    client = TestClient(app)
+    client = TestClient(app, client=("127.0.0.1", 5555))
     res = client.post("/api/ship/preflight", json={"target": "local_demo"})
     assert res.status_code == 200
     assert res.json()["ready"] is True
@@ -77,9 +78,39 @@ def test_preflight_local_demo() -> None:
 
 def test_preflight_cloudflare_missing_token() -> None:
     app = create_app(mock_health=True)
-    client = TestClient(app)
+    client = TestClient(app, client=("127.0.0.1", 5555))
     res = client.post("/api/ship/preflight", json={"target": "cloudflare_pages"})
     assert res.status_code == 200
     body = res.json()
     assert body["ready"] is False
     assert body["blocker"]
+
+
+def test_preflight_netlify_missing_token() -> None:
+    app = create_app(mock_health=True)
+    client = TestClient(app, client=("127.0.0.1", 5555))
+    res = client.post("/api/ship/preflight", json={"target": "netlify"})
+    assert res.status_code == 200
+    body = res.json()
+    assert body["ready"] is False
+    assert body["real_publish"] is True
+    assert "token" in body["blocker"].lower()
+    assert body["blocker"]
+
+
+def test_recommend_server_prefers_the_users_own_vps_when_connected() -> None:
+    """With a box connected, the honest pick is one we can really publish to."""
+    out = recommend_target({"primary": "fastapi", "category": "backend"}, vps_configured=True)
+    assert out["target"] == "vps_ssh"
+    assert out["real_publish"] is True
+
+
+def test_preflight_vps_without_a_host_is_actionable_not_a_generic_refusal(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("OPENVAULT_VPS_HOST", raising=False)
+    client = TestClient(create_app(), client=("127.0.0.1", 5555))
+    body = client.post("/api/ship/preflight", json={"target": "vps_ssh"}).json()
+    assert body["ready"] is False
+    assert body["real_publish"] is True, "vps_ssh is a real host now, not a teach target"
+    assert "VPS" in body["blocker"]

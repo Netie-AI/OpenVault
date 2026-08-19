@@ -71,6 +71,11 @@ class KeyVault:
         self._init_schema()
 
     @property
+    def seal(self) -> Seal:
+        """Shared crypto seal (lock/unseal state lives here)."""
+        return self._seal
+
+    @property
     def db_path(self) -> Path:
         """Filesystem path of the SQLite vault (shared with precheck_history)."""
         return self._db_path
@@ -116,14 +121,17 @@ class KeyVault:
             if "masked" not in cols:
                 conn.execute("ALTER TABLE keys ADD COLUMN masked TEXT NOT NULL DEFAULT ''")
             # One-time backfill: persist masks so list_keys never decrypts plaintext.
-            for row in conn.execute(
-                "SELECT id, secret_blob, masked FROM keys WHERE masked IS NULL OR masked = ''"
-            ).fetchall():
-                secret = self._seal.decrypt(row["secret_blob"])
-                conn.execute(
-                    "UPDATE keys SET masked = ? WHERE id = ?",
-                    (mask_secret(secret), row["id"]),
-                )
+            # Skip while sealed — decrypt would fail closed, and masks stay empty
+            # until an unseal + later write/backfill.
+            if not self._seal.is_sealed:
+                for row in conn.execute(
+                    "SELECT id, secret_blob, masked FROM keys WHERE masked IS NULL OR masked = ''"
+                ).fetchall():
+                    secret = self._seal.decrypt(row["secret_blob"])
+                    conn.execute(
+                        "UPDATE keys SET masked = ? WHERE id = ?",
+                        (mask_secret(secret), row["id"]),
+                    )
             conn.commit()
 
     def _row_to_record(self, row: sqlite3.Row, *, include_secret: bool = False) -> KeyRecord:
@@ -135,6 +143,8 @@ class KeyVault:
             stored = str(row["masked"]) if "masked" in keys and row["masked"] else ""
             if stored:
                 masked = stored
+            elif self._seal.is_sealed:
+                masked = ""
             else:
                 # Legacy row without mask — decrypt once; prefer schema backfill.
                 secret = self._seal.decrypt(row["secret_blob"])
@@ -201,8 +211,9 @@ class KeyVault:
         priority: int = 100,
         enabled: bool = True,
         account_id: str | None = None,
+        key_id: str | None = None,
     ) -> KeyRecord:
-        key_id = uuid.uuid4().hex
+        key_id = key_id or uuid.uuid4().hex
         now = time.time()
         blob = self._seal.encrypt(secret)
         masked = mask_secret(secret)

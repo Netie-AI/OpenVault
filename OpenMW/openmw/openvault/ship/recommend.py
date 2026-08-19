@@ -48,10 +48,16 @@ def recommend_target(
     stack: dict[str, Any] | None = None,
     *,
     sponsored_ids: frozenset[str] | set[str] | None = None,
+    vps_configured: bool = False,
 ) -> dict[str, Any]:
     """Pick one target with a human reason. User may override; blank picker is wrong.
 
     Rule (CLAUDE_DECISIONS §8.5): auto-select **never** picks a sponsored target.
+
+    ``vps_configured`` says the user already has a box we can reach. For a stack
+    that needs a running process that changes the honest answer: their VPS is a
+    target we can really publish to, where FreeBuild Cloud needs credentials
+    they may not have.
     """
     stack = stack or {}
     blocked = frozenset(sponsored_ids or ())
@@ -60,13 +66,22 @@ def recommend_target(
     output_dir = str(stack.get("output_directory") or "").strip()
 
     if primary in _SERVER_PRIMARY or category in _SERVER_CATEGORY:
-        target: ShipTarget = "openship_cloud"
-        reason = (
-            f"Detected {primary or category or 'server'} stack — needs a running "
-            "process. FreeBuild Cloud (or any VPS) hosts containers; Cloudflare Pages "
-            "is for static folders only."
-        )
-        real_publish = False
+        if vps_configured:
+            target: ShipTarget = "vps_ssh"
+            reason = (
+                f"Detected {primary or category or 'server'} stack — needs a running "
+                "process, and you already have a VPS connected. OpenVault builds it "
+                "there, runs replicas behind Caddy and gets the TLS certificate."
+            )
+            real_publish = True
+        else:
+            target = "openship_cloud"
+            reason = (
+                f"Detected {primary or category or 'server'} stack — needs a running "
+                "process. FreeBuild Cloud (or your own VPS) hosts containers; "
+                "Cloudflare Pages is for static folders only."
+            )
+            real_publish = False
     elif primary in _STATIC_PRIMARY or category in _STATIC_CATEGORY or output_dir:
         target = "cloudflare_pages"
         reason = (

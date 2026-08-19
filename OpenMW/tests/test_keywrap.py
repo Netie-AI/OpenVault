@@ -56,6 +56,34 @@ class TestFormat:
             keywrap.unwrap(blob)
 
 
+class TestPassphraseWrap:
+    def test_round_trip(self) -> None:
+        key = Fernet.generate_key()
+        blob = keywrap.wrap(key, method=keywrap.METHOD_PASSPHRASE, passphrase="correct-horse")
+        assert keywrap.peek_method(blob) == keywrap.METHOD_PASSPHRASE
+        unwrapped, method = keywrap.unwrap(blob, passphrase="correct-horse")
+        assert unwrapped == key
+        assert method == keywrap.METHOD_PASSPHRASE
+
+    def test_wrong_passphrase_is_rejected(self) -> None:
+        key = Fernet.generate_key()
+        blob = keywrap.wrap_passphrase(key, "correct-horse")
+        with pytest.raises(keywrap.KeyWrapError, match="incorrect passphrase"):
+            keywrap.unwrap(blob, passphrase="wrong")
+
+    def test_unwrap_without_passphrase_is_rejected(self) -> None:
+        key = Fernet.generate_key()
+        blob = keywrap.wrap_passphrase(key, "correct-horse")
+        with pytest.raises(keywrap.KeyWrapError, match="passphrase"):
+            keywrap.unwrap(blob)
+
+    def test_ciphertext_is_not_the_plaintext(self) -> None:
+        key = Fernet.generate_key()
+        blob = keywrap.wrap_passphrase(key, "correct-horse")
+        assert key not in blob
+        assert b"correct-horse" not in blob
+
+
 @WINDOWS_ONLY
 class TestDpapi:
     def test_protect_unprotect_round_trip(self) -> None:
@@ -156,7 +184,7 @@ class TestMasterKeyLifecycle:
     ) -> None:
         """If wrap succeeds but unwrap returns junk, refuse to write."""
         key_path = tmp_path / "master.key"
-        monkeypatch.setattr(keywrap, "unwrap", lambda _b: (b"wrong-key", "dpapi-user"))
+        monkeypatch.setattr(keywrap, "unwrap", lambda _b, **_kw: (b"wrong-key", "dpapi-user"))
         with pytest.raises(VaultCryptoError, match="round-trip"):
             _load_or_create_master_key(key_path)
 

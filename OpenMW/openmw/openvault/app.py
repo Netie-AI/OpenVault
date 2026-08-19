@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager, suppress
 from dataclasses import asdict
@@ -11,6 +12,7 @@ from typing import Any, Literal
 
 import structlog
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -72,8 +74,13 @@ from openmw.openvault.ship.deploy import (
 )
 from openmw.openvault.ship.detect import detect_project
 from openmw.openvault.ship.domain_guide import build_domain_guide
-from openmw.openvault.ship.engine import load_deployment, run_ship_engine
-from openmw.openvault.ship.gate import check_gate
+from openmw.openvault.ship.engine import (
+    DeployInProgressError,
+    load_deployment,
+    run_ship_engine,
+)
+from openmw.openvault.ship.gate import GateAction, check_gate
+from openmw.openvault.ship import github_auth as github_auth_mod
 from openmw.openvault.ship.github_auth import (
     clear_pat,
     connection_status,
@@ -96,10 +103,15 @@ from openmw.openvault.ship.openship import (
     list_ship_plans,
     load_ship_plan,
 )
+from openmw.openvault.ship.inject import InjectError, ShipEnvRef, resolve_ship_env, scrub_mapping
 from openmw.openvault.ship.openship_client import OpenShipClient, adapter_status
 from openmw.openvault.ship.playwright_smoke import load_smoke, run_playwright_smoke
 from openmw.openvault.vault.accounts import AccountStore, AuthProvider
+from openmw.openvault.vault.api_keys import ApiKeyError, ApiKeyStore
+from openmw.openvault.vault.auth import AuthRefusedError, resolve_caller
+from openmw.openvault.vault.budget import configured_ceiling
 from openmw.openvault.vault.airgpt_keyvault import keyvault_snapshot, upsert_env_secret
+from openmw.openvault.vault.crypto import Seal, VaultCryptoError, VaultSealedError
 from openmw.openvault.vault.env_ingest import ingest_environment, scan_environment
 from openmw.openvault.vault.fallback import FallbackConfig, FallbackManager
 from openmw.openvault.vault.precheck import PrecheckLoop, precheck_all, precheck_one
@@ -113,12 +125,14 @@ from openmw.openvault.vault.proxy import chat_completions, prepare_chat_stream
 from openmw.openvault.vault.ratelimit import (
     DEFAULT_MAX_OUTPUT_TOKENS,
     DEFAULT_TIER,
+    SseUsageCapture,
     TokenBudgetLimiter,
     estimate_prompt_tokens,
     usage_total_tokens,
 )
 from openmw.openvault.vault.redis_store import try_make_redis_store
 from openmw.openvault.vault.secrets import SecretKind, SecretStore, SecretValidationError
+from openmw.openvault.vault.usage_store import HopTrace, UsageEvent, UsageStore
 from openmw.openvault.vault.seed import seed_essentials
 from openmw.openvault.vault.store import KeyRole, KeyVault, ProviderKind
 
@@ -127,6 +141,7 @@ log = structlog.get_logger()
 # Guards on the custody routes. See reveal_secret for the reasoning.
 _LOOPBACK_HOSTS = frozenset({"127.0.0.1", "::1", "localhost"})
 _REVEAL_INTENT_HEADER = "X-OpenVault-Reveal"
+_VAULT_SEALED_DETAIL = "vault is sealed; POST /api/vault/unseal with the passphrase first"
 
 
 def _write_secret_audit(entry: dict[str, Any]) -> None:
@@ -210,6 +225,18 @@ def _require_loopback(request: Request, action: str) -> str:
     return host
 
 
+#: Targets whose adapters mutate something outside this machine — upload files,
+#: trigger a remote build, or SSH in and restart containers. `local_demo` only
+#: simulates and `aws_guide` only writes a plan, so neither needs the gate.
+_REMOTE_SHIP_TARGETS = frozenset(
+    {"cloudflare_pages", "coolify", "netlify", "openship_cloud", "vps_ssh"}
+)
+
+
+def _mutates_remote_host(target: str) -> bool:
+    return target in _REMOTE_SHIP_TARGETS
+
+
 def _require_reveal_intent(request: Request) -> None:
     """Demand the custom intent header on any route that returns plaintext.
 
@@ -227,6 +254,111 @@ def _require_reveal_intent(request: Request) -> None:
                 "header, sent from an explicit user action"
             ),
         )
+
+
+def _require_unsealed(seal: Seal, action: str) -> None:
+    """Refuse reveal/mutate while the master key is not in memory.
+
+    Additive to loopback + intent. A passphrase-wrapped vault starts sealed
+    after restart; lock drops the key again. Fail closed with an honest status
+    rather than attempting decrypt.
+    """
+    if seal.is_sealed:
+        log.warning("custody_request_rejected", reason="vault_sealed", action=action)
+        raise HTTPException(status_code=403, detail=_VAULT_SEALED_DETAIL)
+
+
+def _require_leave_gate(
+    vault: KeyVault,
+    fallback: FallbackManager | None = None,
+    *,
+    action: GateAction = "deploy",
+    project_path: str = "",
+    destination: str = "",
+    request: Request | None = None,
+) -> None:
+    """Refuse leave-machine execute when check_gate denies deploy/leave."""
+    decision = check_gate(
+        action=action,
+        vault=vault,
+        fallback=fallback,
+        project_path=project_path,
+        destination=destination,
+    )
+    if not decision.allowed:
+        log.info(
+            "leave_execute_denied",
+            action=decision.action,
+            reasons=decision.reasons,
+            keys_ready=decision.keys_ready,
+        )
+        # Durable deny line (same store as custody); never secret material.
+        if request is not None:
+            _audit_custody(
+                "gate_denied",
+                request,
+                action=decision.action,
+                reasons=decision.reasons,
+                keys_ready=decision.keys_ready,
+                source="leave_execute",
+            )
+        else:
+            _write_secret_audit(
+                {
+                    "event": "gate_denied",
+                    "action": decision.action,
+                    "reasons": decision.reasons,
+                    "keys_ready": decision.keys_ready,
+                    "source": "leave_execute",
+                    "client": "",
+                }
+            )
+        raise HTTPException(status_code=403, detail=decision.to_dict())
+
+
+def _resolve_ship_inject(
+    raw_secrets: list[dict[str, str]],
+    *,
+    vault: KeyVault,
+    secrets: SecretStore,
+    request: Request,
+) -> tuple[dict[str, str], dict[str, Any]]:
+    """Resolve selected vault secrets for FreeBuild execute. Never logs values."""
+    if not raw_secrets:
+        return {}, {"count": 0, "names": [], "sources": []}
+    try:
+        refs = [
+            ShipEnvRef(
+                env_name=str(item.get("env_name", "")),
+                key_id=item.get("key_id") or None,
+                secret_id=item.get("secret_id") or None,
+            )
+            for item in raw_secrets
+        ]
+        result = resolve_ship_env(refs, vault=vault, secrets=secrets, seal=vault.seal)
+    except InjectError as exc:
+        log.info(
+            "ship_inject_refused",
+            reason=exc.reason,
+            status_code=exc.status_code,
+        )
+        _audit_custody(
+            "ship_inject_refused",
+            request,
+            reason=exc.reason,
+            count=len(raw_secrets),
+        )
+        raise HTTPException(status_code=exc.status_code, detail=exc.reason) from exc
+    summary = result.summary()
+    _audit_custody(
+        "ship_inject",
+        request,
+        count=summary["count"],
+        names=summary["names"],
+        sources=summary["sources"],
+    )
+    log.info("ship_inject", count=summary["count"], names=summary["names"])
+    return result.env, summary
 
 
 def _audit_secret_reveal(key_id: str, client_host: str, user_agent: str) -> None:
@@ -396,7 +528,13 @@ class OnePressDeployBody(BaseModel):
     simulate: bool = True
     auto_execute: bool = True
     target: Literal[
-        "cloudflare_pages", "openship_cloud", "vps_ssh", "aws_guide", "local_demo"
+        "cloudflare_pages",
+        "coolify",
+        "netlify",
+        "openship_cloud",
+        "vps_ssh",
+        "aws_guide",
+        "local_demo",
     ] = "local_demo"
     github_url: str = ""
     vps_host: str = ""
@@ -414,7 +552,13 @@ class DomainGuideBody(BaseModel):
 
 class ShipBlueprintBody(BaseModel):
     target: Literal[
-        "cloudflare_pages", "openship_cloud", "vps_ssh", "aws_guide", "local_demo"
+        "cloudflare_pages",
+        "coolify",
+        "netlify",
+        "openship_cloud",
+        "vps_ssh",
+        "aws_guide",
+        "local_demo",
     ] = "cloudflare_pages"
     project_path: str = ""
     hostname: str = ""
@@ -438,7 +582,13 @@ class GitHubPatBody(BaseModel):
 
 class ShipEngineBody(BaseModel):
     target: Literal[
-        "cloudflare_pages", "openship_cloud", "vps_ssh", "aws_guide", "local_demo"
+        "cloudflare_pages",
+        "coolify",
+        "netlify",
+        "openship_cloud",
+        "vps_ssh",
+        "aws_guide",
+        "local_demo",
     ] = "cloudflare_pages"
     project_path: str = ""
     github_url: str = ""
@@ -452,13 +602,32 @@ class ShipEngineBody(BaseModel):
 
 class ShipPreflightBody(BaseModel):
     target: Literal[
-        "cloudflare_pages", "openship_cloud", "vps_ssh", "aws_guide", "local_demo"
+        "cloudflare_pages",
+        "coolify",
+        "netlify",
+        "openship_cloud",
+        "vps_ssh",
+        "aws_guide",
+        "local_demo",
     ] = "cloudflare_pages"
+    #: Only meaningful for vps_ssh — the box we are about to check.
+    vps_host: str = ""
+
+
+class ApiKeyIssueBody(BaseModel):
+    """Mint a FreeRoute credential for someone else's app."""
+
+    label: str
+    #: `local` is refused by the store — it is the unmetered loopback tier.
+    tier: str = "free"
 
 
 class ShipRecommendBody(BaseModel):
     project_path: str = ""
     stack: dict[str, Any] = Field(default_factory=dict)
+    #: A box the user has already connected — changes the honest pick for
+    #: server stacks from "sign up for FreeBuild Cloud" to "use your VPS".
+    vps_host: str = ""
 
 
 class LibraryInspectBody(BaseModel):
@@ -528,6 +697,9 @@ class DeployExecuteBody(BaseModel):
     project_id: str | None = None
     github_url: str | None = None
     deploy_target: str = "cloud"
+    #: Vault refs to inject into host/deploy env at execute (OpenVault#28).
+    #: Each item needs env_name plus exactly one of key_id / secret_id.
+    secrets: list[dict[str, str]] = Field(default_factory=list)
 
 
 class HandshakeBody(BaseModel):
@@ -573,6 +745,7 @@ class GateCheckBody(BaseModel):
     bypass_gate: bool = False
     force: bool = False
     skip_rules: bool = False
+    ignore_gate: bool = False
 
 
 class CloudShareBody(BaseModel):
@@ -630,6 +803,14 @@ class KeyvaultUpsertBody(BaseModel):
     secrets: dict[str, str] = Field(default_factory=dict)
 
 
+class VaultUnsealBody(BaseModel):
+    passphrase: str = ""
+
+
+class VaultPassphraseBody(BaseModel):
+    passphrase: str
+
+
 def create_app(
     *,
     vault: KeyVault | None = None,
@@ -640,20 +821,40 @@ def create_app(
     precheck_interval_s: float = 60.0,
     mock_health: bool = False,
     enable_precheck_loop: bool = True,
+    rate_limiter: TokenBudgetLimiter | None = None,
 ) -> FastAPI:
     if cortex_url is None:
         cortex_url = cortex_base_url()
-    state_vault = vault if vault is not None else KeyVault()
+    # One Seal for the process: lock/unseal must clear every custody store.
+    if vault is not None:
+        state_vault = vault
+        state_seal = vault.seal
+    else:
+        state_seal = Seal()
+        state_vault = KeyVault(seal=state_seal)
+    # One process Seal for ship PAT custody (same keys.db row, no pat.json SoT).
+    github_auth_mod.bind_vault(state_vault)
     state_accounts = accounts if accounts is not None else AccountStore()
-    state_secrets = secrets if secrets is not None else SecretStore()
+    state_secrets = secrets if secrets is not None else SecretStore(seal=state_seal)
+    # Who is calling the gateway, and what did it cost them. Both live in the
+    # same keys.db as the vault - one backup surface, no second store.
+    state_api_keys = ApiKeyStore()
+    state_usage = UsageStore()
     # Our own address, as the registry should advertise it. Matches how
     # mesh/local_mesh.py builds the self peer, so the two never disagree.
     self_url = f"http://127.0.0.1:{os.environ.get('OPENVAULT_PORT', '5000')}"
     fallback = FallbackManager(state_vault)
-    redis_store = try_make_redis_store()
-    limiter = TokenBudgetLimiter(store=redis_store) if redis_store is not None else TokenBudgetLimiter()
-    if redis_store is not None:
-        log.info("openvault_ratelimit_backend", backend="RedisBucketStore")
+    if rate_limiter is not None:
+        limiter = rate_limiter
+    else:
+        redis_store = try_make_redis_store()
+        limiter = (
+            TokenBudgetLimiter(store=redis_store)
+            if redis_store is not None
+            else TokenBudgetLimiter()
+        )
+        if redis_store is not None:
+            log.info("openvault_ratelimit_backend", backend="RedisBucketStore")
     cortex = CortexClient(cortex_url)
     loop_holder: dict[str, PrecheckLoop | None] = {"loop": None}
     task_holder: dict[str, asyncio.Task[None] | None] = {"task": None}
@@ -872,6 +1073,7 @@ def create_app(
         account_id: str, body: AccountKeyCreate, request: Request
     ) -> dict[str, Any]:
         _require_loopback(request, "key create")
+        _require_unsealed(state_seal, "key create")
         if state_accounts.get(account_id) is None:
             raise HTTPException(status_code=404, detail="account not found")
         record = state_vault.create(
@@ -893,6 +1095,7 @@ def create_app(
         # Kills every key on the account in one call — the single most
         # destructive custody route in the app, and until now the least guarded.
         _require_loopback(request, "account incident kill")
+        _require_unsealed(state_seal, "account incident kill")
         if state_accounts.get(account_id) is None:
             raise HTTPException(status_code=404, detail="account not found")
         result = state_vault.incident_kill(
@@ -936,6 +1139,7 @@ def create_app(
         # Same custody write as POST /api/keys, reached by env_key instead of
         # provider — so it gets the same gate. Otherwise it is a way around one.
         _require_loopback(request, "keyvault upsert")
+        _require_unsealed(state_seal, "keyvault upsert")
         results: list[dict[str, Any]] = []
         batch = dict(body.secrets or {})
         if body.env_key and body.secret:
@@ -1004,22 +1208,30 @@ def create_app(
         return uptime_payload()
 
     @app.post("/api/gate/check")
-    def api_gate_check(body: GateCheckBody) -> dict[str, Any]:
+    def api_gate_check(body: GateCheckBody, request: Request) -> dict[str, Any]:
         """Cortex/apps ask; OpenVault alone allows retrieve/run/deploy/leave."""
-        # Hard-block bypass attempts before vault logic
+        # Hard-block bypass attempts before vault logic (same keys as firewall).
+        bypass_attempt = bool(
+            body.bypass or body.bypass_gate or body.force or body.skip_rules or body.ignore_gate
+        )
         fw = evaluate_action(
-            "bypass_gate"
-            if (body.bypass or body.bypass_gate or body.force or body.skip_rules)
-            else "run_local",
+            "bypass_gate" if bypass_attempt else "run_local",
             destination=body.destination,
             client_flags={
                 "bypass": body.bypass,
                 "bypass_gate": body.bypass_gate,
                 "force": body.force,
                 "skip_rules": body.skip_rules,
+                "ignore_gate": body.ignore_gate,
             },
         )
-        if not fw.allowed and (body.bypass or body.bypass_gate or body.force or body.skip_rules):
+        if not fw.allowed and bypass_attempt:
+            _audit_custody(
+                "gate_bypass_attempt",
+                request,
+                action=body.action,
+                reasons=fw.reasons,
+            )
             return {
                 "allowed": False,
                 "action": body.action,
@@ -1037,6 +1249,15 @@ def create_app(
             destination=body.destination,
             required_providers=body.required_providers or None,
         )
+        if not decision.allowed:
+            _audit_custody(
+                "gate_denied",
+                request,
+                action=decision.action,
+                reasons=decision.reasons,
+                keys_ready=decision.keys_ready,
+                source="gate_check",
+            )
         out = decision.to_dict()
         out["firewall"] = fw.to_dict()
         return out
@@ -1152,6 +1373,7 @@ def create_app(
     @app.post("/api/keys")
     def create_key(body: KeyCreate, request: Request) -> dict[str, Any]:
         _require_loopback(request, "key create")
+        _require_unsealed(state_seal, "key create")
         if body.account_id and state_accounts.get(body.account_id) is None:
             raise HTTPException(status_code=404, detail="account not found")
         record = state_vault.create(
@@ -1170,6 +1392,7 @@ def create_app(
     @app.patch("/api/keys/{key_id}")
     def patch_key(key_id: str, body: KeyUpdate, request: Request) -> dict[str, Any]:
         _require_loopback(request, "key update")
+        _require_unsealed(state_seal, "key update")
         record = state_vault.update(
             key_id,
             label=body.label,
@@ -1192,6 +1415,7 @@ def create_app(
     @app.delete("/api/keys/{key_id}")
     def delete_key(key_id: str, request: Request) -> dict[str, bool]:
         _require_loopback(request, "key delete")
+        _require_unsealed(state_seal, "key delete")
         ok = state_vault.delete(key_id)
         if not ok:
             raise HTTPException(status_code=404, detail="key not found")
@@ -1201,6 +1425,7 @@ def create_app(
     @app.post("/api/keys/{key_id}/revoke")
     def revoke_key(key_id: str, body: KeyRevoke, request: Request) -> dict[str, Any]:
         _require_loopback(request, "key revoke")
+        _require_unsealed(state_seal, "key revoke")
         record = state_vault.revoke(key_id, reason=body.reason)
         if record is None:
             raise HTTPException(status_code=404, detail="key not found")
@@ -1210,6 +1435,7 @@ def create_app(
     @app.post("/api/keys/{key_id}/rotate")
     def rotate_key(key_id: str, body: KeyRotate, request: Request) -> dict[str, Any]:
         _require_loopback(request, "key rotate")
+        _require_unsealed(state_seal, "key rotate")
         record = state_vault.rotate(
             key_id, new_secret=body.new_secret, label_suffix=body.label_suffix
         )
@@ -1237,6 +1463,7 @@ def create_app(
         """
         client_host = _require_loopback(request, "secret reveal")
         _require_reveal_intent(request)
+        _require_unsealed(state_seal, "secret reveal")
 
         secret = state_vault.get_secret(key_id)
         if secret is None:
@@ -1262,6 +1489,7 @@ def create_app(
     @app.post("/api/secrets/passwords")
     def create_password(body: PasswordCreate, request: Request) -> dict[str, Any]:
         _require_loopback(request, "password create")
+        _require_unsealed(state_seal, "password create")
         if body.account_id and state_accounts.get(body.account_id) is None:
             raise HTTPException(status_code=404, detail="account not found")
         try:
@@ -1280,6 +1508,7 @@ def create_app(
     @app.post("/api/secrets/cards")
     def create_card(body: CardCreate, request: Request) -> dict[str, Any]:
         _require_loopback(request, "card create")
+        _require_unsealed(state_seal, "card create")
         if body.account_id and state_accounts.get(body.account_id) is None:
             raise HTTPException(status_code=404, detail="account not found")
         try:
@@ -1304,6 +1533,7 @@ def create_app(
     @app.patch("/api/secrets/{secret_id}")
     def patch_secret(secret_id: str, body: SecretUpdate, request: Request) -> dict[str, Any]:
         _require_loopback(request, "secret update")
+        _require_unsealed(state_seal, "secret update")
         try:
             record = state_secrets.update(
                 secret_id,
@@ -1325,6 +1555,7 @@ def create_app(
     @app.delete("/api/secrets/{secret_id}")
     def delete_secret(secret_id: str, request: Request) -> dict[str, bool]:
         _require_loopback(request, "secret delete")
+        _require_unsealed(state_seal, "secret delete")
         if not state_secrets.delete(secret_id):
             raise HTTPException(status_code=404, detail="secret not found")
         _audit_custody("secret_delete", request, secret_id=secret_id)
@@ -1333,6 +1564,7 @@ def create_app(
     @app.post("/api/secrets/{secret_id}/revoke")
     def revoke_secret(secret_id: str, body: SecretRevoke, request: Request) -> dict[str, Any]:
         _require_loopback(request, "secret revoke")
+        _require_unsealed(state_seal, "secret revoke")
         record = state_secrets.revoke(secret_id, reason=body.reason)
         if record is None:
             raise HTTPException(status_code=404, detail="secret not found")
@@ -1342,6 +1574,7 @@ def create_app(
     @app.post("/api/secrets/{secret_id}/rotate")
     def rotate_secret(secret_id: str, body: SecretRotate, request: Request) -> dict[str, Any]:
         _require_loopback(request, "secret rotate")
+        _require_unsealed(state_seal, "secret rotate")
         try:
             record = state_secrets.rotate(
                 secret_id,
@@ -1370,6 +1603,7 @@ def create_app(
         """
         client_host = _require_loopback(request, "secret reveal")
         _require_reveal_intent(request)
+        _require_unsealed(state_seal, "secret reveal")
 
         record = state_secrets.get(secret_id)
         if record is None:
@@ -1488,20 +1722,56 @@ def create_app(
         return payload
 
     @app.post("/api/deploy/one-press")
-    async def deploy_one_press(body: OnePressDeployBody) -> dict[str, Any]:
+    async def deploy_one_press(body: OnePressDeployBody, request: Request) -> dict[str, Any]:
         """One-press via in-process ship engine (FreeBuild concepts stolen locally)."""
+        # The gate used to hang off `auto_execute` alone, but run_ship_engine
+        # below is unconditional and, since the host adapters landed, it SSHes
+        # into the user's box, installs Docker and swaps live traffic.
+        # `auto_execute` governs the checklist half; it never governed whether
+        # anything left this machine, and `simulate` does not reach the engine.
+        # So this is OR, not a replacement: auto_execute keeps its own gate
+        # (test_one_press_auto_execute_refuses_empty_vault pins that), and a
+        # remote target now gets one whether or not auto_execute was asked for.
+        if body.auto_execute or _mutates_remote_host(body.target):
+            _require_leave_gate(
+                state_vault,
+                fallback,
+                action="deploy",
+                project_path=body.project_path,
+                destination=body.subdomain,
+                request=request,
+            )
         st = await cortex.status()
-        engine = run_ship_engine(
-            target=body.target,
-            project_path=body.project_path,
-            github_url=body.github_url,
-            hostname=body.subdomain,
-            vps_host=body.vps_host,
-            cloud_tier=body.cloud_tier,
-            monthly_cap_usd=body.monthly_cap_usd,
-            run_build=False,
-            prefer_remote_openship=False,
-        )
+        try:
+            # run_ship_engine builds, SSHes and waits on docker for up to 30
+            # minutes. Calling it directly from an async def pins the event loop
+            # for that whole time, so every other request on the process --
+            # including the health check -- stops. Hand it to the threadpool.
+            engine = await run_in_threadpool(
+                run_ship_engine,
+                target=body.target,
+                project_path=body.project_path,
+                github_url=body.github_url,
+                hostname=body.subdomain,
+                vps_host=body.vps_host,
+                cloud_tier=body.cloud_tier,
+                monthly_cap_usd=body.monthly_cap_usd,
+                # Was hardcoded False, which made Cloudflare Pages and Netlify
+                # impossible to finish through one-press. The engine now asks
+                # the adapter whether this machine has to build.
+                run_build=False,
+                prefer_remote_openship=False,
+            )
+        except DeployInProgressError as exc:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "message": "a deploy for this project is already running",
+                    "type": "deploy_in_progress",
+                    "project": exc.project_key,
+                    "since": exc.since,
+                },
+            ) from exc
         if not engine.get("ok") and engine.get("error"):
             return {**engine, "open_console": body.open_console, "cortex_online": st.online}
 
@@ -1627,6 +1897,108 @@ def create_app(
                 "facts": pre.facts,
                 "real_publish": True,
             }
+        if body.target == "coolify":
+            from openmw.openvault.ship.hosts.coolify import CoolifyAdapter, from_vault
+
+            def _coolify_secret(provider: str) -> str | None:
+                for rec in state_vault.list_keys():
+                    if (
+                        rec.enabled
+                        and rec.lifecycle == "active"
+                        and (
+                            rec.provider == provider
+                            or provider in (rec.label or "").lower()
+                            or "coolify" in (rec.label or "").lower()
+                        )
+                    ):
+                        return state_vault.get_secret(rec.id)
+                return None
+
+            try:
+                adapter = from_vault(_coolify_secret)
+            except Exception:
+                adapter = CoolifyAdapter(
+                    base_url=os.environ.get("COOLIFY_URL"),
+                    api_token=os.environ.get("COOLIFY_TOKEN"),
+                    app_uuid=os.environ.get("COOLIFY_APP_UUID"),
+                )
+            pre = adapter.preflight()
+            return {
+                "ok": pre.ready,
+                "ready": pre.ready,
+                "target": body.target,
+                "blocker": pre.blocker,
+                "facts": pre.facts,
+                "real_publish": True,
+            }
+        if body.target == "netlify":
+            from openmw.openvault.ship.hosts.netlify import NetlifyAdapter, from_vault
+
+            def _netlify_secret(provider: str) -> str | None:
+                for rec in state_vault.list_keys():
+                    if (
+                        rec.enabled
+                        and rec.lifecycle == "active"
+                        and (
+                            rec.provider == provider
+                            or provider in (rec.label or "").lower()
+                            or "netlify" in (rec.label or "").lower()
+                        )
+                    ):
+                        return state_vault.get_secret(rec.id)
+                return None
+
+            try:
+                adapter = from_vault(_netlify_secret)
+            except Exception:
+                adapter = NetlifyAdapter(
+                    api_token=os.environ.get("NETLIFY_AUTH_TOKEN"),
+                    site_id=os.environ.get("NETLIFY_SITE_ID"),
+                )
+            pre = adapter.preflight()
+            return {
+                "ok": pre.ready,
+                "ready": pre.ready,
+                "target": body.target,
+                "blocker": pre.blocker,
+                "facts": pre.facts,
+                "real_publish": True,
+            }
+        if body.target == "vps_ssh":
+            from openmw.openvault.ship.hosts.vps_ssh import VpsSshAdapter, from_vault
+
+            def _vps_secret(provider: str) -> str | None:
+                for rec in state_vault.list_keys():
+                    if (
+                        rec.enabled
+                        and rec.lifecycle == "active"
+                        and (
+                            rec.provider == provider
+                            or provider in (rec.label or "").lower()
+                            or "vps" in (rec.label or "").lower()
+                        )
+                    ):
+                        return state_vault.get_secret(rec.id)
+                return None
+
+            host = (body.vps_host or "").strip() or os.environ.get("OPENVAULT_VPS_HOST", "")
+            try:
+                adapter = from_vault(_vps_secret, host=host)
+            except Exception:
+                adapter = VpsSshAdapter(
+                    host=host,
+                    user=os.environ.get("OPENVAULT_VPS_USER", "root"),
+                    key_path=os.environ.get("OPENVAULT_VPS_KEY", ""),
+                )
+            pre = adapter.preflight()
+            return {
+                "ok": pre.ready,
+                "ready": pre.ready,
+                "target": body.target,
+                "blocker": pre.blocker,
+                "facts": pre.facts,
+                "real_publish": True,
+            }
         if body.target == "local_demo":
             return {
                 "ok": True,
@@ -1641,8 +2013,9 @@ def create_app(
             "ready": False,
             "target": body.target,
             "blocker": (
-                f"{body.target} is not a real host adapter yet — use Cloudflare Pages "
-                "for a free first publish, or local_demo to simulate."
+                f"{body.target} is not a real host adapter yet — use Cloudflare Pages, "
+                "Coolify, Netlify, or your own VPS (vps_ssh) for a real publish, or "
+                "local_demo to simulate."
             ),
             "facts": {},
             "real_publish": False,
@@ -1657,7 +2030,8 @@ def create_app(
         if body.project_path.strip() and not stack:
             stack = detect_project(body.project_path.strip()).to_dict()
         sponsored = {t.id for t in TARGET_CARDS if t.sponsored}
-        out = recommend_target(stack, sponsored_ids=sponsored)
+        vps = (body.vps_host or "").strip() or os.environ.get("OPENVAULT_VPS_HOST", "").strip()
+        out = recommend_target(stack, sponsored_ids=sponsored, vps_configured=bool(vps))
         out["stack"] = stack
         return out
 
@@ -1672,12 +2046,22 @@ def create_app(
 
     @app.post("/api/ship/github/pat")
     def ship_github_pat(body: GitHubPatBody) -> dict[str, Any]:
-        return save_pat(body.token, note=body.note).to_dict()
+        _require_unsealed(state_seal, "github pat save")
+        try:
+            return save_pat(body.token, note=body.note, vault=state_vault).to_dict()
+        except VaultSealedError as exc:
+            raise HTTPException(status_code=403, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     @app.delete("/api/ship/github/pat")
     def ship_github_pat_clear() -> dict[str, Any]:
-        clear_pat()
-        return connection_status().to_dict()
+        _require_unsealed(state_seal, "github pat clear")
+        try:
+            clear_pat(vault=state_vault)
+        except VaultSealedError as exc:
+            raise HTTPException(status_code=403, detail=str(exc)) from exc
+        return connection_status(vault=state_vault).to_dict()
 
     @app.get("/api/ship/github/repos")
     def ship_github_repos() -> dict[str, Any]:
@@ -1688,18 +2072,42 @@ def create_app(
         return list_branches(owner, repo)
 
     @app.post("/api/ship/engine")
-    def ship_engine_run(body: ShipEngineBody) -> dict[str, Any]:
-        return run_ship_engine(
-            target=body.target,
-            project_path=body.project_path,
-            github_url=body.github_url,
-            hostname=body.hostname,
-            vps_host=body.vps_host,
-            cloud_tier=body.cloud_tier,
-            monthly_cap_usd=body.monthly_cap_usd,
-            run_build=body.run_build,
-            prefer_remote_openship=body.prefer_remote_openship,
-        )
+    def ship_engine_run(body: ShipEngineBody, request: Request) -> dict[str, Any]:
+        """Run the ship engine. Gated whenever the target really leaves the machine."""
+        if _mutates_remote_host(body.target):
+            _require_leave_gate(
+                state_vault,
+                fallback,
+                action="deploy",
+                project_path=body.project_path,
+                destination=body.hostname,
+                request=request,
+            )
+        try:
+            return run_ship_engine(
+                target=body.target,
+                project_path=body.project_path,
+                github_url=body.github_url,
+                hostname=body.hostname,
+                vps_host=body.vps_host,
+                cloud_tier=body.cloud_tier,
+                monthly_cap_usd=body.monthly_cap_usd,
+                run_build=body.run_build,
+                prefer_remote_openship=body.prefer_remote_openship,
+            )
+        except DeployInProgressError as exc:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "message": (
+                        "a deploy for this project is already running; wait for it to "
+                        "finish rather than racing it onto the same host"
+                    ),
+                    "type": "deploy_in_progress",
+                    "project": exc.project_key,
+                    "since": exc.since,
+                },
+            ) from exc
 
     @app.get("/api/ship/engine/{deployment_id}")
     def ship_engine_get(deployment_id: str) -> dict[str, Any]:
@@ -1824,12 +2232,38 @@ def create_app(
         return updated.to_dict()
 
     @app.post("/api/deploy/{deploy_id}/execute")
-    def deploy_execute(deploy_id: str, body: DeployExecuteBody) -> dict[str, Any]:
+    def deploy_execute(
+        deploy_id: str, body: DeployExecuteBody, request: Request
+    ) -> dict[str, Any]:
         plan = load_plan(deploy_id)
         if plan is None:
             raise HTTPException(status_code=404, detail="deploy plan not found")
-        updated = execute_deploy(plan, simulate=body.simulate)
-        return updated.to_dict()
+        _require_leave_gate(
+            state_vault,
+            fallback,
+            action="deploy",
+            project_path=plan.project_path,
+            destination=plan.subdomain,
+            request=request,
+        )
+        env_vars, inject_summary = _resolve_ship_inject(
+            body.secrets,
+            vault=state_vault,
+            secrets=state_secrets,
+            request=request,
+        )
+        updated = execute_deploy(
+            plan,
+            simulate=body.simulate,
+            env_vars=env_vars or None,
+            secrets_injected=inject_summary.get("names") or None,
+        )
+        payload = updated.to_dict()
+        if env_vars:
+            payload = scrub_mapping(payload, list(env_vars.values()))
+        if inject_summary.get("count"):
+            payload["secrets_injected"] = inject_summary
+        return payload
 
     # --- FreeBuild full clone surface ---
 
@@ -1843,7 +2277,16 @@ def create_app(
 
     @app.post("/api/freebuild/plan")
     @app.post("/api/openship/plan", include_in_schema=False)
-    def freebuild_plan(body: OpenShipBody) -> dict[str, Any]:
+    def freebuild_plan(body: OpenShipBody, request: Request) -> dict[str, Any]:
+        if body.execute:
+            _require_leave_gate(
+                state_vault,
+                fallback,
+                action="deploy",
+                project_path=body.project_path,
+                destination=body.subdomain,
+                request=request,
+            )
         plan = build_openship_plan(
             project_path=body.project_path,
             subdomain=body.subdomain,
@@ -1869,10 +2312,20 @@ def create_app(
 
     @app.post("/api/freebuild/{ship_id}/execute")
     @app.post("/api/openship/{ship_id}/execute", include_in_schema=False)
-    def freebuild_execute(ship_id: str, body: DeployExecuteBody) -> dict[str, Any]:
+    def freebuild_execute(
+        ship_id: str, body: DeployExecuteBody, request: Request
+    ) -> dict[str, Any]:
         plan = load_ship_plan(ship_id)
         if plan is None:
             raise HTTPException(status_code=404, detail="freebuild plan not found")
+        _require_leave_gate(
+            state_vault,
+            fallback,
+            action="deploy",
+            project_path=plan.project_path,
+            destination=plan.subdomain,
+            request=request,
+        )
         # Remote FreeBuild refuses without project_id — fail loud before HTTP round-trip.
         from openmw.openvault.ship.openship import adapter_presence
 
@@ -1890,13 +2343,28 @@ def create_app(
                     "pass project_id or set simulate=true for local simulation"
                 ),
             )
-        return execute_openship_plan(
+        env_vars, inject_summary = _resolve_ship_inject(
+            body.secrets,
+            vault=state_vault,
+            secrets=state_secrets,
+            request=request,
+        )
+        executed = execute_openship_plan(
             plan,
             simulate=body.simulate,
             project_id=body.project_id,
             github_url=body.github_url,
             deploy_target=body.deploy_target,
-        ).to_dict()
+            env_vars=env_vars or None,
+            secrets_injected=inject_summary.get("names") or None,
+        )
+        payload = executed.to_dict()
+        # Defense in depth: never return plaintext even if a step echoed it.
+        if env_vars:
+            payload = scrub_mapping(payload, list(env_vars.values()))
+        if inject_summary.get("count"):
+            payload["secrets_injected"] = inject_summary
+        return payload
 
     # --- Playwright smoke ---
 
@@ -1981,6 +2449,9 @@ def create_app(
     def vault_ingest_env(body: EnvIngestBody, request: Request) -> dict[str, Any]:
         """Auto-retrieve provider secrets from the environment into the vault."""
         _require_loopback(request, "env ingest")
+        # Dry-run only reads env + plans; no encrypt. Non-dry-run is a custody write.
+        if not body.dry_run:
+            _require_unsealed(state_seal, "env ingest")
         result = ingest_environment(
             state_vault,
             dry_run=body.dry_run,
@@ -1990,27 +2461,204 @@ def create_app(
             _audit_custody("env_ingest", request, imported=result.get("imported", 0))
         return result
 
+    @app.get("/api/vault/status")
+    def vault_status() -> dict[str, Any]:
+        """Whether the master key is in memory, and whether a passphrase is set."""
+        return {"ok": True, **state_seal.status()}
+
+    @app.post("/api/vault/unseal")
+    def vault_unseal(body: VaultUnsealBody, request: Request) -> dict[str, Any]:
+        """Load the master key into memory. Passphrase required when configured."""
+        _require_loopback(request, "vault unseal")
+        try:
+            state_seal.unseal(body.passphrase)
+        except VaultCryptoError as exc:
+            raise HTTPException(status_code=401, detail=str(exc)) from exc
+        _audit_custody("vault_unseal", request, ok=True)
+        return {"ok": True, **state_seal.status()}
+
+    @app.post("/api/vault/lock")
+    def vault_lock(request: Request) -> dict[str, Any]:
+        """Drop in-process master key material."""
+        _require_loopback(request, "vault lock")
+        state_seal.lock()
+        _audit_custody("vault_lock", request, ok=True)
+        return {"ok": True, **state_seal.status()}
+
+    @app.post("/api/vault/passphrase")
+    def vault_set_passphrase(body: VaultPassphraseBody, request: Request) -> dict[str, Any]:
+        """Rewrap the live master key under a passphrase. Vault must be unsealed."""
+        _require_loopback(request, "vault set passphrase")
+        _require_unsealed(state_seal, "vault set passphrase")
+        try:
+            state_seal.set_passphrase(body.passphrase)
+        except (VaultCryptoError, VaultSealedError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        _audit_custody("vault_passphrase_set", request, ok=True)
+        return {"ok": True, **state_seal.status()}
+
+    @app.post("/api/apikeys")
+    def apikeys_issue(body: ApiKeyIssueBody, request: Request) -> dict[str, Any]:
+        """Mint a key for a third-party caller. The token is shown exactly once.
+
+        Loopback-only, like every sibling custody mutation: an open mint
+        endpoint would let anyone who can reach the port issue themselves the
+        credential this whole surface exists to require.
+        """
+        _require_loopback(request, "issue api key")
+        try:
+            record, token = state_api_keys.issue(label=body.label, tier=body.tier)
+        except ApiKeyError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        _audit_custody("api_key_issued", request, key_id=record.key_id, tier=record.tier)
+        return {
+            "ok": True,
+            "key": record.to_dict(),
+            "token": token,
+            "warning": (
+                "This is the only time the token is shown. OpenVault stores only its "
+                "SHA-256, so it cannot be recovered — issue a new key if it is lost."
+            ),
+        }
+
+    @app.get("/api/apikeys")
+    def apikeys_list(request: Request, include_revoked: bool = True) -> dict[str, Any]:
+        """Enumerate issued keys. Loopback-only — this is the revoke target list."""
+        _require_loopback(request, "list api keys")
+        keys = state_api_keys.list_keys(include_revoked=include_revoked)
+        return {"ok": True, "keys": [k.to_dict() for k in keys], "count": len(keys)}
+
+    @app.delete("/api/apikeys/{key_id}")
+    def apikeys_revoke(key_id: str, request: Request, reason: str = "") -> dict[str, Any]:
+        _require_loopback(request, "revoke api key")
+        revoked = state_api_keys.revoke(key_id, reason=reason)
+        if not revoked:
+            raise HTTPException(status_code=404, detail="no active key with that id")
+        _audit_custody("api_key_revoked", request, key_id=key_id, reason=reason)
+        return {"ok": True, "key_id": key_id, "lifecycle": "revoked"}
+
+    @app.get("/api/usage")
+    def usage_events(
+        request: Request,
+        api_key_id: str = "",
+        identity: str = "",
+        since: float | None = None,
+        limit: int = 200,
+    ) -> dict[str, Any]:
+        """What was actually spent. Estimates stay labelled as estimates.
+
+        A key holder sees only its own rows — the filters are a convenience for
+        the operator, never the authorization. Reading them as authorization is
+        how one tenant enumerates another tenant's spend, and the rows carry the
+        vault key id that served.
+        """
+        caller = None
+        with suppress(AuthRefusedError):
+            caller = resolve_caller(request, api_keys=state_api_keys)
+        if caller is not None and caller.api_key_id:
+            scoped_key: str | None = caller.api_key_id
+            scoped_identity: str | None = None
+        else:
+            # No issued key: operator view, and therefore loopback-only.
+            _require_loopback(request, "read usage ledger")
+            scoped_key = api_key_id or None
+            scoped_identity = identity or None
+        events = state_usage.events(
+            api_key_id=scoped_key,
+            identity=scoped_identity,
+            since=since,
+            limit=limit,
+        )
+        return {
+            "ok": True,
+            "events": events,
+            "count": len(events),
+            "summary": state_usage.summary(
+                api_key_id=scoped_key, identity=scoped_identity, since=since
+            ),
+        }
+
     @app.get("/api/freeroute/ratelimit")
     @app.get("/api/openfree/ratelimit", include_in_schema=False)
-    def freeroute_ratelimit(identity: str = "local", tier: str = DEFAULT_TIER) -> dict[str, Any]:
-        """FreeRoute token-budget snapshot for a caller (tiers + remaining).
+    def freeroute_ratelimit(
+        request: Request, identity: str = "", tier: str = ""
+    ) -> dict[str, Any]:
+        """FreeRoute token-budget snapshot for the caller (tiers + remaining).
 
         Formerly OpenFree; the old path stays as a hidden alias.
+
+        The identity and tier come from the caller's credential, not from query
+        parameters. Answering `?tier=local` for a free-tier holder reported
+        6,000,000 tokens/min against a bucket that actually holds 40,000 — and
+        Cortex consumes this number to decide whether it can afford a call.
         """
-        return limiter.status(identity, tier=tier)
+        caller = None
+        with suppress(AuthRefusedError):
+            caller = resolve_caller(request, api_keys=state_api_keys)
+        if caller is not None and caller.api_key_id:
+            return limiter.status(caller.identity, tier=caller.tier)
+        _require_loopback(request, "read another identity's rate limit")
+        return limiter.status(identity or "local", tier=tier or DEFAULT_TIER)
 
     @app.post("/v1/chat/completions", response_model=None)
     async def v1_chat(body: ChatBody, request: Request) -> JSONResponse | StreamingResponse:
-        client_host = request.client.host if request.client is not None else "local"
-        identity = request.headers.get("x-openfree-identity") or client_host
-        tier = request.headers.get("x-openfree-tier") or DEFAULT_TIER
+        try:
+            caller = resolve_caller(request, api_keys=state_api_keys)
+        except AuthRefusedError as refusal:
+            return JSONResponse(status_code=refusal.status_code, content=refusal.payload)
+        identity, tier = caller.identity, caller.tier
+        started_at = time.time()
+        trace = HopTrace()
+
+        def _record_usage(
+            *,
+            status: int,
+            total_tokens: int,
+            estimated: bool,
+            stream: bool,
+            prompt_tokens_in: int = 0,
+            completion_tokens_in: int = 0,
+        ) -> None:
+            """One ledger row per request. Never fails the request it describes."""
+            try:
+                state_usage.record(
+                    UsageEvent(
+                        identity=identity,
+                        tier=tier,
+                        api_key_id=caller.api_key_id,
+                        model_requested=str(body.model or ""),
+                        model_served=trace.model_served,
+                        provider=trace.provider,
+                        vault_key_id=trace.vault_key_id,
+                        prompt_tokens=prompt_tokens_in,
+                        completion_tokens=completion_tokens_in,
+                        total_tokens=total_tokens,
+                        estimated=estimated,
+                        cache_hit=trace.cache_hit,
+                        stream=stream,
+                        status=status,
+                        error_type=trace.error_type,
+                        latency_ms=int((time.time() - started_at) * 1000),
+                    )
+                )
+            except Exception as exc:  # pragma: no cover - ledger must not 500 a good call
+                log.warning("usage_ledger_write_failed", error=str(exc))
+
         # Reserve request + (prompt + max_tokens) budget up front (denial-of-wallet guard).
         prompt_tokens = estimate_prompt_tokens(body.messages)
         max_tokens = body.max_tokens if body.max_tokens is not None else DEFAULT_MAX_OUTPUT_TOKENS
+        # Reserve against what we will actually send, not what was asked for.
+        # With an operator ceiling of 256, reserving a caller's 1,000,000 would
+        # 429 them out of their own budget for tokens nobody could ever spend.
+        ceiling = configured_ceiling()
+        if ceiling is not None:
+            max_tokens = min(max_tokens, ceiling)
         decision = limiter.reserve(
             identity, tier=tier, prompt_tokens=prompt_tokens, max_tokens=max_tokens
         )
         if not decision.allowed:
+            trace.error_type = "rate_limited"
+            _record_usage(status=429, total_tokens=0, estimated=False, stream=bool(body.stream))
             return JSONResponse(
                 status_code=429,
                 content={
@@ -2026,32 +2674,70 @@ def create_app(
         rate_headers = limiter.headers_for(identity, tier=tier)
 
         if body.stream:
-            status, result = await prepare_chat_stream(state_vault, fallback, payload)
+            status, result = await prepare_chat_stream(
+                state_vault, fallback, payload, trace=trace, tenant=identity
+            )
             if isinstance(result, dict):
                 limiter.settle(
                     identity,
                     tier=tier,
                     reserved_tokens=decision.reserved_tokens,
                     actual_tokens=0,
+                    reservation_id=decision.reservation_id,
                 )
+                _record_usage(status=status, total_tokens=0, estimated=False, stream=True)
                 return JSONResponse(
                     status_code=status,
                     content=result,
                     headers=limiter.headers_for(identity, tier=tier),
                 )
 
+            # Only settle from real usage when the client asked for it. Otherwise
+            # keep the reservation (never invent / under-charge silently).
+            so = payload.get("stream_options")
+            want_usage = isinstance(so, dict) and bool(so.get("include_usage"))
+
             async def _stream() -> Any:
-                try:
-                    async for chunk in result:
-                        yield chunk
-                finally:
-                    # Stream usage is usually absent; keep the reservation (no refund).
+                # TestClient/ASGI can run generator cleanup more than once; settle
+                # must be once-only or refunds stack and spent drops to ~0.
+                actual = decision.reserved_tokens
+                capture = SseUsageCapture() if want_usage else None
+                settled = False
+
+                def _settle_once() -> None:
+                    nonlocal settled, actual
+                    if settled:
+                        return
+                    settled = True
+                    measured = False
+                    if capture is not None:
+                        capture.finish()
+                        if capture.total_tokens is not None:
+                            actual = capture.total_tokens
+                            measured = True
                     limiter.settle(
                         identity,
                         tier=tier,
                         reserved_tokens=decision.reserved_tokens,
-                        actual_tokens=decision.reserved_tokens,
+                        actual_tokens=actual,
+                        reservation_id=decision.reservation_id,
                     )
+                    # A stream without include_usage gives no usage frame. The
+                    # row is the reservation, flagged — never a number we made up.
+                    _record_usage(
+                        status=status,
+                        total_tokens=actual,
+                        estimated=not measured,
+                        stream=True,
+                    )
+
+                try:
+                    async for chunk in result:
+                        if capture is not None:
+                            capture.feed(chunk)
+                        yield chunk
+                finally:
+                    _settle_once()
 
             return StreamingResponse(
                 _stream(),
@@ -2064,16 +2750,27 @@ def create_app(
                 },
             )
 
-        status, result = await chat_completions(state_vault, fallback, payload)
+        status, result = await chat_completions(
+            state_vault, fallback, payload, trace=trace, tenant=identity
+        )
         # Refund the reservation down to actual usage (0 on upstream failure).
-        actual = usage_total_tokens(result) if 200 <= status < 300 else 0
-        if actual is None:
-            actual = decision.reserved_tokens
+        measured = usage_total_tokens(result) if 200 <= status < 300 else 0
+        actual = decision.reserved_tokens if measured is None else measured
         limiter.settle(
             identity,
             tier=tier,
             reserved_tokens=decision.reserved_tokens,
             actual_tokens=actual,
+            reservation_id=decision.reservation_id,
+        )
+        usage_block = result.get("usage") if isinstance(result, dict) else None
+        _record_usage(
+            status=status,
+            total_tokens=actual,
+            estimated=measured is None,
+            stream=False,
+            prompt_tokens_in=int((usage_block or {}).get("prompt_tokens") or 0),
+            completion_tokens_in=int((usage_block or {}).get("completion_tokens") or 0),
         )
         return JSONResponse(
             status_code=status,

@@ -1,7 +1,8 @@
 """GitHub connect — stolen from FreeBuild local-source (gh CLI → PAT → env).
 
-OpenVault owns the token in ``OPENVAULT_HOME/github/`` (never log secrets).
-Highest practical scopes via ``gh``: repo, read:org, workflow (matches FreeBuild CLI path).
+Durable PATs live in the sealed KeyVault (same master-key Seal as other
+secrets). Legacy ``OPENVAULT_HOME/github/pat.json`` is migrated once then
+removed. Never log the raw token. Resolve order: ``gh`` CLI → sealed PAT → env.
 """
 
 from __future__ import annotations
@@ -11,7 +12,6 @@ import os
 import re
 import shutil
 import subprocess
-import time
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Literal
@@ -20,10 +20,32 @@ import httpx
 import structlog
 
 from openmw.openvault.paths import ensure_home
+from openmw.openvault.vault.crypto import VaultSealedError
+from openmw.openvault.vault.store import KeyVault
 
 log = structlog.get_logger()
 
 AuthMode = Literal["gh_cli", "pat", "env", "disconnected"]
+
+# Fixed KeyVault row — disabled so chat/routing never picks the ship PAT.
+GITHUB_SHIP_PAT_ID = "github-ship-pat"
+_PAT_LABEL = "GitHub ship PAT"
+
+_bound_vault: KeyVault | None = None
+
+
+def bind_vault(vault: KeyVault | None) -> None:
+    """Share the process KeyVault/Seal (create_app). None clears the bind."""
+    global _bound_vault
+    _bound_vault = vault
+
+
+def _vault(vault: KeyVault | None = None) -> KeyVault:
+    if vault is not None:
+        return vault
+    if _bound_vault is not None:
+        return _bound_vault
+    return KeyVault()
 
 
 @dataclass
@@ -114,23 +136,72 @@ def _token_from_env() -> str | None:
     return None
 
 
-def _token_from_pat_file() -> str | None:
+def _scrub_pat_file() -> None:
     path = _pat_path()
-    if not path.is_file():
-        return None
+    if path.is_file():
+        path.unlink()
+        log.info("github_pat_file_removed")
+
+
+def _store_pat_in_vault(vault: KeyVault, token: str, *, note: str = "") -> None:
+    label = _PAT_LABEL if not note.strip() else f"{_PAT_LABEL}: {note.strip()}"[:80]
+    existing = vault.get(GITHUB_SHIP_PAT_ID)
+    if existing is not None:
+        vault.update(GITHUB_SHIP_PAT_ID, secret=token, label=label, enabled=False)
+        return
+    vault.create(
+        label=label,
+        provider="custom",
+        secret=token,
+        role="backup",
+        priority=9999,
+        enabled=False,
+        key_id=GITHUB_SHIP_PAT_ID,
+    )
+
+
+def _migrate_legacy_pat(vault: KeyVault) -> None:
+    """One-shot: sealed store gets the token; plaintext pat.json is deleted.
+
+    Skipped while sealed (cannot encrypt). Resolve also refuses to read the
+    legacy file, so the side door stays closed until unseal + migrate.
+    """
+    path = _pat_path()
+    if not path.is_file() or vault.seal.is_sealed:
+        return
     try:
         raw = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        return None
+    except (OSError, json.JSONDecodeError, UnicodeError):
+        _scrub_pat_file()
+        return
+    if not isinstance(raw, dict):
+        _scrub_pat_file()
+        return
     token = str(raw.get("token", "")).strip()
-    return token or None
+    note = str(raw.get("note", "")).strip()
+    if token:
+        _store_pat_in_vault(vault, token, note=note)
+        log.info("github_pat_migrated_to_vault")
+    _scrub_pat_file()
 
 
-def resolve_token() -> tuple[str | None, AuthMode]:
+def _token_from_vault(vault: KeyVault) -> str | None:
+    _migrate_legacy_pat(vault)
+    if vault.seal.is_sealed:
+        return None
+    if vault.get(GITHUB_SHIP_PAT_ID) is None:
+        return None
+    try:
+        return vault.get_secret(GITHUB_SHIP_PAT_ID)
+    except VaultSealedError:
+        return None
+
+
+def resolve_token(*, vault: KeyVault | None = None) -> tuple[str | None, AuthMode]:
     gh = _token_from_gh()
     if gh:
         return gh, "gh_cli"
-    pat = _token_from_pat_file()
+    pat = _token_from_vault(_vault(vault))
     if pat:
         return pat, "pat"
     env = _token_from_env()
@@ -139,25 +210,31 @@ def resolve_token() -> tuple[str | None, AuthMode]:
     return None, "disconnected"
 
 
-def save_pat(token: str, *, note: str = "") -> GitHubConnection:
-    """Store a classic/fine-grained PAT (operator pasted after GitHub register)."""
+def save_pat(token: str, *, note: str = "", vault: KeyVault | None = None) -> GitHubConnection:
+    """Store a classic/fine-grained PAT behind the vault Seal."""
     cleaned = token.strip()
     if not cleaned:
         raise ValueError("empty token")
-    payload = {
-        "token": cleaned,
-        "note": note,
-        "saved_at": time.time(),
-        "hint": "Create at https://github.com/settings/tokens with repo + workflow + read:org",
-    }
-    _pat_path().write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    return connection_status()
+    kv = _vault(vault)
+    if kv.seal.is_sealed:
+        raise VaultSealedError(
+            "vault is sealed; POST /api/vault/unseal with the passphrase first"
+        )
+    _store_pat_in_vault(kv, cleaned, note=note)
+    _scrub_pat_file()
+    log.info("github_pat_saved_to_vault")
+    return connection_status(vault=kv)
 
 
-def clear_pat() -> None:
-    path = _pat_path()
-    if path.is_file():
-        path.unlink()
+def clear_pat(*, vault: KeyVault | None = None) -> None:
+    kv = _vault(vault)
+    if kv.seal.is_sealed:
+        raise VaultSealedError(
+            "vault is sealed; POST /api/vault/unseal with the passphrase first"
+        )
+    kv.delete(GITHUB_SHIP_PAT_ID)
+    _scrub_pat_file()
+    log.info("github_pat_cleared")
 
 
 def _api_headers(token: str) -> dict[str, str]:
@@ -169,16 +246,23 @@ def _api_headers(token: str) -> dict[str, str]:
     }
 
 
-def connection_status() -> GitHubConnection:
-    token, mode = resolve_token()
+def connection_status(*, vault: KeyVault | None = None) -> GitHubConnection:
+    token, mode = resolve_token(vault=vault)
     if not token:
+        detail = (
+            "Not connected. Run `gh auth login -s repo,read:org,workflow` "
+            "or paste a PAT (repo + workflow + read:org)."
+        )
+        kv = _vault(vault)
+        if kv.seal.is_sealed and kv.get(GITHUB_SHIP_PAT_ID) is not None:
+            detail = (
+                "Vault is sealed; unseal to use the stored GitHub PAT, "
+                "or connect via gh CLI / env."
+            )
         return GitHubConnection(
             connected=False,
             mode="disconnected",
-            detail=(
-                "Not connected. Run `gh auth login -s repo,read:org,workflow` "
-                "or paste a PAT (repo + workflow + read:org)."
-            ),
+            detail=detail,
         )
     try:
         with httpx.Client(timeout=20.0) as client:
@@ -227,12 +311,17 @@ def start_gh_login(*, scopes: str = "repo,read:org,workflow") -> dict[str, Any]:
     }
 
 
-def list_repos(*, limit: int = 40, affiliation: str = "owner,collaborator,organization_member") -> dict[str, Any]:
+def list_repos(
+    *,
+    limit: int = 40,
+    affiliation: str = "owner,collaborator,organization_member",
+    vault: KeyVault | None = None,
+) -> dict[str, Any]:
     """Library view — FreeBuild ``/github/home`` equivalent (repos for picker)."""
-    status = connection_status()
+    status = connection_status(vault=vault)
     if not status.connected:
         return {"ok": False, "connection": status.to_dict(), "repos": []}
-    token, _mode = resolve_token()
+    token, _mode = resolve_token(vault=vault)
     assert token is not None
     repos: list[GitHubRepo] = []
     try:
@@ -286,11 +375,13 @@ def list_repos(*, limit: int = 40, affiliation: str = "owner,collaborator,organi
     }
 
 
-def list_branches(owner: str, repo: str) -> dict[str, Any]:
-    status = connection_status()
+def list_branches(
+    owner: str, repo: str, *, vault: KeyVault | None = None
+) -> dict[str, Any]:
+    status = connection_status(vault=vault)
     if not status.connected:
         return {"ok": False, "branches": [], "connection": status.to_dict()}
-    token, _ = resolve_token()
+    token, _ = resolve_token(vault=vault)
     assert token is not None
     try:
         with httpx.Client(timeout=30.0) as client:

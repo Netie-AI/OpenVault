@@ -51,6 +51,22 @@ def check_gate(
     if action in ("deploy", "leave") and not required:
         required = ["openai", "anthropic", "openrouter", "groq", "google"]
 
+    # Sealed vault still has SQLite metadata rows — do not report keys_ready from
+    # that alone. Secrets are unusable until unseal; deploy/leave must deny.
+    if vault.seal.is_sealed and action in ("deploy", "leave"):
+        return GateDecision(
+            allowed=False,
+            action=action,
+            reasons=["vault is sealed; unseal before deploy/leave"],
+            keys_ready=False,
+            locate={
+                "project_path": (project_path or "")[:500],
+                "destination": (destination or "")[:200],
+                "sealed": True,
+            },
+            required_providers=required,
+        )
+
     keys = vault.list_keys()
     enabled = [k for k in keys if k.enabled and k.lifecycle == "active"]
     by_provider = {k.provider for k in enabled}

@@ -5,6 +5,7 @@
   openvault app         # Electron desktop shell → wraps the same two processes
   openvault doctor      # environment preflight (filesystem, node, npm, ports)
   openvault demo        # mock-health demo: API + app + open browser
+  openvault demo-path   # scripted vault→FreeRoute refuse→ship allow→deny (mocks only)
 
 Topology is deliberately two processes. The vendor trees under ``vendor/`` are
 upstream *sources we copied from*, not services we run.
@@ -242,6 +243,21 @@ def cmd_demo(args: argparse.Namespace) -> int:
     return _run_stack(args, mock_health=True, open_browser=open_browser)
 
 
+def cmd_demo_path(args: argparse.Namespace) -> int:
+    """Auto-safe one-seat path: vault → FreeRoute refuse → ship allow → gate deny.
+
+    In-process mocks/simulate only. Does not start the UI stack and does not
+    claim HT1–HT5. See docs/ONE_SEAT_DEMO.md.
+    """
+    uv = shutil.which("uv") or str(Path.home() / ".local" / "bin" / "uv.exe")
+    script = OPENMW / "scripts" / "one_seat_demo.py"
+    cmd = [uv, "run", "--no-sync", "python", str(script)]
+    if getattr(args, "out", None):
+        cmd.extend(["--out", str(Path(args.out))])
+    print("One-seat demo-path — mocks/simulate ONLY (no live hosts / paid keys).")
+    return subprocess.call(cmd, cwd=str(OPENMW))
+
+
 def cmd_app(_: argparse.Namespace) -> int:
     if not (SHELL / "node_modules").is_dir():
         subprocess.check_call([_npm(), "install", "--no-audit", "--no-fund"], cwd=str(SHELL))
@@ -269,6 +285,16 @@ def main() -> int:
         help="do not open http://127.0.0.1:3010/ after ready",
     )
     demo.set_defaults(func=cmd_demo)
+
+    demo_path = sub.add_parser(
+        "demo-path",
+        help="Scripted one-seat path (vault→FreeRoute refuse→ship allow→deny); mocks only",
+    )
+    demo_path.add_argument(
+        "--out",
+        help="JSON evidence path (default: OPENVAULT_HOME/one_seat_demo_evidence.json)",
+    )
+    demo_path.set_defaults(func=cmd_demo_path)
 
     sub.add_parser("app", help="Electron desktop shell").set_defaults(func=cmd_app)
     sub.add_parser("doctor", help="Environment preflight").set_defaults(func=cmd_doctor)

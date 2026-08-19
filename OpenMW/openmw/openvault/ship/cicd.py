@@ -63,6 +63,7 @@ def detect_cicd(project_path: str | Path) -> CicdReport:
     notes = [
         "CI should call OpenVault /api/deploy/from-cortex then /execute — FreeBuild is SoT for ship.",
         "Do not add a second deploy orchestrator in the workflow.",
+        "Suggest-only + simulate-default: a simulated execute must not invent a live host URL.",
     ]
     if status == "present":
         notes.append(f"Found: {', '.join(detected)}. Review before adding OpenVault ship job.")

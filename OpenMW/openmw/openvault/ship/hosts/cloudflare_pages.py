@@ -66,6 +66,8 @@ class CloudflarePagesAdapter:
     id = "cloudflare_pages"
     name = "Cloudflare Pages"
     credential_provider = "cloudflare"
+    # Direct Upload sends a built directory from this machine.
+    needs_local_build = True
 
     def __init__(self, *, api_token: str | None, account_id: str | None) -> None:
         self._token = (api_token or "").strip()

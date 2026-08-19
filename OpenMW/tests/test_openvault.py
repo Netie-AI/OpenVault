@@ -111,6 +111,46 @@ def test_gate_blocks_deploy_without_keys(vault: KeyVault) -> None:
     assert allowed.allowed is True
 
 
+def test_gate_sealed_keys_ready_false_for_deploy(vault: KeyVault) -> None:
+    """Metadata rows while sealed must not report keys_ready for deploy/leave."""
+    from openmw.openvault.ship.gate import check_gate
+
+    vault.create(
+        label="groq",
+        provider="groq",
+        secret="gsk-test-cccccccccccc",
+        role="free",
+    )
+    assert check_gate(action="deploy", vault=vault, required_providers=["groq"]).allowed is True
+
+    vault.seal.lock()
+    assert vault.seal.is_sealed
+    assert vault.list_keys()  # metadata still present
+
+    denied = check_gate(action="deploy", vault=vault, required_providers=["groq"])
+    assert denied.allowed is False
+    assert denied.keys_ready is False
+    assert any("sealed" in r.lower() for r in denied.reasons)
+
+    leave = check_gate(action="leave", vault=vault)
+    assert leave.allowed is False
+    assert leave.keys_ready is False
+
+    # Local run with ollama still follows today's rules (metadata + local engines).
+    vault_local = KeyVault(db_path=vault.db_path.parent / "local.db", seal=Seal(Fernet.generate_key()))
+    vault_local.create(
+        label="ollama",
+        provider="ollama",
+        secret="local",
+        role="free",
+        base_url="http://127.0.0.1:11434",
+    )
+    vault_local.seal.lock()
+    run = check_gate(action="run", vault=vault_local)
+    assert run.allowed is True
+    assert run.keys_ready is True
+
+
 def test_keyvault_snapshot_and_upsert(vault: KeyVault) -> None:
     from openmw.openvault.vault.airgpt_keyvault import keyvault_snapshot, upsert_env_secret
 

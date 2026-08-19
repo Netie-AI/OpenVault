@@ -129,6 +129,14 @@ def deployment_frames(
     success = bool(dep.ready) and not failed
     if dep.public_url:
         emit({"type": "log", "data": _b64(f"public_url={dep.public_url}\n"), "level": "info"})
+    elif dep.mode == "simulated" or any(s.status == "simulated" for s in dep.steps):
+        emit(
+            {
+                "type": "log",
+                "data": _b64("non-production simulate — no live host URL\n"),
+                "level": "info",
+            }
+        )
     emit(
         {
             "type": "complete",
