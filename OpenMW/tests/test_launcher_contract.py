@@ -127,3 +127,47 @@ def test_launcher_output_survives_a_non_utf8_console(rel: str) -> None:
             f"encoded under cp1252. Use a plain substitute: ' - ', '->', '...', \"'\". "
             f"This is the exact failure that stopped the demo stack from starting."
         )
+
+
+def test_the_cli_reconfigures_stdio_before_it_prints_anything() -> None:
+    """The robust half of R-0012, which this repo did not have.
+
+    Substituting plain characters is the fragile half: it holds only until
+    somebody types an em dash again, and it cannot protect text produced
+    elsewhere and printed through the CLI. Reconfiguring the streams to UTF-8
+    with ``errors="replace"`` kills the whole class - output can no longer be
+    fatal, whatever ends up in it.
+
+    Asserted by actually driving a cp1252 stream, not by grepping for the call:
+    a guard that is present but does not work is worse than none.
+    """
+    import importlib.util
+    import io as _io
+    import sys as _sys
+
+    cli_path = _existing("apps/cli/openvault_cli.py")
+    spec = importlib.util.spec_from_file_location("openvault_cli_under_test", cli_path)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    assert hasattr(module, "ensure_utf8_stdio"), (
+        "apps/cli/openvault_cli.py no longer defines ensure_utf8_stdio(). Without it a "
+        "single unencodable character kills the launcher before it binds :5000."
+    )
+    assert "ensure_utf8_stdio()" in cli_path.read_text(encoding="utf-8").split("def main(")[1], (
+        "ensure_utf8_stdio() is defined but main() does not call it first. It must run "
+        "before argparse, because --help renders the module docstring."
+    )
+
+    real_stdout, real_stderr = _sys.stdout, _sys.stderr
+    try:
+        _sys.stdout = _io.TextIOWrapper(_io.BytesIO(), encoding="cp1252")
+        _sys.stderr = _io.TextIOWrapper(_io.BytesIO(), encoding="cp1252")
+        with pytest.raises(UnicodeEncodeError):
+            print("proof the stream really is cp1252: →")
+        module.ensure_utf8_stdio()
+        print("after the guard: → — …")  # must not raise
+        _sys.stdout.flush()
+    finally:
+        _sys.stdout, _sys.stderr = real_stdout, real_stderr

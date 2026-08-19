@@ -14,14 +14,45 @@ upstream *sources we copied from*, not services we run.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import os
 import shutil
 import socket
 import subprocess
+import sys
 import time
 import urllib.request
 import webbrowser
 from pathlib import Path
+
+
+def ensure_utf8_stdio() -> None:
+    """Make stdout/stderr survive a console that is not UTF-8.
+
+    R-0012 has two halves and this repo only had the fragile one. Substituting
+    plain characters holds exactly as long as nobody types an em dash again,
+    and it cannot protect text produced elsewhere and printed through here.
+
+    The failure it prevents: spawned by a launcher with redirected or detached
+    stdout on Windows, Python picks the ANSI codepage (cp1252). One
+    unencodable character then raises UnicodeEncodeError at the print, and the
+    process dies before doing any work - which is how the demo stack came up
+    without its custody API and failed downstream with an unrelated-looking
+    error about /keys/services.
+
+    ``errors="replace"`` is deliberate: a stray character should degrade to a
+    question mark, never take the process down. Called before argparse, since
+    --help renders the module docstring.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is None:  # not a TextIOWrapper (captured, or replaced)
+            continue
+        # A stream that refuses reconfiguration is not worth dying over - the
+        # whole point of this function is that output can never be fatal.
+        with contextlib.suppress(ValueError, OSError):
+            reconfigure(encoding="utf-8", errors="replace")
+
 
 ROOT = Path(__file__).resolve().parents[2]
 OPENMW = ROOT / "OpenMW"
@@ -265,6 +296,7 @@ def cmd_app(_: argparse.Namespace) -> int:
 
 
 def main() -> int:
+    ensure_utf8_stdio()
     parser = argparse.ArgumentParser(prog="openvault")
     sub = parser.add_subparsers(dest="cmd", required=True)
 
