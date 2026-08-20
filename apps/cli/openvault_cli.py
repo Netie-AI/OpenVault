@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import json
 import os
 import shutil
 import socket
@@ -59,8 +60,40 @@ OPENMW = ROOT / "OpenMW"
 WEB = ROOT / "apps" / "web"
 SHELL = ROOT / "apps" / "shell"
 
-API_PORT = 5000
-WEB_PORT = 3010
+def _home_dir() -> Path:
+    """The vault home this launcher and its children will agree on."""
+    return Path(os.environ.get("OPENVAULT_HOME", str(ROOT / ".openvault")))
+
+
+def _resolve_port(service_key: str, env_var: str, default: int) -> int:
+    """Environment, then the operator's saved choice, then the default.
+
+    Deliberately a small duplicate of openmw.openvault.ports.resolve_port:
+    this launcher runs on the system Python and cannot import the OpenMW
+    package. The two are kept in step by
+    tests/test_ports.py::test_the_launcher_resolver_agrees_with_the_package,
+    so the duplication is a gated invariant rather than a drift risk.
+    """
+    from_env = os.environ.get(env_var, "").strip()
+    if from_env:
+        try:
+            return int(from_env)
+        except ValueError:
+            pass
+    saved = _home_dir() / "ports.json"
+    if saved.is_file():
+        try:
+            data = json.loads(saved.read_text(encoding="utf-8"))
+            value = (data.get("ports") or {}).get(service_key)
+            if value is not None:
+                return int(value)
+        except (OSError, ValueError, TypeError):
+            pass
+    return default
+
+
+API_PORT = _resolve_port("api", "OPENVAULT_API_PORT", 5000)
+WEB_PORT = _resolve_port("web", "OPENVAULT_WEB_PORT", 3010)
 
 
 def _wait(url: str, timeout: float = 60.0) -> bool:
@@ -120,8 +153,41 @@ def _ensure_web_deps() -> None:
     subprocess.check_call([_npm(), "install", "--no-audit", "--no-fund"], cwd=str(WEB))
 
 
+class PortBlockedError(Exception):
+    """A foreign application holds a port the stack needs."""
+
+
+def _port_owner_report(env: dict[str, str]) -> tuple[int, str]:
+    """Ask OpenMW who holds the stack ports. Returns (exit code, output).
+
+    Shelling out rather than importing: this launcher runs on the system
+    Python, where psutil is not guaranteed, while OpenMW already declares it.
+    One implementation, in the package that owns the vault.
+    """
+    uv = shutil.which("uv") or str(Path.home() / ".local" / "bin" / "uv.exe")
+    try:
+        proc = subprocess.run(
+            [uv, "run", "--no-sync", "openmw", "ports"],
+            cwd=str(OPENMW),
+            env={**os.environ, **env},
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        return (0, f"(could not check port owners: {exc})")
+    return (proc.returncode, (proc.stdout or "") + (proc.stderr or ""))
+
+
 def _start_api(env: dict[str, str], *, mock_health: bool = False) -> subprocess.Popen | None:
     if _port_busy(API_PORT):
+        # Something is on the port. Reusing our own already-running server is
+        # legitimate work; adopting a stranger's is how the console ends up
+        # talking to a server that is not ours - or to another stack pointed at
+        # a different vault. Find out which before deciding.
+        code, report = _port_owner_report(env)
+        if code != 0:
+            raise PortBlockedError(report.rstrip())
         print(f"Custody API already listening on :{API_PORT} - reusing it.")
         return None
     uv = shutil.which("uv") or str(Path.home() / ".local" / "bin" / "uv.exe")
@@ -231,7 +297,11 @@ def cmd_doctor(_: argparse.Namespace) -> int:
 def _run_stack(args: argparse.Namespace, *, mock_health: bool, open_browser: bool) -> int:
     procs: list[subprocess.Popen] = []
     env = _base_env()
-    api = _start_api(env, mock_health=mock_health)
+    try:
+        api = _start_api(env, mock_health=mock_health)
+    except PortBlockedError as blocked:
+        print(str(blocked))
+        return 1
     if api is not None:
         procs.append(api)
     if not _wait(f"http://127.0.0.1:{API_PORT}/api/healthz", 90):

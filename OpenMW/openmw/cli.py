@@ -164,7 +164,14 @@ def infer_cmd(
 @app.command("console")
 def console_cmd(
     host: str = typer.Option("127.0.0.1", "--host", help="Bind address (localhost default)."),
-    port: int = typer.Option(5000, "--port", help="HTTP port for OpenVault console."),
+    port: int | None = typer.Option(
+        None,
+        "--port",
+        help=(
+            "HTTP port. Defaults to the port saved by `openmw ports --set api=...`, "
+            "then OPENVAULT_API_PORT, then 5000."
+        ),
+    ),
     cortex_url: str | None = typer.Option(
         None,
         "--cortex-url",
@@ -198,7 +205,13 @@ def console_cmd(
 
     from openmw.openvault.app import create_app
     from openmw.openvault.mesh.local_mesh import cortex_base_url
+    from openmw.openvault.ports import resolve_port
 
+    # An explicit --port still wins; otherwise honour the port the operator
+    # saved with `openmw ports --set`. Without this the saved choice would be
+    # written to disk and then ignored at every start, which is the kind of
+    # setting that is worse than not having one (R-0011).
+    port = resolve_port("api", override=port)
     resolved_cortex = cortex_url if cortex_url is not None else cortex_base_url()
     app = create_app(
         cortex_url=resolved_cortex,
@@ -306,6 +319,64 @@ def demo_ui_cmd(
         for proc in (web, api):
             with suppress(Exception):
                 proc.terminate()
+
+
+
+
+@app.command("ports")
+def ports_cmd(
+    set_: str = typer.Option(
+        "",
+        "--set",
+        help="Save a port for this device, e.g. --set api=5050. Used on every later start.",
+    ),
+) -> None:
+    """Show which application holds each stack port, and pick your own ports.
+
+    "Port busy" is not something an operator can act on. This names the
+    application holding the port, with its executable path, so they know what
+    to close - and offers a port they can keep instead.
+    """
+    from openmw.openvault import ports as ports_mod
+
+    if set_:
+        if "=" not in set_:
+            typer.echo("Use --set <service>=<port>, e.g. --set api=5050")
+            raise typer.Exit(2)
+        key, _, value = set_.partition("=")
+        key, value = key.strip(), value.strip()
+        if key not in ports_mod.SERVICES_BY_KEY:
+            known = ", ".join(s.key for s in ports_mod.SERVICES)
+            typer.echo(f"Unknown service '{key}'. Known: {known}")
+            raise typer.Exit(2)
+        try:
+            path = ports_mod.set_port(key, int(value))
+        except ValueError as exc:
+            typer.echo(f"Refused: {exc}")
+            raise typer.Exit(2) from exc
+        typer.echo(f"Saved {key} = {value} in {path}")
+        typer.echo("This is used on every later start until you change it.")
+        return
+
+    statuses = ports_mod.inspect_all()
+    typer.echo(f"Port settings for this device: {ports_mod.ports_file()}")
+    typer.echo("")
+    for status in statuses:
+        mark = {"free": "free  ", "ours": "in use", "foreign": "BLOCKED"}[status.state]
+        typer.echo(f"  {mark}  :{status.port:<6}{status.service.label}")
+        if status.listener is not None:
+            typer.echo(f"          held by {status.listener.describe()}")
+        for note in status.notes:
+            typer.echo(f"          {note}")
+    blocked = [s for s in statuses if s.blocked]
+    if not blocked:
+        typer.echo("")
+        typer.echo("Nothing is blocking OpenVault.")
+        return
+    for status in blocked:
+        typer.echo("")
+        typer.echo(ports_mod.blocking_message(status))
+    raise typer.Exit(1)
 
 
 if __name__ == "__main__":

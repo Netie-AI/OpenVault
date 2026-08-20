@@ -2,6 +2,36 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-08-20 - Port custody: name the application that is blocking us (DR-0011, proposed)
+
+- **The launcher stopped adopting strangers.** Every launcher had an "already listening on
+  :5000 - reusing it" branch that reused whatever was there, including a server pointed at a
+  different vault home. `openvault up` now identifies the listener first: our own server is
+  still reused, and a foreign one is refused in about 10 seconds with its name and executable
+  path, instead of a 90-second wait and a timeout that blames the wrong thing.
+- **"Port busy" became actionable.** `openmw ports` lists all four stack ports and, for a
+  blocked one, prints the process name, pid and full executable path. Via `psutil`, already a
+  dependency. Verified on Windows 11 without elevation: all 54 listening sockets resolved.
+- **A port choice now persists.** `openmw ports --set api=5099` writes
+  `$OPENVAULT_HOME/ports.json`. Precedence is explicit flag > env var > saved file > default,
+  so a one-off `--port` never rewrites a saved preference.
+- **Refusal stays narrow** (R-0005): only a listener that fails to identify itself on its
+  health endpoint counts as foreign. Cortex :8010 and AirGPT :8765 are reported, never
+  treated as intruders and never reconfigured - they belong to other repos.
+- **Nothing is killed.** Naming a process is decision support, not a licence to terminate
+  somebody else's work. Whether to add an explicit, confirming `--kill` is open in DR-0011.
+- Two implementation errors worth recording, both of which looked right. A command-line
+  heuristic added to recognise our own process matched *any* process launched from
+  `OpenMW/.venv`, so it would have adopted a stranger's script as ours - the exact bug the
+  module exists to prevent. And the first version resolved nothing: the command wrote the
+  file while `openmw console` still defaulted to a hardcoded 5000 and the launcher still had
+  `API_PORT = 5000`, printing "used on every later start" while nothing read it. Both are now
+  gated, and the record carries a live end-to-end check rather than only unit tests.
+- **Four decisions are open and blocking** - see
+  [`DR-0011`](docs/decisions/DR-0011-port-custody.md), filed `proposed`: where ports.json
+  lives given two vault homes, the web port being inert until package.json reads the env,
+  whether anything may ever be killed, and mesh-wide port ownership.
+
 ## 2026-08-20 - Five more intermittent-startup causes, found by a completed adversarial sweep
 
 The first sweep lost 24 of 31 agents to a session limit. Re-run whole: 5 confirmed (two verifiers
