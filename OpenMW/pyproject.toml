@@ -33,6 +33,9 @@ dependencies = [
 [project.scripts]
 openmw = "openmw.cli:app"
 
+[project.entry-points.pytest11]
+openmw_numpy_preload = "openmw.pytest_numpy_preload"
+
 [dependency-groups]
 dev = [
   "pytest>=8",
@@ -90,9 +93,10 @@ ignore_missing_imports = true
 
 # Keep pytest rootdir inside OpenMW so the parent nvme_sentinel pyproject
 # does not steal config when CI runs `working-directory: OpenMW`.
+# Do not add pythonpath=["."] -- that plus the installed package loads openmw
+# twice and numpy 2.x warns/reloads C extensions under pytest-cov.
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["."]
 
 [project.optional-dependencies]
 training = []
