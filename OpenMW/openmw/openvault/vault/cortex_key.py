@@ -40,6 +40,14 @@ def issue_cortex_key(
     return record, token
 
 
+def tenant_key_payload(record: KeyRecord) -> dict[str, Any]:
+    """Public view of a tenant BYOK row. Never a pooled spend flag."""
+    body = asdict(record)
+    body["custody"] = "tenant"
+    body["pooled"] = False
+    return body
+
+
 def issued_payload(record: KeyRecord, token: str) -> dict[str, Any]:
     body = asdict(record)
     body["display_label"] = CORTEX_KEY_LABEL

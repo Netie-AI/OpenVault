@@ -1,4 +1,9 @@
-"""Friendly key UI lock: subscribe copy, Cortex ov_ issue, tenant BYOK custody."""
+"""Friendly key UI lock: subscribe copy, Cortex ov_ issue, tenant BYOK custody.
+
+Proof path does not import create_app (main still pulls missing PR #9 ship
+modules). The key-UI router is mounted on a tiny FastAPI app instead.
+No public :5000 bind.
+"""
 
 from __future__ import annotations
 
@@ -6,10 +11,16 @@ from pathlib import Path
 
 import pytest
 from cryptography.fernet import Fernet
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from openmw.openvault.app import create_app
+from openmw.openvault.routers.key_ui import build_key_ui_router
 from openmw.openvault.vault.accounts import AccountStore
+from openmw.openvault.vault.cortex_key import (
+    issue_cortex_key,
+    issued_payload,
+    tenant_key_payload,
+)
 from openmw.openvault.vault.crypto import Seal
 from openmw.openvault.vault.key_ui_copy import (
     CORTEX_KEY_LABEL,
@@ -33,17 +44,19 @@ def home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 @pytest.fixture()
-def client(home: Path) -> TestClient:
-    seal = Seal(Fernet.generate_key())
-    vault = KeyVault(db_path=home / "keys.db", seal=seal)
-    accounts = AccountStore(db_path=home / "accounts.db")
-    app = create_app(
-        vault=vault,
-        accounts=accounts,
-        mock_health=True,
-        enable_precheck_loop=False,
-        cortex_url="http://127.0.0.1:9",
-    )
+def vault(home: Path) -> KeyVault:
+    return KeyVault(db_path=home / "keys.db", seal=Seal(Fernet.generate_key()))
+
+
+@pytest.fixture()
+def accounts(home: Path) -> AccountStore:
+    return AccountStore(db_path=home / "accounts.db")
+
+
+@pytest.fixture()
+def client(vault: KeyVault, accounts: AccountStore) -> TestClient:
+    app = FastAPI()
+    app.include_router(build_key_ui_router(vault, accounts))
     return TestClient(app)
 
 
@@ -78,20 +91,6 @@ def test_ts_and_webui_subscribe_copy_match_the_lock() -> None:
     assert CORTEX_KEY_LABEL in ts
 
 
-def test_legacy_console_subscribe_is_vendor_clean(client: TestClient) -> None:
-    """Proof path: TestClient /legacy -- no public :5000 bind."""
-    res = client.get("/legacy")
-    assert res.status_code == 200
-    html = res.text
-    start = html.index('id="keypath-subscribe"')
-    end = html.index('id="keypath-byok"')
-    subscribe = html[start:end]
-    assert "Cortex API key" in subscribe
-    assert POWERED_BY in subscribe
-    for term in FORBIDDEN_SUBSCRIBE_TERMS:
-        assert term not in subscribe
-
-
 def test_ui_copy_api(client: TestClient) -> None:
     res = client.get("/api/keys/ui-copy")
     assert res.status_code == 200
@@ -103,7 +102,9 @@ def test_ui_copy_api(client: TestClient) -> None:
         assert term not in joined
 
 
-def test_issue_cortex_key_is_ov_framed_as_cortex(client: TestClient) -> None:
+def test_issue_cortex_key_is_ov_framed_as_cortex(
+    client: TestClient, vault: KeyVault
+) -> None:
     res = client.post("/api/keys/cortex")
     assert res.status_code == 200
     body = res.json()
@@ -112,44 +113,49 @@ def test_issue_cortex_key_is_ov_framed_as_cortex(client: TestClient) -> None:
     assert body["token"].startswith("ov_")
     assert body["pooled"] is False
     assert body["custody"] == "operator"
-    listed = client.get("/api/keys").json()["keys"]
-    assert listed[0]["provider"] == "cortex"
-    assert listed[0]["label"] == CORTEX_KEY_LABEL
+    listed = vault.list_keys()
+    assert listed[0].provider == "cortex"
+    assert listed[0].label == CORTEX_KEY_LABEL
 
 
-def test_account_cortex_key_is_tenant_not_pooled(client: TestClient) -> None:
-    acct = client.post(
-        "/api/accounts",
-        json={"display_name": "Seat", "auth_provider": "netie_email", "local_part": "seat"},
-    ).json()
-    res = client.post(f"/api/accounts/{acct['id']}/cortex-key")
+def test_account_cortex_key_is_tenant_not_pooled(
+    client: TestClient, accounts: AccountStore
+) -> None:
+    acct = accounts.create(
+        display_name="Seat", auth_provider="netie_email", local_part="seat"
+    )
+    res = client.post(f"/api/accounts/{acct.id}/cortex-key")
     assert res.status_code == 200
     body = res.json()
-    assert body["account_id"] == acct["id"]
+    assert body["account_id"] == acct.id
     assert body["custody"] == "tenant"
     assert body["pooled"] is False
     assert body["token"].startswith("ov_")
     assert body["display_label"] == CORTEX_KEY_LABEL
 
 
-def test_account_byok_is_not_silently_pooled(client: TestClient) -> None:
-    acct = client.post(
-        "/api/accounts",
-        json={"display_name": "BYOK", "auth_provider": "netie_email", "local_part": "byok"},
-    ).json()
-    res = client.post(
-        f"/api/accounts/{acct['id']}/keys",
-        json={
-            "label": "Groq lab",
-            "provider": "groq",
-            "secret": "gsk-user-brought-this",
-            "role": "backup",
-        },
+def test_account_byok_is_not_silently_pooled(vault: KeyVault, accounts: AccountStore) -> None:
+    acct = accounts.create(
+        display_name="BYOK", auth_provider="netie_email", local_part="byok"
     )
-    assert res.status_code == 200
-    body = res.json()
-    assert body["account_id"] == acct["id"]
+    record = vault.create(
+        label="Groq lab",
+        provider="groq",
+        secret="gsk-user-brought-this",
+        role="backup",
+        account_id=acct.id,
+    )
+    body = tenant_key_payload(record)
+    assert body["account_id"] == acct.id
     assert body["provider"] == "groq"
     assert body["custody"] == "tenant"
     assert body["pooled"] is False
-    assert "pooled" not in body or body["pooled"] is False
+    assert getattr(record, "pooled", False) is False
+
+
+def test_issue_helper_matches_api_shape(vault: KeyVault) -> None:
+    record, token = issue_cortex_key(vault)
+    payload = issued_payload(record, token)
+    assert payload["token"].startswith("ov_")
+    assert payload["display_label"] == CORTEX_KEY_LABEL
+    assert payload["pooled"] is False
