@@ -133,7 +133,7 @@ def api_observe_trace(body: TraceBody) -> dict[str, Any]:
         out.write_text(json.dumps(trace.records, indent=2), encoding="utf-8")
         timings_written = True
 
-    payload = observe_path_payload(device_path=device_path, prefer_live=True)
+    payload = observe_path_payload(device_path=device_path, prefer_live=not mock)
     payload["trace_ok"] = trace.ok
     payload["timings_written"] = timings_written
     payload["adapter"] = trace.adapter

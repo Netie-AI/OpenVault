@@ -193,7 +193,9 @@ class OnePressDeployBody(BaseModel):
     run_smoke: bool = False
     simulate: bool = True
     auto_execute: bool = True
-    target: Literal["openship_cloud", "vps_ssh", "aws_guide", "local_demo"] = "local_demo"
+    target: Literal[
+        "cursor_origin", "openship_cloud", "vps_ssh", "aws_guide", "local_demo"
+    ] = "local_demo"
     github_url: str = ""
     vps_host: str = ""
     cloud_tier: str = "low"
@@ -209,7 +211,9 @@ class DomainGuideBody(BaseModel):
 
 
 class ShipBlueprintBody(BaseModel):
-    target: Literal["openship_cloud", "vps_ssh", "aws_guide", "local_demo"] = "openship_cloud"
+    target: Literal[
+        "cursor_origin", "openship_cloud", "vps_ssh", "aws_guide", "local_demo"
+    ] = "openship_cloud"
     project_path: str = ""
     hostname: str = ""
     github_url: str = ""
@@ -231,7 +235,9 @@ class GitHubPatBody(BaseModel):
 
 
 class ShipEngineBody(BaseModel):
-    target: Literal["openship_cloud", "vps_ssh", "aws_guide", "local_demo"] = "local_demo"
+    target: Literal[
+        "cursor_origin", "openship_cloud", "vps_ssh", "aws_guide", "local_demo"
+    ] = "local_demo"
     project_path: str = ""
     github_url: str = ""
     hostname: str = ""
@@ -406,6 +412,28 @@ class KeyvaultUpsertBody(BaseModel):
     provider: str = ""
     # Optional batch: {ENV_KEY: secret, ...}
     secrets: dict[str, str] = Field(default_factory=dict)
+
+
+_LOOPBACK_HOSTS = frozenset({"127.0.0.1", "::1", "localhost"})
+
+
+def _require_loopback(request: Request, action: str) -> None:
+    host = request.client.host if request.client is not None else ""
+    if host not in _LOOPBACK_HOSTS:
+        raise HTTPException(status_code=403, detail=f"{action} is loopback-only")
+
+
+def _require_reveal_intent(request: Request) -> None:
+    if request.headers.get("x-openvault-reveal") != "intentional":
+        raise HTTPException(
+            status_code=428,
+            detail="X-OpenVault-Reveal: intentional required",
+        )
+
+
+def _audit_custody(event: str, request: Request, **fields: object) -> None:
+    client = request.client.host if request.client is not None else ""
+    log.info("openvault_custody", action=event, client=client, **fields)
 
 
 def create_app(

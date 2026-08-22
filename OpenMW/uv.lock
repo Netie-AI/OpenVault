@@ -977,6 +977,7 @@ dependencies = [
     { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "structlog" },
+    { name = "tomli" },
     { name = "typer" },
     { name = "uvicorn", extra = ["standard"] },
 ]
@@ -1003,6 +1004,7 @@ requires-dist = [
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "scipy", specifier = ">=1.11" },
     { name = "structlog", specifier = ">=24.1" },
+    { name = "tomli", specifier = ">=2.0.1" },
     { name = "typer", specifier = ">=0.12" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.51.0" },
 ]

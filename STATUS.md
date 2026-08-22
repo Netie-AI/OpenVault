@@ -3,7 +3,7 @@
 > Canonical “what’s done / what’s next.” Deferred ideas: [`PARKINGLOT.md`](PARKINGLOT.md).
 > Protocol/architecture: [`implementation_plan.md`](implementation_plan.md).
 
-Last reconciled: 2026-07-23.
+Last reconciled: 2026-08-22.
 
 ---
 
@@ -123,6 +123,31 @@ openvault`, per the keys lock in PRODUCT_ROLES.
 bridge/gate route is served, the connect pack pins `:8765`, `bypass` / `force` /
 `skip_rules` can never produce a silent allow on either the gate or the LAN
 firewall, and the keyvault snapshot still declares OpenVault the source.
+
+---
+
+## Auto-ship + Cursor Origin (2026-08-22)
+
+OpenVault can now **detect the stack and say whether it is ready to ship**, then
+auto-ship by type. Cursor Origin is the git host (not an app runtime).
+
+| Kind | Examples | Git | HTTP runtime | Auto-update |
+|------|----------|-----|--------------|-------------|
+| `edge_http` / `static_http` | Next.js, Hono, Vite, Astro, `index.html` | Origin | Vercel App on the Origin repo | push = preview, merge = production |
+| `process` | FastAPI, Django, Flask, Node, Go, Rust | Origin | VM / existing VPS | git pull + restart behind Caddy/nginx |
+| `container` | Dockerfile / compose | Origin | compose on a VM | same + LB TLS |
+
+| Route | Purpose |
+|-------|---------|
+| `POST /api/detect` | Stack + commands + `host_kind` (absolute path only) |
+| `GET /api/ship/stacks` | Catalog (ports, commands, Origin HTTP yes/no) |
+| `POST /api/ship/ready` | Ready-to-ship gates (detect, commands, domain, Origin, runtime) |
+| `POST /api/ship/auto` | Simulate/plan Origin repo + Vercel-or-VM HTTP |
+| `GET /api/ship/origin/status` | `origin` CLI / `ORIGIN_MODE=simulate` |
+
+Origin docs: https://cursor.com/docs/origin — no `origin deploy`. Live HTTP for
+Next.js/static is the Vercel App (https://vercel.com/docs/git/vercel-for-origin).
+`ORIGIN_MODE=simulate` is the default when the Origin CLI is missing.
 
 ---
 

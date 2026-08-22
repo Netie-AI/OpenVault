@@ -87,3 +87,10 @@ def observe_path_payload(
 def bottleneck_payload(*, device_path: str = "/dev/mock-nvme0") -> dict[str, Any]:
     """Backward-compatible alias used by /api/health/bottleneck."""
     return observe_path_payload(device_path=device_path, prefer_live=True)
+
+
+def timings_path() -> Path:
+    """Where `/api/observe/trace` persists admin-command timings for live path observe."""
+    from openmw.openvault.paths import ensure_home
+
+    return ensure_home() / "last_admin_timings.json"

@@ -1,4 +1,4 @@
-﻿"""Deploy gate pipeline — Cortex/AirGPT 'deploy to web' orchestration."""
+"""Deploy gate pipeline — Cortex/AirGPT 'deploy to web' orchestration."""
 
 from __future__ import annotations
 
@@ -12,12 +12,16 @@ from typing import Any, Literal
 
 import structlog
 
+from openmw.openvault.paths import ensure_home
 from openmw.openvault.ship.detect import DetectedStack, detect_project
 from openmw.openvault.ship.email_gates import check_email_auth
-from openmw.openvault.vault.fallback import FallbackManager
-from openmw.openvault.ship.openship import adapter_presence, build_openship_plan, execute_openship_plan
-from openmw.openvault.paths import ensure_home
+from openmw.openvault.ship.openship import (
+    adapter_presence,
+    build_openship_plan,
+    execute_openship_plan,
+)
 from openmw.openvault.ship.playwright_smoke import run_playwright_smoke
+from openmw.openvault.vault.fallback import FallbackManager
 from openmw.openvault.vault.store import KeyVault
 
 log = structlog.get_logger()
@@ -262,6 +266,16 @@ def build_deploy_plan(
                 True,
             )
         )
+    elif stack.framework == "static" or stack.category == "static":
+        gates.append(
+            Gate(
+                "build",
+                "Build / rebuild plan",
+                "pass",
+                "static site — publish as-is (no compile)",
+                True,
+            )
+        )
     else:
         gates.append(
             Gate("build", "Build / rebuild plan", "fail", "No suggested build commands", True)
@@ -465,3 +479,45 @@ def _recompute_ready(plan: DeployPlan) -> None:
     blockers = [g for g in plan.gates if g.blocker and g.status == "fail"]
     pending_blockers = [g for g in plan.gates if g.blocker and g.status == "pending"]
     plan.ready_to_scale = len(blockers) == 0 and len(pending_blockers) == 0
+
+
+def one_press_deploy(
+    *,
+    project_path: str,
+    subdomain: str = "",
+    intent: str = "deploy_to_web",
+    source: str = "manual",
+    vault: KeyVault | None = None,
+    fallback: FallbackManager | None = None,
+    cortex_online: bool = False,
+    sending_ip: str | None = None,
+    console_base: str = "http://127.0.0.1:5000",
+    smoke_url: str = "",
+    run_smoke: bool = False,
+    simulate: bool = True,
+    auto_execute: bool = True,
+) -> dict[str, Any]:
+    """Detect + gate + optional OpenShip execute in one call."""
+    from openmw.openvault.ship.domain_guide import build_domain_guide
+    from openmw.openvault.ship.hosting import ready_to_ship
+
+    plan = build_deploy_plan(
+        project_path=project_path,
+        subdomain=subdomain,
+        intent=intent,
+        source=source,
+        vault=vault,
+        fallback=fallback,
+        cortex_online=cortex_online,
+        sending_ip=sending_ip,
+        console_base=console_base,
+        smoke_url=smoke_url,
+        run_smoke=run_smoke,
+    )
+    if auto_execute:
+        plan = execute_deploy(plan, simulate=simulate)
+    payload = plan.to_dict()
+    if subdomain:
+        payload["domain_guide"] = build_domain_guide(subdomain).to_dict()
+    payload["ready_report"] = ready_to_ship(project_path, hostname=subdomain).to_dict()
+    return payload

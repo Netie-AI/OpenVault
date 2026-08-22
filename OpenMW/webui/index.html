@@ -1098,7 +1098,7 @@
     <!-- DEPLOY -->
     <section id="panel-deploy" class="panel">
       <h2 class="section-title">Deploy to Web</h2>
-      <p class="section-sub">Cortex / AirGPT handoff · auto-detect stack · gate checklist · OpenShip-scale roll</p>
+      <p class="section-sub">Auto-detect Next.js / static / Python / Docker · ready-to-ship gates · Cursor Origin git + Vercel HTTP or VM</p>
       <div class="vault-layout">
         <div class="glass vault-form">
           <label for="deployPath">Project path</label>
@@ -1115,7 +1115,9 @@
           <input id="deploySmokeUrl" placeholder="https://app.example.com" />
           <div class="actions">
             <button type="button" class="btn" id="runDetectBtn">Auto-detect</button>
-            <button type="button" class="btn" id="runDeployBtn">Run gates</button>
+            <button type="button" class="btn" id="runReadyBtn">Ready to ship</button>
+            <button type="button" class="btn" id="runOriginBtn">Ship to Origin</button>
+            <button type="button" class="btn-ghost" id="runDeployBtn">Run gates</button>
             <button type="button" class="btn-ghost" id="runSmokeBtn">Playwright smoke</button>
             <button type="button" class="btn-ghost" id="runExecuteBtn">Execute OpenShip</button>
           </div>
@@ -1658,6 +1660,60 @@
 
     document.getElementById("runDetectBtn").addEventListener("click", runDetect);
     document.getElementById("runDeployBtn").addEventListener("click", runDeployGates);
+    const readyBtn = document.getElementById("runReadyBtn");
+    if (readyBtn) {
+      readyBtn.addEventListener("click", async () => {
+        if (!apiMode) return;
+        const res = await fetch("/api/ship/ready", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            project_path: document.getElementById("deployPath").value,
+            hostname: document.getElementById("deploySubdomain").value,
+            target: "cursor_origin"
+          })
+        });
+        const data = await res.json();
+        document.getElementById("deployMsg").textContent = data.ready
+          ? "Ready to ship"
+          : ("Blocked: " + (data.blockers || []).join(", "));
+        if (data.stack) {
+          document.getElementById("detectResult").textContent =
+            `${data.stack.framework || data.stack.primary} · ${data.stack.host_kind || ""} · ${data.host && data.host.runtime || ""}`;
+        }
+        if (data.gates) renderDeployPlan({ gates: data.gates, ready_to_scale: data.ready, deploy_id: "", ship_id: "" });
+      });
+    }
+    const originBtn = document.getElementById("runOriginBtn");
+    if (originBtn) {
+      originBtn.addEventListener("click", async () => {
+        if (!apiMode) return;
+        document.getElementById("deployMsg").textContent = "Shipping to Cursor Origin (simulate unless origin CLI is present)…";
+        const res = await fetch("/api/ship/auto", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            project_path: document.getElementById("deployPath").value,
+            hostname: document.getElementById("deploySubdomain").value,
+            simulate: true,
+            target: "cursor_origin"
+          })
+        });
+        const data = await res.json();
+        const origin = data.origin || {};
+        document.getElementById("deployMsg").textContent = origin.remote_url
+          ? `Origin ${origin.remote_url}`
+          : "Origin ship failed";
+        if (data.ready && data.ready.gates) {
+          renderDeployPlan({
+            gates: data.ready.gates,
+            ready_to_scale: data.ready.ready,
+            deploy_id: origin.plan_id,
+            ship_id: origin.repo
+          });
+        }
+      });
+    }
     document.getElementById("runSmokeBtn").addEventListener("click", async () => {
       if (!apiMode || !lastDeployId) {
         document.getElementById("deployMsg").textContent = "Run gates first to create a deploy plan";
