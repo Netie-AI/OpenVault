@@ -253,7 +253,8 @@ _READABLE_FILES: frozenset[str] = (
 
 def _snapshot(reader: LocalReader, root_directory: str, source: str) -> _Snapshot:
     listing = reader.list_directory(root_directory)
-    names = {entry.name.lower() for entry in listing}
+    on_disk = {entry.name.lower(): entry.name for entry in listing}
+    names = set(on_disk)
     base = Path(reader.root, root_directory) if root_directory else reader.root
     names.update(marker for marker in _NESTED_MARKERS if (base / marker).exists())
 
@@ -261,7 +262,8 @@ def _snapshot(reader: LocalReader, root_directory: str, source: str) -> _Snapsho
     for name in names:
         if name in _READABLE_FILES or name.endswith((".csproj", ".fsproj", ".sln")):
             prefix = f"{root_directory}/" if root_directory else ""
-            text = reader.read_text(f"{prefix}{name}")
+            # Listing keys are lowercased; Linux read_text("dockerfile") misses Dockerfile.
+            text = reader.read_text(f"{prefix}{on_disk.get(name, name)}")
             if text:
                 contents[name] = text
 
