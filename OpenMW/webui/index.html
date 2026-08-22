@@ -751,6 +751,26 @@
     }
 
     .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+
+    .key-paths { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 16px; }
+    .key-paths button {
+      border: 1px solid var(--glass-border); background: transparent; color: var(--text);
+      padding: 8px 12px; border-radius: 999px; cursor: pointer; font: inherit;
+    }
+    .key-paths button.active { background: var(--accent-soft); color: var(--accent); }
+    .keypath { display: none; }
+    .keypath.active { display: block; }
+    .issued-box {
+      margin: 14px 0; padding: 12px 14px; border-radius: 12px;
+      border: 1px dashed var(--glass-border);
+    }
+    .issued-box code { display: block; margin-top: 6px; word-break: break-all; font-size: 0.82rem; }
+    .step-list { list-style: none; margin: 14px 0; }
+    .step-list li { display: flex; gap: 12px; margin: 0 0 12px; }
+    .step-n {
+      width: 28px; height: 28px; border-radius: 50%; background: var(--accent-soft);
+      color: var(--accent); display: grid; place-items: center; font-weight: 600; flex: 0 0 28px;
+    }
   </style>
 </head>
 <body>
@@ -881,8 +901,89 @@
 
     <!-- VAULT -->
     <section id="panel-vault" class="panel">
-      <h2 class="section-title">API Key Vault</h2>
-      <p class="section-sub">Encrypted local store · continuous precheck · primary→backup→cheap→free fallback</p>
+      <h2 class="section-title">Keys</h2>
+      <p class="section-sub">Cortex API key · bring your own · free register + install · one vault</p>
+      <div class="key-paths" role="tablist" aria-label="Key paths">
+        <button type="button" class="active" data-keypath="subscribe">Subscribe</button>
+        <button type="button" data-keypath="byok">Bring your key</button>
+        <button type="button" data-keypath="free">Free keys</button>
+        <button type="button" data-keypath="operator">Operator</button>
+      </div>
+
+      <div id="keypath-subscribe" class="keypath active" data-testid="subscribe-screen">
+        <div class="glass vault-form" style="max-width:40rem">
+          <h3 style="font-family:var(--serif);font-weight:500;margin-bottom:8px">Your Cortex API key</h3>
+          <p class="section-sub">Get a Cortex API key. Use it with Cortex. OpenVault stores it -- one vault, one key.</p>
+          <div class="issued-box" id="subscribeIssued" hidden>
+            <p>Cortex API key</p>
+            <code id="subscribeToken"></code>
+            <p class="section-sub">Copy this Cortex API key now. OpenVault will not show the full value again.</p>
+          </div>
+          <p id="subscribeEmpty" class="section-sub">No Cortex API key yet. Tap the button to issue one.</p>
+          <div class="actions">
+            <button type="button" class="btn" id="issueCortexBtn">Get Cortex API key</button>
+            <button type="button" class="btn-ghost" id="copyCortexBtn">Copy</button>
+          </div>
+          <p id="subscribeMsg" style="margin-top:12px;font-size:0.8rem;color:var(--text-muted)"></p>
+          <p class="section-sub" data-testid="subscribe-disclosure" style="margin-top:16px">
+            Safety: Cortex uses this key. OpenVault keeps it in one vault. Do not share it. Ship and leave-machine still go through the gate. Powered by top-tier AI.
+          </p>
+        </div>
+      </div>
+
+      <div id="keypath-byok" class="keypath">
+        <div class="vault-layout">
+          <div class="glass vault-form">
+            <h3 style="font-family:var(--serif);font-weight:500;margin-bottom:8px">Bring your own key</h3>
+            <p class="section-sub">Paste a key you already have. We show the provider name you brought -- honest labels, not a guessed brand.</p>
+            <label for="byokSecret">Paste your key</label>
+            <input id="byokSecret" type="password" placeholder="the key you copied" autocomplete="off" />
+            <label for="byokProviderName">Provider name you brought</label>
+            <input id="byokProviderName" placeholder="shown as you typed or from the key prefix" />
+            <p id="byokHonest" class="section-sub"></p>
+            <div class="actions">
+              <button type="button" class="btn" id="byokStoreBtn">Store this key</button>
+            </div>
+            <p id="byokMsg" style="margin-top:12px;font-size:0.8rem;color:var(--text-muted)"></p>
+          </div>
+        </div>
+      </div>
+
+      <div id="keypath-free" class="keypath">
+        <div class="glass vault-form" style="max-width:40rem;margin-bottom:18px">
+          <h3 style="font-family:var(--serif);font-weight:500;margin-bottom:8px">Free keys</h3>
+          <p class="section-sub">Two steps. Register, then install.</p>
+          <ol class="step-list">
+            <li data-testid="free-step-1">
+              <span class="step-n">1</span>
+              <div>
+                <strong>Register</strong>
+                <p class="section-sub">Create a free account and copy the key it shows you.</p>
+              </div>
+            </li>
+            <li data-testid="free-step-2">
+              <span class="step-n">2</span>
+              <div>
+                <strong>Install</strong>
+                <p class="section-sub">Paste that key here. OpenVault encrypts it in the vault.</p>
+              </div>
+            </li>
+          </ol>
+          <p class="section-sub">Want the easy path? Issue a Cortex API key on Subscribe -- no extra signup.</p>
+          <div class="actions">
+            <button type="button" class="btn" id="freeGoSubscribe">Get Cortex API key</button>
+            <button type="button" class="btn-ghost" id="freeGoByok">I have a key to paste</button>
+          </div>
+        </div>
+        <div class="glass vault-list">
+          <h3 style="font-family:var(--serif);font-weight:500;margin-bottom:8px">Register catalog</h3>
+          <div id="freeCatalog"></div>
+          <div id="coverageMissing" style="margin-top:12px"></div>
+        </div>
+      </div>
+
+      <div id="keypath-operator" class="keypath">
+      <p class="section-sub">Operator vault -- hop-honest status may name upstreams (R-0011). Not the subscribe screen.</p>
       <div class="vault-layout">
         <div class="glass vault-form">
           <h3 style="font-family:var(--serif);font-weight:500;margin-bottom:8px">Add key</h3>
@@ -946,16 +1047,12 @@
             <h3 style="font-family:var(--serif);font-weight:500;margin-bottom:8px">Stored keys</h3>
             <div id="keyList"></div>
           </div>
-          <div class="glass vault-list" style="margin-bottom:18px">
+          <div class="glass vault-list">
             <h3 style="font-family:var(--serif);font-weight:500;margin-bottom:8px">Fallback chain</h3>
             <div id="fallbackList"></div>
           </div>
-          <div class="glass vault-list">
-            <h3 style="font-family:var(--serif);font-weight:500;margin-bottom:8px">Free / register catalog</h3>
-            <div id="freeCatalog"></div>
-            <div id="coverageMissing" style="margin-top:12px"></div>
-          </div>
         </div>
+      </div>
       </div>
     </section>
 
@@ -1568,6 +1665,108 @@
       await refreshCatalog();
     });
 
+    function activateKeyPath(name) {
+      const allowed = ["subscribe", "byok", "free", "operator"];
+      const path = allowed.includes(name) ? name : "subscribe";
+      document.querySelectorAll(".key-paths button").forEach((b) => {
+        b.classList.toggle("active", b.dataset.keypath === path);
+      });
+      document.querySelectorAll(".keypath").forEach((el) => {
+        el.classList.toggle("active", el.id === "keypath-" + path);
+      });
+    }
+
+    function guessByok(secret) {
+      const v = (secret || "").trim();
+      if (/^ov_[A-Za-z0-9_-]{16,}$/.test(v)) return { id: "cortex", name: "Cortex API key" };
+      if (/^sk-ant-/i.test(v)) return { id: "anthropic", name: "Anthropic" };
+      if (/^sk-or-v1-/i.test(v)) return { id: "openrouter", name: "OpenRouter" };
+      if (/^gsk_/.test(v)) return { id: "groq", name: "Groq" };
+      if (/^hf_/.test(v)) return { id: "huggingface", name: "Hugging Face" };
+      if (/^AIza[0-9A-Za-z_-]{10,}/.test(v)) return { id: "google", name: "Google AI Studio" };
+      if (/^csk-/i.test(v)) return { id: "cerebras", name: "Cerebras" };
+      if (/^fw_/.test(v)) return { id: "fireworks", name: "Fireworks" };
+      if (/^tgp_v1_/.test(v)) return { id: "together", name: "Together AI" };
+      if (/^(ghp_|gho_|ghu_|ghs_|github_pat_)/.test(v)) return { id: "github_models", name: "GitHub Models" };
+      if (/^sk-(proj-)?[A-Za-z0-9_-]{16,}$/.test(v)) return { id: "openai", name: "OpenAI" };
+      return { id: "custom", name: "" };
+    }
+
+    function providerIdFromName(name) {
+      const n = (name || "").trim().toLowerCase();
+      const map = {
+        "cortex api key": "cortex", cortex: "cortex",
+        anthropic: "anthropic", openrouter: "openrouter", groq: "groq",
+        "hugging face": "huggingface", huggingface: "huggingface",
+        "google ai studio": "google", google: "google",
+        cerebras: "cerebras", fireworks: "fireworks",
+        "together ai": "together", together: "together",
+        "github models": "github_models", openai: "openai", ollama: "ollama"
+      };
+      return map[n] || "custom";
+    }
+
+    document.querySelectorAll(".key-paths button").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        activateKeyPath(btn.dataset.keypath);
+        history.replaceState(null, "", "#" + btn.dataset.keypath);
+      });
+    });
+
+    document.getElementById("issueCortexBtn").addEventListener("click", async () => {
+      const res = await fetch("/api/keys/cortex", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        document.getElementById("subscribeMsg").textContent = data.detail || "Could not issue a Cortex API key";
+        return;
+      }
+      document.getElementById("subscribeToken").textContent = data.token || "";
+      document.getElementById("subscribeIssued").hidden = false;
+      document.getElementById("subscribeEmpty").hidden = true;
+      document.getElementById("subscribeMsg").textContent = "Issued a Cortex API key. Copy it now.";
+      await refreshVault();
+    });
+
+    document.getElementById("copyCortexBtn").addEventListener("click", async () => {
+      const token = document.getElementById("subscribeToken").textContent;
+      if (!token) return;
+      await navigator.clipboard.writeText(token);
+      document.getElementById("subscribeMsg").textContent = "Copied Cortex API key";
+    });
+
+    document.getElementById("byokSecret").addEventListener("input", () => {
+      const guess = guessByok(document.getElementById("byokSecret").value);
+      const typed = document.getElementById("byokProviderName");
+      if (guess.name && !typed.value) typed.value = guess.name;
+      const label = typed.value.trim() || guess.name || "Unknown provider -- type the name you got this key from";
+      document.getElementById("byokHonest").textContent = "Stored as " + label;
+    });
+
+    document.getElementById("byokStoreBtn").addEventListener("click", async () => {
+      const secret = document.getElementById("byokSecret").value.trim();
+      const pastedName = document.getElementById("byokProviderName").value.trim();
+      const guess = guessByok(secret);
+      const label = pastedName || guess.name || "Brought key";
+      const provider = pastedName ? providerIdFromName(pastedName) : (guess.id || "custom");
+      if (!secret) {
+        document.getElementById("byokMsg").textContent = "Paste a key first";
+        return;
+      }
+      const res = await fetch("/api/keys", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ label, provider, secret, role: "backup" })
+      });
+      document.getElementById("byokMsg").textContent = res.ok
+        ? "Stored as " + label
+        : "Could not store that key";
+      if (res.ok) document.getElementById("byokSecret").value = "";
+      await refreshVault();
+    });
+
+    document.getElementById("freeGoSubscribe").addEventListener("click", () => activateKeyPath("subscribe"));
+    document.getElementById("freeGoByok").addEventListener("click", () => activateKeyPath("byok"));
+
     const _origRefreshVault = refreshVault;
     refreshVault = async function() {
       await _origRefreshVault();
@@ -1891,7 +2090,7 @@
       document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
       btn.classList.add("active");
       document.getElementById("panel-" + name).classList.add("active");
-      if (name === "vault") refreshVault();
+      if (name === "vault") { refreshVault(); activateKeyPath("subscribe"); }
       if (name === "engine") refreshEngine();
       if (name === "accounts") refreshAccounts();
       if (name === "mesh") refreshMesh();
@@ -1919,6 +2118,10 @@
       }
       const hash = location.hash.replace("#", "");
       if (hash === "deploy" || hash === "accounts" || hash === "mesh") activateTab(hash);
+      if (hash === "vault" || hash === "subscribe" || hash === "byok" || hash === "free" || hash === "keys") {
+        activateTab("vault");
+        activateKeyPath(hash === "keys" || hash === "vault" ? "subscribe" : hash);
+      }
     });
   </script>
 </body>

@@ -126,6 +126,19 @@ firewall, and the keyvault snapshot still declares OpenVault the source.
 
 ---
 
+## Friendly key UI (2026-08-22)
+
+Subscribe / BYOK / free-register copy lock is on `apps/web` (loopback `:3010`) and
+`OpenMW/webui` Keys tab. Subscribe shows a Cortex API key only (`ov_` framed as
+Cortex). BYOK shows the provider name the user pasted. Free is Register then
+Install. Operator hop status stays hop-honest (R-0011).
+
+**Proof (not public :5000):** `npx tsx --test` on `apps/web/src/keys/*.test.ts`;
+`cd OpenMW && uv run pytest tests/test_key_ui.py`; optional loopback
+`npx tsx src/serve.ts` then `curl http://127.0.0.1:3010/subscribe`.
+
+**Not done / HUMAN_STOP:** HT2-HT5 stay human-only. Do not mint Cortex#42.
+
 ## Next priorities
 
 1. Redis + Lua `BucketStore` so a cluster of gateways cannot double-spend a budget.

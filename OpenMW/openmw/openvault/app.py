@@ -92,8 +92,24 @@ from openmw.openvault.ship.openship_client import OpenShipClient, adapter_status
 from openmw.openvault.ship.playwright_smoke import load_smoke, run_playwright_smoke
 from openmw.openvault.vault.accounts import AccountStore, AuthProvider
 from openmw.openvault.vault.airgpt_keyvault import keyvault_snapshot, upsert_env_secret
+from openmw.openvault.vault.cortex_key import issue_cortex_key, issued_payload
 from openmw.openvault.vault.env_ingest import ingest_environment, scan_environment
 from openmw.openvault.vault.fallback import FallbackConfig, FallbackManager
+from openmw.openvault.vault.key_ui_copy import (
+    BYOK_LEAD,
+    BYOK_TITLE,
+    CORTEX_KEY_LABEL,
+    FORBIDDEN_SUBSCRIBE_TERMS,
+    FREE_LEAD,
+    FREE_STEPS,
+    FREE_TITLE,
+    SUBSCRIBE_BUTTON,
+    SUBSCRIBE_DISCLOSURE,
+    SUBSCRIBE_EMPTY_HINT,
+    SUBSCRIBE_ISSUED_HINT,
+    SUBSCRIBE_LEAD,
+    SUBSCRIBE_TITLE,
+)
 from openmw.openvault.vault.precheck import PrecheckLoop, precheck_all, precheck_one
 from openmw.openvault.vault.providers import (
     catalog_coverage_report,
@@ -638,6 +654,7 @@ def create_app(
     def account_create_key(account_id: str, body: AccountKeyCreate) -> dict[str, Any]:
         if state_accounts.get(account_id) is None:
             raise HTTPException(status_code=404, detail="account not found")
+        # Tenant BYOK: account-scoped only. Do not mark pooled / spend this row.
         record = state_vault.create(
             label=body.label,
             provider=body.provider,
@@ -647,7 +664,17 @@ def create_app(
             priority=body.priority,
             account_id=account_id,
         )
-        return asdict(record)
+        payload = asdict(record)
+        payload["custody"] = "tenant"
+        payload["pooled"] = False
+        return payload
+
+    @app.post("/api/accounts/{account_id}/cortex-key")
+    def issue_account_cortex_key(account_id: str) -> dict[str, Any]:
+        if state_accounts.get(account_id) is None:
+            raise HTTPException(status_code=404, detail="account not found")
+        record, token = issue_cortex_key(state_vault, account_id=account_id)
+        return issued_payload(record, token)
 
     @app.post("/api/accounts/{account_id}/incident")
     def account_incident(account_id: str, body: IncidentBody) -> dict[str, Any]:
@@ -676,6 +703,33 @@ def create_app(
     @app.get("/api/keys")
     def list_keys(account_id: str | None = None) -> dict[str, Any]:
         return {"keys": [asdict(k) for k in state_vault.list_keys(account_id=account_id)]}
+
+    @app.get("/api/keys/ui-copy")
+    def keys_ui_copy() -> dict[str, Any]:
+        """Subscribe / BYOK / free copy for the friendly key UI (not hop status)."""
+        return {
+            "subscribe": {
+                "title": SUBSCRIBE_TITLE,
+                "lead": SUBSCRIBE_LEAD,
+                "button": SUBSCRIBE_BUTTON,
+                "issued_label": CORTEX_KEY_LABEL,
+                "issued_hint": SUBSCRIBE_ISSUED_HINT,
+                "empty_hint": SUBSCRIBE_EMPTY_HINT,
+                "disclosure": SUBSCRIBE_DISCLOSURE,
+            },
+            "byok": {"title": BYOK_TITLE, "lead": BYOK_LEAD},
+            "free": {
+                "title": FREE_TITLE,
+                "lead": FREE_LEAD,
+                "steps": [{"title": title, "body": body} for title, body in FREE_STEPS],
+            },
+            "forbidden_subscribe_terms": list(FORBIDDEN_SUBSCRIBE_TERMS),
+        }
+
+    @app.post("/api/keys/cortex")
+    def issue_operator_cortex_key() -> dict[str, Any]:
+        record, token = issue_cortex_key(state_vault, account_id=None)
+        return issued_payload(record, token)
 
     @app.get("/api/keyvault/snapshot")
     def api_keyvault_snapshot() -> dict[str, Any]:

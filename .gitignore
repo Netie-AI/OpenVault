@@ -38,3 +38,7 @@ openmw_demo_ui/
 # IDE files
 .vscode/
 .idea/
+
+# Node (apps/web key UI)
+node_modules/
+apps/web/node_modules/
