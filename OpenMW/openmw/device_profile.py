@@ -11,6 +11,7 @@ import tempfile
 import threading
 import time
 from collections.abc import Callable
+from contextlib import suppress
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -171,10 +172,8 @@ def _probe_nvidia_gpu() -> tuple[str | None, float]:
         log.debug("nvml_probe_failed", error=str(exc))
         return None, 0.0
     finally:
-        try:
+        with suppress(Exception):
             pynvml.nvmlShutdown()
-        except Exception:
-            pass
 
 
 def _run_cmd(argv: list[str], timeout: float = 15.0) -> tuple[int, str]:

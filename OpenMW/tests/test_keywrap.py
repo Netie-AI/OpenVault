@@ -169,9 +169,7 @@ class TestMasterKeyLifecycle:
         monkeypatch.setattr(keywrap, "dpapi_unprotect", _boom)
         monkeypatch.setattr(keywrap, "dpapi_available", lambda: True)
         # Force the wrapped branch regardless of host platform.
-        key_path.write_bytes(
-            b"\n".join([keywrap.MAGIC, keywrap.METHOD_DPAPI.encode(), b"AAAA"])
-        )
+        key_path.write_bytes(b"\n".join([keywrap.MAGIC, keywrap.METHOD_DPAPI.encode(), b"AAAA"]))
 
         with pytest.raises(VaultCryptoError) as excinfo:
             _load_or_create_master_key(key_path)

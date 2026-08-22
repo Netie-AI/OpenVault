@@ -154,9 +154,7 @@ def set_port(service_key: str, port: int) -> Path:
     """Persist a port choice for this device. Returns the file written."""
     service = SERVICES_BY_KEY[service_key]
     if service.owner != "openvault":
-        raise ValueError(
-            f"{service.label} is not ours to reconfigure - {service.fixed_reason}"
-        )
+        raise ValueError(f"{service.label} is not ours to reconfigure - {service.fixed_reason}")
     if not (1 <= int(port) <= 65535):
         raise ValueError(f"port must be 1-65535, got {port}")
     path = ports_file()
@@ -303,9 +301,7 @@ def _looks_like_openvault(port: int, health_path: str) -> bool:
     try:
         import httpx
 
-        resp = httpx.get(
-            f"http://127.0.0.1:{port}{health_path}", timeout=_HEALTH_TIMEOUT_S
-        )
+        resp = httpx.get(f"http://127.0.0.1:{port}{health_path}", timeout=_HEALTH_TIMEOUT_S)
     except Exception:
         return False
     if resp.status_code >= 500:

@@ -1,4 +1,4 @@
-﻿"""Account custody, key kill/rotate, FreeBuild plan, Playwright smoke gate."""
+"""Account custody, key kill/rotate, FreeBuild plan, Playwright smoke gate."""
 
 from __future__ import annotations
 

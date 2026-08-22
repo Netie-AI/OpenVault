@@ -1,4 +1,4 @@
-﻿"""OpenAI-compatible chat proxy with OpenVault fallback chain."""
+"""OpenAI-compatible chat proxy with OpenVault fallback chain."""
 
 from __future__ import annotations
 
@@ -341,9 +341,7 @@ async def chat_completions(
                     provider=record.provider,
                     role=record.role,
                 )
-                trace.note_served(
-                    provider=record.provider, model=model, vault_key_id=record.id
-                )
+                trace.note_served(provider=record.provider, model=model, vault_key_id=record.id)
                 try:
                     return resp.status_code, resp.json()
                 except Exception:
@@ -523,9 +521,7 @@ async def prepare_chat_stream(
                 err_bytes = await resp.aread()
                 await resp.aclose()
                 body_text = err_bytes.decode("utf-8", errors="replace")
-                outcome = classify_attempt(
-                    resp.status_code, body_text, headers=dict(resp.headers)
-                )
+                outcome = classify_attempt(resp.status_code, body_text, headers=dict(resp.headers))
                 err = f"HTTP {resp.status_code}"
                 _apply_outcome(
                     vault,

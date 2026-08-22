@@ -5,10 +5,10 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from conftest import issue_key
 from cryptography.fernet import Fernet
 from fastapi.testclient import TestClient
 
-from conftest import issue_key
 from openmw.openvault.app import create_app
 from openmw.openvault.vault.crypto import Seal
 from openmw.openvault.vault.ratelimit import (

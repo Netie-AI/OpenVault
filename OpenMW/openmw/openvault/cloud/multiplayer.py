@@ -106,15 +106,15 @@ def join_session(session_id: str, *, user: str, peer_ip: str = "") -> AgentSessi
         if u not in sess.participants:
             sess.participants.append(u)
         sess.updated_at = time.time()
-        sess.events.append(
-            {"t": sess.updated_at, "type": "join", "by": u, "peer_ip": peer_ip[:64]}
-        )
+        sess.events.append({"t": sess.updated_at, "type": "join", "by": u, "peer_ip": peer_ip[:64]})
         sess.events = sess.events[-200:]
         _save_all()
         return sess
 
 
-def post_event(session_id: str, *, user: str, event_type: str, detail: str = "") -> AgentSession | None:
+def post_event(
+    session_id: str, *, user: str, event_type: str, detail: str = ""
+) -> AgentSession | None:
     _load_all()
     with _LOCK:
         sess = _SESSIONS.get(session_id)

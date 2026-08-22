@@ -112,9 +112,7 @@ def test_freebuild_execute_and_plan_execute_refuse_empty_vault(
     assert with_exec.json()["detail"]["allowed"] is False
 
 
-def test_one_press_auto_execute_refuses_empty_vault(
-    client: TestClient, tmp_path: Path
-) -> None:
+def test_one_press_auto_execute_refuses_empty_vault(client: TestClient, tmp_path: Path) -> None:
     project = _project(tmp_path)
     res = client.post(
         "/api/deploy/one-press",

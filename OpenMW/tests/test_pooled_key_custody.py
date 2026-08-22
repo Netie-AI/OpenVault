@@ -71,9 +71,7 @@ def _mock_client(*responses: MagicMock) -> MagicMock:
     return mock
 
 
-def _key(
-    vault: KeyVault, label: str, *, custody: str = "pooled", priority: int = 100
-) -> KeyRecord:
+def _key(vault: KeyVault, label: str, *, custody: str = "pooled", priority: int = 100) -> KeyRecord:
     """A healthy key the walk would happily pick if custody allowed it."""
     rec = vault.create(
         label=label,
@@ -110,9 +108,7 @@ class TestTenantKeysNeverServeAMeteredCaller:
         events = client.get("/api/usage").json()["events"]
         assert len(events) == 1
         assert events[0]["vault_key_id"] == ours.id
-        assert events[0]["vault_key_id"] != tenant_b.id, (
-            "tenant A spent a key tenant B uploaded"
-        )
+        assert events[0]["vault_key_id"] != tenant_b.id, "tenant A spent a key tenant B uploaded"
 
     def test_a_vault_holding_only_tenant_keys_refuses_rather_than_falling_back(
         self, client: TestClient, vault: KeyVault
@@ -150,9 +146,7 @@ class TestTenantKeysNeverServeAMeteredCaller:
 
 
 class TestPoolMembership:
-    def test_a_key_created_without_a_custody_argument_is_ours(
-        self, client: TestClient
-    ) -> None:
+    def test_a_key_created_without_a_custody_argument_is_ours(self, client: TestClient) -> None:
         """Default pooled: every key predating the tag was the operator's own."""
         resp = client.post(
             "/api/keys",

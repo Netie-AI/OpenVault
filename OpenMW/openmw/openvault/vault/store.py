@@ -1,4 +1,4 @@
-﻿"""Encrypted SQLite vault for provider API keys."""
+"""Encrypted SQLite vault for provider API keys."""
 
 from __future__ import annotations
 
@@ -136,9 +136,7 @@ class KeyVault:
                 # Backfill 'pooled': every key that predates this column was the
                 # operator's own. Defaulting the other way would silently empty
                 # the fallback pool on upgrade and 503 every route.
-                conn.execute(
-                    "ALTER TABLE keys ADD COLUMN custody TEXT NOT NULL DEFAULT 'pooled'"
-                )
+                conn.execute("ALTER TABLE keys ADD COLUMN custody TEXT NOT NULL DEFAULT 'pooled'")
             if "masked" not in cols:
                 conn.execute("ALTER TABLE keys ADD COLUMN masked TEXT NOT NULL DEFAULT ''")
             # One-time backfill: persist masks so list_keys never decrypts plaintext.

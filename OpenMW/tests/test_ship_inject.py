@@ -161,9 +161,7 @@ def _project(tmp_path: Path) -> Path:
     return project
 
 
-def test_freebuild_execute_injects_without_echoing_plaintext(
-    home: Path, tmp_path: Path
-) -> None:
+def test_freebuild_execute_injects_without_echoing_plaintext(home: Path, tmp_path: Path) -> None:
     seal = Seal(Fernet.generate_key())
     vault = KeyVault(db_path=home / "keys.db", seal=seal)
     secrets = SecretStore(db_path=home / "secrets.db", seal=seal)
@@ -292,9 +290,7 @@ def test_freebuild_execute_sealed_refuses_inject(
     assert SECRET_VALUE not in exe.text
 
 
-def test_freebuild_execute_missing_secret_refuses(
-    home: Path, tmp_path: Path
-) -> None:
+def test_freebuild_execute_missing_secret_refuses(home: Path, tmp_path: Path) -> None:
     seal = Seal(Fernet.generate_key())
     vault = KeyVault(db_path=home / "keys.db", seal=seal)
     secrets = SecretStore(db_path=home / "secrets.db", seal=seal)

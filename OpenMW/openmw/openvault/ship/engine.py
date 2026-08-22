@@ -126,9 +126,7 @@ def load_deployment(deployment_id: str) -> ShipDeployment | None:
     )
 
 
-def classify_deployment(
-    steps: list[EngineStep], *, mode: str, public_url: str
-) -> tuple[str, bool]:
+def classify_deployment(steps: list[EngineStep], *, mode: str, public_url: str) -> tuple[str, bool]:
     """Name what happened, and whether it counts as success.
 
     The old rule was ``all(status in ("pass","simulated","skipped","pending"))``,
@@ -280,7 +278,12 @@ def _observed_remote_url(remote_result: dict[str, Any] | None) -> str:
         if not isinstance(raw, str):
             continue
         value = raw.strip()
-        if not value or "<" in value or value.startswith("http://<") or value.startswith("https://<"):
+        if (
+            not value
+            or "<" in value
+            or value.startswith("http://<")
+            or value.startswith("https://<")
+        ):
             continue
         if value.startswith("http://") or value.startswith("https://"):
             return value
@@ -789,7 +792,9 @@ def _run_ship_engine_locked(
 
     # Local build (off unless this target needs an artifact from this machine)
     if build_here and stack.suggested_build:
-        steps.append(EngineStep("build", "Local build", "running", " → ".join(stack.suggested_build)))
+        steps.append(
+            EngineStep("build", "Local build", "running", " -> ".join(stack.suggested_build))
+        )
         # Detected commands belong to stack.root_directory — in a monorepo that
         # is the sub-app, not the repo root.
         ok_b, detail = _run_build(stack.suggested_build, Path(work_path, stack.root_directory))

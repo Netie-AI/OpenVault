@@ -551,8 +551,7 @@ class TestAttachDomain:
                 "name": "app.example.com",
                 "value": "203.0.113.10",
                 "note": (
-                    "Caddy requests the TLS certificate on the first request after "
-                    "this resolves"
+                    "Caddy requests the TLS certificate on the first request after this resolves"
                 ),
             }
         ]

@@ -538,7 +538,7 @@ class VpsSshAdapter:
         self._sudo = escalation
 
         facts: dict[str, str] = {"server": self.target.label(), "escalation": escalation or "root"}
-        os_name = self._sh(". /etc/os-release 2>/dev/null && echo \"$PRETTY_NAME\"")
+        os_name = self._sh('. /etc/os-release 2>/dev/null && echo "$PRETTY_NAME"')
         if os_name.ok and os_name.out:
             facts["os"] = os_name.out
         docker = self._sh("docker --version 2>/dev/null || true")
@@ -568,9 +568,7 @@ class VpsSshAdapter:
         if missing:
             facts["will_install"] = ", ".join(missing)
 
-        ip = self._sh(
-            "ip -4 route get 1.1.1.1 2>/dev/null | awk '{print $7; exit}'"
-        )
+        ip = self._sh("ip -4 route get 1.1.1.1 2>/dev/null | awk '{print $7; exit}'")
         if ip.ok and ip.out:
             facts["server_ip"] = ip.out
         self._facts = facts
@@ -653,9 +651,7 @@ class VpsSshAdapter:
             )
         except VpsConfigError as exc:
             return False, str(exc)
-        put = self.runner.put_bytes(
-            f"{build_dir}/Dockerfile", content.encode("utf-8"), mode="644"
-        )
+        put = self.runner.put_bytes(f"{build_dir}/Dockerfile", content.encode("utf-8"), mode="644")
         if not put.ok:
             return False, f"could not write the generated Dockerfile: {put.tail()}"
         return True, "generated Dockerfile"
@@ -850,9 +846,7 @@ class VpsSshAdapter:
         if not res.ok:
             return DeployResult(ok=False, detail=f"could not publish the files: {res.tail()}")
 
-        ok, err = self._write_site(
-            plan, static_root=f"{plan.remote_dir}/current", upstreams=()
-        )
+        ok, err = self._write_site(plan, static_root=f"{plan.remote_dir}/current", upstreams=())
         if not ok:
             return DeployResult(ok=False, detail=err)
 
@@ -913,8 +907,10 @@ class VpsSshAdapter:
         ]
         started = self._root("\n".join(start_lines), timeout_s=_BUILD_TIMEOUT_S)
         if not started.ok:
-            self._root(f"docker rm -f $(docker ps -aq --filter name=ov-{plan.project}-{colour}-) "
-                       ">/dev/null 2>&1 || true")
+            self._root(
+                f"docker rm -f $(docker ps -aq --filter name=ov-{plan.project}-{colour}-) "
+                ">/dev/null 2>&1 || true"
+            )
             return DeployResult(
                 ok=False,
                 detail=f"containers would not start: {started.tail()}",
@@ -935,8 +931,7 @@ class VpsSshAdapter:
                 return DeployResult(
                     ok=False,
                     detail=(
-                        f"{err} — the previous version is still serving, nothing was "
-                        "switched over"
+                        f"{err} — the previous version is still serving, nothing was switched over"
                     ),
                     log=logs.stdout,
                 )

@@ -92,9 +92,7 @@ def test_connect_pack_pins_openide_to_airgpt(app: FastAPI) -> None:
     assert pack["cortex"]["base_url"] == "http://127.0.0.1:8010"
 
 
-@pytest.mark.parametrize(
-    "flag", ["bypass", "bypass_gate", "force", "skip_rules", "ignore_gate"]
-)
+@pytest.mark.parametrize("flag", ["bypass", "bypass_gate", "force", "skip_rules", "ignore_gate"])
 def test_gate_never_silently_allows_bypass(app: FastAPI, flag: str) -> None:
     with TestClient(app, client=("127.0.0.1", 5555)) as client:
         res = client.post("/api/gate/check", json={"action": "deploy", flag: True})

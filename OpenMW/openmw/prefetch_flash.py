@@ -40,7 +40,7 @@ def compute_window_size(
     nvme = max(nvme_seq_read_gbps, 0.1)
     gpu = max(gpu_bandwidth_gbps, 0.1)
     ratio = gpu / nvme
-    raw = int(math.ceil(ratio * prefetch_ahead_chunks))
+    raw = math.ceil(ratio * prefetch_ahead_chunks)
     return max(min_window, min(max_window, raw))
 
 
@@ -64,7 +64,7 @@ def chunk_count_for_bytes(total_bytes: int, chunk_size_kb: int) -> int:
     chunk_bytes = chunk_size_kb * 1024
     if total_bytes == 0:
         return 0
-    return int(math.ceil(total_bytes / chunk_bytes))
+    return math.ceil(total_bytes / chunk_bytes)
 
 
 def chunk_byte_range(chunk_index: int, chunk_size_kb: int) -> tuple[int, int]:

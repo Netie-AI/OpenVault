@@ -217,9 +217,7 @@ def save_pat(token: str, *, note: str = "", vault: KeyVault | None = None) -> Gi
         raise ValueError("empty token")
     kv = _vault(vault)
     if kv.seal.is_sealed:
-        raise VaultSealedError(
-            "vault is sealed; POST /api/vault/unseal with the passphrase first"
-        )
+        raise VaultSealedError("vault is sealed; POST /api/vault/unseal with the passphrase first")
     _store_pat_in_vault(kv, cleaned, note=note)
     _scrub_pat_file()
     log.info("github_pat_saved_to_vault")
@@ -229,9 +227,7 @@ def save_pat(token: str, *, note: str = "", vault: KeyVault | None = None) -> Gi
 def clear_pat(*, vault: KeyVault | None = None) -> None:
     kv = _vault(vault)
     if kv.seal.is_sealed:
-        raise VaultSealedError(
-            "vault is sealed; POST /api/vault/unseal with the passphrase first"
-        )
+        raise VaultSealedError("vault is sealed; POST /api/vault/unseal with the passphrase first")
     kv.delete(GITHUB_SHIP_PAT_ID)
     _scrub_pat_file()
     log.info("github_pat_cleared")
@@ -256,8 +252,7 @@ def connection_status(*, vault: KeyVault | None = None) -> GitHubConnection:
         kv = _vault(vault)
         if kv.seal.is_sealed and kv.get(GITHUB_SHIP_PAT_ID) is not None:
             detail = (
-                "Vault is sealed; unseal to use the stored GitHub PAT, "
-                "or connect via gh CLI / env."
+                "Vault is sealed; unseal to use the stored GitHub PAT, or connect via gh CLI / env."
             )
         return GitHubConnection(
             connected=False,
@@ -375,9 +370,7 @@ def list_repos(
     }
 
 
-def list_branches(
-    owner: str, repo: str, *, vault: KeyVault | None = None
-) -> dict[str, Any]:
+def list_branches(owner: str, repo: str, *, vault: KeyVault | None = None) -> dict[str, Any]:
     status = connection_status(vault=vault)
     if not status.connected:
         return {"ok": False, "branches": [], "connection": status.to_dict()}

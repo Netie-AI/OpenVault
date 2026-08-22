@@ -1,4 +1,4 @@
-﻿"""Tests for auto-detect and deploy gate pipeline."""
+"""Tests for auto-detect and deploy gate pipeline."""
 
 from __future__ import annotations
 

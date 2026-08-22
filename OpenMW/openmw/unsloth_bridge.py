@@ -28,8 +28,11 @@ except ImportError:
     pass
 
 
-class UnslothNotAvailable(RuntimeError):
+class UnslothNotAvailableError(RuntimeError):
     """Raised when Unsloth is not installed or failed to import."""
+
+
+UnslothNotAvailable = UnslothNotAvailableError
 
 
 class InsufficientVramError(ValueError):
@@ -109,7 +112,7 @@ def is_unsloth_available() -> bool:
 
 
 def require_unsloth() -> None:
-    """Raise :class:`UnslothNotAvailable` when Unsloth is not installed."""
+    """Raise :class:`UnslothNotAvailableError` when Unsloth is not installed."""
     if not _UNSLOTH_AVAILABLE:
         raise UnslothNotAvailable(
             "Unsloth is not installed. Install the optional training extra "

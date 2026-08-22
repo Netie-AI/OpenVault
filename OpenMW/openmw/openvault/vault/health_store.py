@@ -82,8 +82,8 @@ def _percentile(sorted_vals: list[float], pct: float) -> float | None:
     if len(sorted_vals) == 1:
         return sorted_vals[0]
     rank = (pct / 100.0) * (len(sorted_vals) - 1)
-    lo = int(math.floor(rank))
-    hi = int(math.ceil(rank))
+    lo = math.floor(rank)
+    hi = math.ceil(rank)
     if lo == hi:
         return sorted_vals[lo]
     frac = rank - lo
@@ -128,9 +128,7 @@ class HealthStore:
             )
             conn.commit()
 
-    def _latest_row(
-        self, conn: sqlite3.Connection, key_id: str
-    ) -> tuple[float, str] | None:
+    def _latest_row(self, conn: sqlite3.Connection, key_id: str) -> tuple[float, str] | None:
         row = conn.execute(
             """
             SELECT checked_at, status FROM precheck_history

@@ -1,4 +1,4 @@
-﻿"""OpenVault unit tests — vault, fallback, API smoke."""
+"""OpenVault unit tests — vault, fallback, API smoke."""
 
 from __future__ import annotations
 
@@ -137,7 +137,9 @@ def test_gate_sealed_keys_ready_false_for_deploy(vault: KeyVault) -> None:
     assert leave.keys_ready is False
 
     # Local run with ollama still follows today's rules (metadata + local engines).
-    vault_local = KeyVault(db_path=vault.db_path.parent / "local.db", seal=Seal(Fernet.generate_key()))
+    vault_local = KeyVault(
+        db_path=vault.db_path.parent / "local.db", seal=Seal(Fernet.generate_key())
+    )
     vault_local.create(
         label="ollama",
         provider="ollama",

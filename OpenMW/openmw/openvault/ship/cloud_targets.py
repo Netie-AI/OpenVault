@@ -234,7 +234,11 @@ def build_ship_blueprint(
     card = next((t for t in TARGET_CARDS if t.id == target), TARGET_CARDS[-1])
     blocked = bool(budget.to_dict().get("blocked")) and target not in ("local_demo",)
     domain = build_domain_guide(hostname) if hostname else build_domain_guide("")
-    aws = build_aws_render_plan(hostname=hostname or "app.example.com") if target == "aws_guide" else None
+    aws = (
+        build_aws_render_plan(hostname=hostname or "app.example.com")
+        if target == "aws_guide"
+        else None
+    )
 
     steps: list[dict[str, str]] = []
     if target == "cloudflare_pages":
@@ -243,7 +247,10 @@ def build_ship_blueprint(
             "Install wrangler once: npm install -g wrangler",
             "Preflight refuses early if token/wrangler missing",
             "Build on this machine → wrangler pages deploy (URL parsed from output)",
-            f"Attach custom domain {hostname or 'your.domain'} (or paste CNAME if registrar is elsewhere)",
+            (
+                f"Attach custom domain {hostname or 'your.domain'} "
+                "(or paste CNAME if registrar is elsewhere)"
+            ),
         ]
     elif target == "coolify":
         steps = [
@@ -258,8 +265,12 @@ def build_ship_blueprint(
             "Add Netlify personal access token (vault provider `netlify` or NETLIFY_AUTH_TOKEN)",
             "Optional: set NETLIFY_SITE_ID — else we look up/create a site by project name",
             "Preflight verifies the token via GET /api/v1/user (never fakes ready)",
-            "Zip artifact → POST /sites/{id}/deploys → poll until ready → return observed ssl_url only",
-            f"Attach custom domain {hostname or 'your.domain'} (or paste CNAME if registrar is elsewhere)",
+            "Zip artifact -> POST /sites/{id}/deploys -> poll until ready -> "
+            "return observed ssl_url only",
+            (
+                f"Attach custom domain {hostname or 'your.domain'} "
+                "(or paste CNAME if registrar is elsewhere)"
+            ),
         ]
     elif target == "openship_cloud":
         steps = [

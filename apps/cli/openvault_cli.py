@@ -60,6 +60,7 @@ OPENMW = ROOT / "OpenMW"
 WEB = ROOT / "apps" / "web"
 SHELL = ROOT / "apps" / "shell"
 
+
 def _home_dir() -> Path:
     """The vault home this launcher and its children will agree on."""
     return Path(os.environ.get("OPENVAULT_HOME", str(ROOT / ".openvault")))
@@ -193,11 +194,19 @@ def _start_api(env: dict[str, str], *, mock_health: bool = False) -> subprocess.
     uv = shutil.which("uv") or str(Path.home() / ".local" / "bin" / "uv.exe")
     # --no-sync avoids Windows file locks on openmw.exe during rebuild mid-flight.
     args = [
-        uv, "run", "--no-sync", "openmw", "console",
-        "--host", "127.0.0.1",
-        "--port", str(API_PORT),
-        "--cortex-url", env["CORTEX_URL"],
-        "--openide-url", env["OPENIDE_URL"],
+        uv,
+        "run",
+        "--no-sync",
+        "openmw",
+        "console",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        str(API_PORT),
+        "--cortex-url",
+        env["CORTEX_URL"],
+        "--openide-url",
+        env["OPENIDE_URL"],
         "--no-open-browser",
     ]
     if mock_health:
@@ -215,9 +224,7 @@ def _start_web(env: dict[str, str], *, prod: bool = False) -> subprocess.Popen:
     # not find a production build" left no trace anywhere, and the user was
     # told to run `openvault doctor` - which did not check for a build either.
     log_path = Path(env["OPENVAULT_HOME"]) / "logs" / "web.up.log"
-    return _popen(
-        [_npm(), "run", script], WEB, {**env, "PORT": str(WEB_PORT)}, log_path=log_path
-    )
+    return _popen([_npm(), "run", script], WEB, {**env, "PORT": str(WEB_PORT)}, log_path=log_path)
 
 
 def _base_env() -> dict[str, str]:
@@ -227,7 +234,8 @@ def _base_env() -> dict[str, str]:
         "OPENVAULT_APP_URL": f"http://127.0.0.1:{WEB_PORT}/",
         "CORTEX_URL": os.environ.get("CORTEX_URL", "http://127.0.0.1:8010"),
         "OPENIDE_URL": os.environ.get("OPENIDE_URL", "http://127.0.0.1:8765"),
-        "Path": os.environ.get("Path", os.environ.get("PATH", "")),
+        "PATH": os.environ.get("PATH")
+        or next((v for k, v in os.environ.items() if k.upper() == "PATH"), ""),
     }
 
 
@@ -263,7 +271,9 @@ def cmd_doctor(_: argparse.Namespace) -> int:
         try:
             fs = subprocess.run(
                 [
-                    "powershell", "-NoProfile", "-Command",
+                    "powershell",
+                    "-NoProfile",
+                    "-Command",
                     f"(Get-Volume -DriveLetter {drive}).FileSystemType",
                 ],
                 capture_output=True,

@@ -11,7 +11,7 @@ from dataclasses import asdict
 from typing import Any, Literal
 
 import structlog
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
@@ -55,6 +55,7 @@ from openmw.openvault.route.access import (
     resolve_access,
     uptime_payload,
 )
+from openmw.openvault.ship import github_auth as github_auth_mod
 from openmw.openvault.ship.aws_guide import build_aws_render_plan
 from openmw.openvault.ship.cicd import detect_cicd
 from openmw.openvault.ship.cloud_targets import (
@@ -80,7 +81,6 @@ from openmw.openvault.ship.engine import (
     run_ship_engine,
 )
 from openmw.openvault.ship.gate import GateAction, check_gate
-from openmw.openvault.ship import github_auth as github_auth_mod
 from openmw.openvault.ship.github_auth import (
     clear_pat,
     connection_status,
@@ -89,6 +89,7 @@ from openmw.openvault.ship.github_auth import (
     save_pat,
     start_gh_login,
 )
+from openmw.openvault.ship.inject import InjectError, ShipEnvRef, resolve_ship_env, scrub_mapping
 from openmw.openvault.ship.library import (
     create_upload_session,
     inspect_folder,
@@ -103,14 +104,13 @@ from openmw.openvault.ship.openship import (
     list_ship_plans,
     load_ship_plan,
 )
-from openmw.openvault.ship.inject import InjectError, ShipEnvRef, resolve_ship_env, scrub_mapping
 from openmw.openvault.ship.openship_client import OpenShipClient, adapter_status
 from openmw.openvault.ship.playwright_smoke import load_smoke, run_playwright_smoke
 from openmw.openvault.vault.accounts import AccountStore, AuthProvider
+from openmw.openvault.vault.airgpt_keyvault import keyvault_snapshot, upsert_env_secret
 from openmw.openvault.vault.api_keys import ApiKeyError, ApiKeyStore
 from openmw.openvault.vault.auth import AuthRefusedError, resolve_caller
 from openmw.openvault.vault.budget import configured_ceiling
-from openmw.openvault.vault.airgpt_keyvault import keyvault_snapshot, upsert_env_secret
 from openmw.openvault.vault.crypto import Seal, VaultCryptoError, VaultSealedError
 from openmw.openvault.vault.env_ingest import ingest_environment, scan_environment
 from openmw.openvault.vault.fallback import FallbackConfig, FallbackManager
@@ -132,9 +132,9 @@ from openmw.openvault.vault.ratelimit import (
 )
 from openmw.openvault.vault.redis_store import try_make_redis_store
 from openmw.openvault.vault.secrets import SecretKind, SecretStore, SecretValidationError
-from openmw.openvault.vault.usage_store import HopTrace, UsageEvent, UsageStore
 from openmw.openvault.vault.seed import seed_essentials
 from openmw.openvault.vault.store import KeyCustody, KeyRole, KeyVault, ProviderKind
+from openmw.openvault.vault.usage_store import HopTrace, UsageEvent, UsageStore
 
 log = structlog.get_logger()
 
@@ -161,9 +161,10 @@ def _write_secret_audit(entry: dict[str, Any]) -> None:
     from openmw.openvault.paths import ensure_home
 
     entry = {"ts": datetime.now(timezone.utc).isoformat(), **entry}
-    log.info(str(entry.get("event", "secret_event")), **{
-        k: v for k, v in entry.items() if k not in ("ts", "event", "user_agent")
-    })
+    log.info(
+        str(entry.get("event", "secret_event")),
+        **{k: v for k, v in entry.items() if k not in ("ts", "event", "user_agent")},
+    )
     try:
         path = ensure_home() / "secret_audit.jsonl"
         with path.open("a", encoding="utf-8") as handle:
@@ -200,7 +201,7 @@ def _normalise_host(host: str) -> str:
     elif value.count(":") == 1:
         value = value.split(":")[0]
     if value.lower().startswith("::ffff:"):
-        value = value[len("::ffff:"):]
+        value = value[len("::ffff:") :]
     return value.lower()
 
 
@@ -2131,7 +2132,7 @@ def create_app(
     async def ship_engine_stream(
         deployment_id: str,
         request: Request,
-        lastEventId: int = 0,
+        last_event_id: int = Query(0, alias="lastEventId"),
     ) -> StreamingResponse:
         """SSE replay of a saved deployment — contract: apps/web/src/lib/sse/frames.ts."""
         from openmw.openvault.ship.stream import stream_deployment
@@ -2140,7 +2141,7 @@ def create_app(
         raw = request.headers.get("last-event-id") or request.headers.get("Last-Event-ID")
         if raw and raw.isdigit():
             header_last = int(raw)
-        start_after = max(lastEventId, header_last)
+        start_after = max(last_event_id, header_last)
 
         async def _gen() -> AsyncIterator[bytes]:
             async for chunk in stream_deployment(
@@ -2243,9 +2244,7 @@ def create_app(
         return updated.to_dict()
 
     @app.post("/api/deploy/{deploy_id}/execute")
-    def deploy_execute(
-        deploy_id: str, body: DeployExecuteBody, request: Request
-    ) -> dict[str, Any]:
+    def deploy_execute(deploy_id: str, body: DeployExecuteBody, request: Request) -> dict[str, Any]:
         plan = load_plan(deploy_id)
         if plan is None:
             raise HTTPException(status_code=404, detail="deploy plan not found")
@@ -2342,11 +2341,7 @@ def create_app(
 
         adapter = adapter_presence()
         force_sim = body.simulate if body.simulate is not None else False
-        if (
-            not force_sim
-            and adapter.get("api_ready")
-            and not (body.project_id or "").strip()
-        ):
+        if not force_sim and adapter.get("api_ready") and not (body.project_id or "").strip():
             raise HTTPException(
                 status_code=400,
                 detail=(
@@ -2591,9 +2586,7 @@ def create_app(
 
     @app.get("/api/freeroute/ratelimit")
     @app.get("/api/openfree/ratelimit", include_in_schema=False)
-    def freeroute_ratelimit(
-        request: Request, identity: str = "", tier: str = ""
-    ) -> dict[str, Any]:
+    def freeroute_ratelimit(request: Request, identity: str = "", tier: str = "") -> dict[str, Any]:
         """FreeRoute token-budget snapshot for the caller (tiers + remaining).
 
         Formerly OpenFree; the old path stays as a hidden alias.

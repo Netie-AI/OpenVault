@@ -57,7 +57,9 @@ def _set_passphrase_and_restart(
     return _client(), key_id
 
 
-def test_restart_after_passphrase_starts_sealed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_restart_after_passphrase_starts_sealed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     client, key_id = _set_passphrase_and_restart(tmp_path, monkeypatch)
 
     status = client.get("/api/vault/status").json()

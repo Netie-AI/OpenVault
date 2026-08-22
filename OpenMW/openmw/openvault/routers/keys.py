@@ -120,8 +120,7 @@ def issue_intermediate(body: IntermediateRequest, request: Request) -> dict[str,
         raise HTTPException(
             status_code=401,
             detail=(
-                "intermediate key issue requires an "
-                "Authorization: Bearer <service token> header"
+                "intermediate key issue requires an Authorization: Bearer <service token> header"
             ),
         )
 

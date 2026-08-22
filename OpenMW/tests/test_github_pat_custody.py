@@ -28,7 +28,10 @@ TOKEN = "ghp_test_pat_token_not_real_0001"
 
 
 def _client() -> TestClient:
-    return TestClient(create_app(mock_health=True, enable_precheck_loop=False), client=("127.0.0.1", 5555))
+    return TestClient(
+        create_app(mock_health=True, enable_precheck_loop=False),
+        client=("127.0.0.1", 5555),
+    )
 
 
 @pytest.fixture(autouse=True)
@@ -155,8 +158,7 @@ def test_api_pat_save_resolve_clear_and_sealed_gate(tmp_path: Path) -> None:
 
     unseal = client2.post("/api/vault/unseal", json={"passphrase": PASSPHRASE})
     assert unseal.status_code == 200
-    vault2 = KeyVault(seal=Seal())
-    # New Seal after unseal on app's Seal — bind via API clear on same app seal:
+    # New Seal after unseal on app's Seal -- bind via API clear on same app seal:
     ok_clear = client2.delete("/api/ship/github/pat")
     assert ok_clear.status_code == 200, ok_clear.text
 

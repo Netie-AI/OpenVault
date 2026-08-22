@@ -74,9 +74,7 @@ def test_engine_openship_cloud_simulate_no_fake_url(
     assert "non-production" in host["detail"].lower() or "simulate" in host["detail"].lower()
 
 
-def test_engine_aws_guide_no_fake_live_url(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_engine_aws_guide_no_fake_live_url(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("OPENVAULT_HOME", str(tmp_path / "ov"))
     app_dir = tmp_path / "demo"
     app_dir.mkdir()
@@ -170,9 +168,7 @@ def test_engine_openship_cloud_remote_observed_url_is_live(
     assert host["status"] == "pass"
 
 
-def test_ship_github_and_library_routes(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_ship_github_and_library_routes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("OPENVAULT_HOME", str(tmp_path / "ov"))
     monkeypatch.setenv("OPENSHIP_MODE", "simulate")
     project = tmp_path / "app"
@@ -410,9 +406,7 @@ def test_ship_engine_route_is_gated_for_targets_that_leave_the_machine(
     assert local.status_code == 200
 
 
-def test_engine_local_demo_still_succeeds(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_engine_local_demo_still_succeeds(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """R-0005: the stricter rule must not start refusing work that really worked."""
     monkeypatch.setenv("OPENVAULT_HOME", str(tmp_path / "ov"))
     app_dir = tmp_path / "demo"
@@ -443,9 +437,7 @@ def test_concurrent_deploy_for_one_project_is_refused(
         )
 
     # The slot is released once the first deploy is done — on failure too.
-    out = run_ship_engine(
-        target="vps_ssh", project_path=str(app_dir), vps_host=""
-    )
+    out = run_ship_engine(target="vps_ssh", project_path=str(app_dir), vps_host="")
     assert out["deployment"]["status"] == "blocked"
     assert not active_deploys(), "the lock must not leak after the run"
 

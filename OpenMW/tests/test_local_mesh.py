@@ -1,4 +1,4 @@
-﻿"""Local mesh — OpenVault ↔ Cortex ↔ FreeIDE handshake + connect pack."""
+"""Local mesh — OpenVault ↔ Cortex ↔ FreeIDE handshake + connect pack."""
 
 from __future__ import annotations
 

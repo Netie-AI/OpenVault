@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import ClassVar
 from unittest.mock import MagicMock
 
 import pytest
@@ -62,8 +63,8 @@ class _MockTrainResult:
 
 
 class _MockFastLanguageModel:
-    from_pretrained_calls: list[dict[str, object]] = []
-    peft_calls: list[dict[str, object]] = []
+    from_pretrained_calls: ClassVar[list[dict[str, object]]] = []
+    peft_calls: ClassVar[list[dict[str, object]]] = []
 
     @classmethod
     def reset(cls) -> None:
@@ -144,7 +145,7 @@ def test_training_config_defaults() -> None:
 
 
 def test_validate_training_profile_rejects_low_vram() -> None:
-    with pytest.raises(InsufficientVramError, match=">= 8.0 GB"):
+    with pytest.raises(InsufficientVramError, match=r">= 8.0 GB"):
         validate_training_profile(_profile(gpu_vram_gb=6.0))
 
 

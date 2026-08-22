@@ -53,7 +53,9 @@ def _to_target(body: TargetBody) -> RouteTarget:
 @router.get("/api/route/strategy")
 def api_get_strategy() -> dict[str, Any]:
     state = get_route_state()
-    ordered = apply_strategy(state.strategy, state.targets, combo_name=state.combo_name, metrics=state.metrics)
+    ordered = apply_strategy(
+        state.strategy, state.targets, combo_name=state.combo_name, metrics=state.metrics
+    )
     return {
         "strategy": state.strategy,
         "strategies": list(STRATEGY_NAMES),
@@ -71,7 +73,9 @@ def api_put_strategy(body: StrategyBody) -> dict[str, Any]:
         )
     set_strategy(normalized)
     state = get_route_state()
-    ordered = apply_strategy(state.strategy, state.targets, combo_name=state.combo_name, metrics=state.metrics)
+    ordered = apply_strategy(
+        state.strategy, state.targets, combo_name=state.combo_name, metrics=state.metrics
+    )
     return {
         "strategy": state.strategy,
         "orderedExecutionKeys": [t.execution_key for t in ordered],
@@ -81,7 +85,9 @@ def api_put_strategy(body: StrategyBody) -> dict[str, Any]:
 @router.get("/api/route/targets")
 def api_get_targets() -> dict[str, Any]:
     state = get_route_state()
-    ordered = apply_strategy(state.strategy, state.targets, combo_name=state.combo_name, metrics=state.metrics)
+    ordered = apply_strategy(
+        state.strategy, state.targets, combo_name=state.combo_name, metrics=state.metrics
+    )
     return {
         "strategy": state.strategy,
         "targets": state.target_dicts(),
@@ -101,7 +107,9 @@ def api_put_targets(body: TargetsBody) -> dict[str, Any]:
     targets = [_to_target(t) for t in body.targets]
     set_targets(targets)
     state = get_route_state()
-    ordered = apply_strategy(state.strategy, state.targets, combo_name=state.combo_name, metrics=state.metrics)
+    ordered = apply_strategy(
+        state.strategy, state.targets, combo_name=state.combo_name, metrics=state.metrics
+    )
     return {
         "count": len(targets),
         "orderedExecutionKeys": [t.execution_key for t in ordered],

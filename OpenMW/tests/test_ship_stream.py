@@ -46,7 +46,9 @@ def test_deployment_frames_emit_complete_with_success() -> None:
     assert "end" in joined
 
 
-def test_ship_engine_stream_endpoint(vault: KeyVault, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_ship_engine_stream_endpoint(
+    vault: KeyVault, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     monkeypatch.setenv("OPENVAULT_HOME", str(tmp_path / "home2"))
     dep = ShipDeployment(
         deployment_id="streamtest01",

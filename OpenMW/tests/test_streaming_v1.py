@@ -5,14 +5,14 @@ from __future__ import annotations
 import asyncio
 from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from conftest import issue_key
 from cryptography.fernet import Fernet
 from fastapi.testclient import TestClient
 
-from conftest import issue_key
 from openmw.openvault.app import create_app
 from openmw.openvault.vault.crypto import Seal
 from openmw.openvault.vault.fallback import FallbackManager
@@ -68,11 +68,11 @@ def test_prepare_chat_stream_yields_upstream_bytes(vault: KeyVault) -> None:
     vault.set_precheck(rec.id, status="ok", latency_ms=1.0, error=None)
     fallback = FallbackManager(vault)
 
-    chunks = [b"data: {\"id\":\"1\"}\n\n", b"data: [DONE]\n\n"]
+    chunks = [b'data: {"id":"1"}\n\n', b"data: [DONE]\n\n"]
 
     class _FakeResp:
         status_code = 200
-        headers = {"content-type": "text/event-stream"}
+        headers: ClassVar[dict[str, str]] = {"content-type": "text/event-stream"}
 
         async def aiter_bytes(self) -> AsyncIterator[bytes]:
             for c in chunks:
@@ -126,9 +126,7 @@ def test_gateway_stream_success_path(
     )
     vault.set_precheck(rec.id, status="ok", latency_ms=1.0, error=None)
 
-    async def _fake_prepare(
-        *_args: Any, **_kwargs: Any
-    ) -> tuple[int, AsyncIterator[bytes]]:
+    async def _fake_prepare(*_args: Any, **_kwargs: Any) -> tuple[int, AsyncIterator[bytes]]:
         async def _gen() -> AsyncIterator[bytes]:
             yield b"data: hello\n\n"
             yield b"data: [DONE]\n\n"
@@ -183,9 +181,7 @@ def test_gateway_stream_settles_from_include_usage(
     )
     vault.set_precheck(rec.id, status="ok", latency_ms=1.0, error=None)
 
-    async def _fake_prepare(
-        *_args: Any, **_kwargs: Any
-    ) -> tuple[int, AsyncIterator[bytes]]:
+    async def _fake_prepare(*_args: Any, **_kwargs: Any) -> tuple[int, AsyncIterator[bytes]]:
         return 200, _stream_with_usage_chunks()
 
     # Freeze refill — free tier refills ~666 tok/s and can erase a 20-tok charge.
@@ -203,11 +199,12 @@ def test_gateway_stream_settles_from_include_usage(
         "/api/freeroute/ratelimit", params={"tier": "free", "identity": identity}
     ).json()["token_remaining"]
 
-    with patch(
-        "openmw.openvault.app.prepare_chat_stream",
-        new=AsyncMock(side_effect=_fake_prepare),
-    ):
-        with client.stream(
+    with (
+        patch(
+            "openmw.openvault.app.prepare_chat_stream",
+            new=AsyncMock(side_effect=_fake_prepare),
+        ),
+        client.stream(
             "POST",
             "/v1/chat/completions",
             json={
@@ -218,9 +215,10 @@ def test_gateway_stream_settles_from_include_usage(
                 "messages": [{"role": "user", "content": "hi"}],
             },
             headers=headers,
-        ) as resp:
-            assert resp.status_code == 200
-            _ = b"".join(resp.iter_bytes())
+        ) as resp,
+    ):
+        assert resp.status_code == 200
+        _ = b"".join(resp.iter_bytes())
 
     after = client.get(
         "/api/freeroute/ratelimit", params={"tier": "free", "identity": identity}
@@ -244,9 +242,7 @@ def test_gateway_stream_keeps_reservation_when_usage_absent(
     )
     vault.set_precheck(rec.id, status="ok", latency_ms=1.0, error=None)
 
-    async def _fake_prepare(
-        *_args: Any, **_kwargs: Any
-    ) -> tuple[int, AsyncIterator[bytes]]:
+    async def _fake_prepare(*_args: Any, **_kwargs: Any) -> tuple[int, AsyncIterator[bytes]]:
         async def _gen() -> AsyncIterator[bytes]:
             yield b"data: hello\n\n"
             yield b"data: [DONE]\n\n"
@@ -260,11 +256,12 @@ def test_gateway_stream_keeps_reservation_when_usage_absent(
         "/api/freeroute/ratelimit", params={"tier": "free", "identity": identity}
     ).json()["token_remaining"]
 
-    with patch(
-        "openmw.openvault.app.prepare_chat_stream",
-        new=AsyncMock(side_effect=_fake_prepare),
-    ):
-        with client.stream(
+    with (
+        patch(
+            "openmw.openvault.app.prepare_chat_stream",
+            new=AsyncMock(side_effect=_fake_prepare),
+        ),
+        client.stream(
             "POST",
             "/v1/chat/completions",
             json={
@@ -275,9 +272,10 @@ def test_gateway_stream_keeps_reservation_when_usage_absent(
                 "messages": [{"role": "user", "content": "hi"}],
             },
             headers=headers,
-        ) as resp:
-            assert resp.status_code == 200
-            _ = b"".join(resp.iter_bytes())
+        ) as resp,
+    ):
+        assert resp.status_code == 200
+        _ = b"".join(resp.iter_bytes())
 
     after = client.get(
         "/api/freeroute/ratelimit", params={"tier": "free", "identity": identity}
@@ -301,9 +299,7 @@ def test_gateway_stream_ignores_usage_without_include_usage(
     )
     vault.set_precheck(rec.id, status="ok", latency_ms=1.0, error=None)
 
-    async def _fake_prepare(
-        *_args: Any, **_kwargs: Any
-    ) -> tuple[int, AsyncIterator[bytes]]:
+    async def _fake_prepare(*_args: Any, **_kwargs: Any) -> tuple[int, AsyncIterator[bytes]]:
         return 200, _stream_with_usage_chunks()
 
     app = create_app(vault=vault, mock_health=True, enable_precheck_loop=False)
@@ -313,11 +309,12 @@ def test_gateway_stream_ignores_usage_without_include_usage(
         "/api/freeroute/ratelimit", params={"tier": "free", "identity": identity}
     ).json()["token_remaining"]
 
-    with patch(
-        "openmw.openvault.app.prepare_chat_stream",
-        new=AsyncMock(side_effect=_fake_prepare),
-    ):
-        with client.stream(
+    with (
+        patch(
+            "openmw.openvault.app.prepare_chat_stream",
+            new=AsyncMock(side_effect=_fake_prepare),
+        ),
+        client.stream(
             "POST",
             "/v1/chat/completions",
             json={
@@ -327,9 +324,10 @@ def test_gateway_stream_ignores_usage_without_include_usage(
                 "messages": [{"role": "user", "content": "hi"}],
             },
             headers=headers,
-        ) as resp:
-            assert resp.status_code == 200
-            _ = b"".join(resp.iter_bytes())
+        ) as resp,
+    ):
+        assert resp.status_code == 200
+        _ = b"".join(resp.iter_bytes())
 
     after = client.get(
         "/api/freeroute/ratelimit", params={"tier": "free", "identity": identity}

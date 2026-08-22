@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import threading
 from typing import Any
 
@@ -18,10 +19,8 @@ def pick_local_folder(*, title: str = "Select project folder") -> dict[str, Any]
 
             root = tk.Tk()
             root.withdraw()
-            try:
+            with contextlib.suppress(tk.TclError):
                 root.attributes("-topmost", True)
-            except tk.TclError:
-                pass
             path = filedialog.askdirectory(title=title, mustexist=True)
             holder[0] = path or None
             root.destroy()

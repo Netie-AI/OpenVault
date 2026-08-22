@@ -108,9 +108,7 @@ def test_trace_mock_writes_timings_and_returns_timeline(
 
 
 def test_smart_mock_returns_smart_dict() -> None:
-    body = _client().get(
-        f"/api/sentinel/smart?mock=true&device={MOCK_DEVICE_PATH}"
-    ).json()
+    body = _client().get(f"/api/sentinel/smart?mock=true&device={MOCK_DEVICE_PATH}").json()
     assert body["ok"] is True
     assert body["smart"] is not None
     assert "percentage_used" in body["smart"]

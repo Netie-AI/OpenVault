@@ -39,7 +39,7 @@ def _bind(port: int = 0) -> socket.socket:
 
 class TestNamingTheBlocker:
     def test_a_busy_port_names_the_application_holding_it(self) -> None:
-        """"Port busy" is not actionable; a name and a path are.
+        """ "Port busy" is not actionable; a name and a path are.
 
         This is the whole point of the feature: the operator has to know what
         to close.
@@ -186,9 +186,7 @@ class TestTheExitCodeContractTheLaunchersDependOn:
         )
         return proc.returncode, proc.stdout + proc.stderr
 
-    def test_exit_is_zero_when_nothing_foreign_holds_our_ports(
-        self, isolated_home: Path
-    ) -> None:
+    def test_exit_is_zero_when_nothing_foreign_holds_our_ports(self, isolated_home: Path) -> None:
         code, out = self._run_ports(isolated_home)
         assert code == 0, out
 
@@ -285,9 +283,7 @@ class TestTheLauncherResolverAgreesWithThePackage:
             f"(saved={saved}, env={env_value})"
         )
 
-    def test_the_launcher_reads_the_same_file_the_package_writes(
-        self, isolated_home: Path
-    ) -> None:
+    def test_the_launcher_reads_the_same_file_the_package_writes(self, isolated_home: Path) -> None:
         """With OPENVAULT_HOME set - which every launcher does before spawning.
 
         Unset, the two disagree by design: the package defaults to

@@ -158,8 +158,9 @@ _FRAMEWORK_RULES: tuple[_Rule, ...] = (
     _Rule("rust"),
     _Rule(
         "rails",
-        file_match=lambda names: "gemfile" in names
-        and _has_any(names, "config/routes.rb", "bin/rails"),
+        file_match=lambda names: (
+            "gemfile" in names and _has_any(names, "config/routes.rb", "bin/rails")
+        ),
     ),
     _Rule("sinatra"),
     _Rule("laravel"),
@@ -177,15 +178,12 @@ _FRAMEWORK_RULES: tuple[_Rule, ...] = (
     ),
     _Rule(
         "phoenix",
-        file_match=lambda names: "mix.exs" in names
-        and _has_any(names, "lib", "config/config.exs"),
+        file_match=lambda names: "mix.exs" in names and _has_any(names, "lib", "config/config.exs"),
     ),
     _Rule("python"),
     _Rule(
         "node",
-        file_match=lambda names: _has_any(
-            names, "package.json", "server.js", "app.js", "index.js"
-        ),
+        file_match=lambda names: _has_any(names, "package.json", "server.js", "app.js", "index.js"),
     ),
     _Rule("static", file_match=lambda names: "index.html" in names and "package.json" not in names),
     _Rule("docker-compose"),

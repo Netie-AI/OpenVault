@@ -48,9 +48,7 @@ def test_heartbeat_skips_duplicate_status_within_15m(health: HealthStore) -> Non
     key_id = "hb-key-bbbbbbbbbbbbbbbbbbbbbbbb"
     t0 = 1_700_000_000.0
     assert health.record(key_id, "ok", latency_ms=5.0, checked_at=t0) is True
-    assert (
-        health.record(key_id, "ok", latency_ms=6.0, checked_at=t0 + 60.0) is False
-    )
+    assert health.record(key_id, "ok", latency_ms=6.0, checked_at=t0 + 60.0) is False
     assert health.count_for_key(key_id) == 1
     assert (
         health.record(

@@ -1,4 +1,4 @@
-﻿"""Provider catalog + seed + downtime API tests."""
+"""Provider catalog + seed + downtime API tests."""
 
 from __future__ import annotations
 

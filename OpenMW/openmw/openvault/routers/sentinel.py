@@ -152,8 +152,6 @@ def api_observe_trace(body: TraceBody) -> dict[str, Any]:
     if not trace.ok and trace.error:
         payload["degraded"] = True
         prior = payload.get("degraded_reason")
-        payload["degraded_reason"] = (
-            f"{trace.error}; {prior}" if prior else trace.error
-        )
+        payload["degraded_reason"] = f"{trace.error}; {prior}" if prior else trace.error
 
     return payload

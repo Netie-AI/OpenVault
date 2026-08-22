@@ -140,9 +140,7 @@ class TestIssuedKeys:
         assert revoked.status_code == unknown.status_code == 401
         assert revoked.json() == unknown.json()
 
-    def test_token_is_shown_once_and_never_stored(
-        self, client: TestClient, tmp_path: Path
-    ) -> None:
+    def test_token_is_shown_once_and_never_stored(self, client: TestClient, tmp_path: Path) -> None:
         out = client.post("/api/apikeys", json={"label": "once", "tier": "free"}).json()
         token = out["token"]
         listed = client.get("/api/apikeys").json()["keys"]
@@ -249,8 +247,11 @@ class TestUsageLedger:
         resp_429.headers = {}
         resp_429.json = MagicMock(side_effect=ValueError("not json"))
         ok = _ok_response(
-            {"id": "x", "choices": [], "usage": {"total_tokens": 7, "prompt_tokens": 3,
-                                                 "completion_tokens": 4}}
+            {
+                "id": "x",
+                "choices": [],
+                "usage": {"total_tokens": 7, "prompt_tokens": 3, "completion_tokens": 4},
+            }
         )
         mock = _mock_client(resp_429, ok)
         with patch("openmw.openvault.vault.proxy.httpx.AsyncClient", return_value=mock):
@@ -262,9 +263,7 @@ class TestUsageLedger:
         assert events[0]["vault_key_id"] == second.id
         assert events[0]["vault_key_id"] != first.id
 
-    def test_failed_request_is_recorded_with_its_refusal_type(
-        self, client: TestClient
-    ) -> None:
+    def test_failed_request_is_recorded_with_its_refusal_type(self, client: TestClient) -> None:
         _key_id, headers = issue_key(client)
         resp = client.post("/v1/chat/completions", json=_CHAT, headers=headers)
         assert resp.status_code == 503
@@ -281,8 +280,11 @@ class TestUsageLedger:
         _healthy_key(vault, "sum-hop")
         _key_id, headers = issue_key(client)
         ok = _ok_response(
-            {"id": "s", "choices": [], "usage": {"total_tokens": 40, "prompt_tokens": 20,
-                                                 "completion_tokens": 20}}
+            {
+                "id": "s",
+                "choices": [],
+                "usage": {"total_tokens": 40, "prompt_tokens": 20, "completion_tokens": 20},
+            }
         )
         mock = _mock_client(ok)
         with patch("openmw.openvault.vault.proxy.httpx.AsyncClient", return_value=mock):
@@ -565,9 +567,7 @@ class TestControlPlaneIsGated:
         client.post("/v1/chat/completions", json=_CHAT, headers=victim_headers)
 
         _snoop_id, snoop_headers = issue_key(client, label="snoop")
-        snooped = client.get(
-            "/api/usage", params={"api_key_id": victim_id}, headers=snoop_headers
-        )
+        snooped = client.get("/api/usage", params={"api_key_id": victim_id}, headers=snoop_headers)
         assert snooped.status_code == 200
         assert snooped.json()["count"] == 0, "a key holder must see only its own rows"
 

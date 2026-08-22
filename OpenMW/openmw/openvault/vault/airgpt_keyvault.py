@@ -66,11 +66,7 @@ PROVIDER_TO_ENV: dict[str, str] = {
 
 
 def _best_key(keys: list[KeyRecord], provider: str) -> KeyRecord | None:
-    matches = [
-        k
-        for k in keys
-        if k.provider == provider and k.enabled and k.lifecycle == "active"
-    ]
+    matches = [k for k in keys if k.provider == provider and k.enabled and k.lifecycle == "active"]
     if not matches:
         return None
     matches.sort(key=lambda k: (k.priority, k.updated_at))
@@ -119,7 +115,8 @@ def keyvault_snapshot(vault: KeyVault, *, openvault_url: str = "") -> dict[str, 
             "FreeRoute",
             "OMNIROUTE_API_KEY",
             "gateway",
-            "FreeRoute (ours) — OmniRoute-inspired free gateway; AirGPT enables it, OpenVault routes/custody",
+            "FreeRoute (ours) -- OmniRoute-inspired free gateway; AirGPT enables "
+            "it, OpenVault routes/custody",
         ),
         (
             "openship",
@@ -128,7 +125,13 @@ def keyvault_snapshot(vault: KeyVault, *, openvault_url: str = "") -> dict[str, 
             "deploy",
             "FreeBuild is implemented in OpenVault ship/ — optional external URL/token",
         ),
-        ("github_cli", "GitHub CLI token", "GH_TOKEN", "cli", "gh auth status / repo scope (login is out-of-band)"),
+        (
+            "github_cli",
+            "GitHub CLI token",
+            "GH_TOKEN",
+            "cli",
+            "gh auth status / repo scope (login is out-of-band)",
+        ),
         ("cursor", "Cursor SDK", "CURSOR_API_KEY", "cloud", "FreeIDE Cursor backends"),
     )
     for pid, label, env_key, group, note in extras:
@@ -138,7 +141,10 @@ def keyvault_snapshot(vault: KeyVault, *, openvault_url: str = "") -> dict[str, 
                 for k in keys
                 if k.enabled
                 and k.lifecycle == "active"
-                and (k.label.lower().startswith(pid) or (k.provider == "custom" and pid in k.label.lower()))
+                and (
+                    k.label.lower().startswith(pid)
+                    or (k.provider == "custom" and pid in k.label.lower())
+                )
             ),
             None,
         )

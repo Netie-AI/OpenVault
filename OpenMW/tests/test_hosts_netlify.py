@@ -72,16 +72,14 @@ class TestPreflight:
     def test_bad_token_refuses(self, monkeypatch: pytest.MonkeyPatch) -> None:
         adapter = NetlifyAdapter(api_token="bad")
 
-        def fake_request(method, url, **kwargs):  # noqa: ANN001, ARG001
+        def fake_request(method, url, **kwargs):
             resp = MagicMock()
             resp.status_code = 401
             resp.content = b'{"message":"Unauthorized"}'
             resp.json.return_value = {"message": "Unauthorized"}
             return resp
 
-        monkeypatch.setattr(
-            "openmw.openvault.ship.hosts.netlify.httpx.request", fake_request
-        )
+        monkeypatch.setattr("openmw.openvault.ship.hosts.netlify.httpx.request", fake_request)
         pre = adapter.preflight()
         assert pre.ready is False
         assert "rejected the token" in pre.blocker.lower()
@@ -89,7 +87,7 @@ class TestPreflight:
     def test_ready_when_user_ok(self, monkeypatch: pytest.MonkeyPatch) -> None:
         adapter = NetlifyAdapter(api_token="tok", site_id="site-1")
 
-        def fake_request(method, url, **kwargs):  # noqa: ANN001, ARG001
+        def fake_request(method, url, **kwargs):
             resp = MagicMock()
             resp.status_code = 200
             if url.endswith("/user"):
@@ -106,9 +104,7 @@ class TestPreflight:
             resp.json.return_value = body
             return resp
 
-        monkeypatch.setattr(
-            "openmw.openvault.ship.hosts.netlify.httpx.request", fake_request
-        )
+        monkeypatch.setattr("openmw.openvault.ship.hosts.netlify.httpx.request", fake_request)
         pre = adapter.preflight()
         assert pre.ready is True
         assert pre.facts["email"] == "dev@example.com"
@@ -117,7 +113,7 @@ class TestPreflight:
     def test_bad_site_id_refuses(self, monkeypatch: pytest.MonkeyPatch) -> None:
         adapter = NetlifyAdapter(api_token="tok", site_id="missing")
 
-        def fake_request(method, url, **kwargs):  # noqa: ANN001, ARG001
+        def fake_request(method, url, **kwargs):
             resp = MagicMock()
             if url.endswith("/user"):
                 resp.status_code = 200
@@ -129,9 +125,7 @@ class TestPreflight:
             resp.json.return_value = {"message": "Not Found"}
             return resp
 
-        monkeypatch.setattr(
-            "openmw.openvault.ship.hosts.netlify.httpx.request", fake_request
-        )
+        monkeypatch.setattr("openmw.openvault.ship.hosts.netlify.httpx.request", fake_request)
         pre = adapter.preflight()
         assert pre.ready is False
         assert "not reachable" in pre.blocker.lower()
@@ -169,19 +163,23 @@ class TestDeploy:
         adapter = self._adapter()
         artifact = self._artifact(tmp_path)
 
-        def fake_api(method, path, **kwargs):  # noqa: ANN001, ARG001
+        def fake_api(method, path, **kwargs):
             if path == "/user":
                 return True, {"email": "dev@example.com"}, ""
             if path == "/sites/site-1":
                 return True, {"id": "site-1", "name": "demo", "ssl_url": ""}, ""
             if path == "/sites/site-1/deploys":
-                return True, {
-                    "id": "dep-1",
-                    "state": "ready",
-                    "ssl_url": "",
-                    "deploy_ssl_url": "",
-                    "url": "",
-                }, ""
+                return (
+                    True,
+                    {
+                        "id": "dep-1",
+                        "state": "ready",
+                        "ssl_url": "",
+                        "deploy_ssl_url": "",
+                        "url": "",
+                    },
+                    "",
+                )
             return False, {}, f"unexpected {path}"
 
         monkeypatch.setattr(adapter, "_api", fake_api)
@@ -197,21 +195,29 @@ class TestDeploy:
         adapter = self._adapter()
         artifact = self._artifact(tmp_path)
 
-        def fake_api(method, path, **kwargs):  # noqa: ANN001, ARG001
+        def fake_api(method, path, **kwargs):
             if path == "/user":
                 return True, {"email": "dev@example.com"}, ""
             if path == "/sites/site-1":
-                return True, {
-                    "id": "site-1",
-                    "name": "demo",
-                    "ssl_url": "https://demo.netlify.app",
-                }, ""
+                return (
+                    True,
+                    {
+                        "id": "site-1",
+                        "name": "demo",
+                        "ssl_url": "https://demo.netlify.app",
+                    },
+                    "",
+                )
             if path == "/sites/site-1/deploys":
-                return True, {
-                    "id": "dep-9",
-                    "state": "ready",
-                    "ssl_url": "https://demo.netlify.app",
-                }, ""
+                return (
+                    True,
+                    {
+                        "id": "dep-9",
+                        "state": "ready",
+                        "ssl_url": "https://demo.netlify.app",
+                    },
+                    "",
+                )
             return False, {}, f"unexpected {path}"
 
         monkeypatch.setattr(adapter, "_api", fake_api)
@@ -220,14 +226,12 @@ class TestDeploy:
         assert result.url == "https://demo.netlify.app"
         assert result.deployment_ref == "dep-9"
 
-    def test_poll_then_observed_url(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_poll_then_observed_url(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         adapter = self._adapter()
         artifact = self._artifact(tmp_path)
         polls = {"n": 0}
 
-        def fake_api(method, path, **kwargs):  # noqa: ANN001, ARG001
+        def fake_api(method, path, **kwargs):
             if path == "/user":
                 return True, {"email": "dev@example.com"}, ""
             if path == "/sites/site-1":
@@ -238,17 +242,19 @@ class TestDeploy:
                 polls["n"] += 1
                 if polls["n"] < 2:
                     return True, {"id": "dep-2", "state": "building"}, ""
-                return True, {
-                    "id": "dep-2",
-                    "state": "ready",
-                    "ssl_url": "https://ready.example.netlify.app",
-                }, ""
+                return (
+                    True,
+                    {
+                        "id": "dep-2",
+                        "state": "ready",
+                        "ssl_url": "https://ready.example.netlify.app",
+                    },
+                    "",
+                )
             return False, {}, f"unexpected {path}"
 
         monkeypatch.setattr(adapter, "_api", fake_api)
-        monkeypatch.setattr(
-            "openmw.openvault.ship.hosts.netlify.time.sleep", lambda *_: None
-        )
+        monkeypatch.setattr("openmw.openvault.ship.hosts.netlify.time.sleep", lambda *_: None)
         result = adapter.deploy(artifact, project="demo")
         assert result.ok is True
         assert result.url == "https://ready.example.netlify.app"
@@ -260,7 +266,7 @@ class TestDeploy:
         adapter = self._adapter()
         artifact = self._artifact(tmp_path)
 
-        def fake_api(method, path, **kwargs):  # noqa: ANN001, ARG001
+        def fake_api(method, path, **kwargs):
             if path == "/user":
                 return True, {"email": "dev@example.com"}, ""
             if path == "/sites/site-1":
@@ -281,17 +287,19 @@ class TestAttachDomain:
         adapter = NetlifyAdapter(api_token="tok", site_id="site-1")
         assert adapter.attach_domain(project="app", hostname="  ").ok is False
 
-    def test_already_on_site_is_success(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_already_on_site_is_success(self, monkeypatch: pytest.MonkeyPatch) -> None:
         adapter = NetlifyAdapter(api_token="tok", site_id="site-1")
 
-        def fake_api(method, path, **kwargs):  # noqa: ANN001, ARG001
-            return True, {
-                "id": "site-1",
-                "custom_domain": "netie.ai",
-                "default_domain": "demo.netlify.app",
-            }, ""
+        def fake_api(method, path, **kwargs):
+            return (
+                True,
+                {
+                    "id": "site-1",
+                    "custom_domain": "netie.ai",
+                    "default_domain": "demo.netlify.app",
+                },
+                "",
+            )
 
         monkeypatch.setattr(adapter, "_api", fake_api)
         result = adapter.attach_domain(project="app", hostname="netie.ai")
@@ -302,13 +310,17 @@ class TestAttachDomain:
     ) -> None:
         adapter = NetlifyAdapter(api_token="tok", site_id="site-1")
 
-        def fake_api(method, path, **kwargs):  # noqa: ANN001, ARG001
+        def fake_api(method, path, **kwargs):
             if method == "GET" and path.startswith("/sites/"):
-                return True, {
-                    "id": "site-1",
-                    "custom_domain": "",
-                    "default_domain": "",
-                }, ""
+                return (
+                    True,
+                    {
+                        "id": "site-1",
+                        "custom_domain": "",
+                        "default_domain": "",
+                    },
+                    "",
+                )
             return False, {}, "refused by Netlify"
 
         monkeypatch.setattr(adapter, "_api", fake_api)
@@ -320,9 +332,7 @@ class TestAttachDomain:
 
 
 class TestFromVault:
-    def test_reads_provider_and_env(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_reads_provider_and_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("NETLIFY_SITE_ID", "env-site")
         adapter = from_vault(lambda _p: "vault-token")
         assert adapter.credential_provider == "netlify"

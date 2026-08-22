@@ -122,9 +122,7 @@ class ApiKeyStore:
                 """
             )
             # Verification looks up by digest on every single gateway request.
-            conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_api_keys_digest ON api_keys(token_sha256)"
-            )
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_api_keys_digest ON api_keys(token_sha256)")
             conn.commit()
 
     @staticmethod
@@ -160,8 +158,7 @@ class ApiKeyStore:
         allowed = issuable_tiers()
         if clean_tier not in allowed:
             raise ApiKeyError(
-                f"unknown tier {clean_tier!r}; issuable tiers are "
-                f"{', '.join(sorted(allowed))}"
+                f"unknown tier {clean_tier!r}; issuable tiers are {', '.join(sorted(allowed))}"
             )
 
         token = TOKEN_PREFIX + secrets.token_urlsafe(32)
@@ -200,9 +197,7 @@ class ApiKeyStore:
             return None
         offered = token_digest(token)
         with self._connect() as conn:
-            row = conn.execute(
-                "SELECT * FROM api_keys WHERE token_sha256=?", (offered,)
-            ).fetchone()
+            row = conn.execute("SELECT * FROM api_keys WHERE token_sha256=?", (offered,)).fetchone()
         if row is None:
             return None
         if not hmac.compare_digest(offered, row["token_sha256"]):

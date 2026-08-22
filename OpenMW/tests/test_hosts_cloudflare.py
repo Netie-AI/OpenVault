@@ -107,9 +107,13 @@ class TestDeployRefusals:
         (out / "index.html").write_text("hi", encoding="utf-8")
 
         adapter = CloudflarePagesAdapter(api_token="tok", account_id="acct")
-        monkeypatch.setattr(adapter, "preflight", lambda: __import__(
-            "openmw.openvault.ship.hosts.base", fromlist=["Preflight"]
-        ).Preflight(ready=True))
+        monkeypatch.setattr(
+            adapter,
+            "preflight",
+            lambda: __import__(
+                "openmw.openvault.ship.hosts.base", fromlist=["Preflight"]
+            ).Preflight(ready=True),
+        )
         monkeypatch.setattr(adapter, "ensure_project", lambda p, **kw: (True, "app"))
         monkeypatch.setattr(
             "openmw.openvault.ship.hosts.cloudflare_pages.shutil.which",
@@ -133,9 +137,13 @@ class TestDeployRefusals:
         (out / "index.html").write_text("hi", encoding="utf-8")
 
         adapter = CloudflarePagesAdapter(api_token="tok", account_id="acct")
-        monkeypatch.setattr(adapter, "preflight", lambda: __import__(
-            "openmw.openvault.ship.hosts.base", fromlist=["Preflight"]
-        ).Preflight(ready=True))
+        monkeypatch.setattr(
+            adapter,
+            "preflight",
+            lambda: __import__(
+                "openmw.openvault.ship.hosts.base", fromlist=["Preflight"]
+            ).Preflight(ready=True),
+        )
         monkeypatch.setattr(adapter, "ensure_project", lambda p, **kw: (True, "app"))
         monkeypatch.setattr(
             "openmw.openvault.ship.hosts.cloudflare_pages.shutil.which",
@@ -143,7 +151,9 @@ class TestDeployRefusals:
         )
         monkeypatch.setattr(
             "openmw.openvault.ship.hosts.cloudflare_pages.subprocess.run",
-            lambda *a, **k: subprocess.CompletedProcess(a, 1, b"", b"Authentication error [code: 10000]"),
+            lambda *a, **k: subprocess.CompletedProcess(
+                a, 1, b"", b"Authentication error [code: 10000]"
+            ),
         )
 
         result = adapter.deploy(out, project="app")
@@ -159,9 +169,13 @@ class TestDeployRefusals:
         (out / "index.html").write_text("hi", encoding="utf-8")
 
         adapter = CloudflarePagesAdapter(api_token="tok", account_id="acct")
-        monkeypatch.setattr(adapter, "preflight", lambda: __import__(
-            "openmw.openvault.ship.hosts.base", fromlist=["Preflight"]
-        ).Preflight(ready=True))
+        monkeypatch.setattr(
+            adapter,
+            "preflight",
+            lambda: __import__(
+                "openmw.openvault.ship.hosts.base", fromlist=["Preflight"]
+            ).Preflight(ready=True),
+        )
         monkeypatch.setattr(adapter, "ensure_project", lambda p, **kw: (True, "app"))
         monkeypatch.setattr(
             "openmw.openvault.ship.hosts.cloudflare_pages.shutil.which",
@@ -202,7 +216,5 @@ class TestAttachDomain:
 
     def test_already_attached_is_success(self, monkeypatch: pytest.MonkeyPatch) -> None:
         adapter = CloudflarePagesAdapter(api_token="tok", account_id="acct")
-        monkeypatch.setattr(
-            adapter, "_api", lambda *a, **k: (False, {}, "Domain already exists")
-        )
+        monkeypatch.setattr(adapter, "_api", lambda *a, **k: (False, {}, "Domain already exists"))
         assert adapter.attach_domain(project="app", hostname="netie.ai").ok is True

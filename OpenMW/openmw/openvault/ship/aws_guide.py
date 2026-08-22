@@ -129,7 +129,8 @@ def build_aws_render_plan(*, hostname: str) -> AwsRenderPlan:
         "AWS Budgets: absolute $ cap + forecasted > cap email",
         "Cost Anomaly Detection on the account",
         "OpenVault BillBudget.monthly_cap_usd blocks one-press when estimate exceeds",
-        "Prefer FreeBuild Cloud credit quota (stop_workspaces) for hard stop without AWS bill surprise",
+        "Prefer FreeBuild Cloud credit quota (stop_workspaces) for hard stop "
+        "without AWS bill surprise",
         "Tag every resource Project=Netie / Env=prod for Cost Explorer filters",
     ]
     hetzner = [

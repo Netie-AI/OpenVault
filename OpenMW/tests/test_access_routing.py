@@ -95,7 +95,16 @@ def test_memory_resolves_to_cortex_and_returns_no_content(tmp_path, monkeypatch)
     assert body["location"].endswith("/api/memory")
     # A location and a verdict. Nothing that looks like stored content.
     assert set(body) == {
-        "found", "allowed", "kind", "id", "intent", "owner", "location", "reasons", "gate", "entry"
+        "found",
+        "allowed",
+        "kind",
+        "id",
+        "intent",
+        "owner",
+        "location",
+        "reasons",
+        "gate",
+        "entry",
     }
 
 
@@ -127,10 +136,14 @@ def test_unknown_id_is_a_verdict_not_a_404(tmp_path, monkeypatch):
 def test_deploy_intent_is_blocked_by_an_empty_vault(tmp_path, monkeypatch):
     """Deploy escalates to the leave-machine gate, which needs real keys."""
     monkeypatch.setenv("OPENVAULT_HOME", str(tmp_path))
-    body = _client().post(
-        "/api/access/resolve",
-        json={"kind": "service", "id": "service.freebuild", "intent": "deploy"},
-    ).json()
+    body = (
+        _client()
+        .post(
+            "/api/access/resolve",
+            json={"kind": "service", "id": "service.freebuild", "intent": "deploy"},
+        )
+        .json()
+    )
 
     assert body["found"] is True
     assert body["allowed"] is False
@@ -199,9 +212,10 @@ def test_unprobed_surface_is_null_not_down(tmp_path, monkeypatch):
     cortex = next(s for s in body["surfaces"] if s["id"] == "cortex")
     assert cortex["up"] is None
     assert body["summary"]["unknown"] >= 1
-    assert body["summary"]["up"] + body["summary"]["down"] + body["summary"]["unknown"] == body[
-        "summary"
-    ]["total"]
+    assert (
+        body["summary"]["up"] + body["summary"]["down"] + body["summary"]["unknown"]
+        == body["summary"]["total"]
+    )
 
 
 # --- Open* → Free* aliases ---

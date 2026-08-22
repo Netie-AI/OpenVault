@@ -512,7 +512,9 @@ def identify_payload(*, device: str | None = None, mock: bool = False) -> dict[s
                 "namespace_ids": nsids,
                 "namespaces": namespaces,
                 "degraded": mock,
-                "degraded_reason": "fixture Identify payload — not your controller" if mock else None,
+                "degraded_reason": (
+                    "fixture Identify payload -- not your controller" if mock else None
+                ),
             }
         )
         return payload
@@ -684,9 +686,7 @@ def build_snapshot(device_path: str, *, mock: bool) -> tuple[DeviceSnapshot, str
         wmi_counters = _wmi_counters(device_path)
         source = TelemetrySource.WMI if wmi_counters else TelemetrySource.USB_BRIDGE_DEGRADED
         degraded_reason = (
-            f"adapter fell back to WMI ({failure.reason})"
-            if wmi_counters
-            else failure.reason
+            f"adapter fell back to WMI ({failure.reason})" if wmi_counters else failure.reason
         )
 
     snapshot = DeviceSnapshot(

@@ -1,4 +1,4 @@
-﻿"""Fallback chain + circuit breaker for OpenVault proxy hops."""
+"""Fallback chain + circuit breaker for OpenVault proxy hops."""
 
 from __future__ import annotations
 

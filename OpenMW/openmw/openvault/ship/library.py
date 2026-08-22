@@ -180,11 +180,15 @@ def library_home(*, repo_limit: int = 30) -> dict[str, Any]:
     from openmw.openvault.ship.github_auth import connection_status
 
     conn = connection_status()
-    repos_payload = list_repos(limit=repo_limit) if conn.connected else {
-        "ok": False,
-        "repos": [],
-        "connection": conn.to_dict(),
-    }
+    repos_payload = (
+        list_repos(limit=repo_limit)
+        if conn.connected
+        else {
+            "ok": False,
+            "repos": [],
+            "connection": conn.to_dict(),
+        }
+    )
     return {
         "connection": conn.to_dict(),
         "repos": repos_payload.get("repos", []),

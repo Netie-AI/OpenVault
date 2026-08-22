@@ -1,4 +1,4 @@
-﻿"""FreeBuild control plane — in-repo under OpenVault (not a separate AirGPT product).
+"""FreeBuild control plane — in-repo under OpenVault (not a separate AirGPT product).
 
 FreeBuild operator loop lives here so custody + deploy gate stay with OpenVault:
   subdomain → TLS plan → build → mail DNS → apps/services install|update → roll/rollback
@@ -253,9 +253,7 @@ def load_ship_plan(ship_id: str) -> OpenShipPlan | None:
     stack = DetectedStack(**raw["stack"])
     steps = [ShipStep(**s) for s in raw.get("steps", [])]
     action_raw = raw.get("action", "install")
-    action: Action = (
-        action_raw if action_raw in ("install", "update", "rollback") else "install"
-    )
+    action: Action = action_raw if action_raw in ("install", "update", "rollback") else "install"
     return OpenShipPlan(
         ship_id=raw["ship_id"],
         project_path=raw["project_path"],
@@ -330,7 +328,9 @@ def execute_openship_plan(
         client = OpenShipClient()
         body: dict[str, Any] = {
             "branch": branch,
-            "deployTarget": deploy_target if deploy_target in ("local", "server", "cloud") else "cloud",
+            "deployTarget": (
+                deploy_target if deploy_target in ("local", "server", "cloud") else "cloud"
+            ),
             "envVars": dict(env_vars) if env_vars else {},
         }
         if project_id:
@@ -341,7 +341,10 @@ def execute_openship_plan(
             body["cloudResourceTier"] = cloud_tier
         if plan.subdomain:
             body["publicEndpoints"] = [
-                {"domainType": "custom" if "." in plan.subdomain else "free", "domain": plan.subdomain}
+                {
+                    "domainType": "custom" if "." in plan.subdomain else "free",
+                    "domain": plan.subdomain,
+                }
             ]
         if github_url:
             prep = client.prepare({"repoUrl": github_url, "branch": branch})
@@ -349,14 +352,18 @@ def execute_openship_plan(
                 if step.id == "detect":
                     step.status = "pass" if prep.get("ok", True) else "fail"
                     step.detail = json.dumps(scrub_mapping(prep, inject_values))[:2000]
-        result = client.build_access(body) if project_id else {
-            "ok": False,
-            "error": (
-                "project_id required for FreeBuild build/access — "
-                "create project in FreeBuild UI or pass projectId"
-            ),
-            "prepare_hint": github_url or plan.project_path,
-        }
+        result = (
+            client.build_access(body)
+            if project_id
+            else {
+                "ok": False,
+                "error": (
+                    "project_id required for FreeBuild build/access — "
+                    "create project in FreeBuild UI or pass projectId"
+                ),
+                "prepare_hint": github_url or plan.project_path,
+            }
+        )
         client.close()
         safe_result = scrub_mapping(result, inject_values)
         dep_id = result.get("deployment_id") or result.get("deploymentId")
@@ -409,9 +416,7 @@ def execute_openship_plan(
 
     plan.executed = True
     plan.ready = all(s.status in ("pass", "simulated", "skipped") for s in plan.steps)
-    simulated = force_sim or mode == "simulate" or any(
-        s.status == "simulated" for s in plan.steps
-    )
+    simulated = force_sim or mode == "simulate" or any(s.status == "simulated" for s in plan.steps)
     # Simulate is a valid local path — label it; never invent a live host URL here.
     plan.adapter = {
         **adapter,

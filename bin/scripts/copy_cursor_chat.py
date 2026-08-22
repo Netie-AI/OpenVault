@@ -23,6 +23,7 @@ Bind via .vscode/tasks.json label "Copy Cursor Chat" + Ctrl+Shift+Alt+C.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import re
 import subprocess
@@ -67,7 +68,7 @@ def _normalize_text(text: str) -> str:
     fixes = (
         ("ΓåÆ", "→"),
         ("ΓÇö", "—"),
-        ("ΓÇô", "–"),
+        ("ΓÇô", "\u2013"),
         ("ΓÇÖ", "'"),
         ("ΓÇ£", '"'),
         ("ΓÇ¥", '"'),
@@ -346,10 +347,8 @@ def _copy_to_clipboard(text: str) -> None:
 
 
 def _configure_stdout_utf8() -> None:
-    try:
+    with contextlib.suppress(AttributeError):
         sys.stdout.reconfigure(encoding="utf-8")
-    except AttributeError:
-        pass
 
 
 def main() -> int:

@@ -1,4 +1,5 @@
 """Build Netie (sharp square brand) + rebuild Netie Space multi-size ICOs."""
+
 from __future__ import annotations
 
 import math
@@ -16,7 +17,9 @@ DIST_ICO = Path(r"D:\Space\dist\NetieSpace\Assets\netie.ico")
 SIZES = [16, 24, 32, 48, 64, 128, 256]
 
 
-def star_points(cx: float, cy: float, r: float, rotate_deg: float = 45.0) -> list[tuple[float, float]]:
+def star_points(
+    cx: float, cy: float, r: float, rotate_deg: float = 45.0
+) -> list[tuple[float, float]]:
     """Concave square mark from Brand_mark.svg (points toward corners at rotate=45)."""
 
     def bez(
@@ -128,7 +131,8 @@ def sizes_from(master: Image.Image) -> list[Image.Image]:
 
 
 def main() -> None:
-    # Netie parent / stack launcher = sharp square tile + Brand_mark star (not Space rounded chrome).
+    # Netie parent / stack launcher = sharp square tile + Brand_mark star
+    # (not Space rounded chrome).
     master_netie = render_netie(512, rounded=False).resize((256, 256), Image.Resampling.LANCZOS)
 
     netie_png = OUT_OV / "netie.png"

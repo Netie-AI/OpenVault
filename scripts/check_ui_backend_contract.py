@@ -85,7 +85,9 @@ def backend_paths(api: str) -> set[str]:
         with urllib.request.urlopen(f"{api}/openapi.json", timeout=20) as res:
             spec = json.loads(res.read().decode())
     except urllib.error.URLError as exc:
-        raise SystemExit(f"cannot reach the vault at {api} -- is it running?\n  {exc.reason}") from exc
+        raise SystemExit(
+            f"cannot reach the vault at {api} -- is it running?\n  {exc.reason}"
+        ) from exc
     return {normalise(re.sub(r"\{[^}]+\}", "{param}", p)) for p in spec.get("paths", {})}
 
 
@@ -114,7 +116,9 @@ def probe(api: str, path: str) -> int | None:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("--api", default=DEFAULT_API)
     ap.add_argument("--json", action="store_true", help="machine-readable output")
     args = ap.parse_args()

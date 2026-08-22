@@ -74,9 +74,7 @@ def test_rotate_then_resync_yields_only_the_new_secret(tmp_path, monkeypatch):
     client = _client()
     original = _make_key(client)
 
-    rotated = client.post(
-        f"/api/keys/{original['id']}/rotate", json={"new_secret": "gsk-rotated"}
-    )
+    rotated = client.post(f"/api/keys/{original['id']}/rotate", json={"new_secret": "gsk-rotated"})
     assert rotated.status_code == 200
     replacement = rotated.json()
 
@@ -119,9 +117,7 @@ def test_cards_and_passwords_are_invisible_to_the_key_sync(tmp_path, monkeypatch
         "/api/secrets/cards",
         json={"label": "Visa", "pan": "4242424242424242", "exp_month": 11, "exp_year": 2029},
     )
-    client.post(
-        "/api/secrets/passwords", json={"label": "Netie", "password": "correct-horse"}
-    )
+    client.post("/api/secrets/passwords", json={"label": "Netie", "password": "correct-horse"})
 
     keys_body = client.get("/api/keys").text
     assert "4242424242424242" not in keys_body

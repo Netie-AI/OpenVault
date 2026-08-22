@@ -71,9 +71,7 @@ class TestRegistry:
 
 class TestPreflight:
     def test_missing_base_url_is_actionable(self) -> None:
-        pre = CoolifyAdapter(
-            base_url=None, api_token="tok", app_uuid="uuid-1"
-        ).preflight()
+        pre = CoolifyAdapter(base_url=None, api_token="tok", app_uuid="uuid-1").preflight()
         assert pre.ready is False
         assert "COOLIFY_URL" in pre.blocker
         assert pre.facts == {}
@@ -97,39 +95,33 @@ class TestPreflight:
         assert pre.ready is False
         assert "COOLIFY_APP_UUID" in pre.blocker
 
-    def test_bad_token_refuses(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_bad_token_refuses(self, monkeypatch: pytest.MonkeyPatch) -> None:
         adapter = CoolifyAdapter(
             base_url="https://coolify.example.com",
             api_token="bad",
             app_uuid="uuid-1",
         )
 
-        def fake_request(method, url, **kwargs):  # noqa: ANN001, ARG001
+        def fake_request(method, url, **kwargs):
             resp = MagicMock()
             resp.status_code = 401
             resp.content = b'{"message":"Unauthenticated"}'
             resp.json.return_value = {"message": "Unauthenticated"}
             return resp
 
-        monkeypatch.setattr(
-            "openmw.openvault.ship.hosts.coolify.httpx.request", fake_request
-        )
+        monkeypatch.setattr("openmw.openvault.ship.hosts.coolify.httpx.request", fake_request)
         pre = adapter.preflight()
         assert pre.ready is False
         assert "rejected the token" in pre.blocker.lower()
 
-    def test_ready_when_teams_and_app_ok(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_ready_when_teams_and_app_ok(self, monkeypatch: pytest.MonkeyPatch) -> None:
         adapter = CoolifyAdapter(
             base_url="https://coolify.example.com",
             api_token="tok",
             app_uuid="app-uuid",
         )
 
-        def fake_request(method, url, **kwargs):  # noqa: ANN001, ARG001
+        def fake_request(method, url, **kwargs):
             resp = MagicMock()
             resp.status_code = 200
             if url.endswith("/teams"):
@@ -146,9 +138,7 @@ class TestPreflight:
             resp.json.return_value = body
             return resp
 
-        monkeypatch.setattr(
-            "openmw.openvault.ship.hosts.coolify.httpx.request", fake_request
-        )
+        monkeypatch.setattr("openmw.openvault.ship.hosts.coolify.httpx.request", fake_request)
         pre = adapter.preflight()
         assert pre.ready is True
         assert pre.facts["base_url"] == "https://coolify.example.com"
@@ -164,9 +154,9 @@ class TestDeploy:
         )
 
     def test_no_credentials_refuses_before_network(self, tmp_path: Path) -> None:
-        result = CoolifyAdapter(
-            base_url=None, api_token=None, app_uuid=None
-        ).deploy(tmp_path, project="app")
+        result = CoolifyAdapter(base_url=None, api_token=None, app_uuid=None).deploy(
+            tmp_path, project="app"
+        )
         assert result.ok is False
         assert result.url == ""
         assert "COOLIFY_URL" in result.detail
@@ -178,7 +168,7 @@ class TestDeploy:
         adapter = self._adapter()
         calls: list[str] = []
 
-        def fake_api(method, path, **kwargs):  # noqa: ANN001, ARG001
+        def fake_api(method, path, **kwargs):
             calls.append(f"{method} {path}")
             if path == "/teams":
                 return True, [{"name": "Personal"}], ""
@@ -186,17 +176,13 @@ class TestDeploy:
                 # Preflight ok; post-deploy fqdn also empty.
                 return True, {"uuid": "app-uuid", "name": "demo", "fqdn": ""}, ""
             if path == "/deploy":
-                return True, {
-                    "deployments": [{"deployment_uuid": "dep-1", "status": "queued"}]
-                }, ""
+                return True, {"deployments": [{"deployment_uuid": "dep-1", "status": "queued"}]}, ""
             if path == "/deployments/dep-1":
                 return True, {"status": "finished", "deployment_url": "", "logs": "ok"}, ""
             return False, {}, f"unexpected {path}"
 
         monkeypatch.setattr(adapter, "_api", fake_api)
-        monkeypatch.setattr(
-            "openmw.openvault.ship.hosts.coolify.time.sleep", lambda *_: None
-        )
+        monkeypatch.setattr("openmw.openvault.ship.hosts.coolify.time.sleep", lambda *_: None)
 
         result = adapter.deploy(tmp_path, project="demo")
         assert result.ok is False
@@ -209,31 +195,35 @@ class TestDeploy:
     ) -> None:
         adapter = self._adapter()
 
-        def fake_api(method, path, **kwargs):  # noqa: ANN001, ARG001
+        def fake_api(method, path, **kwargs):
             if path == "/teams":
                 return True, [{"name": "Personal"}], ""
             if path == "/applications/app-uuid":
-                return True, {
-                    "uuid": "app-uuid",
-                    "name": "demo",
-                    "fqdn": "https://demo.example.com",
-                }, ""
+                return (
+                    True,
+                    {
+                        "uuid": "app-uuid",
+                        "name": "demo",
+                        "fqdn": "https://demo.example.com",
+                    },
+                    "",
+                )
             if path == "/deploy":
-                return True, {
-                    "deployments": [{"deployment_uuid": "dep-9", "status": "queued"}]
-                }, ""
+                return True, {"deployments": [{"deployment_uuid": "dep-9", "status": "queued"}]}, ""
             if path == "/deployments/dep-9":
-                return True, {
-                    "status": "finished",
-                    "deployment_url": "https://demo.example.com",
-                    "logs": "built",
-                }, ""
+                return (
+                    True,
+                    {
+                        "status": "finished",
+                        "deployment_url": "https://demo.example.com",
+                        "logs": "built",
+                    },
+                    "",
+                )
             return False, {}, f"unexpected {path}"
 
         monkeypatch.setattr(adapter, "_api", fake_api)
-        monkeypatch.setattr(
-            "openmw.openvault.ship.hosts.coolify.time.sleep", lambda *_: None
-        )
+        monkeypatch.setattr("openmw.openvault.ship.hosts.coolify.time.sleep", lambda *_: None)
 
         result = adapter.deploy(tmp_path, project="demo")
         assert result.ok is True
@@ -245,7 +235,7 @@ class TestDeploy:
     ) -> None:
         adapter = self._adapter()
 
-        def fake_api(method, path, **kwargs):  # noqa: ANN001, ARG001
+        def fake_api(method, path, **kwargs):
             if path == "/teams":
                 return True, [], ""
             if path == "/applications/app-uuid":
@@ -270,9 +260,7 @@ class TestAttachDomain:
         )
         assert adapter.attach_domain(project="app", hostname="  ").ok is False
 
-    def test_already_on_app_is_success(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_already_on_app_is_success(self, monkeypatch: pytest.MonkeyPatch) -> None:
         adapter = CoolifyAdapter(
             base_url="https://coolify.example.com",
             api_token="tok",
@@ -290,9 +278,7 @@ class TestAttachDomain:
         result = adapter.attach_domain(project="app", hostname="netie.ai")
         assert result.ok is True
 
-    def test_missing_domain_gets_paste_ready_hint(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_missing_domain_gets_paste_ready_hint(self, monkeypatch: pytest.MonkeyPatch) -> None:
         adapter = CoolifyAdapter(
             base_url="https://coolify.example.com",
             api_token="tok",
@@ -314,9 +300,7 @@ class TestAttachDomain:
 
 
 class TestFromVault:
-    def test_reads_provider_and_env(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_reads_provider_and_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("COOLIFY_URL", "https://coolify.example.com")
         monkeypatch.setenv("COOLIFY_APP_UUID", "env-uuid")
         adapter = from_vault(lambda _p: "vault-token")

@@ -79,9 +79,13 @@ def call(api: str, path: str, method: str = "GET", payload: dict | None = None) 
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("--api", default=DEFAULT_API, help=f"vault base URL (default {DEFAULT_API})")
-    ap.add_argument("--provider", help="provider id, e.g. google. Inferred from the key if omitted.")
+    ap.add_argument(
+        "--provider", help="provider id, e.g. google. Inferred from the key if omitted."
+    )
     ap.add_argument("--label", help="human name for this key")
     ap.add_argument("--role", default="free", help="key role (default: free)")
     ap.add_argument("--rotate", metavar="KEY_ID", help="replace the secret on an existing key")
@@ -95,7 +99,9 @@ def main() -> int:
             print("no keys stored")
             return 0
         for row in rows:
-            print(f"  {row.get('id','')[:8]}  {row.get('provider','?'):<12} {row.get('label','')}")
+            print(
+                f"  {row.get('id', '')[:8]}  {row.get('provider', '?'):<12} {row.get('label', '')}"
+            )
         return 0
 
     # Never echoed, never in argv, never in history.
@@ -126,7 +132,7 @@ def main() -> int:
 
     # `masked_secret` is what the vault echoes back; the plaintext is not
     # returned by design, so there is nothing here worth redacting further.
-    print(f"stored {created.get('id','?')[:8]}  {provider}  {created.get('masked_secret','')}")
+    print(f"stored {created.get('id', '?')[:8]}  {provider}  {created.get('masked_secret', '')}")
     print("Encrypted at rest by the vault. Run a precheck in the console to confirm it works.")
     return 0
 

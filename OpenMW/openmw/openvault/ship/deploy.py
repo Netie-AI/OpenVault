@@ -1,4 +1,4 @@
-﻿"""Deploy gate pipeline — Cortex/AirGPT 'deploy to web' orchestration."""
+"""Deploy gate pipeline — Cortex/AirGPT 'deploy to web' orchestration."""
 
 from __future__ import annotations
 

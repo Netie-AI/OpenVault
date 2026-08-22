@@ -291,10 +291,16 @@ def demo_ui_cmd(
     uv = shutil.which("uv") or "uv"
     api = subprocess.Popen(
         [
-            uv, "run", "openmw", "console",
-            "--host", "127.0.0.1",
-            "--port", str(port),
-            "--cortex-url", env["CORTEX_URL"],
+            uv,
+            "run",
+            "openmw",
+            "console",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            str(port),
+            "--cortex-url",
+            env["CORTEX_URL"],
             "--no-open-browser",
             "--mock-health",
         ],
@@ -319,8 +325,6 @@ def demo_ui_cmd(
         for proc in (web, api):
             with suppress(Exception):
                 proc.terminate()
-
-
 
 
 @app.command("ports")

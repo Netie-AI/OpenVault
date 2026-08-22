@@ -200,12 +200,16 @@ class CloudflarePagesAdapter:
 
         created, name_or_err = self.ensure_project(project)
         if not created:
-            return DeployResult(ok=False, detail=f"could not create the Pages project: {name_or_err}")
+            return DeployResult(
+                ok=False, detail=f"could not create the Pages project: {name_or_err}"
+            )
         name = name_or_err
 
         wrangler = shutil.which("wrangler") or shutil.which("wrangler.cmd")
         if wrangler is None:  # pragma: no cover — preflight already refused
-            return DeployResult(ok=False, detail="wrangler disappeared between preflight and deploy")
+            return DeployResult(
+                ok=False, detail="wrangler disappeared between preflight and deploy"
+            )
 
         env = os.environ.copy()
         env["CLOUDFLARE_API_TOKEN"] = self._token
@@ -267,7 +271,9 @@ class CloudflarePagesAdapter:
             )
 
         log.info("cloudflare_pages_deployed", project=name, url=url)
-        return DeployResult(ok=True, url=url, deployment_ref=name, detail=f"Live at {url}", log=combined)
+        return DeployResult(
+            ok=True, url=url, deployment_ref=name, detail=f"Live at {url}", log=combined
+        )
 
     def attach_domain(self, *, project: str, hostname: str) -> DomainResult:
         """Register a custom domain on the Pages project.

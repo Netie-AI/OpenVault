@@ -136,8 +136,8 @@ def estimate_tokens_for_body(body: dict[str, Any]) -> int:
                     # A non-text part (image_url, input_audio) is not free just
                     # because it has no `text` field. Counting it as zero made
                     # the refusal gate blind to exactly the biggest inputs.
-                    chars += len(text) if isinstance(text, str) else len(
-                        json.dumps(part, default=str)
+                    chars += (
+                        len(text) if isinstance(text, str) else len(json.dumps(part, default=str))
                     )
                 else:
                     chars += len(str(part))
@@ -226,9 +226,7 @@ def prepare_hop_body(
     if window and estimate + _MIN_USEFUL_OUTPUT >= window:
         return BudgetDecision(
             body=None,
-            refusal=(
-                f"prompt is about {estimate} tokens; {provider}/{model} tops out at {window}"
-            ),
+            refusal=(f"prompt is about {estimate} tokens; {provider}/{model} tops out at {window}"),
             context_exceeded=True,
         )
 

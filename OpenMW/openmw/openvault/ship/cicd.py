@@ -61,7 +61,8 @@ def detect_cicd(project_path: str | Path) -> CicdReport:
 
     status = "present" if detected else "missing"
     notes = [
-        "CI should call OpenVault /api/deploy/from-cortex then /execute — FreeBuild is SoT for ship.",
+        "CI should call OpenVault /api/deploy/from-cortex then /execute -- "
+        "FreeBuild is SoT for ship.",
         "Do not add a second deploy orchestrator in the workflow.",
         "Suggest-only + simulate-default: a simulated execute must not invent a live host URL.",
     ]
@@ -110,14 +111,17 @@ jobs:
           curl -fsS -X POST "$OPENVAULT_URL/api/deploy/from-cortex" \\
             -H "Content-Type: application/json" \\
             -H "Authorization: Bearer $OPENVAULT_TOKEN" \\
-            -d "{\\"project_path\\":\\"${{ inputs.project_path }}\\",\\"subdomain\\":\\"${{ inputs.subdomain }}\\",\\"source\\":\\"cicd\\",\\"intent\\":\\"deploy_to_web\\"}" \\
+            -d "{\\"project_path\\":\\"${{ inputs.project_path }}\\",\\
+            \\"subdomain\\":\\"${{ inputs.subdomain }}\\",\\
+            \\"source\\":\\"cicd\\",\\"intent\\":\\"deploy_to_web\\"}" \\
             | tee plan.json
           python - <<'PY'
           import json, sys
           plan = json.load(open("plan.json", encoding="utf-8"))
           open("deploy_id.txt", "w", encoding="utf-8").write(plan["deploy_id"])
           if not plan.get("ready_to_scale"):
-              print("Blocked gates:", [g for g in plan.get("gates", []) if g.get("status") != "pass"])
+              blocked = [g for g in plan.get("gates", []) if g.get("status") != "pass"]
+              print("Blocked gates:", blocked)
               sys.exit(1)
           PY
       - name: Execute FreeBuild

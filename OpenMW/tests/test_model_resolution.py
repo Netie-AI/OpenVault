@@ -79,7 +79,7 @@ def test_core_byok_auto_resolves_concrete_model() -> None:
 
 
 def test_alias_without_catalogued_pool_is_skipped_not_guessed() -> None:
-    """"auto" with nothing catalogued is exactly the case that 404'd upstream."""
+    """ "auto" with nothing catalogued is exactly the case that 404'd upstream."""
     assert resolve_model("anthropic", "auto") is None
     assert resolve_model("together", "") is None
     assert resolve_model("mistral", "auto") == "mistral-small-latest"

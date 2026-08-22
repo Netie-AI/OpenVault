@@ -73,16 +73,12 @@ def run_demo(*, out_path: Path | None) -> dict[str, Any]:
     }
 
     # ignore_cleanup_errors: Windows often holds SQLite locks briefly after close.
-    with tempfile.TemporaryDirectory(
-        prefix="ov-one-seat-", ignore_cleanup_errors=True
-    ) as tmp:
+    with tempfile.TemporaryDirectory(prefix="ov-one-seat-", ignore_cleanup_errors=True) as tmp:
         home = Path(tmp) / "ovhome"
         home.mkdir()
         project = Path(tmp) / "web"
         project.mkdir()
-        (project / "package.json").write_text(
-            '{"name":"one-seat-demo"}', encoding="utf-8"
-        )
+        (project / "package.json").write_text('{"name":"one-seat-demo"}', encoding="utf-8")
 
         os.environ["OPENVAULT_HOME"] = str(home)
         os.environ["OPENSHIP_MODE"] = "simulate"
@@ -112,9 +108,7 @@ def _run_steps(
     # FreeRoute no longer believes a caller's headers about who it is or what
     # tier it gets. The demo holds a real issued key, exactly like the buyer's
     # app would -- and the key id is the identity the ledger attributes to.
-    issued = client.post(
-        "/api/apikeys", json={"label": "one-seat-demo", "tier": "free"}
-    ).json()
+    issued = client.post("/api/apikeys", json={"label": "one-seat-demo", "tier": "free"}).json()
     fr_headers = {"Authorization": f"Bearer {issued['token']}"}
     demo_key_id = issued["key"]["key_id"]
 
@@ -122,8 +116,7 @@ def _run_steps(
     empty = client.post("/v1/chat/completions", json=_CHAT, headers=fr_headers)
     empty_body = empty.json()
     empty_ok = (
-        empty.status_code == 503
-        and empty_body.get("error", {}).get("type") == "openvault_no_keys"
+        empty.status_code == 503 and empty_body.get("error", {}).get("type") == "openvault_no_keys"
     )
     _step(
         evidence,

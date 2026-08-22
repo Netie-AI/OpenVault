@@ -127,9 +127,7 @@ def test_reveal_denied_without_intentional_header(tmp_path, monkeypatch):
     assert bare.status_code == 428
     assert VISA_PAN not in bare.text
 
-    wrong = client.get(
-        f"/api/secrets/{card['id']}/reveal", headers={"X-OpenVault-Reveal": "yes"}
-    )
+    wrong = client.get(f"/api/secrets/{card['id']}/reveal", headers={"X-OpenVault-Reveal": "yes"})
     assert wrong.status_code == 428
 
 
@@ -310,9 +308,7 @@ def test_rotate_card_chains_old_to_new(tmp_path, monkeypatch):
     client = _client()
     card = _make_card(client)
 
-    rotated = client.post(
-        f"/api/secrets/{card['id']}/rotate", json={"new_pan": VISA_PAN_2}
-    )
+    rotated = client.post(f"/api/secrets/{card['id']}/rotate", json={"new_pan": VISA_PAN_2})
     assert rotated.status_code == 200
     replacement = rotated.json()
     assert replacement["id"] != card["id"]
@@ -322,9 +318,7 @@ def test_rotate_card_chains_old_to_new(tmp_path, monkeypatch):
     assert replacement["exp_year"] == 2029
     assert replacement["cardholder"] == "J HONG"
 
-    old = next(
-        s for s in client.get("/api/secrets").json()["secrets"] if s["id"] == card["id"]
-    )
+    old = next(s for s in client.get("/api/secrets").json()["secrets"] if s["id"] == card["id"])
     assert old["lifecycle"] == "rotated"
     assert old["replaced_by"] == replacement["id"]
 

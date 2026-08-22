@@ -288,8 +288,7 @@ def build_registry(
             base_url=openvault_url,
             path="/api/freebuild",
             detail=(
-                "Plan/gate/execute ships. Formerly OpenShip. "
-                "Owned by OpenVault (PRODUCT_ROLES)."
+                "Plan/gate/execute ships. Formerly OpenShip. Owned by OpenVault (PRODUCT_ROLES)."
             ),
             reachable=True,
         )

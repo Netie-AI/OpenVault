@@ -12,8 +12,9 @@ systemd escaper is for SSH/unit hosts that write ``Environment=`` lines.
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import Any, Literal, Mapping, Sequence
+from typing import Any, Literal
 
 from openmw.openvault.vault.crypto import Seal, VaultSealedError
 from openmw.openvault.vault.secrets import SecretStore
@@ -112,28 +113,20 @@ def _normalize_refs(refs: Sequence[ShipEnvRef | Mapping[str, Any]]) -> list[Ship
             ref = ShipEnvRef(
                 env_name=str(raw.get("env_name", "")).strip(),
                 key_id=(str(raw["key_id"]).strip() or None) if raw.get("key_id") else None,
-                secret_id=(
-                    str(raw["secret_id"]).strip() or None
-                )
-                if raw.get("secret_id")
-                else None,
+                secret_id=(str(raw["secret_id"]).strip() or None) if raw.get("secret_id") else None,
             )
         name = ref.env_name.strip()
         if not name:
             raise InjectError("ship secret binding missing env_name")
         if not _ENV_NAME_RE.match(name):
-            raise InjectError(
-                f"invalid env_name {name!r}; use [A-Za-z_][A-Za-z0-9_]*"
-            )
+            raise InjectError(f"invalid env_name {name!r}; use [A-Za-z_][A-Za-z0-9_]*")
         if name in seen:
             raise InjectError(f"duplicate env_name {name!r} in ship secrets")
         seen.add(name)
         has_key = bool(ref.key_id)
         has_secret = bool(ref.secret_id)
         if has_key == has_secret:
-            raise InjectError(
-                f"{name}: provide exactly one of key_id or secret_id"
-            )
+            raise InjectError(f"{name}: provide exactly one of key_id or secret_id")
         out.append(ShipEnvRef(env_name=name, key_id=ref.key_id, secret_id=ref.secret_id))
     return out
 
@@ -168,9 +161,7 @@ def resolve_ship_env(
             if ref.key_id:
                 record = vault.get(ref.key_id)
                 if record is None:
-                    raise InjectError(
-                        f"{ref.env_name}: key_id {ref.key_id} not found in vault"
-                    )
+                    raise InjectError(f"{ref.env_name}: key_id {ref.key_id} not found in vault")
                 if record.lifecycle != "active":
                     raise InjectError(
                         f"{ref.env_name}: key_id {ref.key_id} is {record.lifecycle}, not active"
@@ -181,9 +172,7 @@ def resolve_ship_env(
                         f"{ref.env_name}: key_id {ref.key_id} has no decryptable secret"
                     )
                 env[ref.env_name] = plaintext
-                sources.append(
-                    {"env_name": ref.env_name, "source": "key", "id": ref.key_id}
-                )
+                sources.append({"env_name": ref.env_name, "source": "key", "id": ref.key_id})
                 continue
 
             assert ref.secret_id is not None
@@ -193,9 +182,7 @@ def resolve_ship_env(
                 )
             record = secrets.get(ref.secret_id)
             if record is None:
-                raise InjectError(
-                    f"{ref.env_name}: secret_id {ref.secret_id} not found in vault"
-                )
+                raise InjectError(f"{ref.env_name}: secret_id {ref.secret_id} not found in vault")
             if record.kind == "payment_card":
                 raise InjectError(
                     f"{ref.env_name}: payment cards cannot be injected at ship "
@@ -211,9 +198,7 @@ def resolve_ship_env(
                     f"{ref.env_name}: secret_id {ref.secret_id} has no decryptable secret"
                 )
             env[ref.env_name] = plaintext
-            sources.append(
-                {"env_name": ref.env_name, "source": "secret", "id": ref.secret_id}
-            )
+            sources.append({"env_name": ref.env_name, "source": "secret", "id": ref.secret_id})
         except VaultSealedError as exc:
             raise InjectError(str(exc), status_code=403) from exc
 

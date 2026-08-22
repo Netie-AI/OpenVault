@@ -129,8 +129,11 @@ def build_domain_guide(
     steps.extend(
         [
             f"1. At your registrar/DNS for apex `{apex}`, create the records listed below.",
-            f"2. Wait for DNS (often 1–30 min). Verify: `nslookup {host}` or `dig {host}`.",
-            f"3. FreeBuild TLS step issues Let's Encrypt for `{host}` once HTTP-01/DNS-01 can reach the host.",
+            f"2. Wait for DNS (often 1-30 min). Verify: `nslookup {host}` or `dig {host}`.",
+            (
+                f"3. FreeBuild TLS step issues Let's Encrypt for `{host}` "
+                "once HTTP-01/DNS-01 can reach the host."
+            ),
             "4. Set OPENSHIP_MODE=cli (or api) with a real adapter when you leave simulate mode.",
             f"5. Smoke: open https://{host} after execute; use Playwright smoke in the Deploy tab.",
         ]
@@ -139,9 +142,16 @@ def build_domain_guide(
     email_notes: list[str] = []
     if include_mail:
         email_notes = [
-            f"SPF: TXT @ → `v=spf1 ip4:{target_a} -all` (replace IP; include ESP includes if using SES/Postmark).",
+            (
+                f"SPF: TXT @ -> `v=spf1 ip4:{target_a} -all` "
+                "(replace IP; include ESP includes if using SES/Postmark)."
+            ),
             "DKIM: add the TXT/CNAME your ESP gives (selector._domainkey).",
-            "DMARC: TXT `_dmarc` → `v=DMARC1; p=none; rua=mailto:dmarc@" + apex + "` then tighten to quarantine/reject.",
+            (
+                "DMARC: TXT `_dmarc` -> `v=DMARC1; p=none; rua=mailto:dmarc@"
+                + apex
+                + "` then tighten to quarantine/reject."
+            ),
             "PTR: reverse DNS on the sending IP must match a hostname under " + apex + ".",
         ]
         steps.append(
@@ -149,10 +159,13 @@ def build_domain_guide(
         )
 
     registrar_hints = [
-        "Cloudflare: add site → update nameservers at registrar → DNS tab → Proxy off (DNS only) until TLS works.",
+        "Cloudflare: add site -> update nameservers at registrar -> DNS tab -> "
+        "Proxy off (DNS only) until TLS works.",
         "Namecheap: Advanced DNS → Add Record; disable parking page / URL redirect for this host.",
-        "Route53: Hosted zone for apex → Create record; attach ACM cert only if terminating at AWS ALB.",
-        "Vercel/Netlify: if using their DNS, CNAME the subdomain to their target instead of a raw IP.",
+        "Route53: Hosted zone for apex -> Create record; attach ACM cert only "
+        "if terminating at AWS ALB.",
+        "Vercel/Netlify: if using their DNS, CNAME the subdomain to their "
+        "target instead of a raw IP.",
     ]
 
     ready_when = [
