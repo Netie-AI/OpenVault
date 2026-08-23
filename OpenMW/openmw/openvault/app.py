@@ -626,6 +626,12 @@ class ApiKeyIssueBody(BaseModel):
     tier: str = "free"
 
 
+class ApiKeyVerifyBody(BaseModel):
+    """Cortex asks whether an issued ov_ token is still active. Never logged."""
+
+    token: str
+
+
 class ShipRecommendBody(BaseModel):
     project_path: str = ""
     stack: dict[str, Any] = Field(default_factory=dict)
@@ -2538,6 +2544,30 @@ def create_app(
         _require_loopback(request, "list api keys")
         keys = state_api_keys.list_keys(include_revoked=include_revoked)
         return {"ok": True, "keys": [k.to_dict() for k in keys], "count": len(keys)}
+
+    @app.post("/api/apikeys/verify")
+    def apikeys_verify(body: ApiKeyVerifyBody, request: Request) -> dict[str, Any]:
+        """Loopback bind: Cortex on this machine checks an ov_ token.
+
+        Always HTTP 200 so a dead OpenVault (connection fail) is distinguishable
+        from an unknown key. Unknown and revoked are the same ``valid: false``.
+        The token is never written to logs or the response.
+        """
+        _require_loopback(request, "verify api key")
+        record = state_api_keys.verify((body.token or "").strip())
+        if record is None:
+            return {"ok": True, "valid": False}
+        try:
+            state_api_keys.touch(record.key_id)
+        except Exception:
+            pass
+        return {
+            "ok": True,
+            "valid": True,
+            "key_id": record.key_id,
+            "tier": record.tier,
+            "label": record.label,
+        }
 
     @app.delete("/api/apikeys/{key_id}")
     def apikeys_revoke(key_id: str, request: Request, reason: str = "") -> dict[str, Any]:
