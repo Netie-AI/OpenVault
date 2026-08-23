@@ -1,4 +1,4 @@
-﻿"""Account custody, key kill/rotate, OpenShip plan, Playwright smoke gate."""
+"""Account custody, key kill/rotate, FreeBuild plan, Playwright smoke gate."""
 
 from __future__ import annotations
 
@@ -8,11 +8,11 @@ import pytest
 from cryptography.fernet import Fernet
 from fastapi.testclient import TestClient
 
-from openmw.openvault.vault.accounts import AccountStore, suggest_netie_email
 from openmw.openvault.app import create_app
-from openmw.openvault.vault.crypto import Seal
 from openmw.openvault.ship.openship import build_openship_plan, execute_openship_plan
 from openmw.openvault.ship.playwright_smoke import run_playwright_smoke
+from openmw.openvault.vault.accounts import AccountStore, suggest_netie_email
+from openmw.openvault.vault.crypto import Seal
 from openmw.openvault.vault.store import KeyVault
 
 
@@ -37,7 +37,9 @@ def client(home: Path) -> TestClient:
         enable_precheck_loop=False,
         cortex_url="http://127.0.0.1:9",
     )
-    return TestClient(app)
+    # Custody mutations are loopback-only; TestClient's default host is
+    # "testclient", which the guard correctly rejects. See test_secret_reveal_gate.
+    return TestClient(app, client=("127.0.0.1", 5555))
 
 
 def test_suggest_netie_email() -> None:
@@ -225,6 +227,18 @@ def test_deploy_smoke_and_execute_api(
 
     monkeypatch.setattr("httpx.Client", _Client)
 
+    # Leave-machine execute calls check_gate — seed a cloud key so the gate opens.
+    seeded = client.post(
+        "/api/keys",
+        json={
+            "label": "groq",
+            "provider": "groq",
+            "secret": "gsk-test-accounts-execute",
+            "role": "free",
+        },
+    )
+    assert seeded.status_code == 200, seeded.text
+
     plan = client.post(
         "/api/deploy/from-cortex",
         json={
@@ -261,7 +275,7 @@ def test_deploy_smoke_and_execute_api(
     assert direct.json()["status"] == "pass"
 
     ship = client.post(
-        "/api/openship/plan",
+        "/api/freebuild/plan",
         json={
             "project_path": str(project),
             "subdomain": "app.example.com",

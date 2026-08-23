@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Callable
 
 import numpy as np
 
@@ -62,7 +62,7 @@ def build_hot_neuron_index(
 
     active = activations > 0
     token_count = activations.shape[0]
-    freq = active.sum(axis=0) / float(token_count)
+    freq = active.astype(np.float64).sum(axis=0) / float(token_count)
 
     index = HotNeuronIndex()
     for layer in range(freq.shape[0]):

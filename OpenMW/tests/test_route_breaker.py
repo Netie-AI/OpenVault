@@ -34,7 +34,9 @@ def test_only_tripping_status_codes() -> None:
 
 def test_closed_to_degraded_to_open() -> None:
     clock = _Clock()
-    breaker = CircuitBreaker("test-provider", get_circuit_breaker("x", "api_key").profile, now=clock.now)
+    breaker = CircuitBreaker(
+        "test-provider", get_circuit_breaker("x", "api_key").profile, now=clock.now
+    )
     assert breaker.state == STATE_CLOSED
 
     breaker.record_failure(status=500)

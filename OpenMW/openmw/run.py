@@ -8,17 +8,15 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import structlog
-
 from nvme_profiler.path_trace import build_mock_path_trace_report
 from nvme_profiler.report import save_path_trace_report
-from nvme_sentinel.bench.run import build_bench_run_report
 from nvme_sentinel.bench.report import save_bench_run_report
+from nvme_sentinel.bench.run import build_bench_run_report
 from nvme_sentinel.snapshot.schema import DeviceSnapshot
 from nvme_sentinel.telemetry.source import TelemetrySource
 
-from openmw.prefetch_naive import NaivePrefetchConfig
 from openmw.prefetch_heuristic import HeuristicPrefetchConfig, lmcache_heuristic_overlay
-from openmw.prefetch_naive import lmcache_disk_config
+from openmw.prefetch_naive import NaivePrefetchConfig, lmcache_disk_config
 
 log = structlog.get_logger()
 

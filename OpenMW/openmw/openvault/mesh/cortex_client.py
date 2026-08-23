@@ -11,10 +11,12 @@ import httpx
 import structlog
 
 from openmw.model_router import ModelRouter
+from openmw.openvault.mesh.local_mesh import DEFAULT_CORTEX_URL, cortex_base_url
 
 log = structlog.get_logger()
 
-DEFAULT_CORTEX_URL = "http://127.0.0.1:8000"
+# Re-export shared mesh default (http://127.0.0.1:8010); override via CORTEX_URL.
+__all__ = ("DEFAULT_CORTEX_URL", "CortexClient", "CortexStatus")
 
 
 @dataclass(frozen=True)
@@ -30,12 +32,12 @@ class CortexClient:
 
     def __init__(
         self,
-        base_url: str = DEFAULT_CORTEX_URL,
+        base_url: str | None = None,
         *,
         timeout_s: float = 5.0,
         local_registry: Path | None = None,
     ) -> None:
-        self.base_url = base_url.rstrip("/")
+        self.base_url = (base_url if base_url is not None else cortex_base_url()).rstrip("/")
         self._timeout_s = timeout_s
         self._local_registry = local_registry
 

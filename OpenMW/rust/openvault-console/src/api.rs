@@ -394,8 +394,8 @@ pub fn router(state: AppState) -> Router {
         .route("/api/vault/secrets/:id/revoke", post(vault_revoke))
         .route("/api/vault/incident", post(vault_incident))
         .route("/api/providers", get(providers))
-        .route("/api/openship/plan", post(openship_plan))
-        .route("/api/openship", get(openship_list))
-        .route("/api/openship/:id", get(openship_get))
+        .route("/api/freebuild/plan", post(openship_plan))
+        .route("/api/freebuild", get(openship_list))
+        .route("/api/freebuild/:id", get(openship_get))
         .with_state(state)
 }

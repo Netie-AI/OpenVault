@@ -76,7 +76,7 @@ def check_email_auth(domain: str, *, sending_ip: str | None = None) -> list[Emai
             EmailGateResult(
                 "dkim",
                 "pending",
-                "No common DKIM selector found — configure OpenShip/mail DKIM",
+                "No common DKIM selector found — configure FreeBuild/mail DKIM",
             )
         )
 

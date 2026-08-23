@@ -252,11 +252,13 @@ def test_unknown_and_wrong_service_are_indistinguishable(home: Path) -> None:
     client = _client()
     client.post("/keys/services", json={"service_id": "dms"}, headers=INTENT)
     wrong_token = client.post(
-        "/keys/intermediate", json={"service_id": "dms"},
+        "/keys/intermediate",
+        json={"service_id": "dms"},
         headers={"Authorization": "Bearer wrong"},
     )
     unknown_service = client.post(
-        "/keys/intermediate", json={"service_id": "ghost"},
+        "/keys/intermediate",
+        json={"service_id": "ghost"},
         headers={"Authorization": "Bearer wrong"},
     )
     assert wrong_token.status_code == unknown_service.status_code == 403

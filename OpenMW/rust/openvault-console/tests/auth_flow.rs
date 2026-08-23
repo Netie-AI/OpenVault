@@ -187,7 +187,7 @@ async fn full_register_verify_passkey_vault_openship() {
     let (s, ship) = json_req(
         app,
         "POST",
-        "/api/openship/plan",
+        "/api/freebuild/plan",
         json!({
             "project_path": "/tmp/demo-app",
             "subdomain": "app.example.com",

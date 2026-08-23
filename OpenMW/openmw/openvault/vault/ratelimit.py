@@ -1,4 +1,4 @@
-"""Token-budget dual-bucket rate limiting for the OpenFree gateway.
+"""Token-budget dual-bucket rate limiting for the FreeRoute gateway.
 
 Two token buckets guard every gateway call:
 
@@ -20,9 +20,11 @@ later without touching the limiter logic above it.
 
 from __future__ import annotations
 
+import json
 import math
 import threading
 import time
+import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any, Protocol
@@ -249,6 +251,7 @@ class RateDecision:
     remaining: int
     reset_s: int
     limited_by: str
+    reservation_id: str = ""
 
     def headers(self) -> dict[str, str]:
         out = {
@@ -297,8 +300,50 @@ def usage_total_tokens(result: dict[str, Any] | str) -> int | None:
     return None
 
 
+class SseUsageCapture:
+    """Scan SSE bytes for OpenAI stream usage without buffering the whole body.
+
+    Upstream may emit ``usage`` only on a late ``data:`` chunk (after content
+    has already been forwarded). Incomplete trailing lines stay in ``_carry``
+    until the next ``feed`` or ``finish`` — never invents usage.
+    """
+
+    def __init__(self) -> None:
+        self._carry = b""
+        self.total_tokens: int | None = None
+
+    def feed(self, chunk: bytes) -> None:
+        if not chunk:
+            return
+        data = self._carry + chunk
+        lines = data.split(b"\n")
+        self._carry = lines[-1]
+        for line in lines[:-1]:
+            self._consider_line(line)
+
+    def finish(self) -> None:
+        if self._carry:
+            self._consider_line(self._carry)
+            self._carry = b""
+
+    def _consider_line(self, line: bytes) -> None:
+        raw = line.strip(b"\r")
+        if not raw.startswith(b"data:"):
+            return
+        payload = raw[5:].strip()
+        if not payload or payload == b"[DONE]":
+            return
+        try:
+            obj = json.loads(payload)
+        except (json.JSONDecodeError, UnicodeDecodeError, ValueError):
+            return
+        got = usage_total_tokens(obj)
+        if got is not None:
+            self.total_tokens = got
+
+
 class TokenBudgetLimiter:
-    """Dual-bucket, tier-aware limiter for the OpenFree gateway."""
+    """Dual-bucket, tier-aware limiter for the FreeRoute gateway."""
 
     def __init__(
         self,
@@ -314,11 +359,37 @@ class TokenBudgetLimiter:
         )
         self._store: BucketStore = store if store is not None else InMemoryBucketStore()
         self._clock = clock
+        self._open_reservations: dict[str, int] = {}
+        self._open_lock = threading.Lock()
 
     def tier_for(self, name: str | None) -> TierLimits:
-        if name is not None and name in self._tiers:
+        """Resolve a tier name. An unknown name gets the *smallest* bucket.
+
+        This used to fall back to ``self._default_tier``, which is ``local`` —
+        6000 rpm / 6,000,000 tpm. So any tier string nobody had defined resolved
+        to the largest bucket in the table: a typo, a renamed tier, or a key
+        issued as "unlimited" all failed **open**. An unrecognised tier is a
+        configuration mistake, and a mistake must not be more generous than
+        every tier we deliberately wrote down.
+
+        ``None`` still means "caller named no tier", which is the loopback dev
+        path, and keeps the default.
+        """
+        if name is None:
+            return self._tiers[self._default_tier]
+        if name in self._tiers:
             return self._tiers[name]
-        return self._tiers[self._default_tier]
+        return self.smallest_tier()
+
+    def smallest_tier(self) -> TierLimits:
+        """The least generous configured tier — what an unknown name resolves to."""
+        return min(
+            self._tiers.values(),
+            key=lambda t: (t.tokens_per_min, t.requests_per_min),
+        )
+
+    def known_tiers(self) -> tuple[str, ...]:
+        return tuple(self._tiers)
 
     def reserve(
         self,
@@ -335,6 +406,11 @@ class TokenBudgetLimiter:
         reset_s = _reset_seconds(
             outcome.token_remaining, limits.token_capacity, limits.token_refill_per_sec
         )
+        reservation_id = ""
+        if outcome.allowed and outcome.reserved_tokens > 0:
+            reservation_id = uuid.uuid4().hex
+            with self._open_lock:
+                self._open_reservations[reservation_id] = outcome.reserved_tokens
         return RateDecision(
             allowed=outcome.allowed,
             tier=limits.name,
@@ -344,6 +420,7 @@ class TokenBudgetLimiter:
             remaining=int(outcome.token_remaining),
             reset_s=reset_s,
             limited_by=outcome.limited_by,
+            reservation_id=reservation_id,
         )
 
     def settle(
@@ -353,10 +430,16 @@ class TokenBudgetLimiter:
         tier: str | None = None,
         reserved_tokens: int,
         actual_tokens: int,
+        reservation_id: str = "",
     ) -> None:
-        """Refund the reserved-minus-actual tokens once generation completes."""
+        """Refund reserved-minus-actual once. Same reservation_id is a no-op."""
         if reserved_tokens <= 0:
             return
+        if reservation_id:
+            with self._open_lock:
+                if reservation_id not in self._open_reservations:
+                    return
+                del self._open_reservations[reservation_id]
         refund = reserved_tokens - max(0, int(actual_tokens))
         if refund <= 0:
             return
@@ -387,6 +470,9 @@ class TokenBudgetLimiter:
             "token_capacity": int(limits.token_capacity),
             "request_remaining": int(request_remaining),
             "token_remaining": int(token_remaining),
+            # Aliases for Cortex workflow_openvault.check_openfree_budget
+            "remaining": int(token_remaining),
+            "remaining_tokens": int(token_remaining),
             "reset_s": _reset_seconds(
                 token_remaining, limits.token_capacity, limits.token_refill_per_sec
             ),

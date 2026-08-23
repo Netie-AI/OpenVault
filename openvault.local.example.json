@@ -24,7 +24,7 @@
     "openide": {
       "url": "http://127.0.0.1:8765",
       "announce": "http://127.0.0.1:5000/api/local/handshake",
-      "invoke": "http://127.0.0.1:5000/api/openide/invoke",
+      "invoke": "http://127.0.0.1:5000/api/freeide/invoke",
       "connect_pack": "http://127.0.0.1:5000/api/local/connect-pack"
     }
   },
