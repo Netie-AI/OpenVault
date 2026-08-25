@@ -98,8 +98,8 @@ def test_skills_index_keeps_ids_and_drops_bodies() -> None:
 
     body = asyncio.run(_run())
     assert body["online"] is True
-    assert body["owner"] == "cortex"
-    assert body["location"].endswith("/api/skills")
+    assert body["owner"] == "netie-kb"
+    assert body["location"] == "http://127.0.0.1:8030"
     assert body["skills"] == [{"id": "outreach.human-email", "tag": "outreach"}]
     dumped = json.dumps(body)
     assert "MUST-NOT-LEAK" not in dumped
@@ -127,7 +127,8 @@ def test_http_skills_index_when_cortex_offline(tmp_path, monkeypatch: pytest.Mon
 
     skills = http.get("/api/cortex/skills").json()
     assert skills["online"] is False
-    assert skills["owner"] == "cortex"
+    assert skills["owner"] == "netie-kb"
+    assert skills["location"] == "http://127.0.0.1:8030"
     assert skills["skills"] == []
     assert "skill_body" not in skills
 

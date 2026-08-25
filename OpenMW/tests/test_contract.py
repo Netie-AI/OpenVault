@@ -95,9 +95,9 @@ def test_connect_pack_pins_openide_to_airgpt(app: FastAPI) -> None:
     assert pack["cortex"]["base_url"] == "http://127.0.0.1:8010"
     assert pack["openvault"]["crew_gate"].endswith("/api/crew/gate")
     assert pack["openvault"]["access_resolve"].endswith("/api/access/resolve")
-    assert pack["cortex"]["skills"].endswith("/api/skills")
     assert pack["cortex"]["crew"].endswith("/api/crew")
-    assert pack["cortex"]["mcp"].endswith("/api/mcp")
+    assert pack["netie_kb"]["base_url"] == "http://127.0.0.1:8030"
+    assert pack["constructor"]["repo"].endswith("/constructor")
 
 
 @pytest.mark.parametrize("flag", ["bypass", "bypass_gate", "force", "skip_rules", "ignore_gate"])

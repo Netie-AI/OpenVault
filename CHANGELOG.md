@@ -2,6 +2,16 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-08-25 - Skill SoT is Netie-KB :8030, not Cortex (DR-0012)
+
+- Founder/constitution answer landed: **keys = OpenVault**, **skills+MCP
+  catalog = Netie-KB R-0016 at 127.0.0.1:8030**, **Cortex stirs**. Access ids
+  are `netie-kb.skills` / `netie-kb.mcp`. Connect pack publishes `netie_kb` and
+  a Constructor pointer (consumer skin, not merged). Grok is a model slot, not
+  an app. Netie Control is the supervised shell; Cortex does not grow a UI.
+- Cortex-crew is a Cortex **worktree branch**. This agent still cannot merge it
+  (`Netie-AI/Cortex` 404). Estate-gate FAILING lives in netie-control, also 404.
+
 ## 2026-08-25 - Cortex crew gate + skill/mcp signposts (DR-0012 wire)
 
 - **Cortex agents have an OpenVault number to call.** `POST /api/crew/gate`

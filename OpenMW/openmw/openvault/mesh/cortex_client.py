@@ -16,7 +16,7 @@ import httpx
 import structlog
 
 from openmw.model_router import ModelRouter
-from openmw.openvault.mesh.local_mesh import DEFAULT_CORTEX_URL, cortex_base_url
+from openmw.openvault.mesh.local_mesh import DEFAULT_CORTEX_URL, cortex_base_url, netie_kb_base_url
 from openmw.openvault.route.access import SIGNPOST_FORBIDDEN_FIELDS
 
 log = structlog.get_logger()
@@ -192,25 +192,32 @@ class CortexClient:
         }
 
     async def skills_index(self) -> dict[str, Any]:
-        """Skill ids Cortex currently advertises. Never skill text (DR-0012)."""
-        location = f"{self.base_url}{CORTEX_SKILLS_PATH}"
-        payload = await self._get_json((CORTEX_SKILLS_PATH,))
+        """Skill ids from the Netie-KB registry. Never skill text (DR-0012 / R-0016)."""
+        kb = netie_kb_base_url()
+        location = kb
+        payload = await self._get_json_at(kb, ("/api/skills", "/v1/skills", "/"))
+        if payload is None:
+            payload = await self._get_json((CORTEX_SKILLS_PATH,))
+        policy = (
+            "R-0016: Netie-KB is the one skill registry. Cursor/Claude/Crew "
+            "are clients. OpenVault signposts. Cortex stirs."
+        )
         if payload is None:
             return {
                 "online": False,
-                "owner": "cortex",
+                "owner": "netie-kb",
                 "location": location,
                 "skills": [],
-                "policy": ("OpenVault signposts. Cortex holds skill bodies. See DR-0012."),
+                "policy": policy,
             }
         cleaned = strip_skill_bodies(payload)
         skills = _as_id_list(cleaned, keys=("skills", "items", "data"))
         return {
             "online": True,
-            "owner": "cortex",
+            "owner": "netie-kb",
             "location": location,
             "skills": skills,
-            "policy": ("OpenVault signposts. Cortex holds skill bodies. See DR-0012."),
+            "policy": policy,
         }
 
     async def crew_index(self) -> dict[str, Any]:
@@ -242,10 +249,17 @@ class CortexClient:
         }
 
     async def _get_json(self, paths: tuple[str, ...]) -> dict[str, Any] | list[Any] | None:
+        return await self._get_json_at(self.base_url, paths)
+
+    async def _get_json_at(
+        self, base: str, paths: tuple[str, ...]
+    ) -> dict[str, Any] | list[Any] | None:
+        root = base.rstrip("/")
         async with httpx.AsyncClient(timeout=self._timeout_s) as client:
             for path in paths:
+                url = f"{root}{path}" if path else root
                 try:
-                    resp = await client.get(f"{self.base_url}{path}")
+                    resp = await client.get(url)
                 except httpx.HTTPError:
                     continue
                 if 200 <= resp.status_code < 300:

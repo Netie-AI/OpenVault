@@ -36,16 +36,12 @@ amendment across four repos, not a ticket. OmniRoute `mcp` / `agent-skills` /
 
 ## Considered Options
 
-- **OpenVault owns the skill library** (catalog + bodies + "when to use").
-  Rejected unless the founder amends PRODUCT_ROLES. OpenVault's job is custody
-  and gate, not the agent loop.
-- **Netie KB is the only store.** Rejected as the runtime path. KB is a search
-  corpus for new sessions. A live graph node cannot block on `kb.py search`.
-- **Cursor `.cursor/skills` only.** Rejected as the crew path. IDE skills are
-  one client of the registry, not the registry.
-- **Three stores, one stirrer (this record).** Cortex runs the loop and loads
-  the skill this turn. OpenVault answers where + may you. Netie KB keeps the
-  distilled lessons. Promote survivors from KB into the Cortex registry.
+- **OpenVault owns the skill library.** Rejected. One key vault, not a second
+  skill store.
+- **Cortex owns the skill library.** Rejected. Crew packs plus `Cortex/skills`
+  plus Cursor packs already forked six names.
+- **Netie-KB is the one registry, Cortex stirs, OpenVault gates.** This
+  record. Matches NETIE.md R-0016 and §3.
 
 ## Decision Outcome
 
@@ -56,27 +52,45 @@ crew spawn, parent-task completion, and the **deficit** (`this node needs skill
 X / MCP Y / tool Z`) live only there.
 
 OpenVault does not pick DAG vs LangGraph, does not run the crew, and does not
-hold skill bodies. Netie KB does not invoke tools.
+hold skill bodies. Netie KB does not invoke tools. Netie Control (plane 4)
+supervises; Cortex does not grow a UI organ.
 
 Crew inference order, every hop:
 
 ```
 Cortex graph says NEED
-  -> OpenVault resolve says WHERE + ALLOWED
-    -> Cortex loads skill / invokes MCP / sends outreach
-      -> Netie KB only if the graph has no skill and a new session must recall
+  -> OpenVault resolve / POST /api/crew/gate says WHERE + ALLOWED
+    -> Cortex loads the skill from Netie-KB :8030 (R-0016)
+    -> or invokes MCP (catalog in KB, credentials in OpenVault)
+    -> or sends outreach
 ```
+
+Grok is the serving model in an OpenVault slot, not a separate app.
 
 ### Three stores (do not merge them)
 
 | Store | Holds | Used when | Never holds |
 |-------|-------|-----------|-------------|
-| **Cortex skill registry** | Skill bodies tagged `outreach` or `system`. When-to-use. Live MCP tool schemas the loop will call. Parent-run + child-run graph. | **This turn.** Next outreach. Crew member spawn. Correction agent. | Provider keys, leave-machine verdicts, the review corpus |
-| **OpenVault** | MCP server URLs and credentials. Access signposts (same shape as `cortex.memory`: location + gate, never content). Leave/send/connect gate. Model **slot** preference. | Before anything leaves or spends a key. Ticket #39 custody MCP (keys + site passwords, deny PAN). | Skill text, system prompts, tool graphs, distilled reviews |
-| **Netie KB** (`kb.py search`, distill ingest) | Reviews of emails people did not understand. Distilled "how Claude/GPT wrote it human". Invariants and lessons for agents who were not in the loop. | Cold start, correction after a miss, promoting a survivor into the Cortex registry | Runtime invoke, live deficit, gate verdicts |
+| **Netie-KB** `:8030` (R-0016) | **The one skill registry** (bodies + when-to-use). MCP tool catalog. Distilled reviews. | This turn (Cursor, Claude, Crew all load here). Cold start. Promote after a review. | Provider keys, leave verdicts, crew parent/child graph |
+| **OpenVault** | **The one key vault.** MCP server credentials. Access signposts. Leave/send/connect gate. Model slot preference. | Before anything leaves or spends a key. #39 custody MCP (keys + passwords, deny PAN). | Skill text, system prompts, tool graphs |
+| **Cortex** | Parent-run + child-run graph. Architecture preset. Live tool-calling loop. | Stir, spawn, finish the parent task. Watchdog of runs. | Keys, a second skill library, an estate UI |
 
-IDE Cursor skills and MCP configs are **clients** of the Cortex registry (and of
-OpenVault for secrets). They are not a fourth store.
+IDE Cursor skills, Claude skills, and `crew/skill_packs` are **clients** of
+Netie-KB. Forks of the same name with different bodies (chat-human 21 vs 47
+lines) are the bug R-0009 names. They must generate from the registry, not
+edit in five trees.
+
+### What must not merge into Cortex
+
+- **Netie Control** is the supervised estate shell (plane 4). First page:
+  live runs, ledger, refusal, estate gate (never a cached green). Buttons
+  for Netie apps live there, not inside Cortex.
+- **Constructor** stays `D:\Constructor` / `Netie-AI/constructor`. Default
+  graph: connector -> ontology -> insight -> foundry -> app. Engine is
+  Cortex; frontend can be reached via Netie. Do not merge the app.
+- **Cortex-crew** is a git worktree of Cortex. Merging it means merging that
+  **branch**, not a sixth product. This cloud agent cannot see `Netie-AI/Cortex`
+  (404) so it cannot merge that branch from here.
 
 ### Two speeds: immediate vs distilled
 
@@ -87,7 +101,7 @@ outreach sent (Cortex) + leave gate (OpenVault)
   -> recipient review / "I don't understand"
   -> one distill ingest (Netie capture -> kb.py)
   -> KB row (learning corpus for later sessions)
-  -> promote survivor -> Cortex skill `outreach.human-email`
+  -> promote survivor in Netie-KB (same registry Cursor/Claude/Crew load)
   -> NEXT outreach agent loads that skill this turn
 ```
 
@@ -146,11 +160,11 @@ Still a PRODUCT_ROLES amendment (do not build here):
 
 ## Open decisions - these need the founder
 
-1. Accept this wiring (Cortex registry + OpenVault signpost + Netie KB corpus)
-   as the skills answer, and close the STATUS "Skills library NEEDS-YOU" as
-   **not OpenVault**. Work then routes to the PRD agent for Cortex + Netie-KB.
-2. Or amend PRODUCT_ROLES so OpenVault owns the skill library. That is four
-   repos, not a ticket in this one.
+1. Accept this wiring (Netie-KB registry + OpenVault keys/gate + Cortex stir)
+   and close STATUS "Skills library NEEDS-YOU" as **not OpenVault**.
+2. Grant this agent `Netie-AI/Cortex`, `netie-control`, `Netie`, `Netie-KB`
+   so Cortex-crew can be merged if gates are green and the estate gate can
+   be repaired where Control already shows FAILING.
 3. Who runs distill ingest (Netie script vs Cortex job). OpenVault still does
    not.
 
@@ -161,9 +175,8 @@ Still a PRODUCT_ROLES amendment (do not build here):
   OpenVault stays the gate.
 - Bad: three places to look, on purpose. The failure mode to watch is a fourth
   place (Cursor-only, AirGPT-only, or an OpenVault catalog).
-- Neutral: `/api/access` does not grow `skill`/`mcp` kinds in this RFC. When it
-  does, those entries must be derived from live Cortex/mesh state, never a
-  hardcoded catalogue of bodies.
+- Neutral: `/api/access` now signposts `netie-kb.skills` / `netie-kb.mcp` at
+  `:8030`. Those entries must never grow skill-body fields.
 
 ## Wire Cortex crew must call (OpenVault half, shipped)
 
@@ -171,13 +184,18 @@ This environment cannot write `Netie-AI/Cortex` (private, 404 with the agent
 token). The OpenVault side of the conversation is implemented so Cortex agents
 have a stable HTTP contract the moment that repo is reachable.
 
-**Cortex owns and must serve** (not implemented here):
+**Netie-KB owns and must serve** (not implemented here; repo 404):
 
 | Path | Returns |
 |------|---------|
-| `GET /api/skills` | Skill ids + tags (`outreach` / `system`). Bodies stay in Cortex. |
+| REST+MCP on `:8030` | Skill ids + bodies. One registry. Cursor/Claude/Crew clients. |
+| MCP catalog | Tool schemas. Credentials stay in OpenVault. |
+
+**Cortex owns and must serve** (not implemented here; repo 404):
+
+| Path | Returns |
+|------|---------|
 | `GET /api/crew` | Parent-run ids + status. No transcripts. |
-| `GET /api/mcp` | MCP server ids the loop may call. Schemas stay in Cortex. |
 
 **Cortex crew calls OpenVault** (implemented):
 
@@ -193,11 +211,12 @@ NEED on graph
 Connect pack (`GET /api/local/connect-pack`) now publishes:
 
 - `openvault.crew_gate`, `openvault.access_resolve`
-- `cortex.skills`, `cortex.crew`, `cortex.mcp`
+- `cortex.crew`
+- `netie_kb.skills` / `netie_kb.mcp` at `:8030`
+- `constructor` pointer (skin, not merged)
 
-`GET /api/cortex/skills` and `GET /api/cortex/crew` are **indexes**: if Cortex
-is online they return ids after stripping forbidden fields; they never cache
-prompt text.
+`GET /api/cortex/skills` is an **index of the KB registry** (ids only, bodies
+stripped). `GET /api/cortex/crew` indexes Cortex parent-run ids.
 
 ## Confirmation
 

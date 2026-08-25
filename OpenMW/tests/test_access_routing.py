@@ -53,8 +53,8 @@ def test_registry_lists_every_kind(tmp_path, monkeypatch):
     }
     ids = {e["id"] for e in body["entries"]}
     assert "cortex.memory" in ids
-    assert "cortex.skills" in ids
-    assert "cortex.mcp" in ids
+    assert "netie-kb.skills" in ids
+    assert "netie-kb.mcp" in ids
     assert "runtime.crew" in ids
     assert "service.freeroute" in ids
     assert "service.freebuild" in ids
@@ -108,7 +108,7 @@ def test_access_registry_is_not_a_skill_store(tmp_path, monkeypatch):
         meta = entry.get("meta") or {}
         assert not (SIGNPOST_FORBIDDEN_FIELDS & set(meta))
         if entry["kind"] in ("skill", "mcp"):
-            assert entry["owner"] == "cortex"
+            assert entry["owner"] == "netie-kb"
 
 
 # --- resolve: location + verdict, never content ---
@@ -150,12 +150,12 @@ def test_skill_resolves_to_cortex_and_returns_no_content(tmp_path, monkeypatch):
 
     body = client.post(
         "/api/access/resolve",
-        json={"kind": "skill", "id": "cortex.skills", "intent": "invoke"},
+        json={"kind": "skill", "id": "netie-kb.skills", "intent": "invoke"},
     ).json()
 
     assert body["found"] is True
-    assert body["owner"] == "cortex"
-    assert body["location"].endswith("/api/skills")
+    assert body["owner"] == "netie-kb"
+    assert "8030" in body["location"]
     assert not (SIGNPOST_FORBIDDEN_FIELDS & set(body))
     assert not (SIGNPOST_FORBIDDEN_FIELDS & set(body.get("entry") or {}))
 
@@ -167,12 +167,12 @@ def test_mcp_resolves_to_cortex_and_returns_no_content(tmp_path, monkeypatch):
 
     body = client.post(
         "/api/access/resolve",
-        json={"kind": "mcp", "id": "cortex.mcp", "intent": "invoke"},
+        json={"kind": "mcp", "id": "netie-kb.mcp", "intent": "invoke"},
     ).json()
 
     assert body["found"] is True
-    assert body["owner"] == "cortex"
-    assert body["location"].endswith("/api/mcp")
+    assert body["owner"] == "netie-kb"
+    assert "8030" in body["location"]
 
 
 def test_crew_gate_is_resolve_plus_audit(tmp_path, monkeypatch):
@@ -185,7 +185,7 @@ def test_crew_gate_is_resolve_plus_audit(tmp_path, monkeypatch):
         "/api/crew/gate",
         json={
             "kind": "skill",
-            "id": "cortex.skills",
+            "id": "netie-kb.skills",
             "intent": "invoke",
             "parent_run_id": "run-parent-1",
             "child_id": "child-outreach",
@@ -194,7 +194,7 @@ def test_crew_gate_is_resolve_plus_audit(tmp_path, monkeypatch):
     ).json()
 
     assert body["found"] is True
-    assert body["owner"] == "cortex"
+    assert body["owner"] == "netie-kb"
     assert body["parent_run_id"] == "run-parent-1"
     assert body["child_id"] == "child-outreach"
     assert body["deficit"] == "need skill outreach.human-email"

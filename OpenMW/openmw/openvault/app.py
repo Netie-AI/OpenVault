@@ -436,7 +436,7 @@ class CrewGateBody(BaseModel):
     """
 
     kind: AccessKind = "skill"
-    id: str = "cortex.skills"
+    id: str = "netie-kb.skills"
     intent: AccessIntent = "invoke"
     parent_run_id: str = ""
     child_id: str = ""

@@ -35,7 +35,12 @@ import time
 from dataclasses import asdict, dataclass, field
 from typing import Any, Literal
 
-from openmw.openvault.mesh.local_mesh import DEFAULT_CORTEX_URL, LocalMeshState, load_mesh
+from openmw.openvault.mesh.local_mesh import (
+    DEFAULT_CORTEX_URL,
+    LocalMeshState,
+    load_mesh,
+    netie_kb_base_url,
+)
 from openmw.openvault.ship.gate import GateAction, GateDecision, check_gate
 from openmw.openvault.vault.fallback import FallbackManager
 from openmw.openvault.vault.store import KeyVault
@@ -287,36 +292,37 @@ def build_registry(
         )
     )
 
-    # --- skill / mcp: Cortex owns the bodies. We route, we do not store. ---
-    cortex_up = _peer_reachable(state, "cortex")
+    # --- skill / mcp: Netie-KB is the one registry (R-0016). We route, we do not store. ---
+    kb_url = netie_kb_base_url()
     entries.append(
         AccessEntry(
             kind="skill",
-            id="cortex.skills",
-            label="Cortex skill registry",
-            owner="cortex",
-            base_url=cortex_url,
-            path="/api/skills",
+            id="netie-kb.skills",
+            label="Netie-KB skill registry",
+            owner="netie-kb",
+            base_url=kb_url,
+            path="",
             detail=(
-                "Cortex holds skill bodies (outreach + system). OpenVault "
-                "gates load/invoke; it never returns prompt text (DR-0012)."
+                "R-0016: one skill registry at :8030 (MCP+REST). Cursor, Claude, "
+                "and Cortex crew are clients. OpenVault gates load/invoke; it "
+                "never returns prompt text (DR-0012)."
             ),
-            reachable=cortex_up,
+            reachable=None,
         )
     )
     entries.append(
         AccessEntry(
             kind="mcp",
-            id="cortex.mcp",
-            label="Cortex MCP / tool graph",
-            owner="cortex",
-            base_url=cortex_url,
-            path="/api/mcp",
+            id="netie-kb.mcp",
+            label="Netie-KB MCP catalog",
+            owner="netie-kb",
+            base_url=kb_url,
+            path="",
             detail=(
-                "Live MCP tool schemas live with the loop. OpenVault holds "
+                "MCP tool catalog lives with the skill registry. OpenVault holds "
                 "MCP credentials and the leave/invoke gate, not the schemas."
             ),
-            reachable=cortex_up,
+            reachable=None,
         )
     )
 

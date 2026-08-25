@@ -43,7 +43,7 @@ def test_mesh_status_and_connect_pack(client: TestClient) -> None:
     assert pack["openvault"]["v1"].endswith("/v1")
     assert "CORTEX_URL" in pack["env"]
     assert pack["openvault"]["crew_gate"].endswith("/api/crew/gate")
-    assert pack["cortex"]["skills"].endswith("/api/skills")
+    assert pack["netie_kb"]["base_url"].endswith("8030")
 
 
 def test_handshake_auto_approve_openide_and_invoke(client: TestClient) -> None:

@@ -39,11 +39,18 @@ DEFAULT_URLS: dict[str, str] = {
 }
 DEFAULT_CORTEX_URL = DEFAULT_URLS["cortex"]
 OPENIDE_DEFAULT_URL = DEFAULT_URLS["openide"]
+# R-0016 skill registry (MCP+REST). Not a mesh peer — Cortex stirs, KB stores.
+DEFAULT_NETIE_KB_URL = "http://127.0.0.1:8030"
 
 
 def cortex_base_url() -> str:
     """Cortex base URL: CORTEX_URL env override, else shared mesh default (:8010)."""
     return os.environ.get("CORTEX_URL", DEFAULT_CORTEX_URL).rstrip("/")
+
+
+def netie_kb_base_url() -> str:
+    """Netie-KB skill registry: NETIE_KB_URL env override, else :8030 (R-0016)."""
+    return os.environ.get("NETIE_KB_URL", DEFAULT_NETIE_KB_URL).rstrip("/")
 
 
 def mesh_path() -> Path:
@@ -344,13 +351,20 @@ def build_connect_pack(state: LocalMeshState | None = None) -> dict[str, Any]:
         "cortex": {
             "base_url": cortex.base_url if cortex else DEFAULT_CORTEX_URL,
             "health": f"{(cortex.base_url if cortex else DEFAULT_CORTEX_URL).rstrip('/')}/health",
-            "skills": (
-                f"{(cortex.base_url if cortex else DEFAULT_CORTEX_URL).rstrip('/')}/api/skills"
-            ),
             "crew": f"{(cortex.base_url if cortex else DEFAULT_CORTEX_URL).rstrip('/')}/api/crew",
-            "mcp": f"{(cortex.base_url if cortex else DEFAULT_CORTEX_URL).rstrip('/')}/api/mcp",
             "approved": bool(cortex and cortex.approved),
             "status": cortex.status if cortex else "unknown",
+        },
+        "netie_kb": {
+            "base_url": netie_kb_base_url(),
+            "skills": netie_kb_base_url(),
+            "mcp": netie_kb_base_url(),
+            "role": "R-0016 one skill+MCP registry. Cursor/Claude/Crew are clients.",
+        },
+        "constructor": {
+            "repo": "https://github.com/Netie-AI/constructor",
+            "engine": (f"{(cortex.base_url if cortex else DEFAULT_CORTEX_URL).rstrip('/')}/cortex"),
+            "note": "Consumer skin. Stays its own app. Do not merge into Cortex.",
         },
         "openide": {
             "base_url": openide.base_url if openide else OPENIDE_DEFAULT_URL,
