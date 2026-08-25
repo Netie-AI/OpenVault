@@ -1,4 +1,4 @@
-"""Type-based auto-ship: Next.js/static → Origin+Vercel HTTP; process → Origin git + VM."""
+"""Type-based auto-ship: Next.js/static -> Origin git + OpenVault Caddy/systemd."""
 
 from __future__ import annotations
 
@@ -36,9 +36,11 @@ def test_nextjs_host_kind_is_origin_http(tmp_path: Path) -> None:
     assert stack.host_kind == "edge_http"
     host = recommend_host(stack, hostname="app.example.com")
     assert host.git_target == "cursor_origin"
-    assert host.runtime == "vercel_app"
+    assert host.runtime == "vm_process"
+    assert host.load_balancer == "caddy"
     assert host.http_auto_update is True
-    assert host.needs_vm is False
+    assert host.needs_vm is True
+    assert host.recommended_target == "vps_ssh"
 
 
 def test_static_site_uses_origin_http(tmp_path: Path) -> None:
@@ -46,8 +48,9 @@ def test_static_site_uses_origin_http(tmp_path: Path) -> None:
     stack = detect_project(tmp_path)
     assert stack.framework == "static"
     host = recommend_host(stack, hostname="site.example.com")
-    assert host.runtime == "vercel_app"
+    assert host.runtime == "caddy_static"
     assert host.needs_static_serve is True
+    assert host.load_balancer == "caddy"
 
 
 def test_fastapi_needs_vm(tmp_path: Path) -> None:
@@ -73,12 +76,22 @@ def test_ready_to_ship_nextjs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
         ),
         encoding="utf-8",
     )
-    report = ready_to_ship(str(tmp_path), hostname="app.example.com", target="cursor_origin")
+    report = ready_to_ship(str(tmp_path), hostname="app.example.com", target="vps_ssh")
     assert report.ready is True
+    assert report.ready_to_execute is False
     assert report.stack["framework"] == "nextjs"
     ids = {g["id"]: g["status"] for g in report.gates}
     assert ids["detect"] == "pass"
     assert ids["http_auto_update"] == "pass"
+    assert ids["execute_host"] == "pending"
+
+    live = ready_to_ship(
+        str(tmp_path),
+        hostname="app.example.com",
+        vps_host="root@1.2.3.4",
+        target="vps_ssh",
+    )
+    assert live.ready_to_execute is True
 
 
 def test_origin_plan_simulate_nextjs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -99,7 +112,8 @@ def test_origin_plan_simulate_nextjs(tmp_path: Path, monkeypatch: pytest.MonkeyP
         owner="demo",
         repo="shop",
     )
-    assert plan.vercel_http is True
+    assert plan.vercel_http is False
+    assert plan.openvault_http is True
     assert plan.remote_url == "https://origin.cursor.com/demo/shop.git"
     executed = execute_origin_plan(plan, simulate=True)
     assert executed.executed is True
@@ -108,9 +122,10 @@ def test_origin_plan_simulate_nextjs(tmp_path: Path, monkeypatch: pytest.MonkeyP
         "detect",
         "origin_repo",
         "git_push",
-        "vercel_app",
+        "http_runtime",
         "load_balancer",
     }
+    assert "vercel_app" not in {s.id for s in executed.steps}
 
 
 def test_api_ship_ready_and_auto(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -124,6 +139,7 @@ def test_api_ship_ready_and_auto(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     status = client.get("/api/ship/origin/status")
     assert status.status_code == 200
     assert status.json()["git_host"] == "https://origin.cursor.com"
+    assert "not Vercel" in status.json()["notes"]
 
     ready = client.post(
         "/api/ship/ready",
@@ -132,6 +148,7 @@ def test_api_ship_ready_and_auto(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     assert ready.status_code == 200
     assert ready.json()["stack"]["framework"] == "static"
     assert ready.json()["ready"] is True
+    assert ready.json()["host"]["runtime"] == "caddy_static"
 
     auto = client.post(
         "/api/ship/auto",
@@ -145,9 +162,16 @@ def test_api_ship_ready_and_auto(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     )
     assert auto.status_code == 200
     body = auto.json()
-    assert body["origin"]["vercel_http"] is True
+    assert body["origin"]["vercel_http"] is False
+    assert body["origin"]["openvault_http"] is True
     assert body["origin"]["executed"] is True
     assert "origin.cursor.com/demo/static-site.git" in body["origin"]["remote_url"]
+    assert body["server"]["executed"] is True
+    assert "file_server" in body["server"]["caddyfile"]
+    assert body["server"]["health_url"] == "https://site.example.com/healthz"
+    assert "curl -fsS" in body["cicd"]["workflow"]
+    assert "healthz" in body["cicd"]["workflow"]
+    assert "vercel" not in body["cicd"]["workflow"].lower()
 
 
 def test_origin_status_simulate_without_cli(monkeypatch: pytest.MonkeyPatch) -> None:

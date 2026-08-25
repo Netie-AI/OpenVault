@@ -74,6 +74,7 @@ from openmw.openvault.ship.github_auth import (
     save_pat,
     start_gh_login,
 )
+from openmw.openvault.ship.hosting import ShipTarget
 from openmw.openvault.ship.library import (
     create_upload_session,
     inspect_folder,
@@ -193,9 +194,7 @@ class OnePressDeployBody(BaseModel):
     run_smoke: bool = False
     simulate: bool = True
     auto_execute: bool = True
-    target: Literal[
-        "cursor_origin", "openship_cloud", "vps_ssh", "aws_guide", "local_demo"
-    ] = "local_demo"
+    target: ShipTarget = "local_demo"
     github_url: str = ""
     vps_host: str = ""
     cloud_tier: str = "low"
@@ -211,9 +210,7 @@ class DomainGuideBody(BaseModel):
 
 
 class ShipBlueprintBody(BaseModel):
-    target: Literal[
-        "cursor_origin", "openship_cloud", "vps_ssh", "aws_guide", "local_demo"
-    ] = "openship_cloud"
+    target: ShipTarget = "vps_ssh"
     project_path: str = ""
     hostname: str = ""
     github_url: str = ""
@@ -235,9 +232,7 @@ class GitHubPatBody(BaseModel):
 
 
 class ShipEngineBody(BaseModel):
-    target: Literal[
-        "cursor_origin", "openship_cloud", "vps_ssh", "aws_guide", "local_demo"
-    ] = "local_demo"
+    target: ShipTarget = "vps_ssh"
     project_path: str = ""
     github_url: str = ""
     hostname: str = ""
@@ -450,7 +445,9 @@ def create_app(
     state_accounts = accounts if accounts is not None else AccountStore()
     fallback = FallbackManager(state_vault)
     redis_store = try_make_redis_store()
-    limiter = TokenBudgetLimiter(store=redis_store) if redis_store is not None else TokenBudgetLimiter()
+    limiter = (
+        TokenBudgetLimiter(store=redis_store) if redis_store is not None else TokenBudgetLimiter()
+    )
     if redis_store is not None:
         log.info("openvault_ratelimit_backend", backend="RedisBucketStore")
     cortex = CortexClient(cortex_url)

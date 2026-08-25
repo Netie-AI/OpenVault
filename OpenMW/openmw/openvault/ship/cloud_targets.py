@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 
 from openmw.openvault.paths import ensure_home
 from openmw.openvault.ship.detect import detect_project
@@ -56,12 +56,42 @@ def list_targets() -> dict[str, Any]:
     return {
         "targets": [
             {
-                "id": "cursor_origin",
-                "name": "Cursor Origin",
-                "git_host": True,
-                "http": "vercel_app_for_next_static_hono",
+                "id": "vps_ssh",
+                "name": "VPS / any box",
+                "git_host": False,
+                "http": "caddy_plus_systemd",
                 "http_auto_update": True,
-                "load_balancer": "vercel_edge or Caddy on VM",
+                "load_balancer": "caddy",
+                "ready": True,
+                "detail": "Default. Replaces Vercel. Caddy TLS + systemd + /healthz.",
+            },
+            {
+                "id": "hetzner",
+                "name": "Hetzner",
+                "git_host": False,
+                "http": "caddy_plus_systemd",
+                "http_auto_update": True,
+                "load_balancer": "caddy",
+                "ready": True,
+                "detail": "Same OpenVault server plan, Hetzner-labelled SSH host.",
+            },
+            {
+                "id": "aws",
+                "name": "AWS EC2 + SSM",
+                "git_host": False,
+                "http": "caddy_plus_systemd_ssm",
+                "http_auto_update": True,
+                "load_balancer": "caddy",
+                "ready": True,
+                "detail": "Same unit file; restart via AWS Systems Manager send-command.",
+            },
+            {
+                "id": "cursor_origin",
+                "name": "Cursor Origin (git only)",
+                "git_host": True,
+                "http": "openvault_caddy_on_vps",
+                "http_auto_update": True,
+                "load_balancer": "caddy",
                 "ready": origin.get("ready"),
                 "detail": origin.get("notes"),
             },
@@ -75,21 +105,12 @@ def list_targets() -> dict[str, Any]:
                 "ready": True,
             },
             {
-                "id": "vps_ssh",
-                "name": "Existing VM / VPS",
-                "git_host": False,
-                "http": "systemd or docker compose",
-                "http_auto_update": True,
-                "load_balancer": "caddy_or_nginx",
-                "ready": True,
-            },
-            {
                 "id": "aws_guide",
-                "name": "AWS / Render guide",
+                "name": "AWS guide (alias of aws)",
                 "git_host": False,
-                "http": "guide only",
-                "http_auto_update": False,
-                "load_balancer": "guide",
+                "http": "caddy_plus_systemd_ssm",
+                "http_auto_update": True,
+                "load_balancer": "caddy",
                 "ready": True,
             },
             {
@@ -107,9 +128,7 @@ def list_targets() -> dict[str, Any]:
 
 def build_ship_blueprint(
     *,
-    target: Literal[
-        "cursor_origin", "openship_cloud", "vps_ssh", "aws_guide", "local_demo"
-    ] = "cursor_origin",
+    target: ShipTarget = "vps_ssh",
     project_path: str = "",
     hostname: str = "",
     github_url: str = "",
@@ -140,20 +159,26 @@ def build_ship_blueprint(
 
 
 def _blueprint_steps(target: str, *, hostname: str, vps_host: str) -> list[dict[str, str]]:
+    dns = f"Point {hostname or '<host>'} A record at the VPS"
     if target == "cursor_origin":
         return [
             {"id": "origin_repo", "title": "Create/push Origin repo"},
-            {"id": "vercel_or_vm", "title": "Vercel App (web) or VM (process)"},
-            {"id": "dns", "title": f"Point {hostname or '<host>'} at the load balancer"},
+            {"id": "openvault_http", "title": "Caddy + systemd on the VPS (not Vercel)"},
+            {"id": "dns", "title": dns},
         ]
-    if target == "vps_ssh":
+    if target in {"vps_ssh", "hetzner"}:
         return [
             {"id": "ssh", "title": f"SSH {vps_host or '<vps>'}"},
-            {"id": "pull", "title": "git pull + restart"},
-            {"id": "lb", "title": "Caddy/nginx TLS + HTTP"},
+            {"id": "sync", "title": "rsync / git pull"},
+            {"id": "service", "title": "systemd enable --now"},
+            {"id": "lb", "title": "Caddy TLS + reverse_proxy + /healthz"},
         ]
-    if target == "aws_guide":
-        return [{"id": "guide", "title": "Follow the AWS/Render plan (no auto-apply)"}]
+    if target in {"aws", "aws_guide"}:
+        return [
+            {"id": "ec2", "title": f"SSH or SSM {vps_host or '<instance>'}"},
+            {"id": "service", "title": "systemd unit + AWS SSM restart"},
+            {"id": "lb", "title": "Caddy TLS + /healthz"},
+        ]
     if target == "openship_cloud":
         return [{"id": "openship", "title": "OpenShip apps install/update"}]
     return [{"id": "local", "title": "Serve on loopback for demo"}]

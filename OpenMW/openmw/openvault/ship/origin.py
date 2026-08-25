@@ -1,12 +1,11 @@
 """Cursor Origin git-host adapter (not an app runtime).
 
 Origin stores repositories at https://origin.cursor.com/{owner}/{repo}.git and
-https://cursor.com/codebase/{owner}/{repo}. HTTP for Next.js/static is the
-Vercel App on Origin (https://vercel.com/docs/git/vercel-for-origin). Process
-apps still use a VM after the git push.
+https://cursor.com/codebase/{owner}/{repo}. HTTP is OpenVault: Caddy + systemd
+on Hetzner / VPS / AWS. Origin does not run apps and has no `origin deploy`.
 
 Docs: https://cursor.com/docs/origin
-CLI: `origin` (https://cursor.com/docs/origin/cli) — no `origin deploy`.
+CLI: `origin` (https://cursor.com/docs/origin/cli)
 """
 
 from __future__ import annotations
@@ -50,6 +49,7 @@ class OriginPlan:
     remote_url: str
     browse_url: str
     vercel_http: bool
+    openvault_http: bool
     stack: dict[str, Any]
     steps: list[OriginStep] = field(default_factory=list)
     ready: bool = False
@@ -66,6 +66,7 @@ class OriginPlan:
             "remote_url": self.remote_url,
             "browse_url": self.browse_url,
             "vercel_http": self.vercel_http,
+            "openvault_http": self.openvault_http,
             "stack": self.stack,
             "steps": [asdict(s) for s in self.steps],
             "ready": self.ready,
@@ -96,8 +97,8 @@ def origin_status() -> dict[str, Any]:
         "browse_host": "https://cursor.com/codebase",
         "detail": detail,
         "notes": (
-            "Origin hosts git, not running apps. Connect the Vercel App on the "
-            "repo Apps tab for Next.js/static HTTP auto-update."
+            "Origin hosts git, not running apps. HTTP is OpenVault Caddy + systemd "
+            "on Hetzner / VPS / AWS (not Vercel)."
         ),
     }
 
@@ -128,7 +129,6 @@ def build_origin_plan(
     repo_s = _repo_name(detected.project_path or project_path, repo)
     remote = f"https://origin.cursor.com/{owner_s}/{repo_s}.git"
     browse = f"https://cursor.com/codebase/{owner_s}/{repo_s}"
-    vercel_http = detected.host_kind in {"static_http", "edge_http"}
     steps: list[OriginStep] = []
 
     if detected.primary == "unknown" or detected.confidence < 0.5:
@@ -179,50 +179,25 @@ def build_origin_plan(
             command="git push -u origin HEAD",
         )
     )
-
-    if vercel_http:
-        steps.append(
-            OriginStep(
-                "vercel_app",
-                "Vercel App HTTP (auto-update)",
-                "pass",
-                (
-                    "Connect Vercel on the Origin repo Apps tab. Pushes get preview "
-                    "URLs; merge deploys production. "
-                    "https://vercel.com/docs/git/vercel-for-origin"
-                ),
-                command=None,
-            )
+    steps.append(
+        OriginStep(
+            "http_runtime",
+            "OpenVault HTTP (replaces Vercel)",
+            "pass",
+            (
+                f"{detected.host_kind}: Caddy + systemd on Hetzner/VPS/AWS. "
+                f"Start: {detected.start_command or 'caddy file_server'}"
+            ),
         )
-        steps.append(
-            OriginStep(
-                "http_auto_update",
-                "HTTP auto-update",
-                "pass",
-                "Origin push → Vercel preview; merge → production domain",
-            )
+    )
+    steps.append(
+        OriginStep(
+            "http_auto_update",
+            "HTTP auto-update",
+            "pass",
+            "git pull on the VM + systemd restart; Caddy keeps the hostname",
         )
-    else:
-        steps.append(
-            OriginStep(
-                "runtime_vm",
-                "VM / static serve / compose",
-                "pass",
-                (
-                    f"{detected.host_kind}: Origin holds git; run "
-                    f"{detected.start_command or detected.suggested_build} on the VM "
-                    "behind Caddy/nginx"
-                ),
-            )
-        )
-        steps.append(
-            OriginStep(
-                "http_auto_update",
-                "HTTP auto-update",
-                "pass",
-                "git pull on the VM + restart process; load balancer keeps the hostname",
-            )
-        )
+    )
 
     if hostname and "." in hostname:
         steps.append(
@@ -230,7 +205,7 @@ def build_origin_plan(
                 "load_balancer",
                 "Hostname / TLS / load balancer",
                 "pass",
-                f"A/CNAME {hostname} → Vercel or VM LB; TLS at the edge",
+                f"A/CNAME {hostname} → VPS; Caddy Let's Encrypt on :443",
                 command=f"openship dns ensure --host {hostname}",
             )
         )
@@ -253,7 +228,8 @@ def build_origin_plan(
         repo=repo_s,
         remote_url=remote,
         browse_url=browse,
-        vercel_http=vercel_http,
+        vercel_http=False,
+        openvault_http=True,
         stack=detected.to_dict(),
         steps=steps,
         ready=len(blockers) == 0,
@@ -300,7 +276,8 @@ def load_origin_plan(plan_id: str) -> OriginPlan | None:
         repo=raw.get("repo", ""),
         remote_url=raw.get("remote_url", ""),
         browse_url=raw.get("browse_url", ""),
-        vercel_http=bool(raw.get("vercel_http")),
+        vercel_http=False,
+        openvault_http=bool(raw.get("openvault_http", True)),
         stack=dict(raw.get("stack") or {}),
         steps=steps,
         ready=bool(raw.get("ready")),

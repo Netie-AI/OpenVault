@@ -126,28 +126,33 @@ firewall, and the keyvault snapshot still declares OpenVault the source.
 
 ---
 
-## Auto-ship + Cursor Origin (2026-08-22)
+## Auto-ship + OpenVault HTTP (2026-08-25)
 
-OpenVault can now **detect the stack and say whether it is ready to ship**, then
-auto-ship by type. Cursor Origin is the git host (not an app runtime).
+OpenVault detects the stack and ships HTTP itself. Cursor Origin is git-only.
+Vercel is not used. Runtime is Caddy (load balancer + Let's Encrypt) plus
+systemd on Hetzner / any VPS / AWS (SSM restart). Default target: `vps_ssh`.
 
 | Kind | Examples | Git | HTTP runtime | Auto-update |
 |------|----------|-----|--------------|-------------|
-| `edge_http` / `static_http` | Next.js, Hono, Vite, Astro, `index.html` | Origin | Vercel App on the Origin repo | push = preview, merge = production |
-| `process` | FastAPI, Django, Flask, Node, Go, Rust | Origin | VM / existing VPS | git pull + restart behind Caddy/nginx |
-| `container` | Dockerfile / compose | Origin | compose on a VM | same + LB TLS |
+| `static_http` | Vite, Astro, `index.html` | Origin (optional) | Caddy `file_server` | git pull + Caddy reload; GET /healthz |
+| `edge_http` | Next.js, Hono | Origin (optional) | systemd (`next start`) + Caddy reverse_proxy | git pull + systemctl restart |
+| `process` | FastAPI, Django, Flask, Node, Go, Rust | Origin (optional) | systemd + Caddy | same |
+| `container` | Dockerfile / compose | Origin (optional) | compose on the VM + Caddy | same |
 
 | Route | Purpose |
 |-------|---------|
 | `POST /api/detect` | Stack + commands + `host_kind` (absolute path only) |
 | `GET /api/ship/stacks` | Catalog (ports, commands, Origin HTTP yes/no) |
-| `POST /api/ship/ready` | Ready-to-ship gates (detect, commands, domain, Origin, runtime) |
-| `POST /api/ship/auto` | Simulate/plan Origin repo + Vercel-or-VM HTTP |
+| `POST /api/ship/ready` | Ready-to-ship gates (detect, commands, domain, Caddy runtime) |
+| `POST /api/ship/auto` | Origin git plan + Caddy/systemd server plan + CI workflow |
+| `POST /api/ship/server` | Caddyfile + systemd unit + health + (AWS) SSM |
+| `POST /api/ship/cicd/plan` | GitHub Actions that scp, restart systemd, curl /healthz |
 | `GET /api/ship/origin/status` | `origin` CLI / `ORIGIN_MODE=simulate` |
 
-Origin docs: https://cursor.com/docs/origin — no `origin deploy`. Live HTTP for
-Next.js/static is the Vercel App (https://vercel.com/docs/git/vercel-for-origin).
+`vercel.json` is still parsed as a **detect hint** (rootDirectory / buildCommand)
+and is otherwise ignored. `origin_vercel_ready` is always false.
 `ORIGIN_MODE=simulate` is the default when the Origin CLI is missing.
+Live apply uses `OPENVAULT_SHIP_MODE=live` plus `vps_host` / `OPENVAULT_VPS_HOST`.
 
 ---
 

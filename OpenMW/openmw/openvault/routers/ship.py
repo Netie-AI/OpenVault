@@ -1,4 +1,4 @@
-"""Stack-detection and Origin auto-ship routes.
+"""Stack-detection and OpenVault auto-ship routes.
 
 Mounted by the integrator with `app.include_router(ship_router)`; this file
 declares the routes and owns nothing else. `POST /api/detect` replaces the
@@ -8,29 +8,23 @@ input we refuse to guess about.
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+from openmw.openvault.ship.cicd import cicd_plan
 from openmw.openvault.ship.detect import DetectionInputError, detect_project
-from openmw.openvault.ship.hosting import ready_to_ship, recommend_host
+from openmw.openvault.ship.hosting import ShipTarget, ready_to_ship, recommend_host
 from openmw.openvault.ship.origin import (
     build_origin_plan,
     execute_origin_plan,
     origin_status,
 )
+from openmw.openvault.ship.server import build_server_plan, execute_server_plan
 from openmw.openvault.ship.stacks import STACKS, get_project_type
 
 router = APIRouter(tags=["ship"])
-
-ShipTarget = Literal[
-    "cursor_origin",
-    "openship_cloud",
-    "vps_ssh",
-    "aws_guide",
-    "local_demo",
-]
 
 
 class DetectBody(BaseModel):
@@ -47,10 +41,28 @@ class ReadyBody(BaseModel):
 class AutoShipBody(BaseModel):
     project_path: str
     hostname: str = ""
+    vps_host: str = ""
     owner: str = ""
     repo: str = ""
     simulate: bool = True
-    target: ShipTarget = "cursor_origin"
+    write_workflow: bool = False
+    target: ShipTarget = "vps_ssh"
+
+
+class ServerShipBody(BaseModel):
+    project_path: str
+    hostname: str = ""
+    vps_host: str = ""
+    simulate: bool = True
+    target: ShipTarget = "vps_ssh"
+
+
+class CicdPlanBody(BaseModel):
+    project_path: str
+    hostname: str = ""
+    vps_host: str = ""
+    provider: str = "vps"
+    write: bool = False
 
 
 @router.post("/api/detect")
@@ -97,7 +109,7 @@ def api_origin_status() -> dict[str, Any]:
 
 @router.post("/api/ship/ready")
 def api_ship_ready(body: ReadyBody) -> dict[str, Any]:
-    """Ready-to-ship gates: detect type, commands, domain, Origin, HTTP runtime."""
+    """Ready-to-ship gates: detect type, commands, domain, Caddy/systemd HTTP."""
     try:
         report = ready_to_ship(
             body.project_path,
@@ -110,30 +122,86 @@ def api_ship_ready(body: ReadyBody) -> dict[str, Any]:
     return report.to_dict()
 
 
-@router.post("/api/ship/auto")
-def api_ship_auto(body: AutoShipBody) -> dict[str, Any]:
-    """Detect type and ship: Origin git + Vercel HTTP, or Origin git + VM."""
+@router.post("/api/ship/server")
+def api_ship_server(body: ServerShipBody) -> dict[str, Any]:
+    """Plan (and simulate) Caddy + systemd on Hetzner / VPS / AWS."""
     try:
         stack = detect_project(body.project_path)
     except DetectionInputError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    host = recommend_host(stack, hostname=body.hostname, target=body.target)
-    plan = build_origin_plan(
+    plan = build_server_plan(
+        project_path=body.project_path,
+        hostname=body.hostname,
+        vps_host=body.vps_host,
+        target=body.target,
+        stack=stack,
+    )
+    executed = execute_server_plan(plan, simulate=body.simulate)
+    return executed.to_dict()
+
+
+@router.post("/api/ship/cicd/plan")
+def api_ship_cicd_plan(body: CicdPlanBody) -> dict[str, Any]:
+    """GitHub Actions that build and ship to the VPS (not Vercel)."""
+    try:
+        return cicd_plan(
+            body.project_path,
+            hostname=body.hostname,
+            vps_host=body.vps_host,
+            provider=body.provider,
+            write=body.write,
+        )
+    except DetectionInputError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post("/api/ship/auto")
+def api_ship_auto(body: AutoShipBody) -> dict[str, Any]:
+    """Detect type and ship: Origin git (optional) + OpenVault Caddy/systemd HTTP."""
+    try:
+        stack = detect_project(body.project_path)
+    except DetectionInputError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    host = recommend_host(
+        stack,
+        hostname=body.hostname,
+        vps_host=body.vps_host,
+        target=body.target,
+    )
+    origin_plan = build_origin_plan(
         project_path=body.project_path,
         hostname=body.hostname,
         owner=body.owner,
         repo=body.repo,
         stack=stack,
     )
-    executed = execute_origin_plan(plan, simulate=body.simulate)
+    origin_executed = execute_origin_plan(origin_plan, simulate=body.simulate)
+    server_plan = build_server_plan(
+        project_path=body.project_path,
+        hostname=body.hostname,
+        vps_host=body.vps_host,
+        target=body.target,
+        stack=stack,
+    )
+    server_executed = execute_server_plan(server_plan, simulate=body.simulate)
+    cicd = cicd_plan(
+        body.project_path,
+        hostname=body.hostname,
+        vps_host=body.vps_host,
+        provider=server_executed.provider,
+        write=body.write_workflow,
+    )
     ready = ready_to_ship(
         body.project_path,
         hostname=body.hostname,
+        vps_host=body.vps_host,
         target=body.target,
     )
     return {
         "stack": stack.to_dict(),
         "host": host.to_dict(),
-        "origin": executed.to_dict(),
+        "origin": origin_executed.to_dict(),
+        "server": server_executed.to_dict(),
+        "cicd": cicd,
         "ready": ready.to_dict(),
     }

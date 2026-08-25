@@ -1,10 +1,8 @@
-"""Map a detected stack onto a runtime: Origin git + Vercel HTTP, VM, or static serve.
+"""Map a detected stack onto OpenVault HTTP: Caddy + systemd on VPS/Hetzner/AWS.
 
-Cursor Origin is a git forge (https://cursor.com/docs/origin). It does not run
-apps. HTTP auto-update for Next.js / Vite / Astro / static / Hono is the Origin
-→ Vercel App path (PR preview, merge = production). Process and container apps
-still push git to Origin, then run on a VM / compose / local static server with
-Caddy/nginx as the load balancer.
+Cursor Origin is git-only (https://cursor.com/docs/origin). OpenVault replaces
+Vercel: load balancer, Let's Encrypt TLS, /healthz, and the process manager
+(systemd on the box, AWS SSM-shaped restart when the provider is AWS).
 """
 
 from __future__ import annotations
@@ -20,17 +18,22 @@ ShipTarget = Literal[
     "cursor_origin",
     "openship_cloud",
     "vps_ssh",
+    "hetzner",
+    "aws",
     "aws_guide",
     "local_demo",
 ]
 
 RuntimeKind = Literal[
-    "vercel_app",
-    "static_serve",
+    "caddy_static",
     "vm_process",
     "docker_compose",
     "local_demo",
 ]
+
+_REMOTE_TARGETS: frozenset[str] = frozenset(
+    {"vps_ssh", "hetzner", "aws", "aws_guide", "openship_cloud", "cursor_origin"}
+)
 
 
 @dataclass(frozen=True)
@@ -53,6 +56,7 @@ class HostPlan:
 @dataclass(frozen=True)
 class ReadyReport:
     ready: bool
+    ready_to_execute: bool
     stack: dict[str, Any]
     host: dict[str, Any]
     origin: dict[str, Any]
@@ -83,41 +87,49 @@ def recommend_host(
     records: list[str] = []
     if hostname and "." in hostname:
         records = [
-            f"A {hostname} → <lb-or-vercel>",
+            f"A {hostname} → {vps_host or '<VPS_IP>'}",
             f"CNAME www.{hostname} → {hostname}",
         ]
 
-    if kind in {"static_http", "edge_http"}:
-        runtime: RuntimeKind = "vercel_app"
-        lb = "vercel_edge"
-        needs_vm = False
-        needs_static = kind == "static_http"
-        recommended: ShipTarget = "cursor_origin"
+    if kind == "static_http":
+        runtime: RuntimeKind = "caddy_static"
+        lb = "caddy"
+        needs_vm = True
+        needs_static = True
+        recommended: ShipTarget = "vps_ssh"
         detail = (
-            "Push git to Cursor Origin; Vercel App serves HTTP and auto-updates "
-            "on push/PR (preview) and merge (production)."
+            "Optional git on Cursor Origin. OpenVault serves static files with "
+            "Caddy file_server + Let's Encrypt on Hetzner / VPS / AWS. Not Vercel."
         )
-        if kind == "static_http":
-            detail += " Static files can also be served by Caddy/nginx on a VM if Vercel is off."
-    elif kind == "container":
-        runtime = "docker_compose"
-        lb = "caddy_or_nginx"
+    elif kind == "edge_http":
+        runtime = "vm_process"
+        lb = "caddy"
         needs_vm = True
         needs_static = False
-        recommended = "vps_ssh" if vps_host else "local_demo"
+        recommended = "vps_ssh"
         detail = (
-            "Push git to Cursor Origin. Run compose/Dockerfile on a VM; "
-            "Caddy/nginx terminates TLS and load-balances HTTP."
+            "Optional git on Cursor Origin. OpenVault runs the process "
+            "(next start / node) under systemd; Caddy reverse-proxies TLS. Not Vercel."
+        )
+    elif kind == "container":
+        runtime = "docker_compose"
+        lb = "caddy"
+        needs_vm = True
+        needs_static = False
+        recommended = "vps_ssh"
+        detail = (
+            "Optional git on Cursor Origin. Run compose/Dockerfile on the VM; "
+            "Caddy terminates TLS and load-balances HTTP."
         )
     elif kind == "process":
         runtime = "vm_process"
-        lb = "caddy_or_nginx"
+        lb = "caddy"
         needs_vm = True
         needs_static = False
-        recommended = "vps_ssh" if vps_host else "local_demo"
+        recommended = "vps_ssh"
         detail = (
-            "Push git to Cursor Origin. Run the process (uvicorn/gunicorn/node) "
-            "on a VM; HTTP auto-update is git pull + restart behind the load balancer."
+            "Optional git on Cursor Origin. systemd (or AWS SSM restart) runs "
+            "uvicorn/gunicorn/node; Caddy is the load balancer."
         )
     else:
         runtime = "local_demo"
@@ -130,13 +142,16 @@ def recommend_host(
     chosen: ShipTarget = target or recommended
     if chosen == "local_demo":
         runtime = "local_demo"
+        needs_vm = False
+        lb = "none"
 
-    vm_needed = bool(needs_vm and chosen in {"vps_ssh", "openship_cloud", "local_demo"})
+    vm_needed = bool(needs_vm and chosen in _REMOTE_TARGETS)
+    http_auto = chosen != "local_demo" and kind != "unknown"
     return HostPlan(
         git_target="cursor_origin",
         runtime=runtime,
         host_kind=kind,
-        http_auto_update=kind in {"static_http", "edge_http"} or chosen != "aws_guide",
+        http_auto_update=http_auto,
         load_balancer=lb,
         needs_vm=vm_needed,
         needs_static_serve=needs_static,
@@ -153,7 +168,7 @@ def ready_to_ship(
     vps_host: str = "",
     target: ShipTarget | None = None,
 ) -> ReadyReport:
-    """Gates that must be green before auto-ship (detect, commands, domain, Origin)."""
+    """Gates that must be green before auto-ship (detect, commands, domain, HTTP)."""
     stack = detect_project(project_path)
     host = recommend_host(stack, hostname=hostname, vps_host=vps_host, target=target)
     origin = origin_status()
@@ -174,7 +189,7 @@ def ready_to_ship(
 
     cmds_ok = True
     if stack.framework == "static" or stack.category == "static":
-        cmd_detail = "static site — no compile step"
+        cmd_detail = "static site — Caddy file_server"
     elif stack.suggested_build or stack.start_command or stack.install_command:
         cmd_detail = " → ".join(
             c for c in (stack.install_command, stack.build_command, stack.start_command) if c
@@ -200,7 +215,7 @@ def ready_to_ship(
     gates.append(
         {
             "id": "domain",
-            "title": "Public hostname + load balancer records",
+            "title": "Public hostname + Caddy load balancer records",
             "status": "pass" if domain_ok else "fail",
             "detail": (
                 "; ".join(host.domain_records)
@@ -213,32 +228,40 @@ def ready_to_ship(
         blockers.append("domain")
 
     origin_ok = bool(origin.get("ready"))
+    origin_required = (target or host.recommended_target) == "cursor_origin"
     gates.append(
         {
             "id": "origin",
-            "title": "Cursor Origin git host",
-            "status": "pass" if origin_ok else "pending",
+            "title": "Cursor Origin git host (optional)",
+            "status": "pass" if origin_ok else ("pending" if origin_required else "pass"),
             "detail": origin.get("detail") or "ORIGIN_MODE=simulate or origin CLI",
         }
     )
-    if host.recommended_target == "cursor_origin" and not origin_ok:
+    if origin_required and not origin_ok:
         blockers.append("origin")
 
-    runtime_ok = True
     runtime_detail = f"{host.runtime} lb={host.load_balancer} vm={host.needs_vm}"
-    if host.needs_vm and not vps_host and host.recommended_target == "vps_ssh":
-        runtime_ok = False
-        runtime_detail = "needs a VM host (vps_host) or switch to local_demo"
     gates.append(
         {
             "id": "runtime",
-            "title": "HTTP runtime (Vercel / static serve / VM)",
-            "status": "pass" if runtime_ok else "fail",
+            "title": "HTTP runtime (Caddy + systemd on VPS/Hetzner/AWS)",
+            "status": "pass",
             "detail": runtime_detail,
         }
     )
-    if not runtime_ok:
-        blockers.append("runtime")
+
+    execute_needed = (target or host.recommended_target) in _REMOTE_TARGETS
+    execute_ok = (not execute_needed) or bool(vps_host)
+    gates.append(
+        {
+            "id": "execute_host",
+            "title": "VPS host for live apply",
+            "status": "pass" if execute_ok else "pending",
+            "detail": (
+                vps_host if vps_host else "plan ready; set vps_host or OPENVAULT_VPS_HOST to apply"
+            ),
+        }
+    )
 
     gates.append(
         {
@@ -246,14 +269,13 @@ def ready_to_ship(
             "title": "HTTP auto-update",
             "status": "pass" if host.http_auto_update else "pending",
             "detail": (
-                "Origin push → Vercel preview/production"
-                if host.runtime == "vercel_app"
-                else "git pull + process restart behind load balancer"
+                "git pull + systemd restart + Caddy reload; GET /healthz"
+                if host.runtime != "local_demo"
+                else "local demo has no public auto-update"
             ),
         }
     )
 
-    # Origin simulate still counts as ready for the git step when ORIGIN_MODE=simulate.
     if "origin" in blockers and origin.get("mode") == "simulate":
         blockers = [b for b in blockers if b != "origin"]
         for gate in gates:
@@ -262,8 +284,10 @@ def ready_to_ship(
                 gate["detail"] = "ORIGIN_MODE=simulate — plan only, no live push"
 
     ready = not blockers
+    ready_to_execute = ready and execute_ok
     return ReadyReport(
         ready=ready,
+        ready_to_execute=ready_to_execute,
         stack=stack.to_dict(),
         host=host.to_dict(),
         origin=origin,

@@ -94,7 +94,7 @@ def detect_project(project_path: str | Path) -> DetectedStack:
             host_kind="unknown",
         )
 
-    vercel = _load_json(root / "vercel.json")
+    vercel = _load_json(root / "vercel.json")  # detect hint only; not a deploy target
     compose_file = _first_existing(root, ("docker-compose.yml", "compose.yml", "compose.yaml"))
     dockerfile = root / "Dockerfile"
     has_compose = compose_file is not None

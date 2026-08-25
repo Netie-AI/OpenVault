@@ -83,3 +83,23 @@ jobs:
         with:
           name: demo-report-${{ matrix.os }}-py${{ matrix.python-version }}
           path: reports/
+
+  openmw:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Install Python 3.12
+        run: uv python install 3.12
+
+      - name: OpenMW pytest
+        working-directory: OpenMW
+        run: |
+          uv sync --dev
+          uv run pytest tests/ -q

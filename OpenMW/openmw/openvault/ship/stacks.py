@@ -1,13 +1,13 @@
-"""Stack catalog — ids, ports, commands, and Origin/Vercel vs VM host kinds.
+"""Stack catalog — ids, ports, commands, and OpenVault HTTP host kinds.
 
 `GET /api/ship/stacks` exposes this so the UI can override detection using the
 same ids the detector emits. Host kinds (cited in hosting.py):
 
-- ``static_http`` / ``edge_http`` — git on Cursor Origin; HTTP via Vercel App
-  (push/PR preview, merge = production). Origin itself is a git forge, not
-  an app runtime: https://cursor.com/docs/origin
-- ``process`` / ``container`` — git on Origin; HTTP on a VM / compose / static
-  file server the operator already has.
+- ``static_http`` / ``edge_http`` — git on Cursor Origin (optional); HTTP via
+  OpenVault Caddy (file_server or reverse_proxy + systemd) on Hetzner / VPS /
+  AWS. Origin is a git forge, not an app runtime: https://cursor.com/docs/origin
+- ``process`` / ``container`` — git on Origin; HTTP on the same Caddy + systemd
+  (or compose) path. No Vercel.
 """
 
 from __future__ import annotations

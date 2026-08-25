@@ -1098,13 +1098,23 @@
     <!-- DEPLOY -->
     <section id="panel-deploy" class="panel">
       <h2 class="section-title">Deploy to Web</h2>
-      <p class="section-sub">Auto-detect Next.js / static / Python / Docker · ready-to-ship gates · Cursor Origin git + Vercel HTTP or VM</p>
+      <p class="section-sub">Auto-detect Next.js / static / Python / Docker · Caddy TLS + systemd on Hetzner / VPS / AWS (not Vercel)</p>
       <div class="vault-layout">
         <div class="glass vault-form">
           <label for="deployPath">Project path</label>
           <input id="deployPath" placeholder="/path/to/app" />
           <label for="deploySubdomain">Subdomain</label>
           <input id="deploySubdomain" placeholder="app.example.com" />
+          <label for="deployVpsHost">VPS host</label>
+          <input id="deployVpsHost" placeholder="root@1.2.3.4 or OPENVAULT_VPS_HOST" />
+          <label for="deployTarget">Ship target</label>
+          <select id="deployTarget">
+            <option value="vps_ssh" selected>VPS / any box</option>
+            <option value="hetzner">Hetzner</option>
+            <option value="aws">AWS (systemd + SSM)</option>
+            <option value="cursor_origin">Origin git + OpenVault HTTP</option>
+            <option value="local_demo">Local demo</option>
+          </select>
           <label for="deploySource">Source</label>
           <select id="deploySource">
             <option value="airgpt">airgpt</option>
@@ -1116,7 +1126,7 @@
           <div class="actions">
             <button type="button" class="btn" id="runDetectBtn">Auto-detect</button>
             <button type="button" class="btn" id="runReadyBtn">Ready to ship</button>
-            <button type="button" class="btn" id="runOriginBtn">Ship to Origin</button>
+            <button type="button" class="btn" id="runOriginBtn">Ship HTTP</button>
             <button type="button" class="btn-ghost" id="runDeployBtn">Run gates</button>
             <button type="button" class="btn-ghost" id="runSmokeBtn">Playwright smoke</button>
             <button type="button" class="btn-ghost" id="runExecuteBtn">Execute OpenShip</button>
@@ -1670,7 +1680,8 @@
           body: JSON.stringify({
             project_path: document.getElementById("deployPath").value,
             hostname: document.getElementById("deploySubdomain").value,
-            target: "cursor_origin"
+            vps_host: document.getElementById("deployVpsHost").value,
+            target: document.getElementById("deployTarget").value || "vps_ssh"
           })
         });
         const data = await res.json();
@@ -1688,28 +1699,30 @@
     if (originBtn) {
       originBtn.addEventListener("click", async () => {
         if (!apiMode) return;
-        document.getElementById("deployMsg").textContent = "Shipping to Cursor Origin (simulate unless origin CLI is present)…";
+        document.getElementById("deployMsg").textContent = "Shipping Caddy + systemd (simulate unless OPENVAULT_SHIP_MODE=live)…";
         const res = await fetch("/api/ship/auto", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             project_path: document.getElementById("deployPath").value,
             hostname: document.getElementById("deploySubdomain").value,
+            vps_host: document.getElementById("deployVpsHost").value,
             simulate: true,
-            target: "cursor_origin"
+            target: document.getElementById("deployTarget").value || "vps_ssh"
           })
         });
         const data = await res.json();
         const origin = data.origin || {};
-        document.getElementById("deployMsg").textContent = origin.remote_url
-          ? `Origin ${origin.remote_url}`
-          : "Origin ship failed";
+        const server = data.server || {};
+        document.getElementById("deployMsg").textContent = server.health_url
+          ? `HTTP ${server.health_url} · lb=caddy · ${server.provider || "vps"}`
+          : (origin.remote_url ? `Origin ${origin.remote_url}` : "Ship failed");
         if (data.ready && data.ready.gates) {
           renderDeployPlan({
             gates: data.ready.gates,
             ready_to_scale: data.ready.ready,
-            deploy_id: origin.plan_id,
-            ship_id: origin.repo
+            deploy_id: server.plan_id || origin.plan_id,
+            ship_id: server.service_name || origin.repo
           });
         }
       });
