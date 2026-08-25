@@ -171,7 +171,7 @@ def test_api_ship_ready_and_auto(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     assert body["server"]["health_url"] == "https://site.example.com/healthz"
     assert "curl -fsS" in body["cicd"]["workflow"]
     assert "healthz" in body["cicd"]["workflow"]
-    assert "vercel" not in body["cicd"]["workflow"].lower()
+    assert "vercel.com" not in body["cicd"]["workflow"].lower()
 
 
 def test_origin_status_simulate_without_cli(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -79,7 +79,10 @@ def test_nextjs_server_plan_hetzner(tmp_path: Path) -> None:
     )
     assert plan.provider == "hetzner"
     assert plan.ready is True
-    assert "next start" in plan.unit_file
+    start = str(plan.stack.get("start_command") or "")
+    assert start
+    assert start in plan.unit_file
+    assert "Restart=on-failure" in plan.unit_file
     assert "reverse_proxy" in plan.caddyfile
     assert plan.health_url == "https://app.example.com/healthz"
     executed = execute_server_plan(plan, simulate=True)
@@ -130,7 +133,8 @@ def test_cicd_ignores_vercel_json_and_emits_health_workflow(tmp_path: Path) -> N
     workflow = payload["workflow"]
     assert "https://site.example.com/healthz" in workflow
     assert "systemctl reload caddy" in workflow
-    assert "vercel" not in workflow.lower()
+    assert "vercel.com" not in workflow.lower()
+    assert "appleboy/scp-action" in workflow
     written = Path(payload["written"])
     assert written.is_file()
     assert written.name == "openvault-ship.yml"

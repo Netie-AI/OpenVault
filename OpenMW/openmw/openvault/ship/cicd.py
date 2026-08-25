@@ -79,7 +79,7 @@ def generate_ship_workflow(
     remote = f"/var/www/{service}"
     return f"""name: OpenVault ship
 
-# Replaces Vercel. Build here, run on Hetzner / VPS / AWS behind Caddy.
+# OpenVault ship: build here, run on Hetzner / VPS / AWS behind Caddy.
 on:
   push:
     branches: [main]
