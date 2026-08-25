@@ -40,7 +40,7 @@ from openmw.openvault.ship.gate import GateAction, GateDecision, check_gate
 from openmw.openvault.vault.fallback import FallbackManager
 from openmw.openvault.vault.store import KeyVault
 
-AccessKind = Literal["memory", "api", "component", "runtime", "model", "service"]
+AccessKind = Literal["memory", "api", "component", "runtime", "model", "service", "skill", "mcp"]
 AccessIntent = Literal["read", "write", "invoke", "deploy", "leave", "connect"]
 
 ACCESS_KINDS: tuple[AccessKind, ...] = (
@@ -50,6 +50,24 @@ ACCESS_KINDS: tuple[AccessKind, ...] = (
     "runtime",
     "model",
     "service",
+    "skill",
+    "mcp",
+)
+
+# Signposts may carry id/owner/location. These fields would mean this module
+# started holding Cortex's skill store (DR-0012). CortexClient strips the same
+# set when it indexes Cortex.
+SIGNPOST_FORBIDDEN_FIELDS: frozenset[str] = frozenset(
+    {
+        "skill_body",
+        "instructions",
+        "system_prompt",
+        "prompt",
+        "tool_schema",
+        "mcp_tools",
+        "skill_content",
+        "transcript",
+    }
 )
 
 # An intent is what the caller wants to do; a GateAction is what the existing
@@ -253,6 +271,54 @@ def build_registry(
             reachable=_peer_reachable(state, "openide"),
         )
     )
+    entries.append(
+        AccessEntry(
+            kind="runtime",
+            id="runtime.crew",
+            label="Cortex crew (parent/child runs)",
+            owner="cortex",
+            base_url=cortex_url,
+            path="/api/crew",
+            detail=(
+                "Crew loop and parent-task completion live in Cortex (DR-0012). "
+                "OpenVault gates invoke/leave; it does not spawn agents."
+            ),
+            reachable=_peer_reachable(state, "cortex"),
+        )
+    )
+
+    # --- skill / mcp: Cortex owns the bodies. We route, we do not store. ---
+    cortex_up = _peer_reachable(state, "cortex")
+    entries.append(
+        AccessEntry(
+            kind="skill",
+            id="cortex.skills",
+            label="Cortex skill registry",
+            owner="cortex",
+            base_url=cortex_url,
+            path="/api/skills",
+            detail=(
+                "Cortex holds skill bodies (outreach + system). OpenVault "
+                "gates load/invoke; it never returns prompt text (DR-0012)."
+            ),
+            reachable=cortex_up,
+        )
+    )
+    entries.append(
+        AccessEntry(
+            kind="mcp",
+            id="cortex.mcp",
+            label="Cortex MCP / tool graph",
+            owner="cortex",
+            base_url=cortex_url,
+            path="/api/mcp",
+            detail=(
+                "Live MCP tool schemas live with the loop. OpenVault holds "
+                "MCP credentials and the leave/invoke gate, not the schemas."
+            ),
+            reachable=cortex_up,
+        )
+    )
 
     # --- model: slot preference is ours; architecture choice is Cortex's. ---
     entries.append(
@@ -322,7 +388,8 @@ def registry_payload(
         "entries": [e.to_dict() for e in entries],
         "policy": (
             "OpenVault resolves location and decides access. It does not store memory, "
-            "run the agent loop, or pick the architecture preset — see PRODUCT_ROLES.md."
+            "run the agent loop, hold skill bodies, or pick the architecture preset — "
+            "see PRODUCT_ROLES.md and DR-0012."
         ),
     }
 

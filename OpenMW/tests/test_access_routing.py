@@ -17,6 +17,7 @@ from __future__ import annotations
 from fastapi.testclient import TestClient
 
 from openmw.openvault.app import create_app
+from openmw.openvault.route.access import SIGNPOST_FORBIDDEN_FIELDS
 
 
 def _client() -> TestClient:
@@ -40,9 +41,21 @@ def test_registry_lists_every_kind(tmp_path, monkeypatch):
     monkeypatch.setenv("OPENVAULT_HOME", str(tmp_path))
     body = _client().get("/api/access/registry").json()
 
-    assert set(body["kinds"]) == {"memory", "api", "component", "runtime", "model", "service"}
+    assert set(body["kinds"]) == {
+        "memory",
+        "api",
+        "component",
+        "runtime",
+        "model",
+        "service",
+        "skill",
+        "mcp",
+    }
     ids = {e["id"] for e in body["entries"]}
     assert "cortex.memory" in ids
+    assert "cortex.skills" in ids
+    assert "cortex.mcp" in ids
+    assert "runtime.crew" in ids
     assert "service.freeroute" in ids
     assert "service.freebuild" in ids
     assert "model.slots" in ids
@@ -79,31 +92,23 @@ def test_registry_never_carries_a_secret(tmp_path, monkeypatch):
 
 # Skill bodies, system prompts, and MCP tool schemas belong in Cortex (DR-0012).
 # A registry that starts carrying them has become the second store lock 5 forbids.
-_SKILL_BODY_FIELDS = frozenset(
-    {
-        "skill_body",
-        "instructions",
-        "system_prompt",
-        "prompt",
-        "tool_schema",
-        "mcp_tools",
-        "skill_content",
-    }
-)
 
 
 def test_access_registry_is_not_a_skill_store(tmp_path, monkeypatch):
-    """DR-0012: OpenVault signposts; it does not hold skill text."""
+    """DR-0012: skill/mcp kinds are signposts; they do not hold skill text."""
     monkeypatch.setenv("OPENVAULT_HOME", str(tmp_path))
     body = _client().get("/api/access/registry").json()
 
-    assert "skill" not in body["kinds"]
-    assert "mcp" not in body["kinds"]
+    assert "skill" in body["kinds"]
+    assert "mcp" in body["kinds"]
     assert "run the agent loop" in body["policy"]
+    assert "hold skill bodies" in body["policy"]
     for entry in body["entries"]:
-        assert not (_SKILL_BODY_FIELDS & set(entry))
+        assert not (SIGNPOST_FORBIDDEN_FIELDS & set(entry))
         meta = entry.get("meta") or {}
-        assert not (_SKILL_BODY_FIELDS & set(meta))
+        assert not (SIGNPOST_FORBIDDEN_FIELDS & set(meta))
+        if entry["kind"] in ("skill", "mcp"):
+            assert entry["owner"] == "cortex"
 
 
 # --- resolve: location + verdict, never content ---
@@ -135,6 +140,66 @@ def test_memory_resolves_to_cortex_and_returns_no_content(tmp_path, monkeypatch)
         "gate",
         "entry",
     }
+
+
+def test_skill_resolves_to_cortex_and_returns_no_content(tmp_path, monkeypatch):
+    """DR-0012: Cortex owns skill bodies. We hand back an address, not the skill."""
+    monkeypatch.setenv("OPENVAULT_HOME", str(tmp_path))
+    client = _client()
+    _add_key(client, "ollama", "local")
+
+    body = client.post(
+        "/api/access/resolve",
+        json={"kind": "skill", "id": "cortex.skills", "intent": "invoke"},
+    ).json()
+
+    assert body["found"] is True
+    assert body["owner"] == "cortex"
+    assert body["location"].endswith("/api/skills")
+    assert not (SIGNPOST_FORBIDDEN_FIELDS & set(body))
+    assert not (SIGNPOST_FORBIDDEN_FIELDS & set(body.get("entry") or {}))
+
+
+def test_mcp_resolves_to_cortex_and_returns_no_content(tmp_path, monkeypatch):
+    monkeypatch.setenv("OPENVAULT_HOME", str(tmp_path))
+    client = _client()
+    _add_key(client, "ollama", "local")
+
+    body = client.post(
+        "/api/access/resolve",
+        json={"kind": "mcp", "id": "cortex.mcp", "intent": "invoke"},
+    ).json()
+
+    assert body["found"] is True
+    assert body["owner"] == "cortex"
+    assert body["location"].endswith("/api/mcp")
+
+
+def test_crew_gate_is_resolve_plus_audit(tmp_path, monkeypatch):
+    """Cortex crew talks here. OpenVault still does not spawn the child."""
+    monkeypatch.setenv("OPENVAULT_HOME", str(tmp_path))
+    client = _client()
+    _add_key(client, "ollama", "local")
+
+    body = client.post(
+        "/api/crew/gate",
+        json={
+            "kind": "skill",
+            "id": "cortex.skills",
+            "intent": "invoke",
+            "parent_run_id": "run-parent-1",
+            "child_id": "child-outreach",
+            "deficit": "need skill outreach.human-email",
+        },
+    ).json()
+
+    assert body["found"] is True
+    assert body["owner"] == "cortex"
+    assert body["parent_run_id"] == "run-parent-1"
+    assert body["child_id"] == "child-outreach"
+    assert body["deficit"] == "need skill outreach.human-email"
+    assert "skill_body" not in body
+    assert "skill_body" not in (body.get("entry") or {})
 
 
 def test_every_resolve_carries_a_gate_decision(tmp_path, monkeypatch):

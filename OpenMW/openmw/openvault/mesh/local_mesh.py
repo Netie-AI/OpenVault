@@ -333,11 +333,22 @@ def build_connect_pack(state: LocalMeshState | None = None) -> dict[str, Any]:
                 f"{(ov.base_url if ov else 'http://127.0.0.1:5000').rstrip('/')}"
                 "/api/deploy/from-cortex"
             ),
+            "access_resolve": (
+                f"{(ov.base_url if ov else 'http://127.0.0.1:5000').rstrip('/')}/api/access/resolve"
+            ),
+            "crew_gate": (
+                f"{(ov.base_url if ov else 'http://127.0.0.1:5000').rstrip('/')}/api/crew/gate"
+            ),
             "approved": bool(ov.approved) if ov else True,
         },
         "cortex": {
             "base_url": cortex.base_url if cortex else DEFAULT_CORTEX_URL,
             "health": f"{(cortex.base_url if cortex else DEFAULT_CORTEX_URL).rstrip('/')}/health",
+            "skills": (
+                f"{(cortex.base_url if cortex else DEFAULT_CORTEX_URL).rstrip('/')}/api/skills"
+            ),
+            "crew": f"{(cortex.base_url if cortex else DEFAULT_CORTEX_URL).rstrip('/')}/api/crew",
+            "mcp": f"{(cortex.base_url if cortex else DEFAULT_CORTEX_URL).rstrip('/')}/api/mcp",
             "approved": bool(cortex and cortex.approved),
             "status": cortex.status if cortex else "unknown",
         },

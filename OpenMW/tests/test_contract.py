@@ -43,6 +43,9 @@ CONTRACT_ROUTES = [
     ("POST", "/api/cloud/shares"),
     ("POST", "/api/cloud/firewall/check"),
     ("POST", "/api/cloud/sessions"),
+    ("POST", "/api/crew/gate"),
+    ("GET", "/api/cortex/skills"),
+    ("GET", "/api/cortex/crew"),
     ("POST", "/v1/chat/completions"),
 ]
 
@@ -90,6 +93,11 @@ def test_connect_pack_pins_openide_to_airgpt(app: FastAPI) -> None:
     # OpenVault stays the custody + gate surface in the pack it publishes.
     assert pack["openvault"]["base_url"] == "http://127.0.0.1:5000"
     assert pack["cortex"]["base_url"] == "http://127.0.0.1:8010"
+    assert pack["openvault"]["crew_gate"].endswith("/api/crew/gate")
+    assert pack["openvault"]["access_resolve"].endswith("/api/access/resolve")
+    assert pack["cortex"]["skills"].endswith("/api/skills")
+    assert pack["cortex"]["crew"].endswith("/api/crew")
+    assert pack["cortex"]["mcp"].endswith("/api/mcp")
 
 
 @pytest.mark.parametrize("flag", ["bypass", "bypass_gate", "force", "skip_rules", "ignore_gate"])

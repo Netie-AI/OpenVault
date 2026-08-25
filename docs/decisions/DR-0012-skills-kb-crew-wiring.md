@@ -165,6 +165,40 @@ Still a PRODUCT_ROLES amendment (do not build here):
   does, those entries must be derived from live Cortex/mesh state, never a
   hardcoded catalogue of bodies.
 
+## Wire Cortex crew must call (OpenVault half, shipped)
+
+This environment cannot write `Netie-AI/Cortex` (private, 404 with the agent
+token). The OpenVault side of the conversation is implemented so Cortex agents
+have a stable HTTP contract the moment that repo is reachable.
+
+**Cortex owns and must serve** (not implemented here):
+
+| Path | Returns |
+|------|---------|
+| `GET /api/skills` | Skill ids + tags (`outreach` / `system`). Bodies stay in Cortex. |
+| `GET /api/crew` | Parent-run ids + status. No transcripts. |
+| `GET /api/mcp` | MCP server ids the loop may call. Schemas stay in Cortex. |
+
+**Cortex crew calls OpenVault** (implemented):
+
+```
+NEED on graph
+  -> POST {openvault}/api/crew/gate
+       {kind, id, intent: invoke, parent_run_id, child_id, deficit}
+  -> location + allowed. No skill_body.
+  -> if allowed: Cortex loads the skill / invokes MCP / sends outreach
+  -> if leave/send: same gate with intent leave
+```
+
+Connect pack (`GET /api/local/connect-pack`) now publishes:
+
+- `openvault.crew_gate`, `openvault.access_resolve`
+- `cortex.skills`, `cortex.crew`, `cortex.mcp`
+
+`GET /api/cortex/skills` and `GET /api/cortex/crew` are **indexes**: if Cortex
+is online they return ids after stripping forbidden fields; they never cache
+prompt text.
+
 ## Confirmation
 
 `OpenMW/tests/test_contract.py`:
@@ -176,8 +210,17 @@ Still a PRODUCT_ROLES amendment (do not build here):
 
 `OpenMW/tests/test_access_routing.py`:
 
-- `test_access_registry_is_not_a_skill_store` — registry kinds stay location
-  kinds; policy still forbids running the agent loop; no skill-body fields.
+- `test_access_registry_is_not_a_skill_store` — `skill`/`mcp` kinds exist as
+  signposts; policy still forbids running the agent loop; no skill-body fields.
+- `test_skill_resolves_to_cortex_and_returns_no_content`
+- `test_crew_gate_is_resolve_plus_audit`
 
-Mutation-check (R-0007): adding `/api/skills` or a `skill_body` on a registry
-entry must fail those tests. A decision with no enforcer is a wish (DR-0001).
+`OpenMW/tests/test_cortex_crew_client.py`:
+
+- `test_skills_index_keeps_ids_and_drops_bodies` — a Cortex payload that
+  includes `skill_body` is stripped before it leaves OpenVault.
+- `test_crew_index_keeps_run_ids_and_drops_transcripts`
+
+Mutation-check (R-0007): adding `/api/skills` (a body catalog) or a
+`skill_body` on a registry entry must fail those tests. A decision with no
+enforcer is a wish (DR-0001).

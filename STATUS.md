@@ -4,9 +4,9 @@
 > [`PARKING_LOT.md`](PARKING_LOT.md). Map: [`docs/ACTIVE.md`](docs/ACTIVE.md).
 
 Last reconciled: 2026-08-25. **HUMAN_STOP** still in force for #18 HT1-HT5. Epic #13 was
-reopened 2026-08-22 (F17 bak + F18 CSV/retrieve). #37 closed locally but the code was not
-on `main`; this wave re-lands it with #38 and #39. Skills SoT is Netie-KB `:8030`
-([`DR-0012`](docs/decisions/DR-0012-skills-kb-crew-wiring.md)), not this vault.
+reopened 2026-08-22 (F17 bak + F18 CSV/retrieve). #37/#38/#39 re-landed on `main`. Skills
+SoT is Netie-KB `:8030` ([`DR-0012`](docs/decisions/DR-0012-skills-kb-crew-wiring.md));
+OpenVault `POST /api/crew/gate` shipped. Cortex-crew merge blocked (repo 404).
 
 **UI:** `:3010` / `:5000`. Scripted demo: `cd OpenMW && uv run --no-sync python scripts/one_seat_demo.py`
 
@@ -26,11 +26,11 @@ Founder authorized #13 under HUMAN_STOP (2026-08-22 yes-now). Do not claim HT1-H
 | # | Status |
 |---|--------|
 | #18 DEMO epic | Awaits your HT1-HT5 |
-| #13 EPIC custody | Reopened F17/F18. #37 re-land + #38 + #39 in PR |
+| #13 EPIC custody | Reopened F17/F18. #37 re-land + #38 + #39 |
 | #33 EPIC host+meter | Open — children closed; blocked on #18 HT1 |
-| #38 PM CSV ingest | Implemented this wave; independent verify still open |
-| #39 agent retrieve | Implemented this wave; hard-denies PAN |
-| **Skills / KB / crew** | [`DR-0012`](docs/decisions/DR-0012-skills-kb-crew-wiring.md): keys=OpenVault, skills=Netie-KB `:8030`, Cortex stirs. Cortex-crew merge blocked (repo 404) |
+| #38 PM CSV ingest | Implemented; independent verify still open |
+| #39 agent retrieve | Implemented; hard-denies PAN |
+| **Skills / KB / crew** | Keys=OpenVault. Skills=Netie-KB `:8030`. Cortex stirs. `POST /api/crew/gate` shipped. Cortex-crew merge blocked (404) |
 | Pricing | **NEEDS-YOU.** DR-0009 (a) — we carry provider cost |
 
 ## Clone-and-verify

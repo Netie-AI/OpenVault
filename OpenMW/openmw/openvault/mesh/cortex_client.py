@@ -1,4 +1,9 @@
-"""Cortex / Netie Engine client — status, engines, models."""
+"""Cortex / Netie Engine client — status, engines, models, skills/crew index.
+
+Skills and crew runs live in Cortex (DR-0012). This client may *index* them
+for mesh status. It must never persist skill bodies, system prompts, or
+transcripts — those would be the second store PRODUCT_ROLES lock 5 forbids.
+"""
 
 from __future__ import annotations
 
@@ -12,11 +17,38 @@ import structlog
 
 from openmw.model_router import ModelRouter
 from openmw.openvault.mesh.local_mesh import DEFAULT_CORTEX_URL, cortex_base_url
+from openmw.openvault.route.access import SIGNPOST_FORBIDDEN_FIELDS
 
 log = structlog.get_logger()
 
+# Paths Cortex must serve. OpenVault signposts these; it does not implement them.
+CORTEX_SKILLS_PATH = "/api/skills"
+CORTEX_CREW_PATH = "/api/crew"
+CORTEX_MCP_PATH = "/api/mcp"
+
 # Re-export shared mesh default (http://127.0.0.1:8010); override via CORTEX_URL.
-__all__ = ("DEFAULT_CORTEX_URL", "CortexClient", "CortexStatus")
+__all__ = (
+    "CORTEX_CREW_PATH",
+    "CORTEX_MCP_PATH",
+    "CORTEX_SKILLS_PATH",
+    "DEFAULT_CORTEX_URL",
+    "CortexClient",
+    "CortexStatus",
+    "strip_skill_bodies",
+)
+
+
+def strip_skill_bodies(value: Any) -> Any:
+    """Drop skill/prompt/transcript fields. Location + ids may remain."""
+    if isinstance(value, dict):
+        return {
+            key: strip_skill_bodies(item)
+            for key, item in value.items()
+            if key not in SIGNPOST_FORBIDDEN_FIELDS
+        }
+    if isinstance(value, list):
+        return [strip_skill_bodies(item) for item in value]
+    return value
 
 
 @dataclass(frozen=True)
@@ -159,6 +191,72 @@ class CortexClient:
             "local_count": len(local),
         }
 
+    async def skills_index(self) -> dict[str, Any]:
+        """Skill ids Cortex currently advertises. Never skill text (DR-0012)."""
+        location = f"{self.base_url}{CORTEX_SKILLS_PATH}"
+        payload = await self._get_json((CORTEX_SKILLS_PATH,))
+        if payload is None:
+            return {
+                "online": False,
+                "owner": "cortex",
+                "location": location,
+                "skills": [],
+                "policy": ("OpenVault signposts. Cortex holds skill bodies. See DR-0012."),
+            }
+        cleaned = strip_skill_bodies(payload)
+        skills = _as_id_list(cleaned, keys=("skills", "items", "data"))
+        return {
+            "online": True,
+            "owner": "cortex",
+            "location": location,
+            "skills": skills,
+            "policy": ("OpenVault signposts. Cortex holds skill bodies. See DR-0012."),
+        }
+
+    async def crew_index(self) -> dict[str, Any]:
+        """Parent-run ids only. Transcripts are stripped (DR-0012)."""
+        location = f"{self.base_url}{CORTEX_CREW_PATH}"
+        payload = await self._get_json((CORTEX_CREW_PATH,))
+        if payload is None:
+            return {
+                "online": False,
+                "owner": "cortex",
+                "location": location,
+                "runs": [],
+                "policy": (
+                    "Crew parent/child runs live in Cortex. OpenVault gates "
+                    "invoke via POST /api/crew/gate."
+                ),
+            }
+        cleaned = strip_skill_bodies(payload)
+        runs = _as_id_list(cleaned, keys=("runs", "parents", "items", "data"))
+        return {
+            "online": True,
+            "owner": "cortex",
+            "location": location,
+            "runs": runs,
+            "policy": (
+                "Crew parent/child runs live in Cortex. OpenVault gates "
+                "invoke via POST /api/crew/gate."
+            ),
+        }
+
+    async def _get_json(self, paths: tuple[str, ...]) -> dict[str, Any] | list[Any] | None:
+        async with httpx.AsyncClient(timeout=self._timeout_s) as client:
+            for path in paths:
+                try:
+                    resp = await client.get(f"{self.base_url}{path}")
+                except httpx.HTTPError:
+                    continue
+                if 200 <= resp.status_code < 300:
+                    try:
+                        data: Any = resp.json()
+                    except json.JSONDecodeError:
+                        return None
+                    if isinstance(data, (dict, list)):
+                        return data
+        return None
+
 
 def _local_engine_catalog() -> list[dict[str, Any]]:
     return [
@@ -198,3 +296,43 @@ def _map_hardware_tier_to_cortex(tier: str) -> str:
         "XLARGE": "T3",
     }
     return mapping.get(tier, "T1")
+
+
+def _as_id_list(
+    payload: dict[str, Any] | list[Any], *, keys: tuple[str, ...]
+) -> list[dict[str, str]]:
+    """Keep id + tag/owner only so an index cannot smuggle a skill body."""
+    rows: list[Any]
+    if isinstance(payload, list):
+        rows = payload
+    else:
+        rows = []
+        for key in keys:
+            found = payload.get(key)
+            if isinstance(found, list):
+                rows = found
+                break
+        if not rows and "id" in payload:
+            rows = [payload]
+    out: list[dict[str, str]] = []
+    for row in rows:
+        if isinstance(row, str):
+            out.append({"id": row})
+            continue
+        if not isinstance(row, dict):
+            continue
+        item_id = str(row.get("id") or row.get("name") or "")
+        if not item_id:
+            continue
+        slim: dict[str, str] = {"id": item_id}
+        tag = row.get("tag") or row.get("kind")
+        if isinstance(tag, str) and tag:
+            slim["tag"] = tag
+        owner = row.get("owner")
+        if isinstance(owner, str) and owner:
+            slim["owner"] = owner
+        status = row.get("status")
+        if isinstance(status, str) and status:
+            slim["status"] = status
+        out.append(slim)
+    return out

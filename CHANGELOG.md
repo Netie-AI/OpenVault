@@ -2,6 +2,20 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-08-25 - Cortex crew gate + skill/mcp signposts (DR-0012 wire)
+
+- **Cortex agents have an OpenVault number to call.** `POST /api/crew/gate`
+  is resolve + audit (`parent_run_id`, `child_id`, `deficit`). Location and
+  allowed, never a skill body. Connect pack publishes `crew_gate`,
+  `access_resolve`, and Cortex's `skills` / `crew` / `mcp` URLs.
+- **Access kinds `skill` and `mcp`** signpost `cortex.skills` and `cortex.mcp`
+  the same way `cortex.memory` already works. `runtime.crew` points at Cortex
+  `/api/crew`. Indexes `GET /api/cortex/skills` and `/api/cortex/crew` strip
+  `skill_body` / `transcript` if Cortex ever sends them.
+- **Cortex code is not in this tree.** `Netie-AI/Cortex` is 404 with this
+  agent's GitHub token. The registry, parent/child loop, and next-email skill
+  load still have to land there once the repo is on the environment.
+
 ## 2026-08-25 - Skills, KB, and Cortex crew: name the three stores (DR-0012, proposed)
 
 - **The skill library is still not here.** Reviews of agent outreach, human-email
