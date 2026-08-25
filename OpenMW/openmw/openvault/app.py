@@ -114,6 +114,7 @@ from openmw.openvault.vault.budget import configured_ceiling
 from openmw.openvault.vault.crypto import Seal, VaultCryptoError, VaultSealedError
 from openmw.openvault.vault.env_ingest import ingest_environment, scan_environment
 from openmw.openvault.vault.fallback import FallbackConfig, FallbackManager
+from openmw.openvault.vault.pm_import import ingest_import_dir, ingest_pm_csv
 from openmw.openvault.vault.precheck import PrecheckLoop, precheck_all, precheck_one
 from openmw.openvault.vault.providers import (
     catalog_coverage_report,
@@ -655,6 +656,21 @@ class EnvIngestBody(BaseModel):
     include_unknown: bool = False
 
 
+class PmIngestBody(BaseModel):
+    """Password-manager CSV ingest. Dry-run default; never scrapes vendors."""
+
+    dry_run: bool = True
+    csv_text: str | None = None
+    scan_import_dir: bool = True
+    filename: str = ""
+
+
+class BackupRetireBody(BaseModel):
+    """Passphrase needed to unwrap a passphrase-scrypt wrap during bak verify."""
+
+    passphrase: str = ""
+
+
 class AccountCreate(BaseModel):
     display_name: str
     email: str | None = None
@@ -1089,6 +1105,7 @@ def create_app(
             base_url=body.base_url,
             priority=body.priority,
             account_id=account_id,
+            custody="tenant",
         )
         _audit_custody(
             "key_create", request, key_id=record.id, provider=record.provider, account_id=account_id
@@ -2467,6 +2484,35 @@ def create_app(
             _audit_custody("env_ingest", request, imported=result.get("imported", 0))
         return result
 
+    @app.post("/api/vault/ingest-pm")
+    def vault_ingest_pm(body: PmIngestBody, request: Request) -> dict[str, Any]:
+        """Import Google / Apple / Chrome password CSVs into sealed secrets."""
+        _require_loopback(request, "pm ingest")
+        if not body.dry_run:
+            _require_unsealed(state_seal, "pm ingest")
+        if body.csv_text is not None:
+            result = ingest_pm_csv(
+                state_secrets,
+                body.csv_text,
+                dry_run=body.dry_run,
+                seal=state_seal,
+                source=body.filename or "posted",
+            )
+        else:
+            result = ingest_import_dir(
+                state_secrets,
+                dry_run=body.dry_run,
+                seal=state_seal,
+            )
+        if not body.dry_run:
+            _audit_custody(
+                "pm_ingest",
+                request,
+                imported=result.get("imported", 0),
+                skipped=result.get("skipped", 0),
+            )
+        return result
+
     @app.get("/api/vault/status")
     def vault_status() -> dict[str, Any]:
         """Whether the master key is in memory, and whether a passphrase is set."""
@@ -2501,6 +2547,20 @@ def create_app(
         except (VaultCryptoError, VaultSealedError) as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         _audit_custody("vault_passphrase_set", request, ok=True)
+        return {"ok": True, **state_seal.status()}
+
+    @app.post("/api/vault/backup/retire")
+    def vault_retire_backup(body: BackupRetireBody, request: Request) -> dict[str, Any]:
+        """DR-0010 (c): unwrap live key, byte-compare bak, then delete the bak."""
+        _require_loopback(request, "vault backup retire")
+        _require_unsealed(state_seal, "vault backup retire")
+        try:
+            state_seal.retire_plaintext_backup(passphrase=body.passphrase)
+        except VaultSealedError as exc:
+            raise HTTPException(status_code=403, detail=str(exc)) from exc
+        except VaultCryptoError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        _audit_custody("vault_backup_retired", request, ok=True)
         return {"ok": True, **state_seal.status()}
 
     @app.post("/api/apikeys")

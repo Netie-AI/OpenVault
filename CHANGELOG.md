@@ -2,6 +2,24 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-08-25 - Custody reopen lands on GitHub (F17 bak + F18 CSV + agent retrieve)
+
+- **#37 re-landed on the branch that GitHub actually has.** Independent verify had
+  closed the ticket, but `main` still required `master.key.v0.bak` after migrate and
+  had no retire route. Status now reports `plaintext_backup_present` even while
+  unsealed. `POST /api/vault/backup/retire` unwraps the live wrap, byte-compares the
+  bak, and deletes only on match. A folder of `keys.db` + bak without a live wrapped
+  key does not yield plaintext. DR-0010 stays `proposed`.
+- **#38 password-manager CSV ingest.** `POST /api/vault/ingest-pm` and
+  `OPENVAULT_HOME/import/*.csv` accept Google / Apple / Chrome shapes. Dry-run
+  default. CVV columns stripped with an explicit reason. Sealed fails closed.
+  Synthetic fixtures only.
+- **#39 agent thin-client retrieve.** `openvault secret get` calls existing reveal
+  gates over loopback HTTP. Hard-denies `payment_card` / PAN. Does not cache
+  passwords on disk. Sealed fails closed.
+- **Account-attached keys are tenant custody (DR-0009).** `POST /api/accounts/{id}/keys`
+  no longer defaulted into the pooled spend list.
+
 ## 2026-08-20 - Port custody: name the application that is blocking us (DR-0011, proposed)
 
 - **The launcher stopped adopting strangers.** Every launcher had an "already listening on

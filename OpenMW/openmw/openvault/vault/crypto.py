@@ -22,6 +22,21 @@ from openmw.openvault.vault import keywrap
 log = structlog.get_logger()
 
 
+def plaintext_backup_path(key_path: Path) -> Path:
+    """Path of the v0 raw-key backup written at migrate (DR-0010).
+
+    Named ``master.key.v0.bak`` next to the live wrapped key. This file is a
+    recovery artefact only — :func:`_load_or_create_master_key` must never
+    read it as a live key (copy-open of ``keys.db`` + bak must fail closed).
+    """
+    return key_path.with_suffix(key_path.suffix + ".v0.bak")
+
+
+def plaintext_backup_present(key_path: Path | None = None) -> bool:
+    path = key_path if key_path is not None else master_key_path()
+    return plaintext_backup_path(path).is_file()
+
+
 class VaultCryptoError(RuntimeError):
     """Raised when ciphertext cannot be decrypted."""
 
@@ -67,7 +82,7 @@ def _migrate_plaintext_key(key_path: Path, key: bytes) -> None:
     than a leftover file, and it is the only recovery path if the wrapped key
     later fails to unwrap.
     """
-    backup = key_path.with_suffix(key_path.suffix + ".v0.bak")
+    backup = plaintext_backup_path(key_path)
     try:
         if not backup.exists():
             backup.write_bytes(key_path.read_bytes())
@@ -106,7 +121,7 @@ def _load_or_create_master_key(path: Path | None = None) -> bytes:
                     f"cannot unwrap the vault master key: {exc}. If this vault "
                     f"was created by a different Windows account, sign in as "
                     f"that account. A pre-migration copy may exist at "
-                    f"{key_path.with_suffix(key_path.suffix + '.v0.bak')}"
+                    f"{plaintext_backup_path(key_path)}"
                 ) from exc
             return key
 
@@ -183,6 +198,9 @@ class Seal:
             "sealed": self.is_sealed,
             "passphrase_configured": self.passphrase_configured,
             "wrap_method": self._wrap_method,
+            # Independent of sealed: a leftover bak is a copy-open hole even
+            # while the live wrap is in memory (DR-0010 / R-0011 CSS trap).
+            "plaintext_backup_present": plaintext_backup_present(self._key_path),
         }
 
     def _require_open(self) -> Fernet:
@@ -248,7 +266,46 @@ class Seal:
             passphrase=passphrase,
         )
         self._wrap_method = method
+        if plaintext_backup_present(self._key_path):
+            # Warn, do not refuse: the operator still needs a working wrap.
+            log.warning(
+                "plaintext_master_key_backup_present",
+                path=str(plaintext_backup_path(self._key_path)),
+            )
         log.info("vault_passphrase_configured", wrap_method=method)
+
+    def retire_plaintext_backup(self, *, passphrase: str = "") -> None:
+        """Verify the bak matches the live wrapped key, then delete it.
+
+        DR-0010 option (c). Unwraps the on-disk wrap via ``keywrap.unwrap``
+        (not the in-memory copy) and byte-compares to the bak. Mismatch
+        refuses so a tampered bak cannot be silently discarded.
+        """
+        if self.is_sealed or self._master_key is None:
+            raise VaultSealedError("cannot retire plaintext backup while the vault is sealed")
+        bak = plaintext_backup_path(self._key_path)
+        if not bak.is_file():
+            raise VaultCryptoError("no plaintext backup to retire")
+        if not self._key_path.is_file():
+            raise VaultCryptoError("live master key file is missing; refusing to retire bak")
+        blob = self._key_path.read_bytes()
+        if not keywrap.is_wrapped(blob):
+            raise VaultCryptoError("live master key is not wrapped; refusing to retire bak")
+        method = keywrap.peek_method(blob)
+        try:
+            if method == keywrap.METHOD_PASSPHRASE:
+                live, _used = keywrap.unwrap(blob, passphrase=passphrase)
+            else:
+                live, _used = keywrap.unwrap(blob)
+        except keywrap.KeyWrapError as exc:
+            raise VaultCryptoError(str(exc)) from exc
+        bak_bytes = bak.read_bytes()
+        if live != bak_bytes and live != bak_bytes.strip():
+            raise VaultCryptoError(
+                "plaintext backup does not match the live wrapped key; refusing to delete"
+            )
+        bak.unlink()
+        log.info("plaintext_master_key_backup_retired", path=str(bak))
 
 
 def mask_secret(secret: str, *, visible: int = 4) -> str:

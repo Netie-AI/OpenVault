@@ -396,6 +396,24 @@ def cmd_demo_path(args: argparse.Namespace) -> int:
     return subprocess.call(cmd, cwd=str(OPENMW))
 
 
+def cmd_secret_get(args: argparse.Namespace) -> int:
+    """Thin HTTP retrieve. Never caches. Hard-denies payment_card / PAN."""
+    cli_dir = str(Path(__file__).resolve().parent)
+    if cli_dir not in sys.path:
+        sys.path.insert(0, cli_dir)
+    from secret_retrieve import RetrieveError, retrieve_secret
+
+    base = args.base_url or f"http://127.0.0.1:{API_PORT}"
+    try:
+        payload = retrieve_secret(base, args.target, kind_hint=args.kind)
+    except RetrieveError as exc:
+        print(str(exc), file=sys.stderr)
+        return int(exc.status) if exc.status else 1
+    # Agents parse stdout. Never write the secret to OPENVAULT_HOME.
+    print(json.dumps(payload, indent=2))
+    return 0
+
+
 def cmd_app(_: argparse.Namespace) -> int:
     if not (SHELL / "node_modules").is_dir():
         subprocess.check_call([_npm(), "install", "--no-audit", "--no-fund"], cwd=str(SHELL))
@@ -437,6 +455,25 @@ def main() -> int:
 
     sub.add_parser("app", help="Electron desktop shell").set_defaults(func=cmd_app)
     sub.add_parser("doctor", help="Environment preflight").set_defaults(func=cmd_doctor)
+
+    secret = sub.add_parser("secret", help="Agent retrieve: keys and site passwords (never cards)")
+    secret_sub = secret.add_subparsers(dest="secret_cmd", required=True)
+    secret_get = secret_sub.add_parser(
+        "get", help="Reveal one API key or site password via loopback"
+    )
+    secret_get.add_argument("target", help="secret/key id or label")
+    secret_get.add_argument(
+        "--kind",
+        choices=("password", "key"),
+        default=None,
+        help="restrict lookup; payment_card is always denied",
+    )
+    secret_get.add_argument(
+        "--base-url",
+        default=None,
+        help="custody API (default http://127.0.0.1:$OPENVAULT_API_PORT)",
+    )
+    secret_get.set_defaults(func=cmd_secret_get)
 
     args = parser.parse_args()
     return int(args.func(args))
