@@ -40,7 +40,7 @@ def test_nextjs_host_kind_is_origin_http(tmp_path: Path) -> None:
     assert host.load_balancer == "caddy"
     assert host.http_auto_update is True
     assert host.needs_vm is True
-    assert host.recommended_target == "vps_ssh"
+    assert host.recommended_target == "openvault_hosted"
 
 
 def test_static_site_uses_origin_http(tmp_path: Path) -> None:
@@ -62,7 +62,7 @@ def test_fastapi_needs_vm(tmp_path: Path) -> None:
     host = recommend_host(stack, hostname="api.example.com", vps_host="vm.example.com")
     assert host.host_kind == "process"
     assert host.runtime == "vm_process"
-    assert host.recommended_target == "vps_ssh"
+    assert host.recommended_target == "openvault_hosted"
 
 
 def test_ready_to_ship_nextjs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -84,6 +84,10 @@ def test_ready_to_ship_nextjs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
     assert ids["detect"] == "pass"
     assert ids["http_auto_update"] == "pass"
     assert ids["execute_host"] == "pending"
+
+    hosted = ready_to_ship(str(tmp_path), hostname="app.example.com")
+    assert hosted.host["recommended_target"] == "openvault_hosted"
+    assert hosted.ready_to_execute is True
 
     live = ready_to_ship(
         str(tmp_path),

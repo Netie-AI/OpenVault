@@ -56,6 +56,19 @@ def list_targets() -> dict[str, Any]:
     return {
         "targets": [
             {
+                "id": "openvault_hosted",
+                "name": "OpenVault Hosted",
+                "git_host": False,
+                "http": "caddy_plus_systemd",
+                "http_auto_update": True,
+                "load_balancer": "caddy",
+                "ready": True,
+                "detail": (
+                    "Suggested product. We wrap AWS Lightsail and a VPS. "
+                    "Customer logs into OpenVault Service, not the laptop."
+                ),
+            },
+            {
                 "id": "vps_ssh",
                 "name": "VPS / any box",
                 "git_host": False,
@@ -63,7 +76,7 @@ def list_targets() -> dict[str, Any]:
                 "http_auto_update": True,
                 "load_balancer": "caddy",
                 "ready": True,
-                "detail": "Default. Replaces Vercel. Caddy TLS + systemd + /healthz.",
+                "detail": "Bring-your-own VPS. Caddy TLS + systemd + /healthz.",
             },
             {
                 "id": "hetzner",
@@ -128,7 +141,7 @@ def list_targets() -> dict[str, Any]:
 
 def build_ship_blueprint(
     *,
-    target: ShipTarget = "vps_ssh",
+    target: ShipTarget = "openvault_hosted",
     project_path: str = "",
     hostname: str = "",
     github_url: str = "",
@@ -160,6 +173,12 @@ def build_ship_blueprint(
 
 def _blueprint_steps(target: str, *, hostname: str, vps_host: str) -> list[dict[str, str]]:
     dns = f"Point {hostname or '<host>'} A record at the VPS"
+    if target == "openvault_hosted":
+        return [
+            {"id": "login", "title": "Log into OpenVault Service (not the laptop)"},
+            {"id": "wrap", "title": "We wrap AWS Lightsail or a VPS as OpenVault Hosted"},
+            {"id": "lb", "title": "Caddy TLS + systemd + /healthz"},
+        ]
     if target == "cursor_origin":
         return [
             {"id": "origin_repo", "title": "Create/push Origin repo"},

@@ -782,6 +782,7 @@
       <button type="button" data-tab="performance">Middleware Gain</button>
       <button type="button" data-tab="vault">Vault</button>
       <button type="button" data-tab="accounts">Accounts</button>
+      <button type="button" data-tab="service">Service</button>
       <button type="button" data-tab="mesh">Local Mesh</button>
       <button type="button" data-tab="engine">Engine</button>
       <button type="button" data-tab="deploy">Deploy</button>
@@ -1012,6 +1013,53 @@
       </div>
     </section>
 
+    <!-- SERVICE -->
+    <section id="panel-service" class="panel">
+      <h2 class="section-title">OpenVault Service</h2>
+      <p class="section-sub">Log in here — not the laptop. We wrap AWS Lightsail + a VPS as our product. Caddy TLS. Bring AWS MCP, their VPS, or their own server (Fast).</p>
+      <div class="vault-layout">
+        <div class="glass vault-form">
+          <h3 style="font-family:var(--serif);font-weight:500;margin-bottom:8px">Log in</h3>
+          <label for="svcEmail">Email</label>
+          <input id="svcEmail" placeholder="ops@acme.example" />
+          <label for="svcName">Display name</label>
+          <input id="svcName" placeholder="Acme" />
+          <label for="svcLoginKind">Log into</label>
+          <select id="svcLoginKind">
+            <option value="openvault" selected>OpenVault Hosted (suggested)</option>
+            <option value="aws">Their AWS (MCP / SSM)</option>
+            <option value="vps">Their VPS</option>
+            <option value="own_server">Their own server (Fast)</option>
+          </select>
+          <div class="actions">
+            <button type="button" class="btn" id="svcLoginBtn">Log in</button>
+            <button type="button" class="btn-ghost" id="svcCatalogBtn">Show prices</button>
+          </div>
+          <hr style="border:none;border-top:1px solid rgba(255,255,255,0.08);margin:18px 0" />
+          <h3 style="font-family:var(--serif);font-weight:500;margin-bottom:8px">Connect AWS / VPS</h3>
+          <label for="svcVpsHost">VPS / instance host</label>
+          <input id="svcVpsHost" placeholder="root@1.2.3.4 or i-abc" />
+          <label for="svcAwsRegion">AWS region</label>
+          <input id="svcAwsRegion" placeholder="us-east-1" />
+          <label for="svcAwsHint">AWS account hint</label>
+          <input id="svcAwsHint" placeholder="123456789012" />
+          <div class="actions">
+            <button type="button" class="btn" id="svcConnectBtn">Connect</button>
+            <button type="button" class="btn-ghost" id="svcAutoHostBtn">Auto-host</button>
+          </div>
+          <label for="svcProject" style="margin-top:10px">Project path (optional)</label>
+          <input id="svcProject" placeholder="/path/to/app" />
+          <p id="svcMsg" style="margin-top:12px;font-size:0.8rem;color:var(--text-muted)"></p>
+        </div>
+        <div class="glass vault-list">
+          <h3 style="font-family:var(--serif);font-weight:500;margin-bottom:8px">Prices (USD / month)</h3>
+          <div id="svcPriceList"></div>
+          <h3 style="font-family:var(--serif);font-weight:500;margin:18px 0 8px">Session</h3>
+          <div id="svcSession"></div>
+        </div>
+      </div>
+    </section>
+
     <!-- LOCAL MESH -->
     <section id="panel-mesh" class="panel">
       <h2 class="section-title">Local Mesh</h2>
@@ -1098,7 +1146,7 @@
     <!-- DEPLOY -->
     <section id="panel-deploy" class="panel">
       <h2 class="section-title">Deploy to Web</h2>
-      <p class="section-sub">Auto-detect Next.js / static / Python / Docker · Caddy TLS + systemd on Hetzner / VPS / AWS (not Vercel)</p>
+      <p class="section-sub">Log into OpenVault Service (not the laptop) · Caddy TLS + systemd on our wrapped AWS/VPS or theirs</p>
       <div class="vault-layout">
         <div class="glass vault-form">
           <label for="deployPath">Project path</label>
@@ -1109,11 +1157,12 @@
           <input id="deployVpsHost" placeholder="root@1.2.3.4 or OPENVAULT_VPS_HOST" />
           <label for="deployTarget">Ship target</label>
           <select id="deployTarget">
-            <option value="vps_ssh" selected>VPS / any box</option>
+            <option value="openvault_hosted" selected>OpenVault Hosted (our AWS/VPS wrap)</option>
+            <option value="vps_ssh">Their VPS</option>
             <option value="hetzner">Hetzner</option>
-            <option value="aws">AWS (systemd + SSM)</option>
+            <option value="aws">Their AWS (systemd + SSM)</option>
             <option value="cursor_origin">Origin git + OpenVault HTTP</option>
-            <option value="local_demo">Local demo</option>
+            <option value="local_demo">Local demo (operator)</option>
           </select>
           <label for="deploySource">Source</label>
           <select id="deploySource">
@@ -1953,6 +2002,125 @@
       if (data.open_url) window.open(data.open_url, "_blank");
     });
 
+    let svcSessionId = "";
+
+    function renderServicePrices(skus) {
+      const el = document.getElementById("svcPriceList");
+      if (!el) return;
+      el.innerHTML = (skus || []).map(s => `
+        <div class="hop-status">
+          <span class="pill ${s.id === "ov_hosted" ? "ok" : "unknown"}">$${s.monthly_usd}/mo</span>
+          <strong>${s.name}</strong>
+          <div class="key-meta">${(s.wraps || []).join(" + ")} · ${s.detail || ""}</div>
+        </div>`).join("");
+    }
+
+    async function refreshServiceCatalog() {
+      if (!apiMode) return;
+      const res = await fetch("/api/service/catalog");
+      const data = await res.json();
+      renderServicePrices(data.skus || []);
+    }
+
+    function showServiceSession(session) {
+      svcSessionId = session.session_id || svcSessionId;
+      const el = document.getElementById("svcSession");
+      if (!el) return;
+      const sku = session.sku || {};
+      el.innerHTML = `
+        <div class="hop-status">
+          <span class="pill ok">${session.login_kind}</span>
+          <strong>${session.email}</strong>
+          <div class="key-meta">${sku.name || ""} · $${sku.monthly_usd || "—"}/mo · host=${session.hostname || "—"} · box=${session.vps_host || "—"} · laptop=no</div>
+        </div>`;
+    }
+
+    const svcLoginBtn = document.getElementById("svcLoginBtn");
+    if (svcLoginBtn) {
+      svcLoginBtn.addEventListener("click", async () => {
+        if (!apiMode) return;
+        const res = await fetch("/api/service/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: document.getElementById("svcEmail").value,
+            display_name: document.getElementById("svcName").value,
+            login_kind: document.getElementById("svcLoginKind").value
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          document.getElementById("svcMsg").textContent = data.detail || "login failed";
+          return;
+        }
+        showServiceSession(data);
+        document.getElementById("svcMsg").textContent = "Logged into OpenVault Service (not the laptop)";
+      });
+    }
+    const svcCatalogBtn = document.getElementById("svcCatalogBtn");
+    if (svcCatalogBtn) {
+      svcCatalogBtn.addEventListener("click", refreshServiceCatalog);
+    }
+    const svcConnectBtn = document.getElementById("svcConnectBtn");
+    if (svcConnectBtn) {
+      svcConnectBtn.addEventListener("click", async () => {
+        if (!apiMode || !svcSessionId) {
+          document.getElementById("svcMsg").textContent = "Log in first";
+          return;
+        }
+        const kind = document.getElementById("svcLoginKind").value;
+        if (kind === "openvault") {
+          document.getElementById("svcMsg").textContent = "Pick AWS, VPS, or own server to connect";
+          return;
+        }
+        const res = await fetch("/api/service/connect", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            session_id: svcSessionId,
+            login_kind: kind,
+            vps_host: document.getElementById("svcVpsHost").value,
+            aws_region: document.getElementById("svcAwsRegion").value,
+            aws_account_hint: document.getElementById("svcAwsHint").value
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          document.getElementById("svcMsg").textContent = data.detail || "connect failed";
+          return;
+        }
+        showServiceSession(data);
+        document.getElementById("svcMsg").textContent = "Connected · Caddy stays ours";
+      });
+    }
+    const svcAutoHostBtn = document.getElementById("svcAutoHostBtn");
+    if (svcAutoHostBtn) {
+      svcAutoHostBtn.addEventListener("click", async () => {
+        if (!apiMode || !svcSessionId) {
+          document.getElementById("svcMsg").textContent = "Log in first";
+          return;
+        }
+        const res = await fetch("/api/service/auto-host", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            session_id: svcSessionId,
+            project_path: document.getElementById("svcProject").value,
+            simulate: true
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          document.getElementById("svcMsg").textContent = data.detail || "auto-host failed";
+          return;
+        }
+        if (data.session) showServiceSession(data.session);
+        const q = data.quote || {};
+        document.getElementById("svcMsg").textContent =
+          `Auto-host ${q.sku && q.sku.name || ""} · $${q.monthly_usd || "—"}/mo · lb=caddy`;
+      });
+    }
+
     function activateTab(name) {
       const btn = document.querySelector(`nav.tabs button[data-tab="${name}"]`);
       if (!btn) return;
@@ -1964,6 +2132,7 @@
       if (name === "engine") refreshEngine();
       if (name === "accounts") refreshAccounts();
       if (name === "mesh") refreshMesh();
+      if (name === "service") refreshServiceCatalog();
     }
 
     document.querySelectorAll("nav.tabs button").forEach(btn => {
@@ -1972,6 +2141,7 @@
         if (btn.dataset.tab === "deploy") history.replaceState(null, "", "#deploy");
         if (btn.dataset.tab === "accounts") history.replaceState(null, "", "#accounts");
         if (btn.dataset.tab === "mesh") history.replaceState(null, "", "#mesh");
+        if (btn.dataset.tab === "service") history.replaceState(null, "", "#service");
       });
     });
 
@@ -1987,7 +2157,7 @@
         }, 30000);
       }
       const hash = location.hash.replace("#", "");
-      if (hash === "deploy" || hash === "accounts" || hash === "mesh") activateTab(hash);
+      if (hash === "deploy" || hash === "accounts" || hash === "mesh" || hash === "service") activateTab(hash);
     });
   </script>
 </body>

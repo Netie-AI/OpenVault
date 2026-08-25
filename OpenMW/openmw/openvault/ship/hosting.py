@@ -15,6 +15,7 @@ from openmw.openvault.ship.origin import origin_status
 from openmw.openvault.ship.stacks import get_stack
 
 ShipTarget = Literal[
+    "openvault_hosted",
     "cursor_origin",
     "openship_cloud",
     "vps_ssh",
@@ -32,8 +33,17 @@ RuntimeKind = Literal[
 ]
 
 _REMOTE_TARGETS: frozenset[str] = frozenset(
-    {"vps_ssh", "hetzner", "aws", "aws_guide", "openship_cloud", "cursor_origin"}
+    {
+        "openvault_hosted",
+        "vps_ssh",
+        "hetzner",
+        "aws",
+        "aws_guide",
+        "openship_cloud",
+        "cursor_origin",
+    }
 )
+_BYO_HOST_TARGETS: frozenset[str] = frozenset({"vps_ssh", "hetzner", "aws", "aws_guide"})
 
 
 @dataclass(frozen=True)
@@ -96,29 +106,29 @@ def recommend_host(
         lb = "caddy"
         needs_vm = True
         needs_static = True
-        recommended: ShipTarget = "vps_ssh"
+        recommended: ShipTarget = "openvault_hosted"
         detail = (
-            "Optional git on Cursor Origin. OpenVault serves static files with "
-            "Caddy file_server + Let's Encrypt on Hetzner / VPS / AWS. Not Vercel."
+            "Log into OpenVault Service (not the laptop). We wrap AWS Lightsail "
+            "or a VPS; Caddy file_server + Let's Encrypt. Not Vercel."
         )
     elif kind == "edge_http":
         runtime = "vm_process"
         lb = "caddy"
         needs_vm = True
         needs_static = False
-        recommended = "vps_ssh"
+        recommended = "openvault_hosted"
         detail = (
-            "Optional git on Cursor Origin. OpenVault runs the process "
-            "(next start / node) under systemd; Caddy reverse-proxies TLS. Not Vercel."
+            "Log into OpenVault Service. systemd runs next start / node; "
+            "Caddy reverse-proxies TLS on our wrapped AWS or VPS. Not Vercel."
         )
     elif kind == "container":
         runtime = "docker_compose"
         lb = "caddy"
         needs_vm = True
         needs_static = False
-        recommended = "vps_ssh"
+        recommended = "openvault_hosted"
         detail = (
-            "Optional git on Cursor Origin. Run compose/Dockerfile on the VM; "
+            "Log into OpenVault Service. Compose/Dockerfile on the wrapped VM; "
             "Caddy terminates TLS and load-balances HTTP."
         )
     elif kind == "process":
@@ -126,10 +136,10 @@ def recommend_host(
         lb = "caddy"
         needs_vm = True
         needs_static = False
-        recommended = "vps_ssh"
+        recommended = "openvault_hosted"
         detail = (
-            "Optional git on Cursor Origin. systemd (or AWS SSM restart) runs "
-            "uvicorn/gunicorn/node; Caddy is the load balancer."
+            "Log into OpenVault Service. systemd (or AWS SSM) runs the process; "
+            "Caddy is the load balancer. Own-server Fast SKU if they bring metal."
         )
     else:
         runtime = "local_demo"
@@ -250,15 +260,22 @@ def ready_to_ship(
         }
     )
 
-    execute_needed = (target or host.recommended_target) in _REMOTE_TARGETS
+    execute_needed = (target or host.recommended_target) in _BYO_HOST_TARGETS
     execute_ok = (not execute_needed) or bool(vps_host)
+    hosted = (target or host.recommended_target) == "openvault_hosted"
     gates.append(
         {
             "id": "execute_host",
             "title": "VPS host for live apply",
             "status": "pass" if execute_ok else "pending",
             "detail": (
-                vps_host if vps_host else "plan ready; set vps_host or OPENVAULT_VPS_HOST to apply"
+                vps_host
+                if vps_host
+                else (
+                    "OpenVault Hosted assigns the box"
+                    if hosted
+                    else "plan ready; set vps_host or OPENVAULT_VPS_HOST to apply"
+                )
             ),
         }
     )

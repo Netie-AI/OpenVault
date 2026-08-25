@@ -22,7 +22,15 @@ from openmw.openvault.ship.server import build_server_plan, execute_server_plan
 log = structlog.get_logger()
 
 _HTTP_TARGETS: frozenset[str] = frozenset(
-    {"vps_ssh", "hetzner", "aws", "aws_guide", "cursor_origin", "openship_cloud"}
+    {
+        "openvault_hosted",
+        "vps_ssh",
+        "hetzner",
+        "aws",
+        "aws_guide",
+        "cursor_origin",
+        "openship_cloud",
+    }
 )
 
 
@@ -84,7 +92,7 @@ def load_deployment(deployment_id: str) -> Deployment | None:
 
 def run_ship_engine(
     *,
-    target: ShipTarget = "vps_ssh",
+    target: ShipTarget = "openvault_hosted",
     project_path: str = "",
     github_url: str = "",
     hostname: str = "",

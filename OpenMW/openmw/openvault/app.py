@@ -210,7 +210,7 @@ class DomainGuideBody(BaseModel):
 
 
 class ShipBlueprintBody(BaseModel):
-    target: ShipTarget = "vps_ssh"
+    target: ShipTarget = "openvault_hosted"
     project_path: str = ""
     hostname: str = ""
     github_url: str = ""
@@ -232,7 +232,7 @@ class GitHubPatBody(BaseModel):
 
 
 class ShipEngineBody(BaseModel):
-    target: ShipTarget = "vps_ssh"
+    target: ShipTarget = "openvault_hosted"
     project_path: str = ""
     github_url: str = ""
     hostname: str = ""

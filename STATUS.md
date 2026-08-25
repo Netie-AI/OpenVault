@@ -156,6 +156,30 @@ Live apply uses `OPENVAULT_SHIP_MODE=live` plus `vps_host` / `OPENVAULT_VPS_HOST
 
 ---
 
+## OpenVault Service login + SKUs (2026-08-25)
+
+Customers log into **OpenVault Service**, not their laptop. Default ship target is
+`openvault_hosted`: we wrap AWS Lightsail and a spare VPS as one OpenVault
+product (Caddy + systemd). They can instead connect AWS (MCP/SSM), their VPS,
+or their own server (Fast SKU).
+
+| SKU | Monthly USD | Wraps | Who pays infra |
+|-----|-------------|-------|----------------|
+| `ov_hosted` (suggested) | 24 | AWS Lightsail + VPS | OpenVault |
+| `ov_fast` | 79 | dedicated VPS / their metal | OpenVault |
+| `byo_aws` | 9 platform | their AWS account | they pay AWS |
+| `byo_vps` | 9 platform | their VPS | they pay the VPS |
+
+| Route | Purpose |
+|-------|---------|
+| `GET /api/service/catalog` | SKUs + login kinds (laptop=false) |
+| `POST /api/service/login` | Session; Hosted auto-assigns `*.openvault.app` |
+| `POST /api/service/connect` | AWS MCP / VPS / own server (secrets not stored) |
+| `POST /api/service/quote` | What they pay |
+| `POST /api/service/auto-host` | Assign box + Caddy/systemd plan |
+
+---
+
 ## Next priorities
 
 1. Redis + Lua `BucketStore` so a cluster of gateways cannot double-spend a budget.

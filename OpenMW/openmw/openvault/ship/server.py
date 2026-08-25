@@ -87,6 +87,7 @@ def normalize_provider(target: str) -> Provider:
         return "hetzner"
     if target in {"aws", "aws_guide"}:
         return "aws"
+    # openvault_hosted wraps Lightsail or a VPS; runtime is still Caddy on a box.
     return "vps"
 
 
