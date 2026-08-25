@@ -18,6 +18,11 @@ Read PRODUCT_ROLES.md before extending this module. The locks that shape it:
   unsafe.
 * **Lock 2 — architecture preset SoT is Cortex.** ``model`` entries report the
   slots and the persisted *slot preference*; they do not pick DAG vs LangGraph.
+* **Skills / MCP (DR-0012).** Cortex owns the skill registry, the crew loop,
+  and ``this node needs skill X``. Netie KB owns distilled reviews. This module
+  may later signpost ``skill`` / ``mcp`` the same way it signposts memory —
+  location plus gate, never the skill body. A route that returns prompt text
+  is the second store lock 5 forbids.
 
 So the honest one-line summary of every response here: *this is where it lives,
 this is who owns it, and this is whether you may go.* The caller still does the

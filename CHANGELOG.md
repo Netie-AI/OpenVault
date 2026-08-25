@@ -2,6 +2,21 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-08-25 - Skills, KB, and Cortex crew: name the three stores (DR-0012, proposed)
+
+- **The skill library is still not here.** Reviews of agent outreach, human-email
+  skills for Grok, internal system skills, and Cortex crew A2A need one loop, not
+  a catalog in the vault. [`DR-0012`](docs/decisions/DR-0012-skills-kb-crew-wiring.md)
+  is the RFC: Cortex stirs (load skill this turn, crew parent-task, deficit
+  `need skill X`), OpenVault signposts and gates (same shape as memory resolve),
+  Netie KB is the one skill registry (R-0016, `:8030`). Immediate next-email use
+  loads from that registry, not a second Cortex catalog and not a vault store.
+- **OpenVault's slice is the negative space.** Tests now fail if `/api/skills`
+  (or agent-skills / omni-skills) appears, if the access registry grows
+  skill-body fields, or if PRODUCT_ROLES stops saying the agent loop is not
+  ours. Compatible later work: access kinds `skill`/`mcp` as location+gate only,
+  and #39 custody MCP. Distill ingest and crew scheduler stay out.
+
 ## 2026-08-25 - Custody reopen lands on GitHub (F17 bak + F18 CSV + agent retrieve)
 
 - **#37 re-landed on the branch that GitHub actually has.** Independent verify had

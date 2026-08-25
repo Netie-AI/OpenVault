@@ -77,6 +77,35 @@ def test_registry_never_carries_a_secret(tmp_path, monkeypatch):
     assert "gsk-supersecret-value" not in client.get("/api/access/registry").text
 
 
+# Skill bodies, system prompts, and MCP tool schemas belong in Cortex (DR-0012).
+# A registry that starts carrying them has become the second store lock 5 forbids.
+_SKILL_BODY_FIELDS = frozenset(
+    {
+        "skill_body",
+        "instructions",
+        "system_prompt",
+        "prompt",
+        "tool_schema",
+        "mcp_tools",
+        "skill_content",
+    }
+)
+
+
+def test_access_registry_is_not_a_skill_store(tmp_path, monkeypatch):
+    """DR-0012: OpenVault signposts; it does not hold skill text."""
+    monkeypatch.setenv("OPENVAULT_HOME", str(tmp_path))
+    body = _client().get("/api/access/registry").json()
+
+    assert "skill" not in body["kinds"]
+    assert "mcp" not in body["kinds"]
+    assert "run the agent loop" in body["policy"]
+    for entry in body["entries"]:
+        assert not (_SKILL_BODY_FIELDS & set(entry))
+        meta = entry.get("meta") or {}
+        assert not (_SKILL_BODY_FIELDS & set(meta))
+
+
 # --- resolve: location + verdict, never content ---
 
 
