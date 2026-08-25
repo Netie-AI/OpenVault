@@ -33,12 +33,12 @@ from openmw.openvault.ship.service import (
     quote,
     service_catalog,
 )
+from openmw.openvault.ship.stacks import STACKS, get_project_type
 from openmw.openvault.ship.stripe_billing import (
     apply_checkout_event,
     confirm_checkout,
     create_checkout,
 )
-from openmw.openvault.ship.stacks import STACKS, get_project_type
 
 router = APIRouter(tags=["ship"])
 

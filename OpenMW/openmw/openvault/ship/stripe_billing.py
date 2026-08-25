@@ -122,7 +122,8 @@ def apply_checkout_event(event: dict[str, Any]) -> dict[str, Any]:
         inner = data.get("object")
         if isinstance(inner, dict):
             obj = inner
-    meta = obj.get("metadata") if isinstance(obj.get("metadata"), dict) else {}
+    raw_meta = obj.get("metadata")
+    meta: dict[str, Any] = raw_meta if isinstance(raw_meta, dict) else {}
     session_id = str(meta.get("ov_session") or "")
     if not session_id:
         raise ValueError("checkout event missing ov_session metadata")
