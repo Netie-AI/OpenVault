@@ -1016,7 +1016,7 @@
     <!-- SERVICE -->
     <section id="panel-service" class="panel">
       <h2 class="section-title">OpenVault Service</h2>
-      <p class="section-sub">Log in here — not the laptop. We wrap AWS Lightsail + a VPS as our product. Caddy TLS. Bring AWS MCP, their VPS, or their own server (Fast).</p>
+      <p class="section-sub">Log in here — not the laptop. Stripe bills the SKU. Ship to netie.ai uses Caddy + systemd. Does not touch AirGPT, DMS, or Cortex mesh.</p>
       <div class="vault-layout">
         <div class="glass vault-form">
           <h3 style="font-family:var(--serif);font-weight:500;margin-bottom:8px">Log in</h3>
@@ -1046,6 +1046,8 @@
           <div class="actions">
             <button type="button" class="btn" id="svcConnectBtn">Connect</button>
             <button type="button" class="btn-ghost" id="svcAutoHostBtn">Auto-host</button>
+            <button type="button" class="btn-ghost" id="svcPayBtn">Pay SKU (Stripe)</button>
+            <button type="button" class="btn-ghost" id="svcShipNetieBtn">Ship to netie.ai</button>
           </div>
           <label for="svcProject" style="margin-top:10px">Project path (optional)</label>
           <input id="svcProject" placeholder="/path/to/app" />
@@ -2031,7 +2033,7 @@
         <div class="hop-status">
           <span class="pill ok">${session.login_kind}</span>
           <strong>${session.email}</strong>
-          <div class="key-meta">${sku.name || ""} · $${sku.monthly_usd || "—"}/mo · host=${session.hostname || "—"} · box=${session.vps_host || "—"} · laptop=no</div>
+          <div class="key-meta">${sku.name || ""} · $${sku.monthly_usd || "—"}/mo · billed=${session.billed ? "yes" : "no"} · host=${session.hostname || "—"} · box=${session.vps_host || "—"} · laptop=no</div>
         </div>`;
     }
 
@@ -2118,6 +2120,75 @@
         const q = data.quote || {};
         document.getElementById("svcMsg").textContent =
           `Auto-host ${q.sku && q.sku.name || ""} · $${q.monthly_usd || "—"}/mo · lb=caddy`;
+      });
+    }
+    const svcPayBtn = document.getElementById("svcPayBtn");
+    if (svcPayBtn) {
+      svcPayBtn.addEventListener("click", async () => {
+        if (!apiMode || !svcSessionId) {
+          document.getElementById("svcMsg").textContent = "Log in first";
+          return;
+        }
+        const chk = await fetch("/api/service/checkout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ session_id: svcSessionId })
+        });
+        const cj = await chk.json();
+        if (!chk.ok) {
+          document.getElementById("svcMsg").textContent = cj.detail || "checkout failed";
+          return;
+        }
+        if (!cj.simulated && cj.url) {
+          window.open(cj.url, "_blank");
+          document.getElementById("svcMsg").textContent = "Stripe Checkout opened. Confirm after pay.";
+          return;
+        }
+        const conf = await fetch("/api/service/checkout/confirm", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ session_id: svcSessionId, checkout_id: cj.id || "" })
+        });
+        const fj = await conf.json();
+        if (!conf.ok) {
+          document.getElementById("svcMsg").textContent = fj.detail || "confirm failed";
+          return;
+        }
+        if (fj.session) showServiceSession(fj.session);
+        const skuName = fj.session && fj.session.sku && fj.session.sku.name;
+        document.getElementById("svcMsg").textContent =
+          `Billed ${skuName || "SKU"} (Stripe simulate, livemode=false)`;
+      });
+    }
+    const svcShipNetieBtn = document.getElementById("svcShipNetieBtn");
+    if (svcShipNetieBtn) {
+      svcShipNetieBtn.addEventListener("click", async () => {
+        if (!apiMode) return;
+        const project = (document.getElementById("svcProject").value || "").trim();
+        const email = (document.getElementById("svcEmail").value || "").trim();
+        if (!email || !project) {
+          document.getElementById("svcMsg").textContent = "Email + project path required to ship to netie.ai";
+          return;
+        }
+        const res = await fetch("/api/service/ship-netie", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email,
+            display_name: (document.getElementById("svcName").value || "").trim(),
+            project_path: project,
+            sku_id: "ov_hosted",
+            simulate: true
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          document.getElementById("svcMsg").textContent = data.detail || "ship-netie failed";
+          return;
+        }
+        if (data.session) showServiceSession(data.session);
+        document.getElementById("svcMsg").textContent =
+          `Shipped ${data.hostname} · billed=${data.session && data.session.billed ? "yes" : "no"} · airgpt=no · dms=no`;
       });
     }
 

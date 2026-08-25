@@ -180,6 +180,36 @@ or their own server (Fast SKU).
 
 ---
 
+## Stripe SKUs + ship to netie.ai (2026-08-25)
+
+Hosted Stripe Checkout on the four Service SKUs (NETIE test-mode account
+`acct_1RMx9FFV5wcFod2f`, livemode=false). No new Python dependency: `httpx`
+already in OpenMW. Default `STRIPE_MODE=simulate`; live Checkout only if
+`STRIPE_MODE=live` **and** `STRIPE_SECRET_KEY`.
+
+`POST /api/service/ship-netie` runs login -> Checkout -> confirm -> Caddy/systemd
+onto `{slug}.netie.ai`. Flags `airgpt: false`, `dms: false`. Default Service
+login hostname stays `{slug}.openvault.app`. Does not import or edit AirGPT,
+DMS trust-root, or Cortex mesh.
+
+| Route | Purpose |
+|-------|---------|
+| `POST /api/service/checkout` | Hosted subscription Checkout for the session SKU |
+| `POST /api/service/checkout/confirm` | Mark session billed (simulate or paid) |
+| `POST /api/service/stripe/webhook` | `checkout.session.completed` |
+| `POST /api/service/ship-netie` | Full pipeline onto `*.netie.ai` |
+
+| SKU | Test price id |
+|-----|----------------|
+| `ov_hosted` | `price_1U8SQSFV5wcFod2fggATWBtT` ($24) |
+| `ov_fast` | `price_1U8SQbFV5wcFod2fBfkEFyl4` ($79) |
+| `byo_aws` | `price_1U8SQbFV5wcFod2fv5r1WD8o` ($9) |
+| `byo_vps` | `price_1U8SQcFV5wcFod2fw5s1cqSs` ($9) |
+
+Not verified: live card charge, production DNS for netie.ai, `OPENVAULT_SHIP_MODE=live`.
+
+---
+
 ## Next priorities
 
 1. Redis + Lua `BucketStore` so a cluster of gateways cannot double-spend a budget.

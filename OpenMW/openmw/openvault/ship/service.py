@@ -41,6 +41,7 @@ class ServiceSku:
     laptop: bool
     customer_pays_infra: bool
     detail: str
+    stripe_price_id: str
 
     def to_dict(self) -> dict[str, Any]:
         payload = asdict(self)
@@ -62,6 +63,7 @@ SKUS: dict[SkuId, ServiceSku] = {
             "Suggested. We wrap AWS Lightsail and a spare VPS as one OpenVault "
             "product: Caddy TLS, systemd, /healthz. You log into OpenVault, not AWS."
         ),
+        stripe_price_id="price_1U8SQSFV5wcFod2fggATWBtT",
     ),
     "ov_fast": ServiceSku(
         id="ov_fast",
@@ -76,6 +78,7 @@ SKUS: dict[SkuId, ServiceSku] = {
             "Dedicated box (or their own server we operate). Faster IO. "
             "Same Caddy + systemd, higher OpenVault price."
         ),
+        stripe_price_id="price_1U8SQbFV5wcFod2fBfkEFyl4",
     ),
     "byo_aws": ServiceSku(
         id="byo_aws",
@@ -90,6 +93,7 @@ SKUS: dict[SkuId, ServiceSku] = {
             "Log into AWS (MCP / SSM / instance profile). "
             "They pay AWS; we charge the platform fee."
         ),
+        stripe_price_id="price_1U8SQbFV5wcFod2fv5r1WD8o",
     ),
     "byo_vps": ServiceSku(
         id="byo_vps",
@@ -101,6 +105,7 @@ SKUS: dict[SkuId, ServiceSku] = {
         laptop=False,
         customer_pays_infra=True,
         detail="Log into their VPS over SSH. They pay the VPS; we charge the platform fee.",
+        stripe_price_id="price_1U8SQcFV5wcFod2fw5s1cqSs",
     ),
 }
 
@@ -119,6 +124,9 @@ class ServiceSession:
     aws_account_hint: str = ""
     aws_mcp: bool = False
     connected: bool = False
+    billed: bool = False
+    stripe_checkout_id: str = ""
+    stripe_subscription_id: str = ""
     laptop: bool = False
     created_at: float = field(default_factory=time.time)
     updated_at: float = field(default_factory=time.time)
@@ -138,6 +146,9 @@ class ServiceSession:
             "aws_account_hint": self.aws_account_hint,
             "aws_mcp": self.aws_mcp,
             "connected": self.connected,
+            "billed": self.billed,
+            "stripe_checkout_id": self.stripe_checkout_id,
+            "stripe_subscription_id": self.stripe_subscription_id,
             "laptop": False,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
@@ -151,6 +162,11 @@ def service_catalog() -> dict[str, Any]:
         "load_balancer": "caddy",
         "suggested_sku": "ov_hosted",
         "currency": "USD",
+        "stripe": {
+            "mode": "test",
+            "checkout": "hosted_subscription",
+            "account": "NETIE",
+        },
         "skus": [sku.to_dict() for sku in SKUS.values()],
         "login_kinds": [
             {
@@ -415,6 +431,9 @@ def load_session(session_id: str) -> ServiceSession | None:
         aws_account_hint=str(raw.get("aws_account_hint") or ""),
         aws_mcp=bool(raw.get("aws_mcp")),
         connected=bool(raw.get("connected")),
+        billed=bool(raw.get("billed")),
+        stripe_checkout_id=str(raw.get("stripe_checkout_id") or ""),
+        stripe_subscription_id=str(raw.get("stripe_subscription_id") or ""),
         laptop=False,
         created_at=float(raw.get("created_at", time.time())),
         updated_at=float(raw.get("updated_at", time.time())),
@@ -436,12 +455,44 @@ def _save_session(session: ServiceSession) -> Path:
         "aws_account_hint": session.aws_account_hint,
         "aws_mcp": session.aws_mcp,
         "connected": session.connected,
+        "billed": session.billed,
+        "stripe_checkout_id": session.stripe_checkout_id,
+        "stripe_subscription_id": session.stripe_subscription_id,
         "laptop": False,
         "created_at": session.created_at,
         "updated_at": session.updated_at,
     }
     path.write_text(json.dumps(raw, indent=2), encoding="utf-8")
     return path
+
+
+def attach_checkout_id(session_id: str, checkout_id: str) -> ServiceSession:
+    session = load_session(session_id)
+    if session is None:
+        raise ValueError("service session not found")
+    session.stripe_checkout_id = checkout_id
+    session.updated_at = time.time()
+    _save_session(session)
+    return session
+
+
+def mark_session_billed(
+    session_id: str,
+    *,
+    checkout_id: str = "",
+    subscription_id: str = "",
+) -> ServiceSession:
+    session = load_session(session_id)
+    if session is None:
+        raise ValueError("service session not found")
+    session.billed = True
+    if checkout_id:
+        session.stripe_checkout_id = checkout_id
+    if subscription_id:
+        session.stripe_subscription_id = subscription_id
+    session.updated_at = time.time()
+    _save_session(session)
+    return session
 
 
 def _ship_target(session: ServiceSession) -> str:

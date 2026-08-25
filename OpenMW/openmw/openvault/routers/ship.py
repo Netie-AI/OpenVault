@@ -21,6 +21,7 @@ from openmw.openvault.ship.origin import (
     execute_origin_plan,
     origin_status,
 )
+from openmw.openvault.ship.pipeline import ship_to_netie
 from openmw.openvault.ship.server import build_server_plan, execute_server_plan
 from openmw.openvault.ship.service import (
     auto_host,
@@ -31,6 +32,11 @@ from openmw.openvault.ship.service import (
     parse_sku_id,
     quote,
     service_catalog,
+)
+from openmw.openvault.ship.stripe_billing import (
+    apply_checkout_event,
+    confirm_checkout,
+    create_checkout,
 )
 from openmw.openvault.ship.stacks import STACKS, get_project_type
 
@@ -105,6 +111,25 @@ class ServiceQuoteBody(BaseModel):
     login_kind: str = "openvault"
     project_path: str = ""
     sku_id: str | None = None
+
+
+class ServiceCheckoutBody(BaseModel):
+    session_id: str
+    success_url: str = "http://127.0.0.1:5000/#service"
+    cancel_url: str = "http://127.0.0.1:5000/#service"
+
+
+class ServiceCheckoutConfirmBody(BaseModel):
+    session_id: str
+    checkout_id: str = ""
+
+
+class NetieShipBody(BaseModel):
+    email: str
+    project_path: str
+    display_name: str = ""
+    sku_id: str = "ov_hosted"
+    simulate: bool = True
 
 
 @router.post("/api/detect")
@@ -348,3 +373,50 @@ def api_service_auto_host(body: ServiceAutoHostBody) -> dict[str, Any]:
     except ValueError as exc:
         status = 404 if "not found" in str(exc) else 400
         raise HTTPException(status_code=status, detail=str(exc)) from exc
+
+
+@router.post("/api/service/checkout")
+def api_service_checkout(body: ServiceCheckoutBody) -> dict[str, Any]:
+    try:
+        return create_checkout(
+            body.session_id,
+            success_url=body.success_url,
+            cancel_url=body.cancel_url,
+        )
+    except ValueError as exc:
+        status = 404 if "not found" in str(exc) else 400
+        raise HTTPException(status_code=status, detail=str(exc)) from exc
+
+
+@router.post("/api/service/checkout/confirm")
+def api_service_checkout_confirm(body: ServiceCheckoutConfirmBody) -> dict[str, Any]:
+    try:
+        return confirm_checkout(body.session_id, checkout_id=body.checkout_id)
+    except ValueError as exc:
+        status = 404 if "not found" in str(exc) else 400
+        raise HTTPException(status_code=status, detail=str(exc)) from exc
+
+
+@router.post("/api/service/stripe/webhook")
+def api_service_stripe_webhook(event: dict[str, Any]) -> dict[str, Any]:
+    try:
+        return apply_checkout_event(event)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post("/api/service/ship-netie")
+def api_service_ship_netie(body: NetieShipBody) -> dict[str, Any]:
+    """Login + Stripe SKU + Caddy ship onto *.netie.ai. Does not touch AirGPT or DMS."""
+    try:
+        return ship_to_netie(
+            email=body.email,
+            project_path=body.project_path,
+            display_name=body.display_name,
+            sku_id=body.sku_id,
+            simulate=body.simulate,
+        )
+    except DetectionInputError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
