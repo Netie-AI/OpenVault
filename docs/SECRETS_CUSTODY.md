@@ -29,6 +29,7 @@ audit line. **Every other custody route had none of them.**
 | `POST /api/accounts/{id}/incident` | **open** (kills every key on an account) | loopback + audit |
 | `POST /api/keyvault/upsert` | **open** (same write, different door) | loopback + audit |
 | `POST /api/vault/ingest-env` | **open** | loopback + audit (non-dry-run only) |
+| `POST /api/vault/ingest-pm` | **n/a (new)** | loopback + audit (non-dry-run only); dry-run default |
 | `GET /api/keys/{id}/secret` | loopback + intent + audit | unchanged |
 
 ### Why mutations get loopback + audit but not the intent header
@@ -84,19 +85,36 @@ a passphrase keep the previous auto-unseal behaviour (copy-protection only).
 
 | Route | Gate when passphrase configured |
 |-------|----------------------------------|
-| `GET /api/vault/status` | open — reports `sealed`, `passphrase_configured`, `wrap_method` |
-| `POST /api/vault/passphrase` | loopback + unsealed (rewraps live master key) |
+| `GET /api/vault/status` | open — reports `sealed`, `passphrase_configured`, `wrap_method`, `plaintext_backup_present` |
+| `POST /api/vault/passphrase` | loopback + unsealed (rewraps live master key; warns if bak present, does not refuse) |
 | `POST /api/vault/unseal` | loopback — loads key; wrong passphrase → 401 |
 | `POST /api/vault/lock` | loopback — drops in-process key material |
+| `POST /api/vault/backup/retire` | loopback + unsealed — unwrap live key, byte-compare bak, delete on match (DR-0010 c) |
 | `GET /api/keys/{id}/secret` | loopback + intent + **unsealed** + audit |
 | `GET /api/secrets/{id}/reveal` | loopback + intent + **unsealed** + audit |
 | `POST/PATCH/DELETE` keys + secrets + keyvault upsert + account incident | loopback + **unsealed** + audit |
 | `POST /api/vault/ingest-env` (non-dry-run) | loopback + **unsealed** + audit |
+| `POST /api/vault/ingest-pm` (non-dry-run) | loopback + **unsealed** + audit; dry-run default writes nothing |
 | `POST/DELETE /api/ship/github/pat` | loopback + **unsealed** (PAT in KeyVault row `github-ship-pat`; no `pat.json` token) |
 | `GET /api/keys`, `GET /api/secrets` | open, masks only — no decrypt when masks are stored |
 
 While sealed, reveal/mutate return **403** with an honest `vault is sealed…`
 detail — they do not attempt decrypt and do not return plaintext.
+
+### 1c. `master.key.v0.bak` (DR-0010, proposed)
+
+v0 migration still writes `master.key.v0.bak` (raw Fernet key) so wrap failure
+stays recoverable. That file is a copy-open hole until retired.
+
+- `GET /api/vault/status` reports `plaintext_backup_present` even when the vault
+  is unsealed. The `:3010` vault panel warning is **not** gated on `sealed`.
+- `POST /api/vault/backup/retire` unwraps the live wrap via `keywrap.unwrap`,
+  byte-compares to the bak, and deletes only on match. Loopback + unsealed.
+  Mismatch refuses. Audit event: `vault_backup_retired`.
+- Load **never** treats the bak as `master.key`. A folder of `keys.db` + bak
+  with no live wrapped key must not yield plaintext.
+- Do not dump live password CSVs until status shows `plaintext_backup_present`
+  false after retire.
 
 ---
 
@@ -196,6 +214,7 @@ it is a temporary import source, same class as process env (`vault/env_ingest.py
 |----------|------|
 | `OPENVAULT_HOME/keys.db` | Encrypted custody (live SoT) |
 | `OPENVAULT_HOME/import/*.keys.env` | Operator staging only; path is under `.openvault/` so git ignores it |
+| `OPENVAULT_HOME/import/*.csv` | Official Google / Apple / Chrome password-manager dumps; ingest via `POST /api/vault/ingest-pm` (dry-run default) |
 | AirGPT `env.local` / Netie `user.env` | Offline **cache** synced *from* OpenVault — never the paste target for a new pile |
 | Provider doc scrapes (`Free API.txt`, etc.) | Catalog notes only — never live secrets |
 
@@ -208,6 +227,15 @@ curl examples or markdown tables.
 Bulk UI ingest (`POST /api/keys/ingest`) stays gated on AirGPT ClipDrop —
 [`CLIPDROP_CONTRACT.md`](CLIPDROP_CONTRACT.md). Until that ships, loopback
 `POST /api/keyvault/upsert` / `POST /api/keys` is the supported path.
+
+### Password-manager CSV (`POST /api/vault/ingest-pm`)
+
+Google Password Manager, Apple Passwords, and Chrome export shapes. Dry-run
+defaults **true**. Non-dry-run is loopback + unsealed and writes sealed
+`password` rows (and `payment_card` without CVV) through `SecretStore`. CVV /
+security-code columns are stripped with an explicit reason and never stored.
+Empty passwords are skipped. Synthetic fixtures only in git — never commit a
+real dump. No scraping Google/iCloud. No autofill.
 
 ---
 
@@ -232,6 +260,19 @@ list Netie iterates cannot hand it a PAN. Structurally,
 parameter a card could occupy. When Netie needs card autofill later, the shape
 is a deep-link into the OpenVault UI or a per-use `GET /api/secrets/{id}/reveal`
 that is never written to disk. Not `user.env`.
+
+### 4b. Agent thin-client retrieve (`openvault secret get`)
+
+Grok / Claude Code retrieve keys and site passwords over loopback HTTP, using
+the existing reveal gates (`X-OpenVault-Reveal: intentional`). The client
+**hard-denies `payment_card` / PAN** even if a naive agent asks — it never
+calls reveal for a card row. Retrieved passwords are never written under
+`OPENVAULT_HOME`. A sealed vault fails closed with a sealed/locked error.
+
+```
+openvault secret get <id-or-label> --kind password
+openvault secret get <id-or-label> --kind key
+```
 
 ---
 
@@ -300,6 +341,9 @@ secret — PRODUCT_ROLES ownership lock 3.
 | File | Pins |
 |------|------|
 | `tests/test_secrets_custody.py` (21) | PAN/password never in the DB file, never in a list response, never in the audit log; reveal denied without the header (428) and off loopback (403); CVV refused; Luhn and expiry validation; rejected PAN not echoed; brand detection; mutations loopback-only; rotate chains old→new; metadata patch cannot replace a payload |
+| `tests/test_master_key_backup_custody.py` | DR-0010 (c): bak present on status while unsealed; retire verifies then deletes; mismatch refuses; copy-open of bak+db yields no plaintext |
+| `tests/test_pm_csv_import.py` | Google/Apple/Chrome dialects; dry-run writes nothing; CVV stripped; sealed fails closed |
+| `tests/test_agent_secret_retrieve.py` | key+password reveal; payment_card hard-deny; sealed fail-closed; no password cache file |
 | `tests/test_netie_thin_client_sync.py` (6) | Netie's exact sync loop; rotate → re-sync yields only the new secret; revoked stops syncing; masks never carry the full secret; cards/passwords invisible to the key sync; missing header fails closed |
 | `tests/test_secret_reveal_gate.py` (4, pre-existing) | the original three controls on the key reveal route |
 

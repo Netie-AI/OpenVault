@@ -226,3 +226,67 @@ class TestPoolMembership:
         shown = {hop["key_id"] for hop in manager.status().hops}
         assert tenant.id not in shown
         assert len(shown) == 1
+
+
+class TestAccountAttachedKeysAreTenant:
+    def test_account_attached_key_is_tenant_and_not_in_pooled_ordered(
+        self, client: TestClient, vault: KeyVault
+    ) -> None:
+        acct = client.post("/api/accounts", json={"display_name": "Tenant B"}).json()
+        attached = client.post(
+            f"/api/accounts/{acct['id']}/keys",
+            json={
+                "label": "their-byok",
+                "provider": "openai",
+                "secret": "sk-tenant-aaaaaaaa",
+            },
+        )
+        assert attached.status_code == 200, attached.text
+        body = attached.json()
+        assert body["custody"] == "tenant"
+        pooled_ids = {row.id for row in vault.pooled_ordered()}
+        assert body["id"] not in pooled_ids
+
+    def test_account_attached_key_loses_the_walk_to_a_lower_priority_pooled_key(
+        self, client: TestClient, vault: KeyVault
+    ) -> None:
+        ours = _key(vault, "our-pooled-key", custody="pooled", priority=100)
+        acct = client.post("/api/accounts", json={"display_name": "Tenant B"}).json()
+        attached = client.post(
+            f"/api/accounts/{acct['id']}/keys",
+            json={
+                "label": "their-byok",
+                "provider": "openai",
+                "secret": "sk-tenant-bbbbbbbb",
+                "priority": 0,
+            },
+        )
+        assert attached.status_code == 200
+        tenant_id = attached.json()["id"]
+        rec = vault.get(tenant_id)
+        assert rec is not None
+        vault.set_precheck(rec.id, status="ok", latency_ms=1.0, error=None)
+
+        _tenant_a, headers = issue_key(client, label="tenant-a")
+        mock = _mock_client(_ok_response({"id": "r", "choices": [], "usage": _USAGE}))
+        with patch("openmw.openvault.vault.proxy.httpx.AsyncClient", return_value=mock):
+            resp = client.post("/v1/chat/completions", json=_CHAT, headers=headers)
+        assert resp.status_code == 200
+        assert client.get("/api/usage").json()["events"][0]["vault_key_id"] == ours.id
+
+    def test_patch_keys_cannot_move_a_tenant_key_into_the_pool(self, client: TestClient) -> None:
+        acct = client.post("/api/accounts", json={"display_name": "Tenant B"}).json()
+        attached = client.post(
+            f"/api/accounts/{acct['id']}/keys",
+            json={
+                "label": "their-byok",
+                "provider": "openai",
+                "secret": "sk-tenant-cccccccc",
+            },
+        ).json()
+        patched = client.patch(
+            f"/api/keys/{attached['id']}",
+            json={"custody": "pooled", "label": "still-theirs"},
+        )
+        assert patched.status_code == 200
+        assert patched.json()["custody"] == "tenant"

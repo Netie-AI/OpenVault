@@ -21,6 +21,7 @@ import {
   fetchVaultStatus,
   listSecrets,
   revealSecretValue,
+  retirePlaintextBackup,
   revokeSecret,
   rotateSecret,
   unsealVault,
@@ -133,6 +134,24 @@ export function SecretsPanel() {
     }
   }
 
+  async function onRetireBackup() {
+    setBusy("retire-bak");
+    setNotice("");
+    try {
+      const st = await retirePlaintextBackup(passphrase);
+      setStatus(st);
+      setNotice(
+        st.plaintext_backup_present
+          ? "Plaintext backup still present"
+          : "Plaintext master-key backup retired",
+      );
+    } catch (err) {
+      setNotice(isApiError(err) ? err.message : "Retire failed");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function toggleReveal(row: SecretRow) {
     if (revealed[row.id]) {
       setRevealed((r) => {
@@ -238,6 +257,7 @@ export function SecretsPanel() {
   }
 
   const sealed = status?.sealed === true;
+  const bakPresent = status?.plaintext_backup_present === true;
   const passwords = secrets.filter((s) => s.kind === "password");
   const cards = secrets.filter((s) => s.kind === "payment_card");
 
@@ -317,6 +337,29 @@ export function SecretsPanel() {
               {status.passphrase_configured ? " · passphrase configured" : ""}
             </p>
           )}
+        </div>
+      ) : null}
+
+      {bakPresent ? (
+        <div
+          data-glass
+          className="rounded-2xl border border-warning-border bg-warning-bg px-4 py-3 text-sm text-foreground"
+        >
+          <p className="font-medium">
+            Plaintext master-key backup is on disk (master.key.v0.bak).
+          </p>
+          <p className="mt-1 text-muted-foreground">
+            Copying this vault folder can open sealed rows without the passphrase.
+            Retire it after the live wrapped key verifies.
+          </p>
+          <Button
+            size="sm"
+            className="mt-3"
+            disabled={sealed || busy === "retire-bak"}
+            onClick={() => void onRetireBackup()}
+          >
+            {busy === "retire-bak" ? "Retiring..." : "Retire plaintext backup"}
+          </Button>
         </div>
       ) : null}
 
