@@ -109,6 +109,7 @@ def test_operator_managed_key_and_incident_kill(client: TestClient) -> None:
     )
     assert key.status_code == 200
     assert key.json()["account_id"] == account_id
+    assert key.json()["custody"] == "tenant"
     key_id = key.json()["id"]
 
     rotated = client.post(
@@ -117,6 +118,7 @@ def test_operator_managed_key_and_incident_kill(client: TestClient) -> None:
     )
     assert rotated.status_code == 200
     assert rotated.json()["lifecycle"] == "active"
+    assert rotated.json()["custody"] == "tenant"
 
     incident = client.post(
         f"/api/accounts/{account_id}/incident",
@@ -138,6 +140,8 @@ def test_operator_managed_key_and_incident_kill(client: TestClient) -> None:
     lifecycles = {k["lifecycle"] for k in bundle.json()["keys"]}
     assert "compromised" in lifecycles
     assert "active" in lifecycles
+    active = [k for k in bundle.json()["keys"] if k["lifecycle"] == "active"]
+    assert active and all(k["custody"] == "tenant" for k in active)
 
 
 def test_revoke_key(client: TestClient) -> None:
