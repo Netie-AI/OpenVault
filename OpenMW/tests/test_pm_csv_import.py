@@ -105,8 +105,18 @@ def test_cvv_column_is_stripped_and_never_stored(
     listed = client.get("/api/secrets").json()["secrets"]
     assert listed[0]["kind"] == "payment_card"
     assert listed[0]["last4"] == "4242"
+    assert "737" not in json.dumps(listed)
+    revealed = client.get(
+        f"/api/secrets/{listed[0]['id']}/reveal",
+        headers={"X-OpenVault-Reveal": "intentional"},
+    )
+    assert revealed.status_code == 200
+    assert revealed.json()["secret"] == VISA_PAN
+    assert "737" not in revealed.text
     raw = (tmp_path / "keys.db").read_bytes()
-    assert b"737" not in raw
+    # UUID hex / Fernet tokens in keys.db can coincidentally contain ASCII
+    # "737". Recoverable store is the reveal path above; the PAN must still
+    # never sit in the file as plaintext.
     assert VISA_PAN.encode() not in raw
 
 
