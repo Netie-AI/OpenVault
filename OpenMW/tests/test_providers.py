@@ -10,7 +10,12 @@ from fastapi.testclient import TestClient
 
 from openmw.openvault.app import create_app
 from openmw.openvault.vault.crypto import Seal
-from openmw.openvault.vault.providers import catalog_coverage_report, get_provider, list_catalog
+from openmw.openvault.vault.providers import (
+    HELP_REGISTER_STEPS,
+    catalog_coverage_report,
+    get_provider,
+    list_catalog,
+)
 from openmw.openvault.vault.seed import seed_essentials
 from openmw.openvault.vault.store import KeyVault
 
@@ -50,6 +55,7 @@ def test_seed_essentials_local_and_pending(tmp_path: Path) -> None:
 def test_coverage_report_lists_missing() -> None:
     report = catalog_coverage_report(set())
     assert report["catalog_size"] >= 10
+    assert "llm-router" in report["omniroute_absorb_notes"]
     assert "openrouter" in report["missing_by_consumer"]["cortex"][0]["id"] or any(
         m["id"] == "openrouter" for m in report["missing_by_consumer"]["cortex"]
     )
@@ -70,10 +76,25 @@ def test_providers_api(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     cat = client.get("/api/providers/catalog")
     assert cat.status_code == 200
     assert cat.json()["count"] >= 10
+    assert cat.json()["priced"] is False
+    assert cat.json()["nvidia_classifier"] is False
 
     free = client.get("/api/providers/free")
     assert free.status_code == 200
     assert free.json()["count"] >= 5
+    assert free.json()["priced"] is False
+    budget = free.json()["budget"]
+    assert budget["priced"] is False
+    assert "ollama" in budget["uncapped_pool_keys"]
+    assert "auto-register" in budget["help"]
+    assert budget["recurring_tokens_sum"] == 0
+    assert free.json()["nvidia_classifier"] is False
+    ladder = free.json()["ladder"]
+    assert ladder == budget["ladder"]
+    assert ladder[0]["kind"] == "local"
+    assert ladder[0]["id"] in {"ollama", "cortex"}
+    assert all(r["monthly_tokens"] == 0 for r in ladder)
+    assert "openai" not in {r["id"] for r in ladder}
 
     seed = client.post(
         "/api/vault/seed-essentials",
@@ -85,6 +106,12 @@ def test_providers_api(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     cov = client.get("/api/providers/coverage")
     assert cov.status_code == 200
     assert "missing_by_consumer" in cov.json()
+    assert cov.json()["priced"] is False
+    assert cov.json()["next_steps"] == list(HELP_REGISTER_STEPS)
+
+    free = client.get("/api/providers/free")
+    assert free.status_code == 200
+    assert free.json()["next_steps"][0]["do"].startswith("Open register_url")
 
     # Local ollama downtime probe (may be offline — still 200)
     down = client.post("/api/providers/ollama/downtime-check")

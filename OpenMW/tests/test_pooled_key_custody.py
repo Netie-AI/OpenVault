@@ -148,6 +148,20 @@ class TestTenantKeysNeverServeAMeteredCaller:
         assert held.json()["error"]["type"] == "openvault_no_pooled_keys"
         assert "tenant-custody" in held.json()["error"]["message"]
 
+    def test_unhealthy_pooled_hop_is_not_an_empty_vault(
+        self, client: TestClient, vault: KeyVault
+    ) -> None:
+        """Crew-starved free hops must not read as 'no keys'. Do not auto-signup."""
+        rec = _key(vault, "dead-free", custody="pooled")
+        vault.set_precheck(rec.id, status="auth_fail", latency_ms=1.0, error="401")
+        _seat, headers = issue_key(client, label="seat")
+        resp = client.post("/v1/chat/completions", json=_CHAT, headers=headers)
+        assert resp.status_code == 503
+        body = resp.json()["error"]
+        assert body["type"] == "openvault_hops_unhealthy"
+        assert body["priced"] is False
+        assert "does not auto-register" in body["message"]
+
 
 class TestPoolMembership:
     def test_a_key_created_without_a_custody_argument_is_ours(

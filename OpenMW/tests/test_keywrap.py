@@ -140,6 +140,7 @@ class TestMasterKeyLifecycle:
         assert loaded == original, "migration must preserve the key itself"
         assert keywrap.is_wrapped(key_path.read_bytes())
         assert (tmp_path / "master.key.v0.bak").is_file(), "migration must leave a backup"
+        assert Seal(key_path=key_path).status()["plaintext_backup_present"] is True
 
         # The decisive assertion: ciphertext written before migration still opens.
         assert Seal(_load_or_create_master_key(key_path)).decrypt(sealed) == "sk-live-secret"

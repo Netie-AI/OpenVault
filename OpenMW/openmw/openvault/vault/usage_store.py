@@ -207,6 +207,7 @@ class UsageStore:
         *,
         api_key_id: str | None = None,
         identity: str | None = None,
+        vault_key_id: str | None = None,
         since: float | None = None,
         limit: int = 200,
     ) -> list[dict[str, Any]]:
@@ -219,6 +220,9 @@ class UsageStore:
         if identity:
             where.append("identity=?")
             params.append(identity)
+        if vault_key_id:
+            where.append("vault_key_id=?")
+            params.append(vault_key_id)
         if since is not None:
             where.append("created_at >= ?")
             params.append(float(since))
@@ -234,6 +238,7 @@ class UsageStore:
         *,
         api_key_id: str | None = None,
         identity: str | None = None,
+        vault_key_id: str | None = None,
         since: float | None = None,
     ) -> dict[str, Any]:
         """Totals a bill could be computed from, with the honesty flags kept.
@@ -261,6 +266,9 @@ class UsageStore:
         if identity:
             where.append("identity=?")
             params.append(identity)
+        if vault_key_id:
+            where.append("vault_key_id=?")
+            params.append(vault_key_id)
         if since is not None:
             where.append("created_at >= ?")
             params.append(float(since))

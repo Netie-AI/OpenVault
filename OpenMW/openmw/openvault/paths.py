@@ -32,6 +32,15 @@ def master_key_path() -> Path:
     return ensure_home() / "master.key"
 
 
+def import_dir() -> Path:
+    """Operator staging for dumps (CSV, keys.env). Not a second vault."""
+    path = ensure_home() / "import"
+    path.mkdir(parents=True, exist_ok=True)
+    with contextlib.suppress(OSError):
+        path.chmod(0o700)
+    return path
+
+
 def selection_path() -> Path:
     return ensure_home() / "orchestration.json"
 

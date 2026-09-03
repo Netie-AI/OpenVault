@@ -8,6 +8,7 @@ import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager, suppress
 from dataclasses import asdict
+from pathlib import Path
 from typing import Any, Literal
 
 import structlog
@@ -56,7 +57,7 @@ from openmw.openvault.route.access import (
     uptime_payload,
 )
 from openmw.openvault.ship.aws_guide import build_aws_render_plan
-from openmw.openvault.ship.cicd import detect_cicd
+from openmw.openvault.ship.cicd import detect_cicd, write_suggested_workflow
 from openmw.openvault.ship.cloud_targets import (
     BillBudget,
     build_ship_blueprint,
@@ -72,7 +73,7 @@ from openmw.openvault.ship.deploy import (
     one_press_deploy,
     run_deploy_smoke,
 )
-from openmw.openvault.ship.detect import detect_project
+from openmw.openvault.ship.detect import DetectionInputError, detect_project
 from openmw.openvault.ship.domain_guide import build_domain_guide
 from openmw.openvault.ship.engine import (
     DeployInProgressError,
@@ -113,11 +114,14 @@ from openmw.openvault.vault.budget import configured_ceiling
 from openmw.openvault.vault.airgpt_keyvault import keyvault_snapshot, upsert_env_secret
 from openmw.openvault.vault.crypto import Seal, VaultCryptoError, VaultSealedError
 from openmw.openvault.vault.env_ingest import ingest_environment, scan_environment
+from openmw.openvault.vault.pm_import import PmImportError, ingest_pm_sources
 from openmw.openvault.vault.fallback import FallbackConfig, FallbackManager
 from openmw.openvault.vault.precheck import PrecheckLoop, precheck_all, precheck_one
 from openmw.openvault.vault.providers import (
+    HELP_REGISTER_STEPS,
     catalog_coverage_report,
     check_provider_downtime,
+    free_budget_summary,
     get_provider,
     list_catalog,
 )
@@ -161,15 +165,25 @@ def _write_secret_audit(entry: dict[str, Any]) -> None:
     from openmw.openvault.paths import ensure_home
 
     entry = {"ts": datetime.now(timezone.utc).isoformat(), **entry}
-    log.info(str(entry.get("event", "secret_event")), **{
-        k: v for k, v in entry.items() if k not in ("ts", "event", "user_agent")
-    })
+    try:
+        log.info(str(entry.get("event", "secret_event")), **{
+            k: v for k, v in entry.items() if k not in ("ts", "event", "user_agent")
+        })
+    except Exception as exc:
+        # Logger blow-up must not 500 a mint/revoke. File write still attempted.
+        try:
+            log.error("secret_audit_log_failed", error=str(exc), entry_event=entry.get("event"))
+        except Exception:
+            pass
     try:
         path = ensure_home() / "secret_audit.jsonl"
         with path.open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(entry) + "\n")
     except OSError as exc:
-        log.error("secret_audit_write_failed", error=str(exc), entry_event=entry.get("event"))
+        try:
+            log.error("secret_audit_write_failed", error=str(exc), entry_event=entry.get("event"))
+        except Exception:
+            pass
 
 
 def _normalise_host(host: str) -> str:
@@ -229,7 +243,14 @@ def _require_loopback(request: Request, action: str) -> str:
 #: trigger a remote build, or SSH in and restart containers. `local_demo` only
 #: simulates and `aws_guide` only writes a plan, so neither needs the gate.
 _REMOTE_SHIP_TARGETS = frozenset(
-    {"cloudflare_pages", "coolify", "netlify", "openship_cloud", "vps_ssh"}
+    {
+        "cloudflare_pages",
+        "coolify",
+        "netlify",
+        "openship_cloud",
+        "spaceship_ftp",
+        "vps_ssh",
+    }
 )
 
 
@@ -532,6 +553,7 @@ class OnePressDeployBody(BaseModel):
     simulate: bool = True
     auto_execute: bool = True
     target: Literal[
+        "spaceship_ftp",
         "cloudflare_pages",
         "coolify",
         "netlify",
@@ -556,6 +578,7 @@ class DomainGuideBody(BaseModel):
 
 class ShipBlueprintBody(BaseModel):
     target: Literal[
+        "spaceship_ftp",
         "cloudflare_pages",
         "coolify",
         "netlify",
@@ -586,6 +609,7 @@ class GitHubPatBody(BaseModel):
 
 class ShipEngineBody(BaseModel):
     target: Literal[
+        "spaceship_ftp",
         "cloudflare_pages",
         "coolify",
         "netlify",
@@ -602,10 +626,13 @@ class ShipEngineBody(BaseModel):
     monthly_cap_usd: float | None = None
     run_build: bool = False
     prefer_remote_openship: bool = False
+    #: Vault refs to inject into host env (same shape as DeployExecuteBody.secrets).
+    secrets: list[dict[str, str]] = Field(default_factory=list)
 
 
 class ShipPreflightBody(BaseModel):
     target: Literal[
+        "spaceship_ftp",
         "cloudflare_pages",
         "coolify",
         "netlify",
@@ -626,6 +653,10 @@ class ApiKeyIssueBody(BaseModel):
     tier: str = "free"
 
 
+class ApiKeyVerifyBody(BaseModel):
+    token: str = ""
+
+
 class ShipRecommendBody(BaseModel):
     project_path: str = ""
     stack: dict[str, Any] = Field(default_factory=dict)
@@ -643,6 +674,11 @@ class DetectBody(BaseModel):
     project_path: str
 
 
+class CicdWriteBody(BaseModel):
+    project_path: str
+    overwrite: bool = False
+
+
 class SeedBody(BaseModel):
     consumers: list[str] = Field(default_factory=lambda: ["cortex", "airgpt", "openvault"])
     include_local_placeholders: bool = True
@@ -652,6 +688,11 @@ class EnvIngestBody(BaseModel):
     # dry_run default mirrors the control tier: never write until asked.
     dry_run: bool = True
     include_unknown: bool = False
+
+
+class PmIngestBody(BaseModel):
+    dry_run: bool = True
+    path: str | None = None
 
 
 class AccountCreate(BaseModel):
@@ -815,6 +856,12 @@ class VaultPassphraseBody(BaseModel):
     passphrase: str
 
 
+class VaultBackupRetireBody(BaseModel):
+    """Passphrase is required only when the live wrap is passphrase-scrypt."""
+
+    passphrase: str = ""
+
+
 def create_app(
     *,
     vault: KeyVault | None = None,
@@ -890,6 +937,14 @@ def create_app(
                 await task
 
     app = FastAPI(title="OpenVault", version="0.1.0", lifespan=lifespan)
+
+    @app.exception_handler(Exception)
+    async def _unhandled(request: Request, exc: Exception) -> JSONResponse:
+        log.exception("openvault_unhandled", path=str(request.url.path), error=str(exc)[:240])
+        return JSONResponse(
+            status_code=500,
+            content={"error": {"message": str(exc)[:400], "type": type(exc).__name__}},
+        )
 
     # Stage-3 integrator mount: routers own their paths; app.py only wires them.
     from openmw.openvault.routers.health import build_health_router
@@ -2010,6 +2065,46 @@ def create_app(
                 "facts": pre.facts,
                 "real_publish": True,
             }
+        if body.target == "spaceship_ftp":
+            from openmw.openvault.ship.hosts.spaceship_ftp import (
+                SpaceshipFtpAdapter,
+                from_vault,
+            )
+
+            def _spaceship_secret(provider: str) -> str | None:
+                for rec in state_vault.list_keys():
+                    if (
+                        rec.enabled
+                        and rec.lifecycle == "active"
+                        and (
+                            rec.provider == provider
+                            or provider in (rec.label or "").lower()
+                            or "spaceship" in (rec.label or "").lower()
+                            or "ftp" in (rec.label or "").lower()
+                        )
+                    ):
+                        return state_vault.get_secret(rec.id)
+                return None
+
+            try:
+                adapter = from_vault(_spaceship_secret)
+            except Exception:
+                adapter = SpaceshipFtpAdapter(
+                    host=os.environ.get("SPACESHIP_FTP_HOST"),
+                    user=os.environ.get("SPACESHIP_FTP_USER"),
+                    password=os.environ.get("SPACESHIP_FTP_PASS"),
+                    remote_dir=os.environ.get("SPACESHIP_FTP_DIR"),
+                    public_url=os.environ.get("SPACESHIP_PUBLIC_URL"),
+                )
+            pre = adapter.preflight()
+            return {
+                "ok": pre.ready,
+                "ready": pre.ready,
+                "target": body.target,
+                "blocker": pre.blocker,
+                "facts": pre.facts,
+                "real_publish": True,
+            }
         if body.target == "local_demo":
             return {
                 "ok": True,
@@ -2024,9 +2119,9 @@ def create_app(
             "ready": False,
             "target": body.target,
             "blocker": (
-                f"{body.target} is not a real host adapter yet — use Cloudflare Pages, "
-                "Coolify, Netlify, or your own VPS (vps_ssh) for a real publish, or "
-                "local_demo to simulate."
+                f"{body.target} is not a real host adapter yet — use Spaceship FTP "
+                "(the host you already pay for), Cloudflare Pages, Coolify, Netlify, "
+                "or your own VPS (vps_ssh) for a real publish, or local_demo to simulate."
             ),
             "facts": {},
             "real_publish": False,
@@ -2035,6 +2130,7 @@ def create_app(
     @app.post("/api/ship/recommend")
     def ship_recommend(body: ShipRecommendBody) -> dict[str, Any]:
         from openmw.openvault.ship.cloud_targets import TARGET_CARDS
+        from openmw.openvault.ship.hosts.spaceship_ftp import host_configured
         from openmw.openvault.ship.recommend import recommend_target
 
         stack = dict(body.stack or {})
@@ -2042,7 +2138,12 @@ def create_app(
             stack = detect_project(body.project_path.strip()).to_dict()
         sponsored = {t.id for t in TARGET_CARDS if t.sponsored}
         vps = (body.vps_host or "").strip() or os.environ.get("OPENVAULT_VPS_HOST", "").strip()
-        out = recommend_target(stack, sponsored_ids=sponsored, vps_configured=bool(vps))
+        out = recommend_target(
+            stack,
+            sponsored_ids=sponsored,
+            vps_configured=bool(vps),
+            spaceship_configured=host_configured(),
+        )
         out["stack"] = stack
         return out
 
@@ -2094,8 +2195,14 @@ def create_app(
                 destination=body.hostname,
                 request=request,
             )
+        env_vars, inject_summary = _resolve_ship_inject(
+            body.secrets,
+            vault=state_vault,
+            secrets=state_secrets,
+            request=request,
+        )
         try:
-            return run_ship_engine(
+            payload = run_ship_engine(
                 target=body.target,
                 project_path=body.project_path,
                 github_url=body.github_url,
@@ -2105,6 +2212,7 @@ def create_app(
                 monthly_cap_usd=body.monthly_cap_usd,
                 run_build=body.run_build,
                 prefer_remote_openship=body.prefer_remote_openship,
+                ship_env=env_vars or None,
             )
         except DeployInProgressError as exc:
             raise HTTPException(
@@ -2119,6 +2227,11 @@ def create_app(
                     "since": exc.since,
                 },
             ) from exc
+        if env_vars:
+            payload = scrub_mapping(payload, list(env_vars.values()))
+        if inject_summary.get("count"):
+            payload["secrets_injected"] = inject_summary
+        return payload
 
     @app.get("/api/ship/engine/{deployment_id}")
     def ship_engine_get(deployment_id: str) -> dict[str, Any]:
@@ -2222,6 +2335,23 @@ def create_app(
     @app.post("/api/deploy/cicd")
     def deploy_cicd_scan(body: DetectBody) -> dict[str, Any]:
         return detect_cicd(body.project_path).to_dict()
+
+    @app.post("/api/ship/cicd/write")
+    def ship_cicd_write(body: CicdWriteBody, request: Request) -> dict[str, Any]:
+        """Write the GitHub Actions ship workflow onto disk. No live URL."""
+        _require_loopback(request, "write ship workflow")
+        return write_suggested_workflow(body.project_path, overwrite=body.overwrite)
+
+    @app.post("/api/ship/preview")
+    def ship_preview(body: DetectBody, request: Request) -> dict[str, Any]:
+        """Loopback preview of a local artifact. Never a live host URL."""
+        from openmw.openvault.ship.local_preview import preview_project
+
+        _require_loopback(request, "start local preview")
+        try:
+            return preview_project(body.project_path)
+        except DetectionInputError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     @app.get("/api/deploy/{deploy_id}")
     def get_deploy(deploy_id: str) -> dict[str, Any]:
@@ -2395,18 +2525,27 @@ def create_app(
         free_only: bool = False,
         needed_by: str | None = None,
     ) -> dict[str, Any]:
+        rows = list_catalog(free_only=free_only, needed_by=needed_by)
         return {
-            "providers": list_catalog(free_only=free_only, needed_by=needed_by),
-            "count": len(list_catalog(free_only=free_only, needed_by=needed_by)),
+            "providers": rows,
+            "count": len(rows),
+            "priced": False,
+            "nvidia_classifier": False,
         }
 
     @app.get("/api/providers/free")
     def providers_free() -> dict[str, Any]:
         rows = list_catalog(free_only=True)
+        budget = free_budget_summary()
         return {
             "providers": rows,
             "count": len(rows),
-            "help": "Use register_url to create keys, then POST /api/keys and precheck",
+            "priced": False,
+            "nvidia_classifier": False,
+            "help": budget["help"],
+            "next_steps": list(HELP_REGISTER_STEPS),
+            "budget": budget,
+            "ladder": budget["ladder"],
         }
 
     @app.get("/api/providers/coverage")
@@ -2472,9 +2611,35 @@ def create_app(
             _audit_custody("env_ingest", request, imported=result.get("imported", 0))
         return result
 
+    @app.post("/api/vault/ingest-pm")
+    def vault_ingest_pm(body: PmIngestBody, request: Request) -> dict[str, Any]:
+        """Import an official Google/Apple/Chrome password CSV into sealed secrets."""
+        _require_loopback(request, "pm csv ingest")
+        if not body.dry_run:
+            _require_unsealed(state_seal, "pm csv ingest")
+        target = Path(body.path).expanduser() if body.path else None
+        try:
+            result = ingest_pm_sources(
+                state_secrets,
+                path=target,
+                dry_run=body.dry_run,
+            )
+        except PmImportError as exc:
+            status = 409 if "plaintext master-key backup" in str(exc) else 400
+            raise HTTPException(status_code=status, detail=str(exc)) from exc
+        if not body.dry_run:
+            _audit_custody(
+                "pm_csv_ingest",
+                request,
+                imported=result.get("imported", 0),
+                scanned=result.get("scanned", 0),
+                source=target.name if target is not None else "import-dir",
+            )
+        return result
+
     @app.get("/api/vault/status")
     def vault_status() -> dict[str, Any]:
-        """Whether the master key is in memory, and whether a passphrase is set."""
+        """Whether the master key is in memory, and whether a plaintext backup remains."""
         return {"ok": True, **state_seal.status()}
 
     @app.post("/api/vault/unseal")
@@ -2508,6 +2673,28 @@ def create_app(
         _audit_custody("vault_passphrase_set", request, ok=True)
         return {"ok": True, **state_seal.status()}
 
+    @app.post("/api/vault/backup/retire")
+    def vault_retire_plaintext_backup(
+        request: Request, body: VaultBackupRetireBody | None = None
+    ) -> dict[str, Any]:
+        """Remove master.key.v0.bak after proving it matches the live wrapped key."""
+        _require_loopback(request, "retire plaintext backup")
+        _require_unsealed(state_seal, "retire plaintext backup")
+        payload = body if body is not None else VaultBackupRetireBody()
+        try:
+            removed = state_seal.retire_plaintext_backup(payload.passphrase or None)
+        except VaultSealedError as exc:
+            raise HTTPException(status_code=403, detail=str(exc)) from exc
+        except VaultCryptoError as exc:
+            detail = str(exc)
+            if "no plaintext master-key backup" in detail:
+                raise HTTPException(status_code=404, detail=detail) from exc
+            if "does not match" in detail:
+                raise HTTPException(status_code=409, detail=detail) from exc
+            raise HTTPException(status_code=400, detail=detail) from exc
+        _audit_custody("vault_backup_retired", request, path=str(removed))
+        return {"ok": True, "retired": str(removed), **state_seal.status()}
+
     @app.post("/api/apikeys")
     def apikeys_issue(body: ApiKeyIssueBody, request: Request) -> dict[str, Any]:
         """Mint a key for a third-party caller. The token is shown exactly once.
@@ -2532,6 +2719,16 @@ def create_app(
             ),
         }
 
+    @app.post("/api/apikeys/verify")
+    def apikeys_verify(body: ApiKeyVerifyBody, request: Request) -> dict[str, Any]:
+        """Confirm an ov_ token. Loopback-only. Never echoes the token."""
+        _require_loopback(request, "verify api key")
+        record = state_api_keys.verify((body.token or "").strip())
+        if record is None:
+            return {"ok": False}
+        state_api_keys.touch(record.key_id)
+        return {"ok": True, "key": record.to_dict()}
+
     @app.get("/api/apikeys")
     def apikeys_list(request: Request, include_revoked: bool = True) -> dict[str, Any]:
         """Enumerate issued keys. Loopback-only — this is the revoke target list."""
@@ -2553,6 +2750,7 @@ def create_app(
         request: Request,
         api_key_id: str = "",
         identity: str = "",
+        vault_key_id: str = "",
         since: float | None = None,
         limit: int = 200,
     ) -> dict[str, Any]:
@@ -2566,6 +2764,7 @@ def create_app(
         caller = None
         with suppress(AuthRefusedError):
             caller = resolve_caller(request, api_keys=state_api_keys)
+        scoped_vault: str | None = None
         if caller is not None and caller.api_key_id:
             scoped_key: str | None = caller.api_key_id
             scoped_identity: str | None = None
@@ -2574,9 +2773,11 @@ def create_app(
             _require_loopback(request, "read usage ledger")
             scoped_key = api_key_id or None
             scoped_identity = identity or None
+            scoped_vault = vault_key_id or None
         events = state_usage.events(
             api_key_id=scoped_key,
             identity=scoped_identity,
+            vault_key_id=scoped_vault,
             since=since,
             limit=limit,
         )
@@ -2585,7 +2786,10 @@ def create_app(
             "events": events,
             "count": len(events),
             "summary": state_usage.summary(
-                api_key_id=scoped_key, identity=scoped_identity, since=since
+                api_key_id=scoped_key,
+                identity=scoped_identity,
+                vault_key_id=scoped_vault,
+                since=since,
             ),
         }
 
@@ -2761,12 +2965,29 @@ def create_app(
                 },
             )
 
-        status, result = await chat_completions(
-            state_vault, fallback, payload, trace=trace, tenant=identity
-        )
-        # Refund the reservation down to actual usage (0 on upstream failure).
-        measured = usage_total_tokens(result) if 200 <= status < 300 else 0
-        actual = decision.reserved_tokens if measured is None else measured
+        try:
+            status, result = await chat_completions(
+                state_vault, fallback, payload, trace=trace, tenant=identity
+            )
+        except Exception as exc:
+            log.exception("v1_chat_unhandled", error=str(exc)[:240])
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "error": {
+                        "message": str(exc)[:400],
+                        "type": type(exc).__name__,
+                    }
+                },
+            )
+        # Refund the reservation down to actual usage (0 on upstream failure
+        # or an exact-match cache hit — a cached completion spent nothing).
+        if trace.cache_hit:
+            measured = 0
+            actual = 0
+        else:
+            measured = usage_total_tokens(result) if 200 <= status < 300 else 0
+            actual = decision.reserved_tokens if measured is None else measured
         limiter.settle(
             identity,
             tier=tier,
@@ -2778,16 +2999,36 @@ def create_app(
         _record_usage(
             status=status,
             total_tokens=actual,
-            estimated=measured is None,
+            estimated=False if trace.cache_hit else measured is None,
             stream=False,
-            prompt_tokens_in=int((usage_block or {}).get("prompt_tokens") or 0),
-            completion_tokens_in=int((usage_block or {}).get("completion_tokens") or 0),
+            prompt_tokens_in=0
+            if trace.cache_hit
+            else int((usage_block or {}).get("prompt_tokens") or 0),
+            completion_tokens_in=0
+            if trace.cache_hit
+            else int((usage_block or {}).get("completion_tokens") or 0),
         )
-        return JSONResponse(
-            status_code=status,
-            content=result,
-            headers=limiter.headers_for(identity, tier=tier),
-        )
+        headers = limiter.headers_for(identity, tier=tier)
+        if trace.cache_hit:
+            headers["X-OpenVault-Cache"] = "HIT"
+        try:
+            return JSONResponse(
+                status_code=status,
+                content=result,
+                headers=headers,
+            )
+        except (TypeError, ValueError, OverflowError) as exc:
+            log.exception("v1_chat_unserializable", error=str(exc)[:240])
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "error": {
+                        "message": "upstream payload was not JSON-serializable",
+                        "type": "openvault_unserializable",
+                    }
+                },
+                headers=headers,
+            )
 
     app_url = os.environ.get("OPENVAULT_APP_URL", "http://127.0.0.1:3010/")
 

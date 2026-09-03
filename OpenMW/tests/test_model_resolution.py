@@ -58,19 +58,17 @@ def test_text_only_provider_refuses_multimodal_instead_of_dropping_the_image() -
 def test_uncatalogued_provider_passes_a_concrete_id_through() -> None:
     """Providers without a catalogued pool still honour a caller-supplied id.
 
-    Skipping those outright would make the proxy unusable for anthropic (Messages
-    API, out of scope), speech-only entries, and every custom endpoint, so a
-    concrete id goes upstream untouched.
+    Skipping those outright would make the proxy unusable for speech-only
+    entries and custom endpoints, so a concrete id goes upstream untouched.
     """
     assert resolve_model("openai", "gpt-4o-mini") == "gpt-4o-mini"
     assert resolve_model("deepseek", "deepseek-v4-flash") == "deepseek-v4-flash"
     assert resolve_model("deepseek", "any-model", multimodal=True) == "any-model"
-    assert resolve_model("anthropic", "claude-opus-4") == "claude-opus-4"
 
 
 def test_core_byok_auto_resolves_concrete_model() -> None:
     """FreeRoute buyer path uses model=auto; empty chat_models used to skip the hop."""
-    for provider in ("openai", "ollama", "deepseek", "litellm", "cortex"):
+    for provider in ("openai", "anthropic", "ollama", "deepseek", "litellm", "cortex"):
         resolved = resolve_model(provider, "auto")
         assert resolved is not None, f"{provider} auto must not skip"
         assert resolved == models_for(provider)[0]
@@ -80,7 +78,6 @@ def test_core_byok_auto_resolves_concrete_model() -> None:
 
 def test_alias_without_catalogued_pool_is_skipped_not_guessed() -> None:
     """"auto" with nothing catalogued is exactly the case that 404'd upstream."""
-    assert resolve_model("anthropic", "auto") is None
     assert resolve_model("together", "") is None
     assert resolve_model("mistral", "auto") == "mistral-small-latest"
 
@@ -114,6 +111,14 @@ def test_catalog_is_exposed_over_the_wire() -> None:
     assert d["chat_models"][0] == "openai/gpt-oss-120b"
     assert isinstance(d["chat_models"], list)
     assert isinstance(d["vision_models"], list)
+    anthropic = get_provider("anthropic")
+    assert anthropic is not None
+    assert anthropic.chat_models[0] == "claude-sonnet-5"
+    assert "claude-opus-5" in anthropic.chat_models
+    assert resolve_model("anthropic", "auto") == "claude-sonnet-5"
+    assert resolve_model("anthropic", "claude-haiku-4-5") == "claude-haiku-4-5"
+    # Unlisted Claude ids fall back rather than 404ing as a fake model name.
+    assert resolve_model("anthropic", "claude-opus-4") == "claude-sonnet-5"
 
 
 # --- reasoning budget floor -------------------------------------------------------

@@ -30,6 +30,21 @@ class VaultSealedError(VaultCryptoError):
     """Raised when the vault is locked / never unsealed after restart."""
 
 
+def plaintext_backup_path(key_path: Path) -> Path:
+    """On-disk name of the v0 raw-key backup written during wrap migration."""
+    return key_path.with_suffix(key_path.suffix + ".v0.bak")
+
+
+def plaintext_backup_present(key_path: Path) -> bool:
+    """True when the migration backup exists next to the live key file.
+
+    Derived from the directory, not from an in-process flag: the operator
+    reads this on ``GET /api/vault/status``, so a copied vault folder must
+    report the same fact the files on disk actually have.
+    """
+    return plaintext_backup_path(key_path).is_file()
+
+
 def _write_key_file(
     key_path: Path,
     key: bytes,
@@ -67,7 +82,7 @@ def _migrate_plaintext_key(key_path: Path, key: bytes) -> None:
     than a leftover file, and it is the only recovery path if the wrapped key
     later fails to unwrap.
     """
-    backup = key_path.with_suffix(key_path.suffix + ".v0.bak")
+    backup = plaintext_backup_path(key_path)
     try:
         if not backup.exists():
             backup.write_bytes(key_path.read_bytes())
@@ -89,34 +104,41 @@ def _load_or_create_master_key(path: Path | None = None) -> bytes:
     """
     key_path = path if path is not None else master_key_path()
 
-    if key_path.is_file():
-        blob = key_path.read_bytes()
-        if keywrap.is_wrapped(blob):
-            method = keywrap.peek_method(blob)
-            if method == keywrap.METHOD_PASSPHRASE:
-                raise VaultSealedError(
-                    "vault master key is passphrase-wrapped; call unseal with the passphrase"
-                )
-            try:
-                key, _method = keywrap.unwrap(blob)
-            except keywrap.KeyWrapError as exc:
-                # Every stored secret is unreadable from here. Say why, and
-                # point at the backup, rather than surfacing a bare stack trace.
-                raise VaultCryptoError(
-                    f"cannot unwrap the vault master key: {exc}. If this vault "
-                    f"was created by a different Windows account, sign in as "
-                    f"that account. A pre-migration copy may exist at "
-                    f"{key_path.with_suffix(key_path.suffix + '.v0.bak')}"
-                ) from exc
-            return key
-
-        # Legacy v0: a raw Fernet key in plaintext. Use it, then upgrade it.
-        key = blob.strip()
-        _migrate_plaintext_key(key_path, key)
+    if not key_path.is_file():
+        bak = plaintext_backup_path(key_path)
+        if bak.is_file():
+            raise VaultCryptoError(
+                "live master key is missing but a plaintext backup exists at "
+                f"{bak}. Restore that file to {key_path.name} only to recover, "
+                "then retire it. Refusing to mint a new key over an old vault."
+            )
+        key = Fernet.generate_key()
+        _write_key_file(key_path, key)
         return key
 
-    key = Fernet.generate_key()
-    _write_key_file(key_path, key)
+    blob = key_path.read_bytes()
+    if keywrap.is_wrapped(blob):
+        method = keywrap.peek_method(blob)
+        if method == keywrap.METHOD_PASSPHRASE:
+            raise VaultSealedError(
+                "vault master key is passphrase-wrapped; call unseal with the passphrase"
+            )
+        try:
+            key, _method = keywrap.unwrap(blob)
+        except keywrap.KeyWrapError as exc:
+            # Every stored secret is unreadable from here. Say why, and
+            # point at the backup, rather than surfacing a bare stack trace.
+            raise VaultCryptoError(
+                f"cannot unwrap the vault master key: {exc}. If this vault "
+                f"was created by a different Windows account, sign in as "
+                f"that account. A pre-migration copy may exist at "
+                f"{plaintext_backup_path(key_path)}"
+            ) from exc
+        return key
+
+    # Legacy v0: a raw Fernet key in plaintext. Use it, then upgrade it.
+    key = blob.strip()
+    _migrate_plaintext_key(key_path, key)
     return key
 
 
@@ -183,6 +205,7 @@ class Seal:
             "sealed": self.is_sealed,
             "passphrase_configured": self.passphrase_configured,
             "wrap_method": self._wrap_method,
+            "plaintext_backup_present": plaintext_backup_present(self._key_path),
         }
 
     def _require_open(self) -> Fernet:
@@ -248,7 +271,47 @@ class Seal:
             passphrase=passphrase,
         )
         self._wrap_method = method
-        log.info("vault_passphrase_configured", wrap_method=method)
+        if plaintext_backup_present(self._key_path):
+            log.warning(
+                "vault_passphrase_configured_with_plaintext_backup",
+                wrap_method=method,
+                backup=str(plaintext_backup_path(self._key_path)),
+            )
+        else:
+            log.info("vault_passphrase_configured", wrap_method=method)
+
+    def retire_plaintext_backup(self, passphrase: str | None = None) -> Path:
+        """Delete ``master.key.v0.bak`` after proving it matches the live key.
+
+        Unwraps the on-disk ``master.key`` through :func:`keywrap.unwrap` and
+        compares those bytes to the backup. A mismatch refuses the delete —
+        a backup of a different key is worse than a leftover file.
+        """
+        if self.is_sealed or self._master_key is None:
+            raise VaultSealedError("cannot retire the plaintext backup while the vault is sealed")
+        bak = plaintext_backup_path(self._key_path)
+        if not bak.is_file():
+            raise VaultCryptoError("no plaintext master-key backup to retire")
+        if not self._key_path.is_file():
+            raise VaultCryptoError("no live master key to verify against")
+        blob = self._key_path.read_bytes()
+        try:
+            live, _used = keywrap.unwrap(blob, passphrase=passphrase)
+        except keywrap.KeyWrapError as exc:
+            raise VaultCryptoError(
+                f"cannot unwrap the live master key to verify the backup: {exc}"
+            ) from exc
+        if live != self._master_key:
+            raise VaultCryptoError(
+                "live master key in memory does not match the unwrapped key file"
+            )
+        if live != bak.read_bytes().strip():
+            raise VaultCryptoError(
+                "plaintext backup does not match the live master key; refusing to delete it"
+            )
+        bak.unlink()
+        log.info("vault_plaintext_backup_retired", path=str(bak))
+        return bak
 
 
 def mask_secret(secret: str, *, visible: int = 4) -> str:

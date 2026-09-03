@@ -12,11 +12,31 @@ import structlog
 
 from openmw.openvault.route.attempt import AttemptOutcome, classify_attempt
 from openmw.openvault.route.breaker import get_circuit_breaker
+from openmw.openvault.route.key_rotator import (
+    key_is_invalid,
+    record_key_failure,
+    record_key_success,
+    rotate_same_provider_bands,
+)
+from openmw.openvault.route.registry import get_route_state
+from openmw.openvault.route.response_cache import lookup as response_cache_lookup
+from openmw.openvault.route.response_cache import store as response_cache_store
+from openmw.openvault.route.semaphore import mark_rate_limited, remaining_cooldown_ms
+from openmw.openvault.route.strategies import apply_strategy, costs_known
+from openmw.openvault.route.task_help import prefer_free_then_cheap, wants_free_help
+from openmw.openvault.route.types import RouteTarget
+from openmw.openvault.vault.anthropic_messages import (
+    messages_to_openai_chat,
+    messages_url,
+    openai_chat_to_messages,
+    openai_sse_from_anthropic,
+    request_headers as anthropic_request_headers,
+)
 from openmw.openvault.vault.budget import estimate_tokens_for_body, prepare_hop_body
 from openmw.openvault.vault.fallback import FallbackManager
 from openmw.openvault.vault.precheck import _default_base_url
 from openmw.openvault.vault.providers import resolve_model
-from openmw.openvault.vault.store import KeyVault
+from openmw.openvault.vault.store import KeyRecord, KeyVault
 from openmw.openvault.vault.usage_store import HopTrace
 
 log = structlog.get_logger()
@@ -62,8 +82,10 @@ def _no_candidates_refusal(vault: KeyVault) -> dict[str, Any]:
     """
     try:
         held = [k for k in vault.enabled_ordered() if k.custody != "pooled"]
+        pooled = [k for k in vault.enabled_ordered() if k.custody == "pooled"]
     except Exception:  # pragma: no cover - a sealed or unreadable vault
         held = []
+        pooled = []
     if held:
         return {
             "error": {
@@ -73,6 +95,19 @@ def _no_candidates_refusal(vault: KeyVault) -> dict[str, Any]:
                     "spent by the metered gateway"
                 ),
                 "type": "openvault_no_pooled_keys",
+            }
+        }
+    if pooled:
+        return {
+            "error": {
+                "message": (
+                    "no healthy pooled hop is available (429 park, open breaker, "
+                    "or auth-fail). Wait out the cooldown, or vault a working "
+                    "primary key (Anthropic / OpenAI) on :3010. OpenVault does "
+                    "not auto-register third-party accounts. priced stays false."
+                ),
+                "type": "openvault_hops_unhealthy",
+                "priced": False,
             }
         }
     return {
@@ -172,14 +207,18 @@ def _apply_outcome(
     if outcome.attempt_class == "success":
         fallback.record_success(key_id)
         get_circuit_breaker(provider).record_success()
+        record_key_success(provider, key_id)
         return
 
     if outcome.candidate == "park":
         fallback.record_park(key_id, outcome.cooldown_ms, outcome.reason or error)
+        if outcome.cooldown_ms > 0:
+            mark_rate_limited(key_id, outcome.cooldown_ms)
         return
 
     if outcome.candidate == "quarantine_key":
         vault.set_precheck(key_id, status="auth_fail", latency_ms=None, error=error)
+        record_key_failure(provider, key_id)
         return
 
     if outcome.candidate == "eject_for_job":
@@ -199,6 +238,98 @@ def _apply_outcome(
             get_circuit_breaker(provider).record_failure(status=status)
 
 
+def _combo_reorder(
+    records: list[KeyRecord],
+    body: dict[str, Any] | None = None,
+) -> list[KeyRecord]:
+    """Apply the OmniRoute combo strategy to hops the fallback manager already ranked.
+
+    ``auto`` / ``priority`` / ``fill-first`` keep role-band order but send
+    429-cooling hops last (same Retry-After parks as ``reset-aware``). That is
+    a gateway walk, not an NVIDIA intent classifier. ``cost-optimized`` is a
+    no-op when no hop has a real cost (priced stays false).
+    Help-route: when the prompt asks for a free key / cheap hop, ``auto``
+    walks free then cheap first. Breakers and empty-pool 503 still fail closed.
+    """
+    if not records:
+        return []
+    state = get_route_state()
+    strategy = state.strategy
+    if strategy in ("auto", "priority", "fill-first", "reset-aware"):
+        ready = [r for r in records if remaining_cooldown_ms(r.id) <= 0]
+        cooling = [r for r in records if remaining_cooldown_ms(r.id) > 0]
+        if strategy == "auto" and wants_free_help(body):
+            ready = prefer_free_then_cheap(ready)
+        return ready + cooling
+    by_id = {r.id: r for r in records}
+    targets = [
+        RouteTarget(
+            execution_key=r.id,
+            provider=r.provider,
+            model_str=r.provider,
+            weight=1.0,
+            priority=r.priority,
+            cost=None,
+        )
+        for r in records
+    ]
+    if strategy == "cost-optimized" and not costs_known(targets):
+        return list(records)
+    ordered = apply_strategy(
+        strategy, targets, combo_name=state.combo_name, metrics=state.metrics
+    )
+    out = [by_id[t.execution_key] for t in ordered if t.execution_key in by_id]
+    seen = {r.id for r in out}
+    out.extend(r for r in records if r.id not in seen)
+    return out
+
+
+def json_safe(value: Any) -> Any:
+    """Make an upstream payload JSONResponse-safe.
+
+    Groq gpt-oss / OpenRouter 200 bodies have crashed uvicorn with a bare
+    ``Internal Server Error`` (text/plain) when FastAPI could not encode the
+    payload. That hid a working hop behind a 500. Never let one encode fail
+    500 the FreeRoute job.
+    """
+    try:
+        return json.loads(json.dumps(value, default=str, allow_nan=False))
+    except (TypeError, ValueError, OverflowError, UnicodeDecodeError):
+        return {
+            "error": {
+                "message": "upstream payload was not JSON-serializable",
+                "type": "openvault_unserializable",
+            }
+        }
+
+
+def _upstream_request(
+    record: KeyRecord,
+    secret: str,
+    hop_body: dict[str, Any],
+    *,
+    stream: bool = False,
+) -> tuple[str, dict[str, str], dict[str, Any]]:
+    """URL, headers, and JSON body for this hop. Anthropic speaks Messages."""
+    base = _default_base_url(record.provider, record.base_url)
+    if record.provider == "anthropic":
+        payload = dict(hop_body)
+        if stream:
+            payload["stream"] = True
+        return (
+            messages_url(base),
+            anthropic_request_headers(secret, stream=stream),
+            openai_chat_to_messages(payload),
+        )
+    url = f"{base}/chat/completions"
+    headers = {"Authorization": f"Bearer {secret}", "Content-Type": "application/json"}
+    if stream:
+        headers["Accept"] = "text/event-stream"
+        hop_body = dict(hop_body)
+        hop_body["stream"] = True
+    return url, headers, hop_body
+
+
 async def chat_completions(
     vault: KeyVault,
     fallback: FallbackManager,
@@ -215,7 +346,17 @@ async def chat_completions(
     the return tuple is unpacked by four test modules that do not want it.
     """
     trace = trace if trace is not None else HopTrace()
-    candidates = fallback.ordered_candidates(affinity_key=affinity_key_for(body, tenant=tenant))
+    cached = response_cache_lookup(tenant, body)
+    if cached is not None:
+        trace.cache_hit = True
+        log.info("openvault_response_cache_hit", tenant=tenant[:32])
+        return 200, json_safe(cached)
+
+    affinity = affinity_key_for(body, tenant=tenant)
+    candidates = rotate_same_provider_bands(
+        _combo_reorder(fallback.ordered_candidates(affinity_key=affinity), body),
+        affinity_key=affinity,
+    )
     if not candidates:
         return 503, _no_candidates_refusal(vault)
 
@@ -233,24 +374,27 @@ async def chat_completions(
     async with httpx.AsyncClient(timeout=timeout_s) as client:
         for record in candidates:
             considered += 1
+            if key_is_invalid(record.provider, record.id):
+                errors.append(f"{record.label}: vault key marked invalid after auth failures")
+                continue
             breaker = get_circuit_breaker(record.provider)
             if not breaker.acquire_probe_slot():
                 errors.append(f"{record.label}: provider circuit open")
                 continue
 
-            secret = vault.get_secret(record.id)
+            try:
+                secret = vault.get_secret(record.id)
+            except Exception as exc:
+                errors.append(
+                    f"{record.label}: vault get_secret {type(exc).__name__}: {exc}"[:240]
+                )
+                continue
             if secret is None:
                 continue
             base = _default_base_url(record.provider, record.base_url)
             if not base:
                 fallback.record_failure(record.id, "missing base_url")
                 errors.append(f"{record.label}: missing base_url")
-                continue
-
-            url = f"{base}/chat/completions"
-            headers = {"Authorization": f"Bearer {secret}", "Content-Type": "application/json"}
-            if record.provider == "anthropic":
-                errors.append(f"{record.label}: anthropic chat not via /v1 proxy yet")
                 continue
 
             # Translate the model per hop. Forwarding the caller's value verbatim sent
@@ -296,8 +440,9 @@ async def chat_completions(
                 )
 
             trace.note_attempt()
+            url, headers, upstream_body = _upstream_request(record, secret, hop_body)
             try:
-                resp = await client.post(url, headers=headers, json=hop_body)
+                resp = await client.post(url, headers=headers, json=upstream_body)
             except httpx.TimeoutException:
                 outcome = classify_attempt(None, "timeout")
                 _apply_outcome(
@@ -322,8 +467,22 @@ async def chat_completions(
                 )
                 errors.append(f"{record.label}: {exc}")
                 continue
+            except Exception as exc:
+                log.exception(
+                    "openvault_hop_unhandled",
+                    provider=record.provider,
+                    error=str(exc)[:240],
+                )
+                errors.append(
+                    f"{record.label}: unhandled {type(exc).__name__}: {exc}"[:240]
+                )
+                continue
 
-            body_text = resp.text
+            try:
+                body_text = resp.text
+            except Exception as exc:
+                errors.append(f"{record.label}: body decode {type(exc).__name__}: {exc}"[:240])
+                continue
             outcome = classify_attempt(resp.status_code, body_text, headers=dict(resp.headers))
 
             if outcome.attempt_class == "success":
@@ -345,9 +504,17 @@ async def chat_completions(
                     provider=record.provider, model=model, vault_key_id=record.id
                 )
                 try:
-                    return resp.status_code, resp.json()
+                    payload = resp.json()
                 except Exception:
-                    return resp.status_code, {"raw": body_text}
+                    payload = {"raw": (body_text or "")[:4000]}
+                if record.provider == "anthropic" and isinstance(payload, dict):
+                    payload = messages_to_openai_chat(payload)
+                if isinstance(payload, dict):
+                    try:
+                        response_cache_store(tenant, body, payload)
+                    except Exception as exc:
+                        log.warning("openvault_cache_store_failed", error=str(exc)[:200])
+                return resp.status_code, json_safe(payload)
 
             err = f"HTTP {resp.status_code}"
             _apply_outcome(
@@ -404,7 +571,11 @@ async def prepare_chat_stream(
     with the correct HTTP status (streaming cannot change status mid-flight).
     """
     trace = trace if trace is not None else HopTrace()
-    candidates = fallback.ordered_candidates(affinity_key=affinity_key_for(body, tenant=tenant))
+    affinity = affinity_key_for(body, tenant=tenant)
+    candidates = rotate_same_provider_bands(
+        _combo_reorder(fallback.ordered_candidates(affinity_key=affinity), body),
+        affinity_key=affinity,
+    )
     if not candidates:
         return 503, _no_candidates_refusal(vault)
 
@@ -427,6 +598,9 @@ async def prepare_chat_stream(
     try:
         for record in candidates:
             considered += 1
+            if key_is_invalid(record.provider, record.id):
+                errors.append(f"{record.label}: vault key marked invalid after auth failures")
+                continue
             breaker = get_circuit_breaker(record.provider)
             if not breaker.acquire_probe_slot():
                 errors.append(f"{record.label}: provider circuit open")
@@ -440,17 +614,6 @@ async def prepare_chat_stream(
                 fallback.record_failure(record.id, "missing base_url")
                 errors.append(f"{record.label}: missing base_url")
                 continue
-
-            if record.provider == "anthropic":
-                errors.append(f"{record.label}: anthropic chat not via /v1 proxy yet")
-                continue
-
-            url = f"{base}/chat/completions"
-            headers = {
-                "Authorization": f"Bearer {secret}",
-                "Content-Type": "application/json",
-                "Accept": "text/event-stream",
-            }
 
             # Same per-hop translation as the non-streaming path. Fixing only one of
             # the two left streaming answering 404 while plain chat worked.
@@ -491,8 +654,11 @@ async def prepare_chat_stream(
                 )
 
             trace.note_attempt()
+            url, headers, upstream_body = _upstream_request(
+                record, secret, hop_payload, stream=True
+            )
             try:
-                req = client.build_request("POST", url, headers=headers, json=hop_payload)
+                req = client.build_request("POST", url, headers=headers, json=upstream_body)
                 resp = await client.send(req, stream=True)
             except httpx.TimeoutException:
                 outcome = classify_attempt(None, "timeout")
@@ -567,9 +733,13 @@ async def prepare_chat_stream(
 
             async def _byte_iter(
                 response: httpx.Response = resp,
+                translate: bool = record.provider == "anthropic",
             ) -> AsyncIterator[bytes]:
                 try:
-                    async for chunk in response.aiter_bytes():
+                    source: AsyncIterator[bytes] = response.aiter_bytes()
+                    if translate:
+                        source = openai_sse_from_anthropic(source)
+                    async for chunk in source:
                         if chunk:
                             yield chunk
                 finally:

@@ -50,6 +50,9 @@ class ProviderSpec:
     # (AirGPT does) would cascade away from a perfectly healthy key, so these need a
     # budget floor rather than a blanket "empty means broken".
     reasoning_models: tuple[str, ...] = ()
+    pool_key: str = ""
+    monthly_tokens: int = 0
+    pool_kind: str = ""  # recurring | uncapped | credit | local | ""
 
     def to_dict(self) -> dict[str, Any]:
         d = asdict(self)
@@ -111,6 +114,24 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
         openai_compatible=False,
         needed_by=("cortex", "airgpt", "openvault"),
         status_page="https://status.anthropic.com/",
+        # Pinned from https://platform.claude.com/docs/en/about-claude/models/overview
+        # (fetched 2026-08-28). Auto uses the workhorse (Sonnet 5), not Fable/Opus.
+        # Haiku lists both the published alias and the dated API id. Vision is
+        # the same set: that page says every current model accepts image input.
+        chat_models=(
+            "claude-sonnet-5",
+            "claude-haiku-4-5",
+            "claude-haiku-4-5-20251001",
+            "claude-opus-5",
+            "claude-fable-5",
+        ),
+        vision_models=(
+            "claude-sonnet-5",
+            "claude-haiku-4-5",
+            "claude-haiku-4-5-20251001",
+            "claude-opus-5",
+            "claude-fable-5",
+        ),
     ),
     ProviderSpec(
         id="openrouter",
@@ -329,6 +350,8 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
         free_notes="100% free local; api_key can be 'ollama'",
         needed_by=("cortex", "airgpt", "openvault"),
         placeholder_secret="ollama",
+        pool_key="ollama",
+        pool_kind="local",
         # Tags commonly served by a stock Ollama install. Missing pull -> real
         # upstream 404, not a dishonest "no catalogued model" skip.
         chat_models=(
@@ -353,6 +376,8 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
         free_notes="Local Netie Engine — BYOK via OpenVault",
         needed_by=("airgpt", "openvault"),
         placeholder_secret="cortex-local",
+        pool_key="cortex",
+        pool_kind="local",
         # Align with OpenMW model_manager tier defaults / models.json ids.
         chat_models=(
             "qwen3.5-9b",
@@ -457,6 +482,87 @@ def essentials_for(*consumers: str) -> list[dict[str, Any]]:
     return out
 
 
+def free_budget_summary() -> dict[str, Any]:
+    """Pool-deduped free/local catalog. monthly_tokens stays 0 unless a grant is cited."""
+    pools: dict[str, dict[str, Any]] = {}
+    for spec in PROVIDER_CATALOG:
+        if spec.tier not in ("free", "freemium", "local"):
+            continue
+        key = spec.pool_key or spec.id
+        row = pools.setdefault(
+            key,
+            {
+                "pool_key": key,
+                "kind": spec.pool_kind or spec.tier,
+                "monthly_tokens": 0,
+                "register_urls": [],
+                "provider_ids": [],
+            },
+        )
+        if spec.monthly_tokens > int(row["monthly_tokens"]):
+            row["monthly_tokens"] = spec.monthly_tokens
+        row["provider_ids"].append(spec.id)
+        if spec.register_url and spec.register_url not in row["register_urls"]:
+            row["register_urls"].append(spec.register_url)
+    recurring = sum(int(p["monthly_tokens"]) for p in pools.values())
+    return {
+        "priced": False,
+        "recurring_tokens_sum": recurring,
+        "uncapped_pool_keys": sorted(
+            p["pool_key"] for p in pools.values() if p["kind"] in ("uncapped", "local")
+        ),
+        "pools": list(pools.values()),
+        "help": (
+            "Use register_url, then POST /api/keys and precheck. "
+            "OpenVault does not auto-register third-party accounts."
+        ),
+        "honesty": (
+            "monthly_tokens is 0 unless a grant is cited on the spec. "
+            "Do not invent a billion-token headline."
+        ),
+        "ladder": free_ladder(),
+    }
+
+
+_LADDER_KIND_RANK = {
+    "local": 0,
+    "uncapped": 1,
+    "free": 2,
+    "freemium": 3,
+    "recurring": 4,
+    "credit": 5,
+}
+
+
+def free_ladder() -> list[dict[str, Any]]:
+    """Ranked free/local hops for first-run help. No dollars. No invented grants."""
+    rows: list[tuple[tuple[int, str], dict[str, Any]]] = []
+    for spec in PROVIDER_CATALOG:
+        if spec.tier not in ("free", "freemium", "local"):
+            continue
+        kind = spec.pool_kind or spec.tier
+        rows.append(
+            (
+                (_LADDER_KIND_RANK.get(kind, 9), spec.id),
+                {
+                    "id": spec.id,
+                    "name": spec.name,
+                    "tier": spec.tier,
+                    "kind": kind,
+                    "register_url": spec.register_url,
+                    "free_notes": spec.free_notes,
+                    "monthly_tokens": spec.monthly_tokens,
+                },
+            )
+        )
+    rows.sort(key=lambda item: item[0])
+    out: list[dict[str, Any]] = []
+    for rank, (_sort, row) in enumerate(rows, 1):
+        row["rank"] = rank
+        out.append(row)
+    return out
+
+
 @dataclass
 class DowntimeResult:
     provider_id: str
@@ -497,6 +603,13 @@ async def check_provider_downtime(
         return DowntimeResult(spec.id, False, None, str(exc), spec.register_url)
 
 
+HELP_REGISTER_STEPS: tuple[dict[str, str], ...] = (
+    {"n": "1", "do": "Open register_url on a missing free/freemium provider"},
+    {"n": "2", "do": "POST /api/keys with the issued key (vault SoT)"},
+    {"n": "3", "do": "Precheck the key, then POST /v1/chat/completions"},
+)
+
+
 def catalog_coverage_report(vault_provider_ids: set[str] | frozenset[str]) -> dict[str, Any]:
     """What Cortex/AirGPT still need vs what the vault already has."""
     missing: dict[str, list[dict[str, str]]] = {
@@ -534,10 +647,20 @@ def catalog_coverage_report(vault_provider_ids: set[str] | frozenset[str]) -> di
         "missing_by_consumer": missing,
         "free_or_local_catalog": free,
         "catalog_size": len(PROVIDER_CATALOG),
+        "priced": False,
+        "next_steps": HELP_REGISTER_STEPS,
+        "budget": free_budget_summary(),
         "omniroute_absorb_notes": (
             "FreeRoute (AirGPT product name) absorbs OmniRoute patterns: 4-tier fallback, "
-            "free-tier surface, register links, downtime probes, circuit breaker. "
-            "Not cloned: 250-provider matrix, compression engines, quota-share DRR. "
+            "free-tier surface, register links, downtime probes, circuit breaker, "
+            "auto strategy (fallback chain), reset-aware hop order from Retry-After, "
+            "Anthropic Messages translation on /v1/chat/completions, pool-deduped "
+            "free-budget summary (cited grants only), quota-share hop order "
+            "(equal-share overage on same-provider keys; request counts, priced=false), "
+            "headroom (unused capacity first, cooling last), lkgp (last-known-good hop first). "
+            "Not cloned: 250-provider matrix, compression engines, OmniRoute "
+            "hard/soft/burst DRR dashboard, "
+            "NVIDIA llm-router / Switchyard intent classifiers (BERT, CLIP, LLM-as-judge). "
             "Custody + routing SoT stays OpenVault; AirGPT only enables the sidecar."
         ),
         "similar_routers": [
@@ -584,9 +707,8 @@ def resolve_model(provider: str, requested: str | None, *, multimodal: bool = Fa
     pool = spec.vision_models if multimodal else spec.chat_models
     if not pool:
         # Nothing catalogued for this modality yet. Remaining empty entries
-        # (anthropic Messages API, speech-only, etc.) still need concrete caller
-        # ids to stay usable; only an alias is unresolvable here, and guessing
-        # is what sent "auto" upstream as a model name in the first place.
+        # (speech-only, unverified aliases, custom endpoints) still
+        # need concrete caller ids; guessing "auto" is what 404'd upstream.
         want = (requested or "").strip()
         if want and want.lower() not in _AUTO_ALIASES:
             return want

@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Literal
 
 from openmw.openvault.paths import fallback_path
+from openmw.openvault.route.semaphore import remaining_cooldown_ms
 from openmw.openvault.vault.store import KeyRecord, KeyVault
 
 CircuitState = Literal["closed", "open", "half_open"]
@@ -202,6 +203,7 @@ class FallbackManager:
                     "last_latency_ms": record.last_latency_ms,
                     "park_until": circ.park_until,
                     "park_reason": circ.park_reason,
+                    "remaining_cooldown_ms": remaining_cooldown_ms(record.id),
                 }
             )
         return FallbackStatus(
