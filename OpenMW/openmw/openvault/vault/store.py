@@ -367,6 +367,7 @@ class KeyVault:
             priority=current.priority,
             enabled=True,
             account_id=current.account_id,
+            custody=current.custody,
         )
         with self._connect() as conn:
             conn.execute(
@@ -426,6 +427,7 @@ class KeyVault:
                         role="primary",
                         priority=10,
                         account_id=account_id,
+                        custody="tenant",
                     )
                 )
             elif provider not in ("ollama", "cortex", "litellm"):
