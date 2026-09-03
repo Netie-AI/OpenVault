@@ -43,6 +43,9 @@ CONTRACT_ROUTES = [
     ("POST", "/api/cloud/shares"),
     ("POST", "/api/cloud/firewall/check"),
     ("POST", "/api/cloud/sessions"),
+    ("POST", "/api/crew/gate"),
+    ("GET", "/api/cortex/skills"),
+    ("GET", "/api/cortex/crew"),
     ("POST", "/v1/chat/completions"),
 ]
 
@@ -90,6 +93,11 @@ def test_connect_pack_pins_openide_to_airgpt(app: FastAPI) -> None:
     # OpenVault stays the custody + gate surface in the pack it publishes.
     assert pack["openvault"]["base_url"] == "http://127.0.0.1:5000"
     assert pack["cortex"]["base_url"] == "http://127.0.0.1:8010"
+    assert pack["openvault"]["crew_gate"].endswith("/api/crew/gate")
+    assert pack["openvault"]["access_resolve"].endswith("/api/access/resolve")
+    assert pack["cortex"]["crew"].endswith("/api/crew")
+    assert pack["netie_kb"]["base_url"] == "http://127.0.0.1:8030"
+    assert pack["constructor"]["repo"].endswith("/constructor")
 
 
 @pytest.mark.parametrize("flag", ["bypass", "bypass_gate", "force", "skip_rules", "ignore_gate"])
@@ -142,3 +150,26 @@ def test_openfree_status_aliases_for_cortex(app: FastAPI) -> None:
     assert "token_remaining" in data
     assert data["remaining_tokens"] == data["token_remaining"]
     assert data["remaining"] == data["token_remaining"]
+
+
+_SKILL_LIBRARY_PATHS = ("/api/skills", "/api/agent-skills", "/api/omni-skills")
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+def test_no_skills_library_route(app: FastAPI) -> None:
+    """DR-0012: a skills catalog here is a PRODUCT_ROLES amendment, not a route."""
+    served = _routes(app)
+    leaked = [
+        f"{method} {path}"
+        for method, path in served
+        if any(p in path for p in _SKILL_LIBRARY_PATHS)
+    ]
+    assert leaked == [], f"skills-library routes must not exist: {leaked}"
+
+
+def test_product_roles_openvault_does_not_run_the_loop() -> None:
+    """DR-0012: Cortex stirs; OpenVault does not become the crew orchestrator."""
+    text = (_REPO_ROOT / "PRODUCT_ROLES.md").read_text(encoding="utf-8")
+    assert "Running the agent loop itself" in text
+    assert "Brains / architecture / MoE / agent loop" in text
+    assert "Keys / where-is-it / connect / deploy / host / gate" in text

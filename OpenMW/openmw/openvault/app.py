@@ -428,6 +428,22 @@ class AccessResolveBody(BaseModel):
     required_providers: list[str] = Field(default_factory=list)
 
 
+class CrewGateBody(BaseModel):
+    """Cortex crew asks: may this child invoke a skill/MCP/tool?
+
+    OpenVault answers with a location + verdict. It does not spawn the child
+    or load the skill body (DR-0012). ``parent_run_id`` is audit-only.
+    """
+
+    kind: AccessKind = "skill"
+    id: str = "netie-kb.skills"
+    intent: AccessIntent = "invoke"
+    parent_run_id: str = ""
+    child_id: str = ""
+    deficit: str = ""
+    required_providers: list[str] = Field(default_factory=list)
+
+
 class PasswordCreate(BaseModel):
     label: str
     password: str
@@ -1710,6 +1726,45 @@ def create_app(
     @app.get("/api/cortex/models")
     async def cortex_models() -> dict[str, Any]:
         return await cortex.models()
+
+    @app.get("/api/cortex/skills")
+    async def cortex_skills() -> dict[str, Any]:
+        """Skill *ids* Cortex advertises. Never prompt text (DR-0012)."""
+        return await cortex.skills_index()
+
+    @app.get("/api/cortex/crew")
+    async def cortex_crew() -> dict[str, Any]:
+        """Parent-run ids only. Transcripts stay in Cortex."""
+        return await cortex.crew_index()
+
+    @app.post("/api/crew/gate")
+    def crew_gate(body: CrewGateBody) -> dict[str, Any]:
+        """Cortex crew: may this child invoke? Location + verdict, no skill body."""
+        result = resolve_access(
+            vault=state_vault,
+            kind=body.kind,
+            resource_id=body.id,
+            intent=body.intent,
+            fallback=fallback,
+            openvault_url=self_url,
+            required_providers=list(body.required_providers) or None,
+        )
+        log.info(
+            "crew_gate",
+            kind=result.kind,
+            resource=result.id,
+            intent=result.intent,
+            parent_run_id=body.parent_run_id or None,
+            child_id=body.child_id or None,
+            deficit=body.deficit or None,
+            allowed=result.allowed,
+            reasons=result.reasons,
+        )
+        payload = result.to_dict()
+        payload["parent_run_id"] = body.parent_run_id
+        payload["child_id"] = body.child_id
+        payload["deficit"] = body.deficit
+        return payload
 
     @app.get("/api/orchestration/selection")
     def get_selection() -> dict[str, Any]:
