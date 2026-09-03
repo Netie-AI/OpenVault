@@ -245,6 +245,22 @@ class TestRenderers:
         assert "app.py" in names
         assert not [n for n in names if n.startswith((".git", "node_modules"))]
 
+    def test_tar_skips_secret_dotenv_keeps_example(self, tmp_path: Path) -> None:
+        (tmp_path / "app.py").write_text("x", encoding="utf-8")
+        (tmp_path / ".env").write_text("SECRET=1", encoding="utf-8")
+        (tmp_path / ".env.local").write_text("SECRET=2", encoding="utf-8")
+        (tmp_path / ".env.example").write_text("SECRET=", encoding="utf-8")
+        blob = tar_directory(tmp_path)
+        import io
+        import tarfile
+
+        with tarfile.open(fileobj=io.BytesIO(blob)) as tar:
+            names = tar.getnames()
+        assert "app.py" in names
+        assert ".env.example" in names
+        assert ".env" not in names
+        assert ".env.local" not in names
+
 
 class TestPlan:
     def test_long_running_stack_is_a_container(self) -> None:

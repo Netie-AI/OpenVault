@@ -18,6 +18,7 @@ from typing import Any, Literal
 from openmw.openvault.paths import ensure_home
 from openmw.openvault.ship.aws_guide import build_aws_render_plan
 from openmw.openvault.ship.domain_guide import build_domain_guide
+from openmw.openvault.ship.hosts import adapter_ids
 from openmw.openvault.ship.openship_client import adapter_status
 
 # `cloudflare_pages` is the first target that genuinely publishes: it uploads
@@ -26,6 +27,7 @@ from openmw.openvault.ship.openship_client import adapter_status
 # ship/hosts/ for the distinction and docs/BACKEND_HONESTY_AUDIT.md for why it
 # matters that the two are never conflated.
 ShipTarget = Literal[
+    "spaceship_ftp",
     "cloudflare_pages",
     "coolify",
     "netlify",
@@ -116,6 +118,19 @@ class TargetCard:
 
 
 TARGET_CARDS: tuple[TargetCard, ...] = (
+    TargetCard(
+        id="spaceship_ftp",
+        title="Spaceship FTP (existing host)",
+        blurb=(
+            "Real publish to the shared host you already pay for. Your machine builds; "
+            "OpenVault uploads over the existing FTP account. Never buy New hosting. "
+            "No URL unless a probe of a configured public URL succeeds."
+        ),
+        instant_host=True,
+        needs=["SPACESHIP_FTP_HOST", "SPACESHIP_FTP_USER", "vaulted FTP password"],
+        register_url="https://www.spaceship.com/application/hosting-manager/",
+        estimated_min_usd=0.0,
+    ),
     TargetCard(
         id="cloudflare_pages",
         title="Cloudflare Pages",
@@ -208,6 +223,28 @@ def list_targets() -> dict[str, Any]:
         "sponsored": sponsored,
         "budget": budget.to_dict(),
         "openship": adapter,
+        "host_adapters": adapter_ids(),
+        # Real adapters; no live public URL until HT1 (human). Never invent one.
+        "live_public_url": None,
+        "live_url_observed": False,
+        "human_test_gate": "HT1",
+        "vercel_job": {
+            "git_push": "write-workflow",
+            "ftp_push": "spaceship-existing-host",
+            "preview": "loopback-or-observed",
+            "env": "vault-inject",
+            "dotenv_upload": "excluded",
+            "spaceship_first": True,
+            "live_public_url": None,
+            "note": (
+                "Not Vercel. Host adapters include Spaceship FTP for the account you "
+                "already pay for. git-push writes an Actions workflow (simulate default); "
+                "it does not mint a public preview URL. A local loopback preview of the "
+                "artifact is not live. Simulate never invents a production URL. "
+                ".env files stay off the upload; inject from the vault. A real openable "
+                "URL is HT1 (human). Do not buy a second host."
+            ),
+        },
         "product_promise": (
             "Your machine builds; your cloud account hosts; your domain points. "
             "OpenVault owns no servers. Sponsored targets never auto-select."
@@ -237,7 +274,15 @@ def build_ship_blueprint(
     aws = build_aws_render_plan(hostname=hostname or "app.example.com") if target == "aws_guide" else None
 
     steps: list[dict[str, str]] = []
-    if target == "cloudflare_pages":
+    if target == "spaceship_ftp":
+        steps = [
+            "Reuse the Spaceship host you already pay for — do not click New hosting",
+            "Set SPACESHIP_FTP_HOST + SPACESHIP_FTP_USER; vault the FTP password",
+            "Optional: SPACESHIP_PUBLIC_URL (only returned after a live probe)",
+            "Preflight can be ready; live overwrite needs OPENVAULT_SPACESHIP_ALLOW_PUBLISH=1",
+            "Build on this machine → FTP upload excluding .env → return observed URL only",
+        ]
+    elif target == "cloudflare_pages":
         steps = [
             "Add CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID to the vault (or env)",
             "Install wrangler once: npm install -g wrangler",
@@ -308,7 +353,8 @@ def build_ship_blueprint(
         "openship": adapter_status(),
         "one_click_ready": (not blocked)
         and (
-            target == "cloudflare_pages"
+            target == "spaceship_ftp"
+            or target == "cloudflare_pages"
             or target == "coolify"
             or target == "netlify"
             or (target == "openship_cloud" and adapter_status()["api_ready"])

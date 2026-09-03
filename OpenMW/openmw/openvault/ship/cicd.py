@@ -36,6 +36,64 @@ class CicdReport:
         return asdict(self)
 
 
+SUGGESTED_WORKFLOW_REL = ".github/workflows/openvault-ship.yml"
+
+
+def write_suggested_workflow(
+    project_path: str | Path,
+    *,
+    overwrite: bool = False,
+) -> dict[str, Any]:
+    """Write the OpenVault ship workflow onto disk. Never invents a preview URL.
+
+    Vercel git-push publishes because they host the build. We write a workflow the
+    operator can ``git push``; GitHub Actions green is not a live host URL. Simulate
+    stays the default on dispatch. Loopback OpenVault is unreachable from
+    GitHub-hosted runners — that is said in the file, not hidden.
+    """
+    root = Path(project_path).expanduser().resolve()
+    if not root.is_dir():
+        return {
+            "ok": False,
+            "written": False,
+            "path": SUGGESTED_WORKFLOW_REL,
+            "public_url": None,
+            "git_push": "suggest-only",
+            "detail": "project path missing or not a directory",
+        }
+    dest = root / SUGGESTED_WORKFLOW_REL
+    suggested = _suggested_github_workflow()
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    if dest.is_file() and not overwrite:
+        existing = dest.read_text(encoding="utf-8")
+        return {
+            "ok": True,
+            "written": False,
+            "already_present": True,
+            "same_as_suggested": existing == suggested,
+            "path": SUGGESTED_WORKFLOW_REL,
+            "public_url": None,
+            "git_push": "workflow-on-disk",
+            "detail": (
+                "Workflow already on disk. Pass overwrite=true to replace. "
+                "git push is yours; this write does not invent a live URL."
+            ),
+        }
+    dest.write_text(suggested, encoding="utf-8", newline="\n")
+    return {
+        "ok": True,
+        "written": True,
+        "already_present": False,
+        "path": SUGGESTED_WORKFLOW_REL,
+        "public_url": None,
+        "git_push": "workflow-on-disk",
+        "detail": (
+            "Wrote OpenVault ship workflow. Commit and git push from this repo when "
+            "you want it on GitHub. Actions will not invent a preview URL (HT1)."
+        ),
+    }
+
+
 def detect_cicd(project_path: str | Path) -> CicdReport:
     """Scan for CI config files under ``project_path``."""
     root = Path(project_path).expanduser().resolve()
@@ -74,15 +132,19 @@ def detect_cicd(project_path: str | Path) -> CicdReport:
         detected=detected,
         workflow_paths=paths,
         status=status,
+        suggested_workflow_path=SUGGESTED_WORKFLOW_REL,
         suggested_workflow=suggested,
         notes=notes,
     )
 
 
 def _suggested_github_workflow() -> str:
-    return """# OpenVault → FreeBuild (thin CI; custody/gate stay on OpenVault)
+    return """# OpenVault ship — not Vercel. Green CI is not a live URL.
 name: openvault-ship
 on:
+  push:
+    paths:
+      - ".github/workflows/openvault-ship.yml"
   workflow_dispatch:
     inputs:
       subdomain:
@@ -97,7 +159,16 @@ on:
         required: true
         default: "true"
 jobs:
+  no-fake-preview:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Refuse to invent a preview URL
+        run: |
+          echo "OpenVault does not mint *.vercel.app (or any) preview from this job."
+          echo "Ship from the laptop (Spaceship FTP / host adapters). HT1 is human."
+          echo "GitHub-hosted runners cannot reach 127.0.0.1:5000."
   gate-and-ship:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -107,6 +178,10 @@ jobs:
           OPENVAULT_TOKEN: ${{ secrets.OPENVAULT_TOKEN }}
         run: |
           set -euo pipefail
+          if [ -z "${OPENVAULT_URL:-}" ]; then
+            echo "OPENVAULT_URL unset — skip remote gate. Use the OpenVault laptop for ship."
+            exit 0
+          fi
           curl -fsS -X POST "$OPENVAULT_URL/api/deploy/from-cortex" \\
             -H "Content-Type: application/json" \\
             -H "Authorization: Bearer $OPENVAULT_TOKEN" \\
@@ -125,6 +200,10 @@ jobs:
           OPENVAULT_URL: ${{ secrets.OPENVAULT_URL }}
           OPENVAULT_TOKEN: ${{ secrets.OPENVAULT_TOKEN }}
         run: |
+          if [ -z "${OPENVAULT_URL:-}" ] || [ ! -f deploy_id.txt ]; then
+            echo "No remote OpenVault — nothing executed, no URL invented."
+            exit 0
+          fi
           DEPLOY_ID=$(cat deploy_id.txt)
           curl -fsS -X POST "$OPENVAULT_URL/api/deploy/$DEPLOY_ID/execute" \\
             -H "Content-Type: application/json" \\

@@ -328,3 +328,50 @@ class TestFromVault:
         assert adapter.credential_provider == "netlify"
         assert adapter._token == "vault-token"
         assert adapter._site_id == "env-site"
+
+
+class TestZipHonesty:
+    def test_zip_skips_secret_dotenv_keeps_example(self, tmp_path: Path) -> None:
+        import io
+        import zipfile
+
+        from openmw.openvault.ship.hosts.netlify import _zip_directory
+
+        (tmp_path / "index.html").write_text("hi", encoding="utf-8")
+        (tmp_path / ".env").write_text("SECRET=1", encoding="utf-8")
+        (tmp_path / ".env.local").write_text("SECRET=2", encoding="utf-8")
+        (tmp_path / ".env.example").write_text("SECRET=", encoding="utf-8")
+        blob = _zip_directory(tmp_path)
+        with zipfile.ZipFile(io.BytesIO(blob)) as zf:
+            names = zf.namelist()
+        assert "index.html" in names
+        assert ".env.example" in names
+        assert ".env" not in names
+        assert ".env.local" not in names
+
+
+class TestVaultEnv:
+    def test_site_env_patch_does_not_echo_values(self) -> None:
+        adapter = NetlifyAdapter(api_token="tok", site_id="site-1")
+        captured: dict[str, object] = {}
+
+        def fake_api(method: str, path: str, **kwargs: object) -> tuple:
+            captured["method"] = method
+            captured["path"] = path
+            captured["payload"] = kwargs.get("payload")
+            return True, {}, ""
+
+        adapter._api = fake_api  # type: ignore[method-assign]
+        ok, note = adapter.set_site_env("site-1", {"GROQ_API_KEY": "sk-secret-never"})
+        assert ok is True
+        assert "sk-secret" not in note
+        assert captured["method"] == "PATCH"
+        assert captured["payload"] == {"build_settings": {"env": {"GROQ_API_KEY": "sk-secret-never"}}}
+
+    def test_failed_env_inject_redacts_value(self) -> None:
+        adapter = NetlifyAdapter(api_token="tok", site_id="site-1")
+        adapter._api = lambda *a, **k: (False, {}, "echo sk-secret-never")  # type: ignore[method-assign]
+        ok, note = adapter.set_site_env("site-1", {"GROQ_API_KEY": "sk-secret-never"})
+        assert ok is False
+        assert "sk-secret-never" not in note
+        assert "[redacted]" in note

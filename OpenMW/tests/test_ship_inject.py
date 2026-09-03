@@ -218,6 +218,50 @@ def test_freebuild_execute_injects_without_echoing_plaintext(
     assert body["adapter"].get("secrets_injected") == ["GROQ_API_KEY"]
 
 
+def test_ship_engine_injects_without_echoing_plaintext(
+    home: Path, tmp_path: Path
+) -> None:
+    seal = Seal(Fernet.generate_key())
+    vault = KeyVault(db_path=home / "keys.db", seal=seal)
+    secrets = SecretStore(db_path=home / "secrets.db", seal=seal)
+    accounts = AccountStore(db_path=home / "accounts.db")
+    app = create_app(
+        vault=vault,
+        accounts=accounts,
+        secrets=secrets,
+        mock_health=True,
+        enable_precheck_loop=False,
+        cortex_url="http://127.0.0.1:9",
+    )
+    client = TestClient(app, client=("127.0.0.1", 5555))
+    created = client.post(
+        "/api/keys",
+        json={
+            "label": "groq",
+            "provider": "groq",
+            "secret": SECRET_VALUE,
+            "role": "free",
+        },
+    )
+    assert created.status_code == 200, created.text
+    key_id = created.json()["id"]
+    project = _project(tmp_path)
+    out = client.post(
+        "/api/ship/engine",
+        json={
+            "target": "local_demo",
+            "project_path": str(project),
+            "secrets": [{"env_name": "GROQ_API_KEY", "key_id": key_id}],
+        },
+    )
+    assert out.status_code == 200, out.text
+    assert SECRET_VALUE not in out.text
+    body = out.json()
+    assert body["secrets_injected"]["names"] == ["GROQ_API_KEY"]
+    assert body["deployment"]["public_url"] == ""
+    assert body["deployment"]["mode"] == "simulated"
+
+
 def test_freebuild_execute_sealed_refuses_inject(
     home: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

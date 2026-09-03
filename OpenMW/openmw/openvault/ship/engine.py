@@ -66,6 +66,8 @@ class ShipDeployment:
     #: cannot say *why*, and "blocked" is the case that used to read as success.
     status: str = "planned"
     public_url: str = ""
+    #: Loopback-only artifact serve. Never a live host URL (not HT1).
+    local_preview_url: str = ""
     created_at: float = field(default_factory=time.time)
     mode: str = "local_engine"
 
@@ -83,6 +85,7 @@ class ShipDeployment:
             "ready": self.ready,
             "status": self.status,
             "public_url": self.public_url,
+            "local_preview_url": self.local_preview_url,
             "created_at": self.created_at,
             "mode": self.mode,
         }
@@ -121,6 +124,7 @@ def load_deployment(deployment_id: str) -> ShipDeployment | None:
         # defaulting to "planned", which would relabel a live deploy.
         status=raw.get("status") or ("live" if raw.get("public_url") else "planned"),
         public_url=raw.get("public_url", ""),
+        local_preview_url=raw.get("local_preview_url", ""),
         created_at=float(raw.get("created_at", time.time())),
         mode=raw.get("mode", "local_engine"),
     )
@@ -355,6 +359,7 @@ def _host_cloudflare_pages(
     stack: Any,
     hostname: str,
     run_build: bool,
+    ship_env: Mapping[str, str] | None = None,
 ) -> tuple[EngineStep, str]:
     """Publish to the user's Cloudflare account. Returns (step, public_url).
 
@@ -397,7 +402,7 @@ def _host_cloudflare_pages(
     account = os.environ.get("CLOUDFLARE_ACCOUNT_ID")
     adapter = CloudflarePagesAdapter(api_token=token, account_id=account)
 
-    result = adapter.deploy(artifact, project=project)
+    result = adapter.deploy(artifact, project=project, env=dict(ship_env or {}))
     if not result.ok:
         return EngineStep("host", "Cloudflare Pages", "fail", result.detail), ""
 
@@ -462,6 +467,7 @@ def _host_netlify(
     stack: Any,
     hostname: str,
     run_build: bool,
+    ship_env: Mapping[str, str] | None = None,
 ) -> tuple[EngineStep, str]:
     """Publish to the user's Netlify account. Returns (step, public_url).
 
@@ -503,7 +509,7 @@ def _host_netlify(
         api_token=os.environ.get("NETLIFY_AUTH_TOKEN"),
         site_id=os.environ.get("NETLIFY_SITE_ID"),
     )
-    result = adapter.deploy(artifact, project=project)
+    result = adapter.deploy(artifact, project=project, env=dict(ship_env or {}))
     if not result.ok:
         return EngineStep("host", "Netlify", "fail", result.detail), ""
 
@@ -519,6 +525,65 @@ def _host_netlify(
             detail = f"{detail} · {domain.detail}{f' [{records}]' if records else ''}"
 
     return EngineStep("host", "Netlify", "pass", detail), result.url
+
+
+def _host_spaceship_ftp(
+    *,
+    work_path: Path,
+    stack: Any,
+    hostname: str,
+    run_build: bool,
+    ship_env: Mapping[str, str] | None = None,
+) -> tuple[EngineStep, str]:
+    """Publish to the existing Spaceship FTP account. Returns (step, public_url).
+
+    Same honesty as the other adapters: needs a built artifact. URL comes only
+    from a probe of a configured public URL — never constructed.
+    """
+    from openmw.openvault.ship.hosts.spaceship_ftp import SpaceshipFtpAdapter
+
+    if not run_build:
+        return (
+            EngineStep(
+                "host",
+                "Spaceship FTP",
+                "fail",
+                "nothing was built — publishing needs run_build=true so there is "
+                "an artifact to upload",
+            ),
+            "",
+        )
+
+    output_dir = (getattr(stack, "output_directory", "") or "").strip()
+    if not output_dir:
+        return (
+            EngineStep(
+                "host",
+                "Spaceship FTP",
+                "fail",
+                "the detected stack has no output directory, so we do not know "
+                "which folder to upload",
+            ),
+            "",
+        )
+
+    root = getattr(stack, "root_directory", "") or ""
+    artifact = work_path / root / output_dir
+    project = hostname.split(".")[0] if hostname else work_path.name
+
+    adapter = SpaceshipFtpAdapter(
+        host=os.environ.get("SPACESHIP_FTP_HOST"),
+        user=os.environ.get("SPACESHIP_FTP_USER"),
+        password=os.environ.get("SPACESHIP_FTP_PASS"),
+        remote_dir=os.environ.get("SPACESHIP_FTP_DIR"),
+        public_url=os.environ.get("SPACESHIP_PUBLIC_URL"),
+        env_dir=os.environ.get("SPACESHIP_FTP_ENV_DIR"),
+    )
+    result = adapter.deploy(artifact, project=project, env=dict(ship_env or {}))
+    if not result.ok:
+        return EngineStep("host", "Spaceship FTP", "fail", result.detail), ""
+
+    return EngineStep("host", "Spaceship FTP", "pass", result.detail), result.url
 
 
 def _host_vps_ssh(
@@ -807,18 +872,39 @@ def _run_ship_engine_locked(
 
     # Target-specific closing step.
     # Honesty rule: never invent a live-looking host URL. Only real adapters
-    # (Cloudflare Pages, Coolify, Netlify, or a remote FreeBuild response that
-    # already carries an observed URL) may set public_url. Simulate / teach /
-    # pending host paths stay labeled non-production and leave public_url empty.
+    # (Spaceship FTP, Cloudflare Pages, Coolify, Netlify, VPS, or a remote
+    # FreeBuild response that already carries an observed URL) may set
+    # public_url. Simulate / teach / pending host paths stay labeled
+    # non-production and leave public_url empty.
     public = ""
     dep_mode = "local_engine"
-    if target == "cloudflare_pages":
+    if target == "spaceship_ftp":
+        step, public = _host_spaceship_ftp(
+            work_path=Path(work_path),
+            stack=stack,
+            hostname=hostname,
+            run_build=build_here,
+            ship_env=ship_env or {},
+        )
+        steps.append(step)
+        if step.status == "pass" and public:
+            dep_mode = "live"
+        elif step.status == "pass" and not public:
+            steps[-1] = EngineStep(
+                "host",
+                "Spaceship FTP",
+                "fail",
+                "deploy reported success but no observed URL — refusing to invent one",
+            )
+            public = ""
+    elif target == "cloudflare_pages":
         # Requires a real build — nothing to upload otherwise.
         step, public = _host_cloudflare_pages(
             work_path=Path(work_path),
             stack=stack,
             hostname=hostname,
             run_build=build_here,
+            ship_env=ship_env or {},
         )
         steps.append(step)
         if step.status == "pass" and public:
@@ -854,6 +940,7 @@ def _run_ship_engine_locked(
             stack=stack,
             hostname=hostname,
             run_build=build_here,
+            ship_env=ship_env or {},
         )
         steps.append(step)
         if step.status == "pass" and public:
@@ -916,6 +1003,21 @@ def _run_ship_engine_locked(
         )
         dep_mode = "simulated"
 
+    local_preview = ""
+    if not public:
+        from openmw.openvault.ship.local_preview import preview_root_for, start_local_preview
+
+        preview_root = preview_root_for(Path(work_path), stack)
+        if preview_root is not None:
+            local_preview = start_local_preview(preview_root)
+            if local_preview:
+                host_steps = [s for s in steps if s.id == "host"]
+                if host_steps:
+                    last = host_steps[-1]
+                    last.detail = (
+                        f"{last.detail}; local preview {local_preview} (loopback, not live)"
+                    ).strip("; ")
+
     status_name, ready = classify_deployment(steps, mode=dep_mode, public_url=public)
     dep = ShipDeployment(
         deployment_id=uuid.uuid4().hex[:12],
@@ -930,6 +1032,7 @@ def _run_ship_engine_locked(
         ready=ready,
         status=status_name,
         public_url=public,
+        local_preview_url=local_preview,
         mode=dep_mode,
     )
     save_deployment(dep)

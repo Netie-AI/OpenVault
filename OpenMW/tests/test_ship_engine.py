@@ -44,6 +44,7 @@ def test_engine_local_folder(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) ->
     assert out["deployment"]["steps"]
     assert out["deployment"]["public_url"] == ""
     assert out["deployment"]["mode"] == "simulated"
+    assert out["deployment"].get("local_preview_url", "") == ""
     host = next(s for s in out["deployment"]["steps"] if s["id"] == "host")
     assert host["status"] == "simulated"
     assert "non-production" in host["detail"]
@@ -353,6 +354,7 @@ def test_build_requirement_comes_from_the_adapter_not_the_caller(
     # do not, so we never burn minutes building for them.
     assert needs_local_build("cloudflare_pages") is True
     assert needs_local_build("netlify") is True
+    assert needs_local_build("spaceship_ftp") is True
     assert needs_local_build("coolify") is False
     assert needs_local_build("vps_ssh") is False
     assert needs_local_build("local_demo") is False

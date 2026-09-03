@@ -86,6 +86,18 @@ class TestDeployRefusals:
         assert result.ok is False
         assert "empty" in result.detail
 
+    def test_secret_dotenv_in_artifact_refuses(self, tmp_path: Path) -> None:
+        out = tmp_path / "out"
+        out.mkdir()
+        (out / "index.html").write_text("hi", encoding="utf-8")
+        (out / ".env").write_text("SECRET=1", encoding="utf-8")
+        adapter = CloudflarePagesAdapter(api_token="tok", account_id="acct")
+        result = adapter.deploy(out, project="app")
+        assert result.ok is False
+        assert result.url == ""
+        assert "dotenv" in result.detail
+        assert ".env" in result.detail
+
     def test_no_credentials_refuses_before_network(self, tmp_path: Path) -> None:
         out = tmp_path / "out"
         out.mkdir()
@@ -205,4 +217,36 @@ class TestAttachDomain:
         monkeypatch.setattr(
             adapter, "_api", lambda *a, **k: (False, {}, "Domain already exists")
         )
-        assert adapter.attach_domain(project="app", hostname="netie.ai").ok is True
+        result = adapter.attach_domain(project="app", hostname="netie.ai")
+        assert result.ok is True
+
+
+class TestVaultEnv:
+    def test_pages_env_is_secret_text_and_not_echoed(self) -> None:
+        adapter = CloudflarePagesAdapter(api_token="tok", account_id="acct")
+        captured: dict[str, object] = {}
+
+        def fake_api(method: str, path: str, payload: dict | None = None) -> tuple:
+            captured["method"] = method
+            captured["path"] = path
+            captured["payload"] = payload
+            return True, {}, ""
+
+        adapter._api = fake_api  # type: ignore[method-assign]
+        ok, note = adapter.set_project_env("app", {"GROQ_API_KEY": "sk-secret-never"})
+        assert ok is True
+        assert "sk-secret" not in note
+        assert captured["method"] == "PATCH"
+        payload = captured["payload"]
+        assert isinstance(payload, dict)
+        vars_body = payload["deployment_configs"]["production"]["env_vars"]
+        assert vars_body["GROQ_API_KEY"]["type"] == "secret_text"
+        assert vars_body["GROQ_API_KEY"]["value"] == "sk-secret-never"
+
+    def test_failed_env_inject_redacts_value(self) -> None:
+        adapter = CloudflarePagesAdapter(api_token="tok", account_id="acct")
+        adapter._api = lambda *a, **k: (False, {}, "bad sk-secret-never")  # type: ignore[method-assign]
+        ok, note = adapter.set_project_env("app", {"GROQ_API_KEY": "sk-secret-never"})
+        assert ok is False
+        assert "sk-secret-never" not in note
+        assert "[redacted]" in note

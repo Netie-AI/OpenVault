@@ -17,6 +17,7 @@ import os
 import re
 import time
 import zipfile
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -24,6 +25,8 @@ import httpx
 import structlog
 
 from openmw.openvault.ship.hosts.base import DeployResult, DomainResult, Preflight
+from openmw.openvault.ship.inject import redact_plaintext, sanitized_env
+from openmw.openvault.ship.stacks import is_upload_ignored_path
 
 log = structlog.get_logger()
 
@@ -64,8 +67,12 @@ def _zip_directory(artifact_dir: Path) -> bytes:
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         for path in sorted(artifact_dir.rglob("*")):
-            if path.is_file():
-                zf.write(path, path.relative_to(artifact_dir).as_posix())
+            if not path.is_file():
+                continue
+            rel = path.relative_to(artifact_dir).as_posix()
+            if is_upload_ignored_path(rel):
+                continue
+            zf.write(path, rel)
     return buf.getvalue()
 
 
@@ -228,7 +235,27 @@ class NetlifyAdapter:
             time.sleep(_DEPLOY_POLL_S)
         return False, last, f"deployment timed out after {int(_DEPLOY_TIMEOUT_S / 60)} minutes"
 
-    def deploy(self, artifact_dir: Path, *, project: str) -> DeployResult:
+    def set_site_env(self, site_id: str, env: Mapping[str, str]) -> tuple[bool, str]:
+        """Push vault env onto the Netlify site. Values stay off logs."""
+        cleaned = sanitized_env(env)
+        if not cleaned:
+            return True, ""
+        ok, _, err = self._api(
+            "PATCH",
+            f"/sites/{site_id}",
+            payload={"build_settings": {"env": cleaned}},
+        )
+        if not ok:
+            return False, redact_plaintext(err, list(cleaned.values()))
+        return True, f"{len(cleaned)} vault env names on Netlify"
+
+    def deploy(
+        self,
+        artifact_dir: Path,
+        *,
+        project: str,
+        env: Mapping[str, str] | None = None,
+    ) -> DeployResult:
         artifact = Path(artifact_dir)
         if not artifact.is_dir():
             return DeployResult(
@@ -252,6 +279,15 @@ class NetlifyAdapter:
         site_id, err = self._resolve_site(project)
         if not site_id:
             return DeployResult(ok=False, detail=err)
+
+        env_note = ""
+        if env:
+            ok_env, env_note = self.set_site_env(site_id, env)
+            if not ok_env:
+                return DeployResult(
+                    ok=False,
+                    detail=f"vault env inject refused: {env_note}",
+                )
 
         try:
             zip_bytes = _zip_directory(artifact)
@@ -318,11 +354,14 @@ class NetlifyAdapter:
             )
 
         log.info("netlify_deployed", site_id=site_id, url=url, deployment=deploy_id)
+        detail = f"Live at {url}"
+        if env_note:
+            detail = f"{detail}; {env_note}"
         return DeployResult(
             ok=True,
             url=url,
             deployment_ref=deploy_id,
-            detail=f"Live at {url}",
+            detail=detail,
             log=str(deploy.get("state") or "ready"),
         )
 

@@ -702,6 +702,8 @@ TRANSFER_EXCLUDES: tuple[str, ...] = (
     # Runtime state — sqlite DBs, uploads, dev-only generated secrets.
     "data",
     ".dev-secrets.json",
+    # Vault inject is the env path. Do not upload local secret files (Vercel job).
+    ".env",
 )
 
 #: The excludes whose names are ALSO ordinary source-folder names. Pruning these
@@ -721,9 +723,18 @@ def is_upload_ignored_path(relative_path: str) -> bool:
     segments = [seg for seg in relative_path.replace("\\", "/").split("/") if seg]
     if not segments:
         return False
+    if is_secret_dotenv_name(segments[-1]):
+        return True
     if any(seg in _UNAMBIGUOUS_UPLOAD_EXCLUDES for seg in segments):
         return True
     return segments[0] in PACKAGE_ROOT_ONLY_EXCLUDES
+
+
+def is_secret_dotenv_name(name: str) -> bool:
+    """Local secret files stay off the upload. Examples may ship."""
+    if name in (".env.example", ".env.sample", ".env.template"):
+        return False
+    return name == ".env" or name.startswith(".env.")
 
 
 def get_stack(stack_id: str) -> Stack:

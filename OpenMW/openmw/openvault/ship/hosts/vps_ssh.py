@@ -48,6 +48,7 @@ import httpx
 import structlog
 
 from openmw.openvault.ship.hosts.base import DeployResult, DomainResult, Preflight
+from openmw.openvault.ship.stacks import is_upload_ignored_path
 
 log = structlog.get_logger()
 
@@ -355,6 +356,9 @@ def tar_directory(local_dir: Path, *, exclude: Sequence[str] = ()) -> bytes:
     with tarfile.open(fileobj=buf, mode="w:gz") as tar:
         for path in sorted(root.rglob("*")):
             rel = path.relative_to(root)
+            rel_posix = str(rel).replace("\\", "/")
+            if is_upload_ignored_path(rel_posix):
+                continue
             if any(part in skip for part in rel.parts):
                 continue
             if path.is_symlink() or not (path.is_file() or path.is_dir()):

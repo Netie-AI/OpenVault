@@ -49,10 +49,15 @@ def recommend_target(
     *,
     sponsored_ids: frozenset[str] | set[str] | None = None,
     vps_configured: bool = False,
+    spaceship_configured: bool = False,
 ) -> dict[str, Any]:
     """Pick one target with a human reason. User may override; blank picker is wrong.
 
     Rule (CLAUDE_DECISIONS §8.5): auto-select **never** picks a sponsored target.
+
+    ``spaceship_configured`` means the existing paid host is named (FTP host+user).
+    That wins for static stacks: do not buy Cloudflare/Vercel when the site already
+    lives on Spaceship.
 
     ``vps_configured`` says the user already has a box we can reach. For a stack
     that needs a running process that changes the honest answer: their VPS is a
@@ -83,20 +88,36 @@ def recommend_target(
             )
             real_publish = False
     elif primary in _STATIC_PRIMARY or category in _STATIC_CATEGORY or output_dir:
-        target = "cloudflare_pages"
-        reason = (
-            "Static/SSG (or known output folder) → Cloudflare Pages: free tier, "
-            "one API token, custom domain as a first-class API object. Your machine "
-            "builds; their account hosts."
-        )
-        real_publish = True
+        if spaceship_configured:
+            target = "spaceship_ftp"
+            reason = (
+                "Static/SSG and you already pay for Spaceship — upload over the "
+                "existing FTP account. Do not buy New hosting or a second CDN."
+            )
+            real_publish = True
+        else:
+            target = "cloudflare_pages"
+            reason = (
+                "Static/SSG (or known output folder) → Cloudflare Pages: free tier, "
+                "one API token, custom domain as a first-class API object. Your machine "
+                "builds; their account hosts."
+            )
+            real_publish = True
     else:
-        target = "cloudflare_pages"
-        reason = (
-            "Defaulting to Cloudflare Pages for a free first deploy. Override to "
-            "FreeBuild/VPS if this app needs a server process."
-        )
-        real_publish = True
+        if spaceship_configured:
+            target = "spaceship_ftp"
+            reason = (
+                "Defaulting to the Spaceship host you already pay for. Override to "
+                "VPS if this app needs a server process."
+            )
+            real_publish = True
+        else:
+            target = "cloudflare_pages"
+            reason = (
+                "Defaulting to Cloudflare Pages for a free first deploy. Override to "
+                "FreeBuild/VPS if this app needs a server process."
+            )
+            real_publish = True
 
     # Hard line: if organic pick is sponsored, fall back to local_demo rather than
     # preselecting a paid placement ("we chose this for you" must never be an ad).

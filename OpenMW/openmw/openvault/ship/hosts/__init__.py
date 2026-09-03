@@ -16,6 +16,7 @@ from openmw.openvault.ship.hosts.base import (
 from openmw.openvault.ship.hosts.cloudflare_pages import CloudflarePagesAdapter
 from openmw.openvault.ship.hosts.coolify import CoolifyAdapter
 from openmw.openvault.ship.hosts.netlify import NetlifyAdapter
+from openmw.openvault.ship.hosts.spaceship_ftp import SpaceshipFtpAdapter
 from openmw.openvault.ship.hosts.vps_ssh import VpsSshAdapter
 
 #: id -> adapter class. Kept deliberately small; a target that cannot really
@@ -24,6 +25,7 @@ ADAPTERS: dict[str, type] = {
     CloudflarePagesAdapter.id: CloudflarePagesAdapter,
     CoolifyAdapter.id: CoolifyAdapter,
     NetlifyAdapter.id: NetlifyAdapter,
+    SpaceshipFtpAdapter.id: SpaceshipFtpAdapter,
     VpsSshAdapter.id: VpsSshAdapter,
 }
 
@@ -57,6 +59,7 @@ __all__ = [
     "HostAdapter",
     "NetlifyAdapter",
     "Preflight",
+    "SpaceshipFtpAdapter",
     "VpsSshAdapter",
     "adapter_ids",
     "needs_local_build",

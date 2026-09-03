@@ -28,6 +28,7 @@ import os
 import re
 import shutil
 import subprocess
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -35,6 +36,8 @@ import httpx
 import structlog
 
 from openmw.openvault.ship.hosts.base import DeployResult, DomainResult, Preflight
+from openmw.openvault.ship.inject import redact_plaintext, sanitized_env
+from openmw.openvault.ship.stacks import is_secret_dotenv_name
 
 log = structlog.get_logger()
 
@@ -177,7 +180,30 @@ class CloudflarePagesAdapter:
             return False, err
         return True, name
 
-    def deploy(self, artifact_dir: Path, *, project: str) -> DeployResult:
+    def set_project_env(self, project: str, env: Mapping[str, str]) -> tuple[bool, str]:
+        """Push vault env onto Pages production. Values stay off logs."""
+        cleaned = sanitized_env(env)
+        if not cleaned:
+            return True, ""
+        vars_body = {
+            name: {"type": "secret_text", "value": value} for name, value in cleaned.items()
+        }
+        ok, _, err = self._api(
+            "PATCH",
+            f"/accounts/{self._account}/pages/projects/{normalize_project_name(project)}",
+            payload={"deployment_configs": {"production": {"env_vars": vars_body}}},
+        )
+        if not ok:
+            return False, redact_plaintext(err, list(cleaned.values()))
+        return True, f"{len(cleaned)} vault env names on Pages"
+
+    def deploy(
+        self,
+        artifact_dir: Path,
+        *,
+        project: str,
+        env: Mapping[str, str] | None = None,
+    ) -> DeployResult:
         artifact = Path(artifact_dir)
         if not artifact.is_dir():
             return DeployResult(
@@ -193,6 +219,20 @@ class CloudflarePagesAdapter:
                     "detected output directory."
                 ),
             )
+        leaks = [
+            p.relative_to(artifact).as_posix()
+            for p in artifact.rglob("*")
+            if p.is_file() and is_secret_dotenv_name(p.name)
+        ]
+        if leaks:
+            shown = ", ".join(leaks[:5])
+            return DeployResult(
+                ok=False,
+                detail=(
+                    f"refusing to upload secret dotenv files ({shown}). "
+                    "Inject env from the vault."
+                ),
+            )
 
         pre = self.preflight()
         if not pre.ready:
@@ -203,17 +243,26 @@ class CloudflarePagesAdapter:
             return DeployResult(ok=False, detail=f"could not create the Pages project: {name_or_err}")
         name = name_or_err
 
+        env_note = ""
+        if env:
+            ok_env, env_note = self.set_project_env(name, env)
+            if not ok_env:
+                return DeployResult(
+                    ok=False,
+                    detail=f"vault env inject refused: {env_note}",
+                )
+
         wrangler = shutil.which("wrangler") or shutil.which("wrangler.cmd")
         if wrangler is None:  # pragma: no cover — preflight already refused
             return DeployResult(ok=False, detail="wrangler disappeared between preflight and deploy")
 
-        env = os.environ.copy()
-        env["CLOUDFLARE_API_TOKEN"] = self._token
-        env["CLOUDFLARE_ACCOUNT_ID"] = self._account
+        proc_env = os.environ.copy()
+        proc_env["CLOUDFLARE_API_TOKEN"] = self._token
+        proc_env["CLOUDFLARE_ACCOUNT_ID"] = self._account
         # Wrangler phones home and prompts on first run; both would hang a
         # non-interactive deploy.
-        env["WRANGLER_SEND_METRICS"] = "false"
-        env["CI"] = "true"
+        proc_env["WRANGLER_SEND_METRICS"] = "false"
+        proc_env["CI"] = "true"
 
         cmd = [
             wrangler,
@@ -229,7 +278,7 @@ class CloudflarePagesAdapter:
                 capture_output=True,
                 timeout=_DEPLOY_TIMEOUT_S,
                 check=False,
-                env=env,
+                env=proc_env,
                 cwd=str(artifact),
             )
         except subprocess.TimeoutExpired:
@@ -243,6 +292,8 @@ class CloudflarePagesAdapter:
         out = (proc.stdout or b"").decode(errors="replace")
         err = (proc.stderr or b"").decode(errors="replace")
         combined = f"{out}\n{err}".strip()
+        if env:
+            combined = redact_plaintext(combined, list(sanitized_env(env).values()))
 
         if proc.returncode != 0:
             return DeployResult(
@@ -267,7 +318,10 @@ class CloudflarePagesAdapter:
             )
 
         log.info("cloudflare_pages_deployed", project=name, url=url)
-        return DeployResult(ok=True, url=url, deployment_ref=name, detail=f"Live at {url}", log=combined)
+        detail = f"Live at {url}"
+        if env_note:
+            detail = f"{detail}; {env_note}"
+        return DeployResult(ok=True, url=url, deployment_ref=name, detail=detail, log=combined)
 
     def attach_domain(self, *, project: str, hostname: str) -> DomainResult:
         """Register a custom domain on the Pages project.

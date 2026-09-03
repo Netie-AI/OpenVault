@@ -70,10 +70,29 @@ def test_ship_api_routes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Non
 
     targets = client.get("/api/ship/targets")
     assert targets.status_code == 200
-    ids = {t["id"] for t in targets.json()["targets"]}
+    payload = targets.json()
+    ids = {t["id"] for t in payload["targets"]}
     assert "openship_cloud" in ids
     assert "vps_ssh" in ids
     assert "aws_guide" in ids
+    assert payload["live_public_url"] is None
+    assert payload["live_url_observed"] is False
+    assert payload["human_test_gate"] == "HT1"
+    assert payload["vercel_job"]["live_public_url"] is None
+    assert payload["vercel_job"]["preview"] == "loopback-or-observed"
+    assert payload["vercel_job"]["git_push"] == "write-workflow"
+    assert payload["vercel_job"]["env"] == "vault-inject"
+    assert payload["vercel_job"]["dotenv_upload"] == "excluded"
+    assert payload["vercel_job"]["spaceship_first"] is True
+    assert payload["vercel_job"]["ftp_push"] == "spaceship-existing-host"
+    assert set(payload["host_adapters"]) == {
+        "cloudflare_pages",
+        "coolify",
+        "netlify",
+        "spaceship_ftp",
+        "vps_ssh",
+    }
+    assert "spaceship_ftp" in ids
 
     bud = client.put(
         "/api/ship/budget",
@@ -101,3 +120,15 @@ def test_ship_api_routes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Non
     body = press.json()
     assert body["blueprint"]["target"]["id"] == "local_demo"
     assert body["one_press"]["executed"] is True
+
+
+def test_secret_dotenv_is_upload_ignored() -> None:
+    from openmw.openvault.ship.stacks import is_secret_dotenv_name, is_upload_ignored_path
+
+    assert is_secret_dotenv_name(".env")
+    assert is_secret_dotenv_name(".env.local")
+    assert not is_secret_dotenv_name(".env.example")
+    assert is_upload_ignored_path(".env")
+    assert is_upload_ignored_path("apps/web/.env.production.local")
+    assert not is_upload_ignored_path(".env.example")
+    assert not is_upload_ignored_path("src/index.ts")

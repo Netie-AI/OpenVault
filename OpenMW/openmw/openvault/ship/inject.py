@@ -78,6 +78,13 @@ def systemd_environment_line(name: str, value: str) -> str:
     return f'Environment="{name}={escape_systemd_env_value(value)}"'
 
 
+def sanitized_env(env: Mapping[str, str] | None) -> dict[str, str]:
+    """Keep only valid env names. Callers must not log the values."""
+    if not env:
+        return {}
+    return {name: value for name, value in env.items() if _ENV_NAME_RE.match(name)}
+
+
 def redact_plaintext(text: str, values: Sequence[str]) -> str:
     """Omit known secret values from a string (logs / step detail / API dump)."""
     out = text
