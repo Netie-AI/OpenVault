@@ -48,6 +48,9 @@ No per-agent files. No per-session files - the answer to "what filename do I sto
 session in" is: none, update `STATUS.md`. No dates in filenames outside an archive. IDs
 are never reused. Full law: `D:\Netie\Internal\Rules\DOCUMENT_SYSTEM.md`.
 
+Laptop-ASCII only (R-0012): `-` `--` `->` `'` `"` `...`. No em dash, no curly quotes,
+no arrow glyphs in issues, STATUS, or chat.
+
 ## Before deleting anything
 
 Grep the basename across **all** repos and check `git ls-files --error-unmatch`. An

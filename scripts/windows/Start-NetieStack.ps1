@@ -17,8 +17,12 @@
   powershell -ExecutionPolicy Bypass -File scripts\windows\Start-NetieStack.ps1 -WithOpenVaultApp
 #>
 param(
-  [string]$OpenVaultRoot = "D:\OpenVault",
-  [string]$CortexRoot = "D:\Cortex",
+  [string]$OpenVaultRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path,
+  [string]$CortexRoot = $(
+    if (Test-Path "E:\Cortex\START_ENGINE.bat") { "E:\Cortex" }
+    elseif (Test-Path "D:\Cortex\START_ENGINE.bat") { "D:\Cortex" }
+    else { "E:\Cortex" }
+  ),
   [string]$AirGptRoot = "D:\AirGPT",
   [string]$NetieSpaceRoot = "D:\Space",
   [int]$CortexPort = 8010,

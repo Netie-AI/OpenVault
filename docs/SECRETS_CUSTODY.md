@@ -71,8 +71,15 @@ control.
   Item 2/3 (no KDF / no unseal) are closed by the sealed-state rows below when a
   passphrase is configured. Item 5 (GitHub PAT plaintext `pat.json`) is closed:
   the ship PAT is a sealed KeyVault row (`github-ship-pat`); legacy `pat.json` is
-  migrated once then deleted. DPAPI alone still auto-unseals on process start —
-  that is intentional until an operator sets a passphrase.
+  migrated once then deleted. **`master.key.v0.bak` is the remaining plaintext
+  artifact of that class:** a raw Fernet master key written when a v0 vault is
+  wrapped. It is visible as `plaintext_backup_present` on vault status and
+  retired only via `POST /api/vault/backup/retire` after the live wrapped key
+  unwraps to the same bytes. It is not deleted at migrate time — a same-process
+  wrap round-trip does not prove the key survives the next cold start. DPAPI
+  alone still auto-unseals on process start — that is intentional until an
+  operator sets a passphrase. A leftover bak bypasses that passphrase: retire it
+  before treating the vault as copy-safe.
 
 ---
 
@@ -84,14 +91,16 @@ a passphrase keep the previous auto-unseal behaviour (copy-protection only).
 
 | Route | Gate when passphrase configured |
 |-------|----------------------------------|
-| `GET /api/vault/status` | open — reports `sealed`, `passphrase_configured`, `wrap_method` |
-| `POST /api/vault/passphrase` | loopback + unsealed (rewraps live master key) |
+| `GET /api/vault/status` | open — reports `sealed`, `passphrase_configured`, `wrap_method`, `plaintext_backup_present` |
+| `POST /api/vault/passphrase` | loopback + unsealed (rewraps live master key). Warns (does not refuse) if `master.key.v0.bak` is present |
 | `POST /api/vault/unseal` | loopback — loads key; wrong passphrase → 401 |
 | `POST /api/vault/lock` | loopback — drops in-process key material |
+| `POST /api/vault/backup/retire` | loopback + **unsealed** — unwraps live `master.key`, byte-compares to `master.key.v0.bak`, then deletes the bak and audits |
 | `GET /api/keys/{id}/secret` | loopback + intent + **unsealed** + audit |
 | `GET /api/secrets/{id}/reveal` | loopback + intent + **unsealed** + audit |
 | `POST/PATCH/DELETE` keys + secrets + keyvault upsert + account incident | loopback + **unsealed** + audit |
 | `POST /api/vault/ingest-env` (non-dry-run) | loopback + **unsealed** + audit |
+| `POST /api/vault/ingest-pm` | dry-run default (open to loopback). Non-dry-run: loopback + **unsealed** + no `master.key.v0.bak`. Official Google/Apple/Chrome CSV only |
 | `POST/DELETE /api/ship/github/pat` | loopback + **unsealed** (PAT in KeyVault row `github-ship-pat`; no `pat.json` token) |
 | `GET /api/keys`, `GET /api/secrets` | open, masks only — no decrypt when masks are stored |
 
@@ -196,6 +205,7 @@ it is a temporary import source, same class as process env (`vault/env_ingest.py
 |----------|------|
 | `OPENVAULT_HOME/keys.db` | Encrypted custody (live SoT) |
 | `OPENVAULT_HOME/import/*.keys.env` | Operator staging only; path is under `.openvault/` so git ignores it |
+| `OPENVAULT_HOME/import/*.csv` or loopback `POST /api/vault/ingest-pm` `{path}` | Official Google Password Manager / Apple Passwords / Chrome CSV dump. Dry-run defaults on. CVV is stripped and never stored. Delete the CSV after import. Never commit dumps. |
 | AirGPT `env.local` / Netie `user.env` | Offline **cache** synced *from* OpenVault — never the paste target for a new pile |
 | Provider doc scrapes (`Free API.txt`, etc.) | Catalog notes only — never live secrets |
 

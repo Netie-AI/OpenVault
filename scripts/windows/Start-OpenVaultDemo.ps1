@@ -12,7 +12,7 @@
   powershell -ExecutionPolicy Bypass -File scripts\windows\Start-OpenVaultDemo.ps1
 #>
 param(
-  [string]$OpenVaultRoot = "D:\OpenVault",
+  [string]$OpenVaultRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path,
   [switch]$Prod
 )
 

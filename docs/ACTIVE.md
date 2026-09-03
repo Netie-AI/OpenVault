@@ -14,11 +14,12 @@ What exists in this repo and where. Update when structure changes, not when stat
 | `OpenMW/rust/openvault-console/` | Optional Rust auth on `:5055`, skipped when `cargo` missing |
 | `apps/web/` | OpenVault UI on `:3010` (Next 16, wired exclusively to `:5000` — see `docs/decisions/DR-0003-openship-app-plan.md`) |
 | `apps/cli/` | `openvault_cli.py` — `up` / `demo` / `demo-path` / `app` / `doctor` |
-| `OpenMW/scripts/one_seat_demo.py` | Auto-safe one-seat evidence path (vault → FreeRoute refuse → ship allow → deny); see [`ONE_SEAT_DEMO.md`](ONE_SEAT_DEMO.md) |
+| `OpenMW/scripts/one_seat_demo.py` | Auto-safe one-seat evidence path; human HT1-HT5 in [`ONE_SEAT_DEMO.md`](ONE_SEAT_DEMO.md) |
+| `scripts/ht1_sample/` | Static sample for HT1 (`https://netie.ai/ht1-demo`), not the homepage |
 | `apps/shell/` | Electron desktop shell |
 | `docs/reference/` | Protocol/technical reference docs still live and current |
 | `docs/decisions/` | Decision records, `DR-####-kebab-title.md`, MADR format (see `docs/decisions/DR-0001-record-decisions.md`) |
-| `scripts/windows/` | `Start-OpenVaultDemo.ps1`, `Start-NetieStack.ps1`, `Start-LocalMesh.ps1` |
+| `scripts/windows/` | `Start-OpenVaultDemo.ps1`, `Start-NetieStack.ps1`, `Start-LocalMesh.ps1`, `Load-SpaceshipFtpEnv.ps1` |
 | `bin/` | Quarantine — dead/orphaned files pending the founder's final review and removal |
 
 ## OpenVault app tiers (`OpenMW/openmw/openvault/`)
@@ -28,7 +29,7 @@ What exists in this repo and where. Update when structure changes, not when stat
 | Health | `health/` | Laptop device inventory |
 | Observe | `observe/` | PathTrace hops + severity (`hot` = red) |
 | Vault | `vault/` | Encrypted keys, accounts, proxy, FreeRoute gateway. Metering trio: `api_keys.py` (issued `ov_` credentials) · `auth.py` (who is calling — never a header) · `usage_store.py` (one durable row per request) · `budget.py` (output ceiling + context refusal) |
-| Ship | `ship/` (+ `ship/hosts/`) | Deploy / FreeBuild / email gates |
+| Ship | `ship/` (+ `ship/hosts/`) | Deploy / FreeBuild / email gates. Host adapters: `spaceship_ftp`, Cloudflare Pages, Coolify, Netlify, VPS SSH |
 | Mesh | `mesh/` | Local mesh + Cortex client + `/api/slots` |
 | Control | `control/` | GPU/CPU/fan remediation (dry_run default) |
 | Cloud | `cloud/` | Small Software LAN cloud — device discovery, shares, multiplayer sessions (`docs/decisions/DR-0002-small-software-lan-cloud.md`) |

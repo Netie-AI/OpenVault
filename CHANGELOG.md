@@ -2,6 +2,117 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-08-28 - auto/gpt-oss 500 is a JSON encode crash, not a dead vault
+
+- Live `POST /v1/chat/completions` `model=auto` (and groq gpt-oss / OpenRouter
+  ids) returned uvicorn `text/plain` HTTP 500. Groq llama ids returned a typed
+  JSON 400 (stale catalog / `job=dead` on 404). Cortex AGENT_TASK sends `auto`.
+- `json_safe` on hop success; unhandled hop exceptions continue the chain;
+  `v1_chat` JSONResponse encode is JSON 500 not text/plain.
+- Gate: `tests/test_proxy_json_safe.py` 33 passed with model resolution.
+- Live `:5000` PID 62048 is still the old process. Do not kill it from here.
+
+## 2026-08-28 - Auto skips cooling hops; unhealthy pool is not 'no keys'
+
+- **`auto` (and priority) send 429-cooling hops last**, same Retry-After parks
+  as `reset-aware`. Still no NVIDIA classifier. Crew no longer hammers a dead
+  Groq hop before a ready primary.
+- **503 when pooled keys exist but none are healthy** is
+  `openvault_hops_unhealthy` (`priced: false`), not an empty-vault lie. We do
+  not auto-register third-party accounts. Vault a working primary on `:3010`.
+
+## 2026-08-28 - Preview without deploy; honest catalog stays unpriced
+
+- **Ship `POST /api/ship/preview`** serves a local artifact on `127.0.0.1` without
+  a host deploy. `public_url` / `live` stay false. `.env` stays 404. Empty
+  folders refuse without inventing a URL. Ship UI: Preview locally.
+- **Providers catalog** returns `priced: false` and `nvidia_classifier: false`.
+  The Providers page shows pinned chat models, unknown context windows, and no
+  USD. HT1/HT2 stay human.
+
+## 2026-08-28 - ASCII in agent prompts; HT1-HT5 human runbook (Spaceship)
+
+- **PRD / EPIC / Ticket Runner prompts** now bind laptop-ASCII (R-0012) in
+  `AGENT_SYSTEM.md` so GitHub issue bodies stop emitting em dashes that render
+  as garbage. Cursor companion + netie-prd skill + `netie_init.py` stamp the
+  same rule.
+- **Human HT1-HT5 setup** is in `docs/ONE_SEAT_DEMO.md`. Spaceship sample ships
+  to `https://netie.ai/ht1-demo/` (not the homepage). Loader
+  `scripts/windows/Load-SpaceshipFtpEnv.ps1` maps `FTP_*` to `SPACESHIP_FTP_*`.
+  Start scripts resolve `E:\OpenVault` / `E:\Cortex` instead of missing `D:\`.
+  Gates stay human-only. Do not claim HT1-HT5 done.
+
+## 2026-08-28 - Vault env on CF/Netlify; hop ledger on Route
+
+- **Cloudflare Pages and Netlify take vault inject** as platform env (secret_text /
+  build_settings.env). Values are redacted from errors and logs. Still no
+  `.env` in the artifact. HT5 eyeball stays human.
+- **Route meters list recent hops** (provider, model, tokens, cache, status).
+  No USD.
+
+## 2026-08-28 - Loopback preview (not live); remaining budget on Route
+
+- **FreeBuild serves a built artifact on 127.0.0.1** when there is no observed
+  public URL. That is `local_preview_url`, never `public_url`. `.env` stays 404.
+  HT1 stays human.
+- **Route meters show remaining token/request budget** from
+  `GET /api/freeroute/ratelimit` (the caller's real tier). Still unpriced.
+- **Fallback hops expose remaining cooldown** so parked 429s are visible.
+
+## 2026-08-28 - Anthropic auto is catalogued; meters on Route; FTP env stays off the web root
+
+- **Anthropic `chat_models` pinned** from Anthropic's model overview
+  (`claude-sonnet-5` first for `auto`, plus Haiku/Opus/Fable ids). No guessed
+  aliases. Concrete unlisted ids fall back instead of 404ing as a fake name.
+- **Route meters card** reads `GET /api/usage` (tokens, cache hits,
+  `priced: false`). No USD.
+- **Spaceship FTP will not STOR vault env into the public upload dir.** Inject
+  needs `SPACESHIP_FTP_ENV_DIR` distinct from `SPACESHIP_FTP_DIR`. HT1 stays
+  human.
+
+## 2026-08-28 - Route UI shows the token ledger (still unpriced)
+
+- **Meters card on Route** reads `GET /api/usage`. Requests, billable tokens,
+  cache hits, and `priced: false`. No USD. OmniRoute-class visibility without
+  inventing a rate.
+
+## 2026-08-28 - Anthropic prompt-cache breakpoints; Spaceship-first Ship picker
+
+- **FreeRoute marks the Anthropic system prefix** with `cache_control: ephemeral`
+  and copies `cache_read_input_tokens` / `cache_creation_input_tokens` when
+  Anthropic sends them. Missing fields stay missing — no invented savings.
+- **Ship picker defaults to Spaceship FTP** (the host this estate already pays
+  for), not Cloudflare. Detect copy matches. Do not buy New hosting.
+
+## 2026-08-28 - git-push writes a workflow, still no fake preview URL
+
+- **Ship can write** `.github/workflows/openvault-ship.yml` onto a project
+  (`POST /api/ship/cicd/write`, loopback). `vercel_job.git_push` is
+  `write-workflow`. The file's push job refuses to invent a preview URL;
+  simulate stays the default. GitHub-hosted runners cannot reach `:5000`. HT1
+  stays human.
+
+## 2026-08-28 - Anthropic Messages hop on FreeRoute /v1
+
+- **Healthy Claude keys are hops again.** `/v1/chat/completions` translates to
+  Anthropic `POST /v1/messages` (x-api-key, required max_tokens, OpenAI-shaped
+  response + SSE). `model: auto` still skips anthropic until a model id is
+  pinned from Anthropic's own list. Usage maps input/output tokens; nothing is
+  invented. Prompt-cache breakpoints stay parked.
+
+## 2026-08-28 - Exact cache, key rotator live, Spaceship FTP adapter
+
+- **FreeRoute now skips a vault key after two auth failures** and round-robins
+  sibling keys in the same provider/role band on one-shot traffic. Affinity still
+  pins a conversation so upstream prompt caches stay warm.
+- **Exact-match response cache** fires only on explicit `temperature: 0`, is
+  tenant-scoped, writes `cache_hit` on the usage ledger, and refunds the token
+  reservation to 0. Not embeddings. `summary.priced` stays false.
+- **Spaceship FTP is a real Ship adapter** for the host this estate already pays
+  for. Live overwrite needs `OPENVAULT_SPACESHIP_ALLOW_PUBLISH=1`. A public URL is
+  returned only after a probe of a configured `SPACESHIP_PUBLIC_URL`. Simulate
+  never invents one. Do not buy New hosting. HT1 and HT2 stay human.
+
 ## 2026-08-20 - Port custody: name the application that is blocking us (DR-0011, proposed)
 
 - **The launcher stopped adopting strangers.** Every launcher had an "already listening on

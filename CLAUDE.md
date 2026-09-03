@@ -45,6 +45,9 @@ an unlock condition). Decisions go in `docs/decisions/DR-NNNN-*.md`.
 No per-agent files. No per-session files. No dates in filenames outside an archive.
 IDs are never reused. Full law: `D:\Netie\Internal\Rules\DOCUMENT_SYSTEM.md`.
 
+Laptop-ASCII only (R-0012): `-` `--` `->` `'` `"` `...`. No em dash, no curly quotes,
+no arrow glyphs in issues, STATUS, or chat.
+
 <!-- NETIE:END -->
 
 Read this before any edit.
