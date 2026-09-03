@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from openmw.prefetch_naive import NaivePrefetchConfig, lmcache_disk_config
 from openmw.prefetch_heuristic import HeuristicPrefetchConfig, lmcache_heuristic_overlay
+from openmw.prefetch_naive import NaivePrefetchConfig, lmcache_disk_config
 from openmw.run import compare_prefetch_runs, run_offload_measurement_loop
 from openmw.windows_ioring_spike import probe_windows_ioring_spike
 

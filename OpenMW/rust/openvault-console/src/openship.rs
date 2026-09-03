@@ -1,4 +1,4 @@
-//! OpenShip-style deploy plan + simulate executor (in-repo clone surface).
+//! FreeBuild-style deploy plan + simulate executor (in-repo clone surface).
 
 use chrono::Utc;
 use rusqlite::params;

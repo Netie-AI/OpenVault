@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import random
-
 from openmw.openvault.route.rr_state import fisher_yates_shuffle, get_next_from_deck
 from openmw.openvault.route.sorters import (
     order_by_p2c,

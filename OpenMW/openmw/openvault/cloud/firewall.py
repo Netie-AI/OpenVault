@@ -143,18 +143,17 @@ def evaluate_action(
 
     if action == "share_lan":
         applied.append("lan-only-share")
-        if dest.startswith("http://") or dest.startswith("https://"):
-            # Allow only private / loopback URLs
-            if not _is_private_url(dest):
-                return FirewallDecision(
-                    allowed=False,
-                    action=action,
-                    level="deny",
-                    reasons=[
-                        "WARN: share destination is not private LAN/loopback — blocked."
-                    ],
-                    rules_applied=applied,
-                )
+        # Allow only private / loopback URLs
+        if (dest.startswith("http://") or dest.startswith("https://")) and not _is_private_url(
+            dest
+        ):
+            return FirewallDecision(
+                allowed=False,
+                action=action,
+                level="deny",
+                reasons=["WARN: share destination is not private LAN/loopback — blocked."],
+                rules_applied=applied,
+            )
         if peer and not _is_private_ip(peer):
             return FirewallDecision(
                 allowed=False,
@@ -199,9 +198,7 @@ def _is_private_ip(ip: str) -> bool:
         return True
     if a == 192 and b == 168:
         return True
-    if a == 172 and 16 <= b <= 31:
-        return True
-    return False
+    return a == 172 and 16 <= b <= 31
 
 
 def _is_private_url(url: str) -> bool:

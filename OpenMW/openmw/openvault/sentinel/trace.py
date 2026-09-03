@@ -21,7 +21,6 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import structlog
-
 from nvme_sentinel.commands.identify import active_namespace_list, identify_controller
 from nvme_sentinel.commands.log_pages import (
     get_error_info_log,

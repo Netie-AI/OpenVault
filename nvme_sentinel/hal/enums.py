@@ -4,7 +4,7 @@ from enum import Flag, IntEnum
 
 
 class AdminOpcode(IntEnum):
-    """NVMe admin command opcodes (implementation_plan.md §4.1)."""
+    """NVMe admin command opcodes (nvme-sentinel-spec.md §4.1)."""
 
     GET_LOG_PAGE = 0x02
     IDENTIFY = 0x06
@@ -15,7 +15,7 @@ class AdminOpcode(IntEnum):
 
 
 class CNSValue(IntEnum):
-    """Identify CNS values for opcode 0x06 (implementation_plan.md §4.2)."""
+    """Identify CNS values for opcode 0x06 (nvme-sentinel-spec.md §4.2)."""
 
     IDENTIFY_NAMESPACE = 0x00
     IDENTIFY_CONTROLLER = 0x01
@@ -24,7 +24,7 @@ class CNSValue(IntEnum):
 
 
 class LogPageID(IntEnum):
-    """Get Log Page identifiers for opcode 0x02 (implementation_plan.md §4.3)."""
+    """Get Log Page identifiers for opcode 0x02 (nvme-sentinel-spec.md §4.3)."""
 
     ERROR_INFO = 0x01
     SMART_HEALTH = 0x02
@@ -35,7 +35,7 @@ class LogPageID(IntEnum):
 
 
 class CriticalWarning(Flag):
-    """SMART critical warning bits from byte 0 (implementation_plan.md §4.4)."""
+    """SMART critical warning bits from byte 0 (nvme-sentinel-spec.md §4.4)."""
 
     # preferred for Flag subclasses — bit position is self-documenting
     AVAILABLE_SPARE_LOW = 1 << 0  # bit 0

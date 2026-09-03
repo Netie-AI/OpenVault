@@ -9,8 +9,9 @@ from __future__ import annotations
 import math
 import threading
 import time
-from dataclasses import dataclass, field
-from typing import Callable, Literal
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import Literal
 
 CircuitState = Literal["CLOSED", "DEGRADED", "OPEN", "HALF_OPEN"]
 
@@ -253,7 +254,6 @@ _sweep_started = False
 def _evict_cold_breakers() -> None:
     if len(_registry) < MAX_REGISTRY_SIZE:
         return
-    now_ms = time.time() * 1000
     candidates: list[tuple[float, str]] = []
     for name, breaker in _registry.items():
         status = breaker.get_status()

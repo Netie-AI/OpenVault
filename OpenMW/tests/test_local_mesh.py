@@ -1,4 +1,4 @@
-﻿"""Local mesh — OpenVault ↔ Cortex ↔ OpenIDE handshake + connect pack."""
+"""Local mesh — OpenVault ↔ Cortex ↔ FreeIDE handshake + connect pack."""
 
 from __future__ import annotations
 
@@ -49,7 +49,7 @@ def test_handshake_auto_approve_openide_and_invoke(client: TestClient) -> None:
         "/api/local/handshake",
         json={
             "peer_kind": "openide",
-            "name": "OpenIDE test",
+            "name": "FreeIDE test",
             "base_url": "http://127.0.0.1:5100",
             "capabilities": ["signin", "passkey"],
             "auto_approve": True,
@@ -73,7 +73,7 @@ def test_handshake_auto_approve_openide_and_invoke(client: TestClient) -> None:
     assert cortex.json()["handshake"]["status"] == "approved"
 
     inv = client.post(
-        "/api/openide/invoke",
+        "/api/freeide/invoke",
         json={"action": "complete_signin", "username": "acmeops"},
     )
     assert inv.status_code == 200

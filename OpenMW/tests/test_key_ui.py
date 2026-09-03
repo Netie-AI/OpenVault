@@ -1,8 +1,11 @@
 """Friendly key UI lock: subscribe copy, Cortex ov_ issue, tenant BYOK custody.
 
-Proof path does not import create_app (main still pulls missing PR #9 ship
-modules). The key-UI router is mounted on a tiny FastAPI app instead.
-No public :5000 bind.
+The key-UI router is mounted on a tiny FastAPI app so the copy lock and the
+mint routes are proved on their own; the guarded mount inside create_app is
+covered by the create_app tests at the bottom of this file. No public :5000 bind.
+
+The subscribe surface lives in the Next console (apps/web /keys) -- the old
+OpenMW/webui Keys tab was ported there when main retired that file.
 """
 
 from __future__ import annotations
@@ -14,6 +17,7 @@ from cryptography.fernet import Fernet
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from openmw.openvault.app import create_app
 from openmw.openvault.routers.key_ui import build_key_ui_router
 from openmw.openvault.vault.accounts import AccountStore
 from openmw.openvault.vault.cortex_key import (
@@ -31,7 +35,7 @@ from openmw.openvault.vault.key_ui_copy import (
 from openmw.openvault.vault.store import KeyVault
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-WEBUI = REPO_ROOT / "OpenMW" / "webui" / "index.html"
+KEYS_PAGE = REPO_ROOT / "apps" / "web" / "src" / "app" / "keys" / "page.tsx"
 TS_COPY = REPO_ROOT / "apps" / "web" / "src" / "keys" / "copy.ts"
 TS_RENDER = REPO_ROOT / "apps" / "web" / "src" / "keys" / "render.ts"
 
@@ -61,7 +65,7 @@ def client(vault: KeyVault, accounts: AccountStore) -> TestClient:
 
 
 def _subscribe_html() -> str:
-    html = WEBUI.read_text(encoding="utf-8")
+    html = KEYS_PAGE.read_text(encoding="utf-8")
     start = html.index('id="keypath-subscribe"')
     end = html.index('id="keypath-byok"')
     return html[start:end]
@@ -102,9 +106,7 @@ def test_ui_copy_api(client: TestClient) -> None:
         assert term not in joined
 
 
-def test_issue_cortex_key_is_ov_framed_as_cortex(
-    client: TestClient, vault: KeyVault
-) -> None:
+def test_issue_cortex_key_is_ov_framed_as_cortex(client: TestClient, vault: KeyVault) -> None:
     res = client.post("/api/keys/cortex")
     assert res.status_code == 200
     body = res.json()
@@ -121,9 +123,7 @@ def test_issue_cortex_key_is_ov_framed_as_cortex(
 def test_account_cortex_key_is_tenant_not_pooled(
     client: TestClient, accounts: AccountStore
 ) -> None:
-    acct = accounts.create(
-        display_name="Seat", auth_provider="netie_email", local_part="seat"
-    )
+    acct = accounts.create(display_name="Seat", auth_provider="netie_email", local_part="seat")
     res = client.post(f"/api/accounts/{acct.id}/cortex-key")
     assert res.status_code == 200
     body = res.json()
@@ -135,9 +135,7 @@ def test_account_cortex_key_is_tenant_not_pooled(
 
 
 def test_account_byok_is_not_silently_pooled(vault: KeyVault, accounts: AccountStore) -> None:
-    acct = accounts.create(
-        display_name="BYOK", auth_provider="netie_email", local_part="byok"
-    )
+    acct = accounts.create(display_name="BYOK", auth_provider="netie_email", local_part="byok")
     record = vault.create(
         label="Groq lab",
         provider="groq",
@@ -159,3 +157,53 @@ def test_issue_helper_matches_api_shape(vault: KeyVault) -> None:
     assert payload["token"].startswith("ov_")
     assert payload["display_label"] == CORTEX_KEY_LABEL
     assert payload["pooled"] is False
+
+
+# --- Guarded mount: the routes inside create_app carry the app's custody controls ---
+
+
+def _app_client(vault: KeyVault, accounts: AccountStore, host: str) -> TestClient:
+    app = create_app(
+        vault=vault,
+        accounts=accounts,
+        mock_health=True,
+        enable_precheck_loop=False,
+        cortex_url="http://127.0.0.1:9",
+    )
+    # Custody mutations are loopback-only; TestClient's default host is
+    # "testclient", which the guard correctly rejects (see test_accounts_custody).
+    return TestClient(app, client=(host, 5555))
+
+
+def test_mounted_cortex_mint_is_loopback_only(vault: KeyVault, accounts: AccountStore) -> None:
+    """A vault reachable from the LAN is not a vault -- minting is a custody write."""
+    lan = _app_client(vault, accounts, "192.168.1.50")
+    assert lan.get("/api/keys/ui-copy").status_code == 200  # copy is public
+    res = lan.post("/api/keys/cortex")
+    assert res.status_code == 403
+    assert "loopback-only" in res.text
+    assert vault.list_keys() == []
+
+
+def test_mounted_account_cortex_key_is_tenant_and_never_pooled(
+    vault: KeyVault, accounts: AccountStore
+) -> None:
+    """DR-0009: an account-attached key is stored tenant, not just reported tenant."""
+    local = _app_client(vault, accounts, "127.0.0.1")
+    acct = accounts.create(display_name="Seat", auth_provider="netie_email", local_part="seat")
+    res = local.post(f"/api/accounts/{acct.id}/cortex-key")
+    assert res.status_code == 200, res.text
+    body = res.json()
+    assert body["token"].startswith("ov_")
+    assert body["custody"] == "tenant"
+    stored = vault.get(body["id"])
+    assert stored is not None
+    assert stored.custody == "tenant"
+    assert body["id"] not in {k.id for k in vault.pooled_ordered()}
+
+    op = local.post("/api/keys/cortex")
+    assert op.status_code == 200, op.text
+    operator_row = vault.get(op.json()["id"])
+    assert operator_row is not None
+    assert operator_row.custody == "pooled"
+    assert local.post("/api/accounts/nope/cortex-key").status_code == 404

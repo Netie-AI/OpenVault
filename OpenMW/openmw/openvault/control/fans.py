@@ -15,5 +15,5 @@ def fan_set(*, percent: int, confirm: bool, dry_run: bool) -> dict[str, Any]:
         "confirm": confirm,
         "requested_percent": pct,
         "error": "fan write unsupported on this host (laptop EC locked)",
-        "recommendation": "Use OEM thermal / OS cooling mode; see PARKINGLOT.md",
+        "recommendation": "Use OEM thermal / OS cooling mode; see PARKING_LOT.md",
     }

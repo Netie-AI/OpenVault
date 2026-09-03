@@ -1,4 +1,4 @@
-"""Linux NVMe adapter using ioctl passthrough from implementation_plan.md §4.5."""
+"""Linux NVMe adapter using ioctl passthrough from nvme-sentinel-spec.md §4.5."""
 
 from __future__ import annotations
 

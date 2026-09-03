@@ -1,4 +1,4 @@
-﻿"""OpenVault unit tests — vault, fallback, API smoke."""
+"""OpenVault unit tests — vault, fallback, API smoke."""
 
 from __future__ import annotations
 
@@ -9,9 +9,13 @@ from cryptography.fernet import Fernet
 from fastapi.testclient import TestClient
 
 from openmw.openvault.app import create_app
+from openmw.openvault.mesh.orchestration import (
+    OrchestrationSelection,
+    load_selection,
+    save_selection,
+)
 from openmw.openvault.vault.crypto import Seal, mask_secret
 from openmw.openvault.vault.fallback import FallbackManager
-from openmw.openvault.mesh.orchestration import OrchestrationSelection, load_selection, save_selection
 from openmw.openvault.vault.store import KeyVault
 
 
@@ -107,6 +111,48 @@ def test_gate_blocks_deploy_without_keys(vault: KeyVault) -> None:
     assert allowed.allowed is True
 
 
+def test_gate_sealed_keys_ready_false_for_deploy(vault: KeyVault) -> None:
+    """Metadata rows while sealed must not report keys_ready for deploy/leave."""
+    from openmw.openvault.ship.gate import check_gate
+
+    vault.create(
+        label="groq",
+        provider="groq",
+        secret="gsk-test-cccccccccccc",
+        role="free",
+    )
+    assert check_gate(action="deploy", vault=vault, required_providers=["groq"]).allowed is True
+
+    vault.seal.lock()
+    assert vault.seal.is_sealed
+    assert vault.list_keys()  # metadata still present
+
+    denied = check_gate(action="deploy", vault=vault, required_providers=["groq"])
+    assert denied.allowed is False
+    assert denied.keys_ready is False
+    assert any("sealed" in r.lower() for r in denied.reasons)
+
+    leave = check_gate(action="leave", vault=vault)
+    assert leave.allowed is False
+    assert leave.keys_ready is False
+
+    # Local run with ollama still follows today's rules (metadata + local engines).
+    vault_local = KeyVault(
+        db_path=vault.db_path.parent / "local.db", seal=Seal(Fernet.generate_key())
+    )
+    vault_local.create(
+        label="ollama",
+        provider="ollama",
+        secret="local",
+        role="free",
+        base_url="http://127.0.0.1:11434",
+    )
+    vault_local.seal.lock()
+    run = check_gate(action="run", vault=vault_local)
+    assert run.allowed is True
+    assert run.keys_ready is True
+
+
 def test_keyvault_snapshot_and_upsert(vault: KeyVault) -> None:
     from openmw.openvault.vault.airgpt_keyvault import keyvault_snapshot, upsert_env_secret
 
@@ -142,7 +188,9 @@ def test_api_smoke(vault: KeyVault, monkeypatch: pytest.MonkeyPatch, tmp_path: P
         enable_precheck_loop=False,
         cortex_url="http://127.0.0.1:9",
     )
-    client = TestClient(app)
+    # Custody mutations are loopback-only; TestClient's default host is
+    # "testclient", which the guard correctly rejects.
+    client = TestClient(app, client=("127.0.0.1", 5555))
 
     z = client.get("/api/healthz")
     assert z.status_code == 200
@@ -175,8 +223,12 @@ def test_api_smoke(vault: KeyVault, monkeypatch: pytest.MonkeyPatch, tmp_path: P
     assert listed.status_code == 200
     assert len(listed.json()["keys"]) == 1
 
-    secret = client.get(f"/api/keys/{key_id}/secret")
-    assert secret.json()["secret"] == "local-no-auth"
+    # Revealing plaintext requires loopback *and* an explicit intent header.
+    # This client is loopback (custody mutations above need it), so the missing
+    # header is what bites here — 428. The off-loopback 403 and the full matrix
+    # live in test_secret_reveal_gate.py.
+    gated = client.get(f"/api/keys/{key_id}/secret")
+    assert gated.status_code == 428
 
     fb = client.get("/api/fallback/status")
     assert fb.status_code == 200

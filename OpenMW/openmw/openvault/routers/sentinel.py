@@ -110,19 +110,26 @@ def api_observe_trace(body: TraceBody) -> dict[str, Any]:
     device_path = body.device or default_device_path(mock=mock)
 
     if device_path is None:
-        payload: dict[str, Any] = {
-            "ok": False,
-            "source": "mock" if mock else "live",
-            "device": None,
-            "degraded": True,
-            "degraded_reason": (
-                "no storage device detected — Get-PhysicalDisk returned nothing "
-                "(pass mock=true to inspect the fixture device instead)"
-            ),
-            "trace_ok": False,
-            "timings_written": False,
-        }
-        payload.update(observe_path_payload(prefer_live=False))
+        # The path payload goes in FIRST and the specific diagnosis on top.
+        # Updating in the other order let observe_path_payload's generic
+        # "live trace not requested" overwrite the real reason, which reads as
+        # "you didn't ask for live" to someone who just did.
+        payload: dict[str, Any] = dict(observe_path_payload(prefer_live=False))
+        payload.update(
+            {
+                "ok": False,
+                "source": "mock",
+                "device": None,
+                "degraded": True,
+                "degraded_reason": (
+                    "no storage device detected — device enumeration returned nothing, "
+                    "so there is nothing to time (pass mock=true to inspect the fixture "
+                    "device instead)"
+                ),
+                "trace_ok": False,
+                "timings_written": False,
+            }
+        )
         return payload
 
     trace = run_admin_trace(device_path, mock=mock)
@@ -145,8 +152,6 @@ def api_observe_trace(body: TraceBody) -> dict[str, Any]:
     if not trace.ok and trace.error:
         payload["degraded"] = True
         prior = payload.get("degraded_reason")
-        payload["degraded_reason"] = (
-            f"{trace.error}; {prior}" if prior else trace.error
-        )
+        payload["degraded_reason"] = f"{trace.error}; {prior}" if prior else trace.error
 
     return payload

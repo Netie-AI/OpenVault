@@ -1,0 +1,13 @@
+{
+  "name": "@openvault/shell",
+  "version": "0.1.0",
+  "private": true,
+  "main": "electron/main-openvault.js",
+  "scripts": {
+    "dev": "electron electron/main-openvault.js",
+    "start": "electron electron/main-openvault.js"
+  },
+  "devDependencies": {
+    "electron": "^35.0.0"
+  }
+}

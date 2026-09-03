@@ -7,7 +7,6 @@ import subprocess
 
 from nvme_sentinel.inventory.models import InventoryDevice
 
-
 _DEFAULT_LIST_TIMEOUT_S = 5.0
 
 

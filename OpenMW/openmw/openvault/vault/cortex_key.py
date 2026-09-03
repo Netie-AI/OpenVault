@@ -11,7 +11,7 @@ from dataclasses import asdict
 from typing import Any
 
 from openmw.openvault.vault.key_ui_copy import CORTEX_KEY_LABEL
-from openmw.openvault.vault.store import KeyRecord, KeyVault
+from openmw.openvault.vault.store import KeyCustody, KeyRecord, KeyVault
 
 TOKEN_PREFIX = "ov_"
 
@@ -27,8 +27,14 @@ def issue_cortex_key(
     account_id: str | None = None,
     label: str = CORTEX_KEY_LABEL,
 ) -> tuple[KeyRecord, str]:
-    """Store a Cortex-framed ov_ token. Never marks the row as pooled spend."""
+    """Store a Cortex-framed ov_ token.
+
+    An account-attached key is tenant custody (DR-0009, #41): stored, visible to
+    its owner, never walked by the metered gateway. An operator key keeps the
+    store default so the row's custody matches what ``issued_payload`` reports.
+    """
     token = mint_cortex_token()
+    custody: KeyCustody = "tenant" if account_id else "pooled"
     record = vault.create(
         label=label,
         provider="cortex",
@@ -36,6 +42,7 @@ def issue_cortex_key(
         role="primary",
         priority=10,
         account_id=account_id,
+        custody=custody,
     )
     return record, token
 

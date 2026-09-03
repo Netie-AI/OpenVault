@@ -40,7 +40,7 @@ def gpu_status() -> dict[str, Any]:
             )
         pynvml.nvmlShutdown()
         return {"ok": True, "capability": True, "devices": devices}
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return {"ok": False, "capability": False, "error": str(exc)}
 
 
@@ -51,5 +51,5 @@ def gpu_power_hint(*, confirm: bool, dry_run: bool) -> dict[str, Any]:
         "capability": False,
         "dry_run": dry_run,
         "confirm": confirm,
-        "error": "gpu power/clock write unsupported — see PARKINGLOT.md",
+        "error": "gpu power/clock write unsupported — see PARKING_LOT.md",
     }

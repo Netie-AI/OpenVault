@@ -1,4 +1,4 @@
-"""nvme-cli subprocess fallback per implementation_plan.md §7.2."""
+"""nvme-cli subprocess fallback per nvme-sentinel-spec.md §7.2."""
 
 from __future__ import annotations
 

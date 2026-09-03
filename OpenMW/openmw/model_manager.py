@@ -6,10 +6,10 @@ import hashlib
 import json
 import re
 import shutil
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Callable
 from urllib.parse import urlparse
 
 import structlog
