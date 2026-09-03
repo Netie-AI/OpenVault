@@ -1,4 +1,4 @@
-"""Stress OpenVault + AirGPT OpenIDE buttons via Playwright.
+"""Stress OpenVault + AirGPT FreeIDE buttons via Playwright.
 
 Blocks/warns are asserted for bypass attempts.
 Requires: OpenVault :5000, AirGPT :8765, playwright installed.
@@ -8,15 +8,14 @@ Requires: OpenVault :5000, AirGPT :8765, playwright installed.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import sys
 import urllib.request
 from typing import Any
 
-try:
+with contextlib.suppress(Exception):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
-except Exception:
-    pass
 
 BASE_OV = "http://127.0.0.1:5000"
 BASE_IDE = "http://127.0.0.1:8765"
@@ -52,7 +51,11 @@ def main() -> int:
             failures.append(f"{label} down: {e}")
             print(f"FAIL {label}: {e}")
 
-    deny = http_json("POST", f"{BASE_OV}/api/cloud/firewall/check", {"action": "share_lan", "bypass": True})
+    deny = http_json(
+        "POST",
+        f"{BASE_OV}/api/cloud/firewall/check",
+        {"action": "share_lan", "bypass": True},
+    )
     if deny.get("allowed") is not False:
         failures.append("bypass was allowed — SECURITY FAIL")
     else:
@@ -83,13 +86,14 @@ def main() -> int:
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
-        page.goto(f"{BASE_OV}/#mesh", wait_until="domcontentloaded", timeout=15000)
+        page.goto("http://127.0.0.1:3010/peers", wait_until="domcontentloaded", timeout=15000)
         page.wait_for_timeout(600)
         tabs = [
             "Detection",
             "Data Flow",
             "Bottleneck",
             "Middleware Gain",
+            "Routing",
             "Vault",
             "Accounts",
             "Local Mesh",

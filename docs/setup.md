@@ -69,7 +69,7 @@ uv run nvme-sentinel collect --device /dev/nvme0 --output reports/nvme0.json
 
 ### Related docs
 - Current state: [`STATUS.md`](../STATUS.md)
-- Deferred backlog: [`PARKINGLOT.md`](../PARKINGLOT.md)
+- Deferred backlog: [`PARKING_LOT.md`](../PARKING_LOT.md)
 - Design tradeoffs: [`design-decisions.md`](design-decisions.md)
 
 ## Docker (any host)

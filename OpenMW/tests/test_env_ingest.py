@@ -92,7 +92,8 @@ def test_env_scan_endpoint(
     monkeypatch.setenv("OPENVAULT_HOME", str(tmp_path / "home"))
     monkeypatch.setenv("OPENAI_API_KEY", REAL_SECRET)
     app = create_app(vault=vault, mock_health=True, enable_precheck_loop=False)
-    client = TestClient(app)
+    # /api/vault/ingest-env is a custody write, so it is loopback-only.
+    client = TestClient(app, client=("127.0.0.1", 5555))
 
     scan = client.get("/api/vault/env-scan")
     assert scan.status_code == 200

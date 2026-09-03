@@ -1,0 +1,702 @@
+/**
+ * Framework catalogue — generated from OpenShip's `packages/core/src/stacks.ts`
+ * (the STACKS registry, sliced out and evaluated as the pure object literal it
+ * is). Pure data: no React, no vendor imports, so it is safe to consume from
+ * server components and from plain logic.
+ *
+ * The vendor original rendered stack marks from jsdelivr URLs. Electron's CSP
+ * blocks external hosts, so each entry carries a `letter` instead and the UI
+ * draws a token-coloured tile. Regenerate, do not hand-edit.
+ */
+
+export type StackCategory = "frontend" | "backend" | "fullstack" | "static" | "generic";
+
+export interface FrameworkOptions {
+  buildCommand: string;
+  /** Always empty in the catalogue — detection fills it from the real lockfile. */
+  installCommand: string;
+  startCommand: string;
+  outputDirectory: string;
+  isStatic: boolean;
+}
+
+export interface FrameworkConfig {
+  id: string;
+  name: string;
+  language: string;
+  category: StackCategory;
+  /** Fallback glyph for the stack tile (see file header). */
+  letter: string;
+  defaultPort: number;
+  options: FrameworkOptions;
+}
+
+/** Categories shown in the import-project tab strip. */
+export const stackCategories: { id: StackCategory; label: string }[] = [
+  { id: "frontend", label: "Frontend" },
+  { id: "backend", label: "Backend" },
+  { id: "fullstack", label: "Fullstack" },
+  { id: "static", label: "Static" },
+];
+
+export const frameworks: FrameworkConfig[] = [
+  {
+    id: "nextjs",
+    name: "Next.js",
+    language: "typescript",
+    category: "fullstack",
+    letter: "N",
+    defaultPort: 3000,
+    options: {
+      buildCommand: "next build",
+      installCommand: "",
+      startCommand: "next start",
+      outputDirectory: ".next",
+      isStatic: false,
+    },
+  },
+  {
+    id: "nuxt",
+    name: "Nuxt",
+    language: "typescript",
+    category: "fullstack",
+    letter: "N",
+    defaultPort: 3000,
+    options: {
+      buildCommand: "nuxt build",
+      installCommand: "",
+      startCommand: "node .output/server/index.mjs",
+      outputDirectory: ".output",
+      isStatic: false,
+    },
+  },
+  {
+    id: "sveltekit",
+    name: "SvelteKit",
+    language: "typescript",
+    category: "fullstack",
+    letter: "S",
+    defaultPort: 3000,
+    options: {
+      buildCommand: "vite build",
+      installCommand: "",
+      startCommand: "node build/index.js",
+      outputDirectory: ".svelte-kit",
+      isStatic: false,
+    },
+  },
+  {
+    id: "remix",
+    name: "Remix",
+    language: "typescript",
+    category: "fullstack",
+    letter: "R",
+    defaultPort: 3000,
+    options: {
+      buildCommand: "remix build",
+      installCommand: "",
+      startCommand: "remix-serve build/index.js",
+      outputDirectory: "build",
+      isStatic: false,
+    },
+  },
+  {
+    id: "astro",
+    name: "Astro",
+    language: "typescript",
+    category: "frontend",
+    letter: "A",
+    defaultPort: 4321,
+    options: {
+      buildCommand: "astro build",
+      installCommand: "",
+      startCommand: "node dist/server/entry.mjs",
+      outputDirectory: "dist",
+      isStatic: false,
+    },
+  },
+  {
+    id: "vite",
+    name: "Vite",
+    language: "typescript",
+    category: "frontend",
+    letter: "V",
+    defaultPort: 5173,
+    options: {
+      buildCommand: "vite build",
+      installCommand: "",
+      startCommand: "",
+      outputDirectory: "dist",
+      isStatic: true,
+    },
+  },
+  {
+    id: "angular",
+    name: "Angular",
+    language: "typescript",
+    category: "frontend",
+    letter: "A",
+    defaultPort: 4200,
+    options: {
+      buildCommand: "ng build --configuration production",
+      installCommand: "",
+      startCommand: "",
+      outputDirectory: "dist",
+      isStatic: true,
+    },
+  },
+  {
+    id: "gatsby",
+    name: "Gatsby",
+    language: "javascript",
+    category: "frontend",
+    letter: "G",
+    defaultPort: 8000,
+    options: {
+      buildCommand: "gatsby build",
+      installCommand: "",
+      startCommand: "gatsby serve",
+      outputDirectory: "public",
+      isStatic: false,
+    },
+  },
+  {
+    id: "cra",
+    name: "Create React App",
+    language: "javascript",
+    category: "frontend",
+    letter: "C",
+    defaultPort: 3000,
+    options: {
+      buildCommand: "react-scripts build",
+      installCommand: "",
+      startCommand: "",
+      outputDirectory: "build",
+      isStatic: true,
+    },
+  },
+  {
+    id: "vue",
+    name: "Vue CLI",
+    language: "javascript",
+    category: "frontend",
+    letter: "V",
+    defaultPort: 8080,
+    options: {
+      buildCommand: "vue-cli-service build",
+      installCommand: "",
+      startCommand: "",
+      outputDirectory: "dist",
+      isStatic: true,
+    },
+  },
+  {
+    id: "react",
+    name: "React",
+    language: "javascript",
+    category: "frontend",
+    letter: "R",
+    defaultPort: 3000,
+    options: {
+      buildCommand: "",
+      installCommand: "",
+      startCommand: "",
+      outputDirectory: "build",
+      isStatic: true,
+    },
+  },
+  {
+    id: "express",
+    name: "Express",
+    language: "javascript",
+    category: "backend",
+    letter: "E",
+    defaultPort: 3000,
+    options: {
+      buildCommand: "",
+      installCommand: "",
+      startCommand: "node index.js",
+      outputDirectory: "dist",
+      isStatic: false,
+    },
+  },
+  {
+    id: "fastify",
+    name: "Fastify",
+    language: "typescript",
+    category: "backend",
+    letter: "F",
+    defaultPort: 3000,
+    options: {
+      buildCommand: "",
+      installCommand: "",
+      startCommand: "node dist/index.js",
+      outputDirectory: "dist",
+      isStatic: false,
+    },
+  },
+  {
+    id: "hono",
+    name: "Hono",
+    language: "typescript",
+    category: "backend",
+    letter: "H",
+    defaultPort: 3000,
+    options: {
+      buildCommand: "",
+      installCommand: "",
+      startCommand: "node dist/index.js",
+      outputDirectory: "dist",
+      isStatic: false,
+    },
+  },
+  {
+    id: "nestjs",
+    name: "NestJS",
+    language: "typescript",
+    category: "backend",
+    letter: "N",
+    defaultPort: 3000,
+    options: {
+      buildCommand: "nest build",
+      installCommand: "",
+      startCommand: "node dist/main.js",
+      outputDirectory: "dist",
+      isStatic: false,
+    },
+  },
+  {
+    id: "koa",
+    name: "Koa",
+    language: "javascript",
+    category: "backend",
+    letter: "K",
+    defaultPort: 3000,
+    options: {
+      buildCommand: "",
+      installCommand: "",
+      startCommand: "node index.js",
+      outputDirectory: "dist",
+      isStatic: false,
+    },
+  },
+  {
+    id: "adonis",
+    name: "AdonisJS",
+    language: "typescript",
+    category: "fullstack",
+    letter: "A",
+    defaultPort: 3333,
+    options: {
+      buildCommand: "node ace build --production",
+      installCommand: "",
+      startCommand: "node build/server.js",
+      outputDirectory: "build",
+      isStatic: false,
+    },
+  },
+  {
+    id: "elysia",
+    name: "Elysia",
+    language: "typescript",
+    category: "backend",
+    letter: "E",
+    defaultPort: 3000,
+    options: {
+      buildCommand: "",
+      installCommand: "",
+      startCommand: "bun dist/index.js",
+      outputDirectory: "dist",
+      isStatic: false,
+    },
+  },
+  {
+    id: "go",
+    name: "Go",
+    language: "go",
+    category: "backend",
+    letter: "G",
+    defaultPort: 8080,
+    options: {
+      buildCommand: "go build -o app .",
+      installCommand: "",
+      startCommand: "./app",
+      outputDirectory: ".",
+      isStatic: false,
+    },
+  },
+  {
+    id: "gin",
+    name: "Gin",
+    language: "go",
+    category: "backend",
+    letter: "G",
+    defaultPort: 8080,
+    options: {
+      buildCommand: "go build -o app .",
+      installCommand: "",
+      startCommand: "./app",
+      outputDirectory: ".",
+      isStatic: false,
+    },
+  },
+  {
+    id: "fiber",
+    name: "Fiber",
+    language: "go",
+    category: "backend",
+    letter: "F",
+    defaultPort: 3000,
+    options: {
+      buildCommand: "go build -o app .",
+      installCommand: "",
+      startCommand: "./app",
+      outputDirectory: ".",
+      isStatic: false,
+    },
+  },
+  {
+    id: "echo",
+    name: "Echo",
+    language: "go",
+    category: "backend",
+    letter: "E",
+    defaultPort: 8080,
+    options: {
+      buildCommand: "go build -o app .",
+      installCommand: "",
+      startCommand: "./app",
+      outputDirectory: ".",
+      isStatic: false,
+    },
+  },
+  {
+    id: "rust",
+    name: "Rust",
+    language: "rust",
+    category: "backend",
+    letter: "R",
+    defaultPort: 8080,
+    options: {
+      buildCommand: "cargo build --release",
+      installCommand: "",
+      startCommand: "./target/release/app",
+      outputDirectory: "target/release",
+      isStatic: false,
+    },
+  },
+  {
+    id: "actix",
+    name: "Actix Web",
+    language: "rust",
+    category: "backend",
+    letter: "A",
+    defaultPort: 8080,
+    options: {
+      buildCommand: "cargo build --release",
+      installCommand: "",
+      startCommand: "./target/release/app",
+      outputDirectory: "target/release",
+      isStatic: false,
+    },
+  },
+  {
+    id: "axum",
+    name: "Axum",
+    language: "rust",
+    category: "backend",
+    letter: "A",
+    defaultPort: 3000,
+    options: {
+      buildCommand: "cargo build --release",
+      installCommand: "",
+      startCommand: "./target/release/app",
+      outputDirectory: "target/release",
+      isStatic: false,
+    },
+  },
+  {
+    id: "rocket",
+    name: "Rocket",
+    language: "rust",
+    category: "backend",
+    letter: "R",
+    defaultPort: 8000,
+    options: {
+      buildCommand: "cargo build --release",
+      installCommand: "",
+      startCommand: "./target/release/app",
+      outputDirectory: "target/release",
+      isStatic: false,
+    },
+  },
+  {
+    id: "python",
+    name: "Python",
+    language: "python",
+    category: "backend",
+    letter: "P",
+    defaultPort: 8000,
+    options: {
+      buildCommand: "pip install -r requirements.txt",
+      installCommand: "",
+      startCommand: "python app.py",
+      outputDirectory: ".",
+      isStatic: false,
+    },
+  },
+  {
+    id: "django",
+    name: "Django",
+    language: "python",
+    category: "fullstack",
+    letter: "D",
+    defaultPort: 8000,
+    options: {
+      buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput",
+      installCommand: "",
+      startCommand: "gunicorn config.wsgi:application --bind 0.0.0.0:8000",
+      outputDirectory: ".",
+      isStatic: false,
+    },
+  },
+  {
+    id: "flask",
+    name: "Flask",
+    language: "python",
+    category: "backend",
+    letter: "F",
+    defaultPort: 5000,
+    options: {
+      buildCommand: "pip install -r requirements.txt",
+      installCommand: "",
+      startCommand: "gunicorn app:app --bind 0.0.0.0:5000",
+      outputDirectory: ".",
+      isStatic: false,
+    },
+  },
+  {
+    id: "fastapi",
+    name: "FastAPI",
+    language: "python",
+    category: "backend",
+    letter: "F",
+    defaultPort: 8000,
+    options: {
+      buildCommand: "pip install -r requirements.txt",
+      installCommand: "",
+      startCommand: "uvicorn main:app --host 0.0.0.0 --port 8000",
+      outputDirectory: ".",
+      isStatic: false,
+    },
+  },
+  {
+    id: "rails",
+    name: "Ruby on Rails",
+    language: "ruby",
+    category: "fullstack",
+    letter: "R",
+    defaultPort: 3000,
+    options: {
+      buildCommand: "bundle install && bundle exec rails assets:precompile",
+      installCommand: "",
+      startCommand: "bundle exec rails server -b 0.0.0.0",
+      outputDirectory: ".",
+      isStatic: false,
+    },
+  },
+  {
+    id: "sinatra",
+    name: "Sinatra",
+    language: "ruby",
+    category: "backend",
+    letter: "S",
+    defaultPort: 4567,
+    options: {
+      buildCommand: "bundle install",
+      installCommand: "",
+      startCommand: "ruby app.rb",
+      outputDirectory: ".",
+      isStatic: false,
+    },
+  },
+  {
+    id: "laravel",
+    name: "Laravel",
+    language: "php",
+    category: "fullstack",
+    letter: "L",
+    defaultPort: 8000,
+    options: {
+      buildCommand: "composer install --no-dev --optimize-autoloader",
+      installCommand: "",
+      startCommand: "envsubst '$PORT' < /etc/nginx/app.conf.template > /etc/nginx/conf.d/default.conf && php-fpm -D && nginx -g 'daemon off;'",
+      outputDirectory: "public",
+      isStatic: false,
+    },
+  },
+  {
+    id: "symfony",
+    name: "Symfony",
+    language: "php",
+    category: "fullstack",
+    letter: "S",
+    defaultPort: 8000,
+    options: {
+      buildCommand: "composer install --no-dev --optimize-autoloader",
+      installCommand: "",
+      startCommand: "envsubst '$PORT' < /etc/nginx/app.conf.template > /etc/nginx/conf.d/default.conf && php-fpm -D && nginx -g 'daemon off;'",
+      outputDirectory: "public",
+      isStatic: false,
+    },
+  },
+  {
+    id: "springboot",
+    name: "Spring Boot",
+    language: "java",
+    category: "backend",
+    letter: "S",
+    defaultPort: 8080,
+    options: {
+      buildCommand: "mvn clean package -DskipTests",
+      installCommand: "",
+      startCommand: "java -jar target/*.jar",
+      outputDirectory: "target",
+      isStatic: false,
+    },
+  },
+  {
+    id: "quarkus",
+    name: "Quarkus",
+    language: "java",
+    category: "backend",
+    letter: "Q",
+    defaultPort: 8080,
+    options: {
+      buildCommand: "mvn clean package -DskipTests",
+      installCommand: "",
+      startCommand: "java -jar target/quarkus-app/quarkus-run.jar",
+      outputDirectory: "target",
+      isStatic: false,
+    },
+  },
+  {
+    id: "kotlin",
+    name: "Kotlin",
+    language: "java",
+    category: "backend",
+    letter: "K",
+    defaultPort: 8080,
+    options: {
+      buildCommand: "gradle build -x test",
+      installCommand: "",
+      startCommand: "java -jar build/libs/*.jar",
+      outputDirectory: "build/libs",
+      isStatic: false,
+    },
+  },
+  {
+    id: "dotnet",
+    name: ".NET",
+    language: "csharp",
+    category: "backend",
+    letter: ".",
+    defaultPort: 5000,
+    options: {
+      buildCommand: "dotnet publish -c Release -o publish",
+      installCommand: "",
+      startCommand: "ASPNETCORE_URLS=http://0.0.0.0:$PORT dotnet publish/app.dll",
+      outputDirectory: "publish",
+      isStatic: false,
+    },
+  },
+  {
+    id: "blazor",
+    name: "Blazor",
+    language: "csharp",
+    category: "static",
+    letter: "B",
+    defaultPort: 5000,
+    options: {
+      buildCommand: "dotnet publish -c Release -o publish",
+      installCommand: "",
+      startCommand: "",
+      outputDirectory: "publish/wwwroot",
+      isStatic: true,
+    },
+  },
+  {
+    id: "phoenix",
+    name: "Phoenix",
+    language: "elixir",
+    category: "fullstack",
+    letter: "P",
+    defaultPort: 4000,
+    options: {
+      buildCommand: "MIX_ENV=prod mix do deps.get, compile, assets.deploy, release",
+      installCommand: "",
+      startCommand: "_build/prod/rel/app/bin/app start",
+      outputDirectory: "_build/prod/rel",
+      isStatic: false,
+    },
+  },
+  {
+    id: "node",
+    name: "Node.js",
+    language: "javascript",
+    category: "backend",
+    letter: "N",
+    defaultPort: 3000,
+    options: {
+      buildCommand: "",
+      installCommand: "",
+      startCommand: "node index.js",
+      outputDirectory: "dist",
+      isStatic: false,
+    },
+  },
+  {
+    id: "static",
+    name: "Static Site",
+    language: "multi",
+    category: "static",
+    letter: "S",
+    defaultPort: 3000,
+    options: {
+      buildCommand: "",
+      installCommand: "",
+      startCommand: "",
+      outputDirectory: ".",
+      isStatic: true,
+    },
+  },
+  {
+    id: "webmail",
+    name: "Webmail",
+    language: "typescript",
+    category: "fullstack",
+    letter: "W",
+    defaultPort: 4080,
+    options: {
+      buildCommand: "bun run build",
+      installCommand: "",
+      startCommand: "bun run src/main.ts",
+      outputDirectory: "client/build",
+      isStatic: false,
+    },
+  },
+];
+
+const BY_ID = new Map(frameworks.map((fw) => [fw.id, fw]));
+
+/**
+ * Never throws: an unknown id falls back to the "static" entry, because the
+ * deploy wizard must still render a form for a stack we failed to detect.
+ */
+export function getFrameworkConfig(frameworkId: string): FrameworkConfig {
+  return BY_ID.get(frameworkId) ?? BY_ID.get("static") ?? frameworks[0];
+}
+
+export function frameworksByCategory(category: StackCategory): FrameworkConfig[] {
+  return frameworks.filter((fw) => fw.category === category);
+}

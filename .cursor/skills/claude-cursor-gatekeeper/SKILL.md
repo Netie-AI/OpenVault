@@ -120,14 +120,14 @@ Cursor should not:
 7. **Update continuity notes**
 
    Before ending substantial work, update the project memory anchors. In this repo that is
-   `STATUS.md` (current state / next priorities) and `PARKINGLOT.md` (deferred backlog).
+   `STATUS.md` (current state / next priorities) and `PARKING_LOT.md` (deferred backlog).
    Record only evidence-backed state: completed work, commands run, artifacts produced,
    open risks, and next actions. Do not record guesses as facts.
 
 ## Continuity anchor
 
 Use `STATUS.md` as the durable cross-session source of truth for project state.
-Use `PARKINGLOT.md` for deferred / research items.
+Use `PARKING_LOT.md` for deferred / research items.
 Use chat todos/status only as short-term working memory.
 
 Update `STATUS.md` when:
@@ -137,7 +137,7 @@ Update `STATUS.md` when:
 - Verification evidence changes project status.
 - Next priorities change.
 
-Move long-horizon / research items into `PARKINGLOT.md` instead of bloating STATUS.
+Move long-horizon / research items into `PARKING_LOT.md` instead of bloating STATUS.
 
 Use this entry shape in STATUS (next priorities) or PARKINGLOT:
 
@@ -155,7 +155,7 @@ Use this entry shape in STATUS (next priorities) or PARKINGLOT:
 ```
 
 If the update is only temporary working state, keep it in the response or todo list instead
-of editing `STATUS.md` / `PARKINGLOT.md`.
+of editing `STATUS.md` / `PARKING_LOT.md`.
 
 ## Gate levels
 
@@ -321,14 +321,14 @@ Before accepting a change, check:
 
 When working in this repo:
 
-- Read `implementation_plan.md` before coding (static spec; NVMe protocol refs in section 4).
-- Read `STATUS.md` for current state and next priorities; `PARKINGLOT.md` for deferred backlog.
-- Update `STATUS.md` / `PARKINGLOT.md` when closing substantial work; if docs disagree with code, trust code and record the doc correction.
+- Read `docs/reference/nvme-sentinel-spec.md` before coding (static spec; NVMe protocol refs in section 4).
+- Read `STATUS.md` for current state and next priorities; `PARKING_LOT.md` for deferred backlog.
+- Update `STATUS.md` / `PARKING_LOT.md` when closing substantial work; if docs disagree with code, trust code and record the doc correction.
 - Use `uv run <cmd>` for tests, mypy, ruff, and CLI runs.
 - Do not use pip, poetry, or conda.
 - Preserve Python 3.10 compatibility.
 - For hardware-dependent checks, provide a mock/unit path and label real-hardware checks separately.
-- For NVMe field offsets, opcodes, log pages, ioctl structs, and Windows structs, cite `implementation_plan.md` section 4 or official headers. Do not invent values.
+- For NVMe field offsets, opcodes, log pages, ioctl structs, and Windows structs, cite `docs/reference/nvme-sentinel-spec.md` section 4 or official headers. Do not invent values.
 
 ## When evidence is missing
 

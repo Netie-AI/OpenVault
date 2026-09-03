@@ -1,4 +1,4 @@
-"""SMART / Health log model and parser (implementation_plan.md §4.4)."""
+"""SMART / Health log model and parser (nvme-sentinel-spec.md §4.4)."""
 
 from __future__ import annotations
 
@@ -43,17 +43,17 @@ class SmartHealthLog(BaseModel):
         if len(buf) != 512:
             raise ParseError(f"SMART log must be exactly 512 bytes, got {len(buf)}")
 
-        # implementation_plan.md §4.4: offset 0, 1 byte; mask reserved bits 6-7.
+        # nvme-sentinel-spec.md §4.4: offset 0, 1 byte; mask reserved bits 6-7.
         critical_warning = CriticalWarning(buf[0] & 0x3F)
-        # implementation_plan.md §4.4: offsets 1-2, u16 LE, unit Kelvin.
+        # nvme-sentinel-spec.md §4.4: offsets 1-2, u16 LE, unit Kelvin.
         composite_temperature_kelvin = int.from_bytes(buf[1:3], "little")
-        # implementation_plan.md §4.4: offsets 3, 4, 5, 6.
+        # nvme-sentinel-spec.md §4.4: offsets 3, 4, 5, 6.
         available_spare = buf[3]
         available_spare_threshold = buf[4]
         percentage_used = buf[5]
         endurance_group_critical_warning_summary = buf[6]
 
-        # implementation_plan.md §4.4: u128 LE counters.
+        # nvme-sentinel-spec.md §4.4: u128 LE counters.
         # Python int is arbitrary precision, so 128-bit values are safe.
         data_units_read = int.from_bytes(buf[32:48], "little")
         data_units_written = int.from_bytes(buf[48:64], "little")
@@ -66,7 +66,7 @@ class SmartHealthLog(BaseModel):
         media_and_data_integrity_errors = int.from_bytes(buf[160:176], "little")
         number_of_error_information_log_entries = int.from_bytes(buf[176:192], "little")
 
-        # implementation_plan.md §4.4: 192-195 Warning Composite Temperature Time (min), u32 LE;
+        # nvme-sentinel-spec.md §4.4: 192-195 Warning Composite Temperature Time (min), u32 LE;
         # 196-199 Critical Composite Temperature Time (min), u32 LE.
         warning_composite_temp_time_minutes = int.from_bytes(buf[192:196], "little")
         critical_composite_temp_time_minutes = int.from_bytes(buf[196:200], "little")

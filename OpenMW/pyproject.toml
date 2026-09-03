@@ -11,8 +11,10 @@ requires-python = ">=3.10,<3.13"
 dependencies = [
   "nvme-sentinel",
   "nvme-profiler",
-  "numpy>=1.26",
-  "scipy>=1.11",
+  # pytest-cov + numpy 2.4+ re-inits _multiarray_umath (PEP 489) and collection
+  # dies with ImportError. scipy 1.16+ then trips _CopyMode.IF_NEEDED on reload.
+  "numpy>=1.26,<2.3",
+  "scipy>=1.11,<1.16",
   "pydantic>=2.5",
   "structlog>=24.1",
   "pyyaml>=6.0",
@@ -24,16 +26,24 @@ dependencies = [
   "uvicorn[standard]>=0.51.0",
   "httpx>=0.28.1",
   "cryptography>=49.0.0",
+  "redis>=5",
+  "python-multipart>=0.0.32",
 ]
 
 [project.scripts]
 openmw = "openmw.cli:app"
+
+[project.entry-points.pytest11]
+openmw_numpy_preload = "openmw.pytest_numpy_preload"
 
 [dependency-groups]
 dev = [
   "pytest>=8",
   "mypy>=1.10",
   "ruff>=0.6",
+  "fakeredis>=2.23",
+  "lupa>=2.0",
+  "pytest-cov>=7.1.0",
 ]
 
 [tool.uv.sources]
@@ -45,7 +55,6 @@ packages = ["openmw"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "openmw/data/models.json" = "openmw/data/models.json"
-"webui/index.html" = "webui/index.html"
 
 [tool.ruff]
 line-length = 100
@@ -81,6 +90,13 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = ["unsloth", "unsloth.*", "datasets", "datasets.*", "trl", "trl.*"]
 ignore_missing_imports = true
+
+# Keep pytest rootdir inside OpenMW so the parent nvme_sentinel pyproject
+# does not steal config when CI runs `working-directory: OpenMW`.
+# Do not add pythonpath=["."] -- that plus the installed package loads openmw
+# twice and numpy 2.x warns/reloads C extensions under pytest-cov.
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 
 [project.optional-dependencies]
 training = []

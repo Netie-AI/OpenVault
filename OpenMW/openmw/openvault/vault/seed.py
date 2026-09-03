@@ -1,4 +1,4 @@
-﻿"""Seed OpenVault with Cortex / AirGPT essential provider slots."""
+"""Seed OpenVault with Cortex / AirGPT essential provider slots."""
 
 from __future__ import annotations
 

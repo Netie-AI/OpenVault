@@ -93,7 +93,11 @@ def test_list_windows_devices_timeout_returns_empty(monkeypatch: pytest.MonkeyPa
     import subprocess
 
     def fake_run(*args: object, **kwargs: object) -> None:
-        raise subprocess.TimeoutExpired(cmd="powershell", timeout=kwargs.get("timeout", 0))
+        timeout = kwargs.get("timeout", 0)
+        raise subprocess.TimeoutExpired(
+            cmd="powershell",
+            timeout=float(timeout) if isinstance(timeout, (int, float)) else 0.0,
+        )
 
     monkeypatch.setattr("nvme_sentinel.inventory.windows.subprocess.run", fake_run)
     assert list_windows_devices(timeout_s=1.0) == []

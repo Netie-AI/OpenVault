@@ -62,7 +62,7 @@ class ModelSpec:
     name: str
     tier: HardwareTier
     comfortable_tier: HardwareTier
-    params_B: float
+    params_B: float  # noqa: N815  # registry JSON field (billions of params)
     layers: int
     context_length: int
     quant_options: tuple[str, ...]
@@ -120,20 +120,20 @@ def quant_effective_bits(quant_level: str) -> float:
     return _QUANT_BITS[quant_level]
 
 
-def kv_mb_per_1k_tokens(params_B: float) -> float:
+def kv_mb_per_1k_tokens(params_B: float) -> float:  # noqa: N803
     """Scale KV working-set from the 8B FP16 reference (144 MB / 1k tokens)."""
     return _KV_MB_PER_1K_AT_8B * (params_B / 8.0)
 
 
-def estimate_vram_gb(params_B: float, quant_bits: float, ctx_tokens: int) -> float:
+def estimate_vram_gb(params_B: float, quant_bits: float, ctx_tokens: int) -> float:  # noqa: N803
     """VRAM for weights + KV cache using the PART 2 master-plan formula."""
     weights_gb = (params_B * quant_bits / 8.0) * _WEIGHT_OVERHEAD
     kv_gb = (ctx_tokens / 1024.0) * (kv_mb_per_1k_tokens(params_B) / 1024.0)
     return weights_gb + kv_gb
 
 
-def layer_vram_gb(params_B: float, layers: int, quant_bits: float) -> float:
-    """Per-layer weight footprint including the 1.4× overhead factor."""
+def layer_vram_gb(params_B: float, layers: int, quant_bits: float) -> float:  # noqa: N803
+    """Per-layer weight footprint including the 1.4x overhead factor."""
     if layers < 1:
         raise ValueError(f"layers must be >= 1, got {layers}")
     return (params_B / layers) * (quant_bits / 8.0) * _WEIGHT_OVERHEAD
@@ -345,9 +345,7 @@ class ModelRouter:
             budget = profile.system_ram_gb * _UNIFIED_USABLE_FRACTION
         if profile.cpu_inference_mode:
             budget = profile.system_ram_gb * _RAM_USABLE_FRACTION
-        if estimated_vram > budget * 0.85:
-            return True
-        return False
+        return estimated_vram > budget * 0.85
 
     @staticmethod
     def _kv_quant_bits(recommended: bool) -> tuple[int, int]:

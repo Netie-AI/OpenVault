@@ -2,7 +2,7 @@
 name = "openvault-console"
 version = "0.1.0"
 edition = "2021"
-description = "OpenVault Rust console — passkey auth, custody, OmniRoute, OpenShip, vaults"
+description = "OpenVault Rust console — passkey auth, custody, OmniRoute, FreeBuild, vaults"
 license = "Apache-2.0"
 rust-version = "1.75"
 

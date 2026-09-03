@@ -34,7 +34,7 @@ def probe_windows_ioring_spike() -> IoRingSpikeResult:
         )
     build = 0
     try:
-        import winreg  # noqa: PLC0415
+        import winreg
 
         with winreg.OpenKey(
             winreg.HKEY_LOCAL_MACHINE,
@@ -53,7 +53,7 @@ def probe_windows_ioring_spike() -> IoRingSpikeResult:
     # DirectStorage is tuned for GDeflate game assets; raw tensor KV is unproven.
     ds_runtime = False
     try:
-        import ctypes  # noqa: PLC0415
+        import ctypes
 
         _ = ctypes.windll.kernel32  # IoRing lives in kernel32 on recent builds
         ds_runtime = True

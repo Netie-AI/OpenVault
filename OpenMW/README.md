@@ -54,8 +54,8 @@ Starts the liquid-glass **OpenVault** console with:
 - Cortex / Netie Engine status + model catalog selection
 - Gated control (`GET /api/control/capabilities`, `POST /api/control/action`)
 - Provider catalog + deploy-to-web gate (`POST /api/deploy/from-cortex`)
-- Local mesh (`#mesh`) toward Cortex `:8000` / OpenIDE `:8765`
+- Local mesh (`/peers` on `:3010`) toward Cortex `:8000` / FreeIDE `:8765`
 
 Point Cursor / tools at the `/v1` endpoint. Cortex URL defaults to `http://127.0.0.1:8000` (`--cortex-url`).
 
-See monorepo [`STATUS.md`](../STATUS.md) and [`PARKINGLOT.md`](../PARKINGLOT.md).
+See monorepo [`STATUS.md`](../STATUS.md) and [`PARKING_LOT.md`](../PARKING_LOT.md).

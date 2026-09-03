@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 import structlog
 
@@ -27,8 +28,11 @@ except ImportError:
     pass
 
 
-class UnslothNotAvailable(RuntimeError):
+class UnslothNotAvailableError(RuntimeError):
     """Raised when Unsloth is not installed or failed to import."""
+
+
+UnslothNotAvailable = UnslothNotAvailableError
 
 
 class InsufficientVramError(ValueError):
@@ -108,7 +112,7 @@ def is_unsloth_available() -> bool:
 
 
 def require_unsloth() -> None:
-    """Raise :class:`UnslothNotAvailable` when Unsloth is not installed."""
+    """Raise :class:`UnslothNotAvailableError` when Unsloth is not installed."""
     if not _UNSLOTH_AVAILABLE:
         raise UnslothNotAvailable(
             "Unsloth is not installed. Install the optional training extra "
@@ -293,7 +297,7 @@ def unsloth_finetune(
         output_dir=resolved_output,
         sft_trainer_factory=sft_trainer_factory,
     )
-    train_result = getattr(trainer, "train")()
+    train_result = trainer.train()
     steps = int(getattr(train_result, "global_step", 0) or cfg.num_train_epochs)
     trained_session = UnslothSession(
         model_id=session.model_id, model=model, tokenizer=session.tokenizer

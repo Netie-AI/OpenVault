@@ -26,7 +26,7 @@ def get_smart_health(device: StorageInterface, nsid: int = 0xFFFFFFFF) -> SmartH
     if nsid != 0xFFFFFFFF:
         _LOG.warning("namespace_scoped_smart_requested", nsid=nsid)
 
-    # implementation_plan.md §4.3, §4.4: SMART log is 512 bytes with LID in cdw10[7:0].
+    # nvme-sentinel-spec.md §4.3, §4.4: SMART log is 512 bytes with LID in cdw10[7:0].
     cdw10 = int(LogPageID.SMART_HEALTH) | _numdl_bits(512)
     cmd = AdminCommand(
         opcode=int(AdminOpcode.GET_LOG_PAGE),
@@ -75,7 +75,7 @@ def get_error_info_log(device: StorageInterface, n_entries: int) -> list[ErrorLo
 
 def get_firmware_slot_info(device: StorageInterface) -> FirmwareSlotInfo:
     """Fetch Firmware Slot Information log (LID 0x03)."""
-    # implementation_plan.md §4.3: Firmware Slot log is 512 bytes.
+    # nvme-sentinel-spec.md §4.3: Firmware Slot log is 512 bytes.
     cdw10 = int(LogPageID.FIRMWARE_SLOT) | _numdl_bits(512)
     cmd = AdminCommand(
         opcode=int(AdminOpcode.GET_LOG_PAGE),
