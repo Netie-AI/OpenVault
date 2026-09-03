@@ -48,7 +48,7 @@ class AwsRenderPlan:
         }
 
 
-def build_aws_render_plan(*, hostname: str) -> AwsRenderPlan:
+def build_aws_render_plan(*, hostname: str = "") -> AwsRenderPlan:
     host = hostname.strip() or "app.example.com"
     resources = [
         AwsResource(
@@ -124,6 +124,15 @@ def build_aws_render_plan(*, hostname: str) -> AwsRenderPlan:
         "6. ElastiCache if you need Redis; else skip.",
         "7. DNS: alias {host} → CloudFront (static) / ALB (API subdomain).",
         "8. Until OpenVault AWS adapter ships: deploy FreeBuild on one EC2 and use SSH target.",
+        # OpenVault-owned HTTP on the instance (same plan as VPS, plus SSM).
+        f"9. Or: provision (or reuse) an EC2/VPS with SSH or SSM for {host}",
+        "10. Install Caddy; OpenVault emits the Caddyfile (TLS + reverse_proxy)",
+        "11. Install the systemd unit OpenVault emits; Restart=on-failure",
+        "12. Point the A record at the instance; Caddy obtains Let's Encrypt",
+        f"13. Health: curl -fsS https://{host}/healthz",
+        "14. Restart without SSH: aws ssm send-command AWS-RunShellScript "
+        "(see ServerPlan.ssm_restart)",
+        "15. Vercel is not used. OpenVault is the HTTP runtime.",
     ]
     bill_controls = [
         "AWS Budgets: absolute $ cap + forecasted > cap email",

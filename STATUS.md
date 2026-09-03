@@ -35,6 +35,15 @@ Founder authorized #13 under HUMAN_STOP (2026-08-22 yes-now). Do not claim HT1-H
 | **Skills / KB / crew** | Keys=OpenVault. Skills=Netie-KB `:8030`. Cortex stirs. `POST /api/crew/gate` shipped. Cortex-crew merge blocked (404) |
 | Pricing | **NEEDS-YOU.** Not a ticket. DR-0009 (a) — we carry provider cost |
 
+## Service SKUs + Stripe checkout (PR #40, merged with main 2026-09-03)
+
+`routers/ship.py`: `POST /api/ship/ready|auto|server|cicd/plan`, `GET /api/ship/stacks|origin/status`,
+`POST /api/service/login|connect|quote|auto-host|checkout|checkout/confirm|stripe/webhook|ship-netie`.
+SKUs `ov_hosted` $24 / `ov_fast` $79 / `byo_aws` + `byo_vps` $9 platform (NETIE test prices).
+`STRIPE_MODE=simulate` is the default - CI never charges; live only with `STRIPE_MODE=live` +
+`STRIPE_SECRET_KEY`. Not verified: live card charge, netie.ai DNS, `OPENVAULT_SHIP_MODE=live`.
+The PR's `OpenMW/webui` Service tab went with the webui (UI is `apps/web`) - port pending.
+
 ## Clone-and-verify
 
 ```bash

@@ -48,6 +48,7 @@ from openmw.openvault.ship.stacks import (
     get_build_image,
     get_project_type,
     get_stack,
+    host_kind_for_stack,
 )
 from openmw.openvault.ship.workspaces import (
     WORKSPACE_MANIFEST_FILES,
@@ -94,6 +95,9 @@ class DetectedStack:
     build_image: str = ""
     # Things a human must decide, e.g. "no build script in package.json".
     warnings: list[str] = field(default_factory=list)
+    # OpenVault HTTP runtime for this stack (static_http / edge_http / process /
+    # container / unknown) — what `ship.hosting` maps onto Caddy + systemd.
+    host_kind: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -721,6 +725,7 @@ def _unknown(root: Path, reason: str, confidence: float = 0.1) -> DetectedStack:
         signals=[reason],
         suggested_build=[],
         suggested_services=[],
+        host_kind="unknown",
     )
 
 
@@ -813,6 +818,7 @@ def detect_project(project_path: str | Path) -> DetectedStack:
         project_type=get_project_type(stack_id),
         build_image=get_build_image(stack_id, pm),
         warnings=warnings,
+        host_kind=host_kind_for_stack(stack_id),
     )
 
 

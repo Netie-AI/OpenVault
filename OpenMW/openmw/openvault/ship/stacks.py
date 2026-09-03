@@ -19,6 +19,17 @@ StackCategory = Literal[
 ]
 ProjectType = Literal["app", "docker", "services", "monorepo"]
 
+#: How OpenVault serves HTTP for a stack (cited in `hosting.py`): Caddy
+#: `file_server` for built static output, systemd + Caddy `reverse_proxy` for a
+#: long-running process, compose on the box for containers. Cursor Origin is a
+#: source forge, not an app runtime, so `origin_http` only says whether the
+#: stack is a web artefact Caddy can serve straight after a push.
+HostKind = Literal["static_http", "edge_http", "process", "container", "unknown"]
+
+#: Backend stacks that ship as an edge-style HTTP handler rather than a plain
+#: long-running process. Kept explicit so the catalog does not guess.
+_EDGE_HTTP_STACKS: frozenset[str] = frozenset({"hono"})
+
 
 @dataclass(frozen=True)
 class LanguageDefinition:
@@ -106,6 +117,29 @@ class Stack:
     required_tools: tuple[str, ...] = ()
     required_tool_versions: tuple[tuple[str, str], ...] = ()
     detection: StackDetection = field(default_factory=StackDetection)
+
+    @property
+    def host_kind(self) -> HostKind:
+        return host_kind_for_category(self.category, stack_id=self.name.lower())
+
+    @property
+    def origin_http(self) -> bool:
+        return self.host_kind in ("static_http", "edge_http")
+
+
+def host_kind_for_category(category: str, *, stack_id: str = "") -> HostKind:
+    """Map a stack category onto the OpenVault HTTP runtime that serves it."""
+    if stack_id in _EDGE_HTTP_STACKS:
+        return "edge_http"
+    if category in ("static", "frontend"):
+        return "static_http"
+    if category == "fullstack":
+        return "edge_http"
+    if category == "backend":
+        return "process"
+    if category in ("docker", "services"):
+        return "container"
+    return "unknown"
 
 
 STACKS: dict[str, Stack] = {
@@ -728,6 +762,11 @@ def is_upload_ignored_path(relative_path: str) -> bool:
 
 def get_stack(stack_id: str) -> Stack:
     return STACKS.get(stack_id, STACKS["unknown"])
+
+
+def host_kind_for_stack(stack_id: str) -> HostKind:
+    """`host_kind` for a catalog id; unknown ids resolve to the `unknown` stack."""
+    return host_kind_for_category(get_stack(stack_id).category, stack_id=stack_id)
 
 
 def get_project_type(stack_id: str) -> str:
