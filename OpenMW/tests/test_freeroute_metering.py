@@ -150,6 +150,36 @@ class TestIssuedKeys:
         assert out["key"]["display"].startswith("ov_")
         assert len(out["key"]["display"]) < len(token)
 
+    def test_issue_survives_audit_logger_raise(self, client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Live :5000 minted then returned text/plain 500; Constructor issue-key became 503."""
+        import openmw.openvault.app as app_mod
+
+        def boom(*_a: Any, **_k: Any) -> None:
+            raise RuntimeError("structlog exploded")
+
+        monkeypatch.setattr(app_mod.log, "info", boom)
+        resp = client.post("/api/apikeys", json={"label": "audit-boom", "tier": "free"})
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        assert body.get("ok") is True
+        assert str(body.get("token") or "").startswith("ov_")
+
+    def test_verify_accepts_issued_token_and_rejects_unknown(
+        self, client: TestClient
+    ) -> None:
+        out = client.post("/api/apikeys", json={"label": "probe", "tier": "free"}).json()
+        token = out["token"]
+        ok = client.post("/api/apikeys/verify", json={"token": token})
+        assert ok.status_code == 200
+        body = ok.json()
+        assert body["ok"] is True
+        assert "token" not in body
+        assert token not in str(body)
+        assert body["key"]["key_id"] == out["key"]["key_id"]
+        bad = client.post("/api/apikeys/verify", json={"token": "ov_not-real"})
+        assert bad.status_code == 200
+        assert bad.json() == {"ok": False}
+
     def test_local_tier_cannot_be_issued(self, client: TestClient) -> None:
         """Issuing `local` would hand out the exact bypass this closes."""
         resp = client.post("/api/apikeys", json={"label": "sneaky", "tier": "local"})
@@ -261,6 +291,11 @@ class TestUsageLedger:
         assert len(events) == 1, "one request is one ledger row, however many hops it took"
         assert events[0]["vault_key_id"] == second.id
         assert events[0]["vault_key_id"] != first.id
+        by_vault = client.get("/api/usage", params={"vault_key_id": second.id}).json()
+        assert by_vault["summary"]["total_tokens"] == 7
+        assert by_vault["summary"]["priced"] is False
+        empty = client.get("/api/usage", params={"vault_key_id": first.id}).json()
+        assert empty["count"] == 0
 
     def test_failed_request_is_recorded_with_its_refusal_type(
         self, client: TestClient
@@ -549,6 +584,12 @@ class TestControlPlaneIsGated:
     def test_remote_caller_cannot_mint_itself_a_key(self, vault: KeyVault) -> None:
         """An open mint endpoint hands out the credential the gateway requires."""
         resp = self._remote(vault).post("/api/apikeys", json={"label": "atk", "tier": "free"})
+        assert resp.status_code == 403
+
+    def test_remote_caller_cannot_verify_a_token(self, vault: KeyVault) -> None:
+        resp = self._remote(vault).post(
+            "/api/apikeys/verify", json={"token": "ov_anything"}
+        )
         assert resp.status_code == 403
 
     def test_remote_caller_cannot_enumerate_or_revoke_keys(self, vault: KeyVault) -> None:

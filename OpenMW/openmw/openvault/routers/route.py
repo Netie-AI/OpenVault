@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 
 from openmw.openvault.route.breaker import get_all_breaker_statuses, reset_circuit_breaker
 from openmw.openvault.route.registry import get_route_state, set_strategy, set_targets
-from openmw.openvault.route.strategies import apply_strategy, normalize_strategy
+from openmw.openvault.route.strategies import apply_strategy, costs_known, normalize_strategy
 from openmw.openvault.route.types import STRATEGY_NAMES, RouteTarget
 
 router = APIRouter(tags=["route"])
@@ -50,15 +50,35 @@ def _to_target(body: TargetBody) -> RouteTarget:
     )
 
 
-@router.get("/api/route/strategy")
-def api_get_strategy() -> dict[str, Any]:
-    state = get_route_state()
-    ordered = apply_strategy(state.strategy, state.targets, combo_name=state.combo_name, metrics=state.metrics)
+def _strategy_payload(state: Any) -> dict[str, Any]:
+    ordered = apply_strategy(
+        state.strategy, state.targets, combo_name=state.combo_name, metrics=state.metrics
+    )
+    priced_hops = costs_known(state.targets)
+    unavailable = [] if priced_hops else ["cost-optimized"]
     return {
         "strategy": state.strategy,
         "strategies": list(STRATEGY_NAMES),
         "orderedExecutionKeys": [t.execution_key for t in ordered],
+        # Meters exist; a dollar figure does not. Never invent one.
+        "priced": False,
+        "costOptimizedAvailable": priced_hops,
+        "unavailableStrategies": unavailable,
+        "hops": [
+            {
+                "executionKey": t.execution_key,
+                "used": state.metrics.for_key(t.execution_key).requests,
+                "remaining": None,
+                "priced": False,
+            }
+            for t in ordered
+        ],
     }
+
+
+@router.get("/api/route/strategy")
+def api_get_strategy() -> dict[str, Any]:
+    return _strategy_payload(get_route_state())
 
 
 @router.put("/api/route/strategy")
@@ -69,13 +89,17 @@ def api_put_strategy(body: StrategyBody) -> dict[str, Any]:
             status_code=400,
             detail=f"Unknown strategy {body.strategy!r}; expected one of {list(STRATEGY_NAMES)}",
         )
-    set_strategy(normalized)
     state = get_route_state()
-    ordered = apply_strategy(state.strategy, state.targets, combo_name=state.combo_name, metrics=state.metrics)
-    return {
-        "strategy": state.strategy,
-        "orderedExecutionKeys": [t.execution_key for t in ordered],
-    }
+    if normalized == "cost-optimized" and not costs_known(state.targets):
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "cost-optimized needs a numeric cost on at least one target; "
+                "OpenVault meters tokens but does not invent a price (priced=false)"
+            ),
+        )
+    set_strategy(normalized)
+    return _strategy_payload(get_route_state())
 
 
 @router.get("/api/route/targets")

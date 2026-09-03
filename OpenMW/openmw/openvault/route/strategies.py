@@ -1,17 +1,29 @@
-"""Combo routing strategies — 8 of 18 for pass 1."""
+"""Combo routing strategies — OmniRoute gateway ordering, not NVIDIA llm-router.
+
+``auto`` is OmniRoute's default: walk the vault fallback chain (priority).
+It does not classify user intent with BERT/CLIP/an LLM-as-judge. That is the
+deprecated NVIDIA llm-router family; FreeRoute stays a signal+breaker gateway.
+``cost-optimized`` only sorts when a target has a real cost. Pricing is false
+until the founder picks a model (DR-0009 / STATUS NEEDS-YOU).
+"""
 
 from __future__ import annotations
 
 from openmw.openvault.route.rr_state import fisher_yates_shuffle, get_next_from_deck
+from openmw.openvault.route.semaphore import remaining_cooldown_ms
 from openmw.openvault.route.sorters import (
     order_by_p2c,
+    order_lkgp,
     select_weighted_target,
     sort_by_cost,
+    sort_by_headroom,
+    sort_by_quota_share,
     sort_by_usage,
 )
 from openmw.openvault.route.types import ComboMetrics, RouteTarget, StrategyName
 
 STRATEGY_ALIASES: dict[str, StrategyName] = {
+    "auto": "auto",
     "priority": "priority",
     "weighted": "weighted",
     "fill-first": "fill-first",
@@ -24,6 +36,14 @@ STRATEGY_ALIASES: dict[str, StrategyName] = {
     "least_used": "least-used",
     "cost-optimized": "cost-optimized",
     "cost_optimized": "cost-optimized",
+    "reset-aware": "reset-aware",
+    "reset_aware": "reset-aware",
+    "reset-window": "reset-aware",
+    "reset_window": "reset-aware",
+    "quota-share": "quota-share",
+    "quota_share": "quota-share",
+    "headroom": "headroom",
+    "lkgp": "lkgp",
 }
 
 
@@ -42,7 +62,7 @@ def apply_strategy(
     if not targets:
         return []
 
-    if strategy == "priority":
+    if strategy in ("auto", "priority"):
         return sorted(targets, key=lambda t: (t.priority, t.execution_key))
 
     if strategy == "fill-first":
@@ -79,4 +99,24 @@ def apply_strategy(
     if strategy == "cost-optimized":
         return sort_by_cost(targets)
 
+    if strategy == "reset-aware":
+        return sorted(
+            targets,
+            key=lambda t: (remaining_cooldown_ms(t.execution_key), t.priority, t.execution_key),
+        )
+
+    if strategy == "quota-share":
+        return sort_by_quota_share(targets, metrics)
+
+    if strategy == "headroom":
+        return sort_by_headroom(targets, metrics)
+
+    if strategy == "lkgp":
+        return order_lkgp(targets, metrics)
+
     return list(targets)
+
+
+def costs_known(targets: list[RouteTarget]) -> bool:
+    """True only when at least one hop carries a numeric cost. None is not a price."""
+    return any(t.cost is not None for t in targets)

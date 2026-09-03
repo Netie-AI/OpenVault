@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal
+from typing import Any, Literal
 
 KeyStatus = Literal["active", "warning", "invalid"]
 
@@ -138,6 +138,51 @@ def reset_key_status(connection_id: str, key_id: str) -> KeyHealth:
 
 def get_all_key_health() -> dict[str, KeyHealth]:
     return dict(_key_health)
+
+
+def key_is_invalid(connection_id: str, key_id: str) -> bool:
+    """True when this vault key has been marked invalid after auth failures."""
+    health = _key_health.get(_scoped_key(connection_id, key_id))
+    return health is not None and health.status == "invalid"
+
+
+def rotate_same_provider_bands(
+    records: list[Any],
+    *,
+    affinity_key: str = "",
+) -> list[Any]:
+    """Round-robin within consecutive same-provider, same-role runs.
+
+    Affinity pins a conversation on one account so upstream prompt caches stay
+    warm — rotating would undo that. One-shot traffic (empty affinity) spreads
+    load across sibling vault keys for the same provider without leaving the
+    role band the fallback manager already ranked.
+    """
+    if affinity_key or len(records) < 2:
+        return list(records)
+    out: list[Any] = []
+    i = 0
+    n = len(records)
+    while i < n:
+        rec = records[i]
+        provider = getattr(rec, "provider", "")
+        role = getattr(rec, "role", "")
+        j = i + 1
+        while j < n and getattr(records[j], "provider", "") == provider and getattr(
+            records[j], "role", ""
+        ) == role:
+            j += 1
+        band = list(records[i:j])
+        if len(band) == 1:
+            out.extend(band)
+        else:
+            band_key = f"{provider}:{role}"
+            current = _key_indexes.get(band_key, 0)
+            idx = current % len(band)
+            _key_indexes[band_key] = current + 1
+            out.extend(band[idx:] + band[:idx])
+        i = j
+    return out
 
 
 def reset_all() -> None:

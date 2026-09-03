@@ -154,6 +154,20 @@ def mark_rate_limited(model_str: str, cooldown_ms: int) -> None:
         gate.rate_limited_until = time.time() + cooldown_ms / 1000.0
 
 
+def remaining_cooldown_ms(model_str: str, *, now: float | None = None) -> int:
+    """Milliseconds until a 429 park lifts. 0 means the hop is free to try."""
+    clock = time.time() if now is None else now
+    with _gate_lock:
+        gate = _gates.get(model_str)
+        if gate is None or gate.rate_limited_until is None:
+            return 0
+        wait = gate.rate_limited_until - clock
+        if wait <= 0:
+            gate.rate_limited_until = None
+            return 0
+        return int(wait * 1000)
+
+
 def get_stats() -> dict[str, dict[str, int | str | None]]:
     with _gate_lock:
         stats: dict[str, dict[str, int | str | None]] = {}

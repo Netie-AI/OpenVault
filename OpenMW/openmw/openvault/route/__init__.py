@@ -32,8 +32,16 @@ from openmw.openvault.route.fallback_signals import (
 )
 from openmw.openvault.route.key_rotator import (
     get_valid_api_key,
+    key_is_invalid,
     record_key_failure,
     record_key_success,
+    rotate_same_provider_bands,
+)
+from openmw.openvault.route.response_cache import (
+    cacheable as response_cacheable,
+    lookup as response_cache_lookup,
+    reset as reset_response_cache,
+    store as response_cache_store,
 )
 from openmw.openvault.route.registry import (
     get_route_state,
@@ -43,7 +51,10 @@ from openmw.openvault.route.registry import (
     set_targets,
 )
 from openmw.openvault.route.rr_state import get_next_from_deck, reset_decks
-from openmw.openvault.route.semaphore import SEMAPHORE_QUEUE_FULL
+from openmw.openvault.route.semaphore import (
+    SEMAPHORE_QUEUE_FULL,
+    remaining_cooldown_ms,
+)
 from openmw.openvault.route.semaphore import acquire as acquire_semaphore
 from openmw.openvault.route.sorters import (
     order_by_p2c,
@@ -51,7 +62,7 @@ from openmw.openvault.route.sorters import (
     sort_by_cost,
     sort_by_usage,
 )
-from openmw.openvault.route.strategies import apply_strategy, normalize_strategy
+from openmw.openvault.route.strategies import apply_strategy, costs_known, normalize_strategy
 from openmw.openvault.route.types import STRATEGY_NAMES, ComboMetrics, RouteTarget, StrategyName
 from openmw.openvault.route.window_limiter import (
     AcquireResult,
@@ -85,6 +96,7 @@ __all__ = [
     "acquire_semaphore",
     "apply_strategy",
     "check_fallback_error",
+    "costs_known",
     "classify_attempt",
     "get_all_breaker_statuses",
     "get_circuit_breaker",
@@ -92,6 +104,7 @@ __all__ = [
     "get_route_state",
     "get_valid_api_key",
     "is_tripping_status",
+    "key_is_invalid",
     "normalize_strategy",
     "order_by_p2c",
     "parse_reset_from_headers",
@@ -100,6 +113,12 @@ __all__ = [
     "record_key_failure",
     "record_key_success",
     "record_target_result",
+    "reset_response_cache",
+    "response_cache_lookup",
+    "response_cache_store",
+    "response_cacheable",
+    "rotate_same_provider_bands",
+    "remaining_cooldown_ms",
     "reset_all_circuit_breakers",
     "reset_circuit_breaker",
     "reset_decks",

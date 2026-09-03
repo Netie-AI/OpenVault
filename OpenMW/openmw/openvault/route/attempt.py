@@ -2,6 +2,10 @@
 
 Wraps ``check_fallback_error`` into the two-axis policy from
 ``docs/DESIGN_TIERED_QUEUE_LB.md`` §4. Pure — no I/O.
+
+This is OmniRoute-class *error-signal* classification (status, Retry-After,
+quota/auth text). It is not NVIDIA llm-router / Switchyard intent routing
+(BERT, CLIP, LLM-as-judge). Do not grow an intent model here.
 """
 
 from __future__ import annotations

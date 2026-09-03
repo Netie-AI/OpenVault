@@ -10,7 +10,7 @@ from openmw.openvault.route.types import ComboMetrics, RouteTarget, StrategyName
 
 @dataclass
 class RouteState:
-    strategy: StrategyName = "priority"
+    strategy: StrategyName = "auto"
     combo_name: str = "default"
     targets: list[RouteTarget] = field(default_factory=list)
     metrics: ComboMetrics = field(default_factory=ComboMetrics)

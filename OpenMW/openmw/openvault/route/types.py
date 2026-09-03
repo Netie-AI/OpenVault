@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from typing import Literal
 
 StrategyName = Literal[
+    "auto",
     "priority",
     "weighted",
     "fill-first",
@@ -14,9 +15,14 @@ StrategyName = Literal[
     "random",
     "least-used",
     "cost-optimized",
+    "reset-aware",
+    "quota-share",
+    "headroom",
+    "lkgp",
 ]
 
 STRATEGY_NAMES: tuple[StrategyName, ...] = (
+    "auto",
     "priority",
     "weighted",
     "fill-first",
@@ -25,6 +31,10 @@ STRATEGY_NAMES: tuple[StrategyName, ...] = (
     "random",
     "least-used",
     "cost-optimized",
+    "reset-aware",
+    "quota-share",
+    "headroom",
+    "lkgp",
 )
 
 BreakerProfileName = Literal["oauth", "api_key", "local"]
@@ -79,6 +89,8 @@ class ComboMetrics:
 
     by_execution_key: dict[str, TargetMetrics] = field(default_factory=dict)
 
+    last_good_key: str | None = None
+
     def for_key(self, execution_key: str) -> TargetMetrics:
         if execution_key not in self.by_execution_key:
             self.by_execution_key[execution_key] = TargetMetrics()
@@ -89,4 +101,5 @@ class ComboMetrics:
         m.requests += 1
         if success:
             m.successes += 1
+            self.last_good_key = execution_key
         m.total_latency_ms += max(0.0, latency_ms)

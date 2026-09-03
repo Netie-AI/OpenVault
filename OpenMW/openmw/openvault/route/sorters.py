@@ -77,3 +77,54 @@ def sort_by_cost(targets: list[T]) -> list[T]:
         return t.cost
 
     return sorted(targets, key=cost_key)
+
+
+def sort_by_quota_share(targets: list[T], metrics: ComboMetrics | None) -> list[T]:
+    """Same-provider keys: under equal fair share first, over-users last.
+
+    Equal share is provider request-total / n keys. Overage = used - fair.
+    Hop order only -- does not clone OmniRoute hard/soft/burst allow/block.
+    Uses request counts, never dollars (priced stays false).
+    """
+    by_provider: dict[str, list[T]] = {}
+    for t in targets:
+        by_provider.setdefault(t.provider, []).append(t)
+
+    overage: dict[str, float] = {}
+    for group in by_provider.values():
+        n = len(group)
+        total = 0
+        if metrics is not None:
+            total = sum(metrics.for_key(t.execution_key).requests for t in group)
+        fair = (total / n) if n else 0.0
+        for t in group:
+            used = metrics.for_key(t.execution_key).requests if metrics is not None else 0
+            overage[t.execution_key] = used - fair
+
+    return sorted(
+        targets,
+        key=lambda t: (overage.get(t.execution_key, 0.0), t.priority, t.execution_key),
+    )
+
+
+def sort_by_headroom(targets: list[T], metrics: ComboMetrics | None) -> list[T]:
+    """Most unused capacity first; cooling hops last. Request counts, not dollars."""
+    from openmw.openvault.route.semaphore import remaining_cooldown_ms
+
+    def headroom_key(t: T) -> tuple[int, int, int, str]:
+        cooling = 1 if remaining_cooldown_ms(t.execution_key) > 0 else 0
+        used = metrics.for_key(t.execution_key).requests if metrics is not None else 0
+        return (cooling, used, t.priority, t.execution_key)
+
+    return sorted(targets, key=headroom_key)
+
+
+def order_lkgp(targets: list[T], metrics: ComboMetrics | None) -> list[T]:
+    """Last-known-good provider first when that hop is still in the set."""
+    good = metrics.last_good_key if metrics is not None else None
+    if not good:
+        return sorted(targets, key=lambda t: (t.priority, t.execution_key))
+    hit = [t for t in targets if t.execution_key == good]
+    rest = [t for t in targets if t.execution_key != good]
+    rest.sort(key=lambda t: (t.priority, t.execution_key))
+    return [*hit, *rest]
