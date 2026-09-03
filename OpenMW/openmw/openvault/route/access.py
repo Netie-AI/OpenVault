@@ -18,6 +18,11 @@ Read PRODUCT_ROLES.md before extending this module. The locks that shape it:
   unsafe.
 * **Lock 2 — architecture preset SoT is Cortex.** ``model`` entries report the
   slots and the persisted *slot preference*; they do not pick DAG vs LangGraph.
+* **Skills / MCP (DR-0012).** Cortex owns the skill registry, the crew loop,
+  and ``this node needs skill X``. Netie KB owns distilled reviews. This module
+  may later signpost ``skill`` / ``mcp`` the same way it signposts memory —
+  location plus gate, never the skill body. A route that returns prompt text
+  is the second store lock 5 forbids.
 
 So the honest one-line summary of every response here: *this is where it lives,
 this is who owns it, and this is whether you may go.* The caller still does the
@@ -30,12 +35,17 @@ import time
 from dataclasses import asdict, dataclass, field
 from typing import Any, Literal
 
-from openmw.openvault.mesh.local_mesh import DEFAULT_CORTEX_URL, LocalMeshState, load_mesh
+from openmw.openvault.mesh.local_mesh import (
+    DEFAULT_CORTEX_URL,
+    LocalMeshState,
+    load_mesh,
+    netie_kb_base_url,
+)
 from openmw.openvault.ship.gate import GateAction, GateDecision, check_gate
 from openmw.openvault.vault.fallback import FallbackManager
 from openmw.openvault.vault.store import KeyVault
 
-AccessKind = Literal["memory", "api", "component", "runtime", "model", "service"]
+AccessKind = Literal["memory", "api", "component", "runtime", "model", "service", "skill", "mcp"]
 AccessIntent = Literal["read", "write", "invoke", "deploy", "leave", "connect"]
 
 ACCESS_KINDS: tuple[AccessKind, ...] = (
@@ -45,6 +55,24 @@ ACCESS_KINDS: tuple[AccessKind, ...] = (
     "runtime",
     "model",
     "service",
+    "skill",
+    "mcp",
+)
+
+# Signposts may carry id/owner/location. These fields would mean this module
+# started holding Cortex's skill store (DR-0012). CortexClient strips the same
+# set when it indexes Cortex.
+SIGNPOST_FORBIDDEN_FIELDS: frozenset[str] = frozenset(
+    {
+        "skill_body",
+        "instructions",
+        "system_prompt",
+        "prompt",
+        "tool_schema",
+        "mcp_tools",
+        "skill_content",
+        "transcript",
+    }
 )
 
 # An intent is what the caller wants to do; a GateAction is what the existing
@@ -248,6 +276,55 @@ def build_registry(
             reachable=_peer_reachable(state, "openide"),
         )
     )
+    entries.append(
+        AccessEntry(
+            kind="runtime",
+            id="runtime.crew",
+            label="Cortex crew (parent/child runs)",
+            owner="cortex",
+            base_url=cortex_url,
+            path="/api/crew",
+            detail=(
+                "Crew loop and parent-task completion live in Cortex (DR-0012). "
+                "OpenVault gates invoke/leave; it does not spawn agents."
+            ),
+            reachable=_peer_reachable(state, "cortex"),
+        )
+    )
+
+    # --- skill / mcp: Netie-KB is the one registry (R-0016). We route, we do not store. ---
+    kb_url = netie_kb_base_url()
+    entries.append(
+        AccessEntry(
+            kind="skill",
+            id="netie-kb.skills",
+            label="Netie-KB skill registry",
+            owner="netie-kb",
+            base_url=kb_url,
+            path="",
+            detail=(
+                "R-0016: one skill registry at :8030 (MCP+REST). Cursor, Claude, "
+                "and Cortex crew are clients. OpenVault gates load/invoke; it "
+                "never returns prompt text (DR-0012)."
+            ),
+            reachable=None,
+        )
+    )
+    entries.append(
+        AccessEntry(
+            kind="mcp",
+            id="netie-kb.mcp",
+            label="Netie-KB MCP catalog",
+            owner="netie-kb",
+            base_url=kb_url,
+            path="",
+            detail=(
+                "MCP tool catalog lives with the skill registry. OpenVault holds "
+                "MCP credentials and the leave/invoke gate, not the schemas."
+            ),
+            reachable=None,
+        )
+    )
 
     # --- model: slot preference is ours; architecture choice is Cortex's. ---
     entries.append(
@@ -317,7 +394,8 @@ def registry_payload(
         "entries": [e.to_dict() for e in entries],
         "policy": (
             "OpenVault resolves location and decides access. It does not store memory, "
-            "run the agent loop, or pick the architecture preset — see PRODUCT_ROLES.md."
+            "run the agent loop, hold skill bodies, or pick the architecture preset — "
+            "see PRODUCT_ROLES.md and DR-0012."
         ),
     }
 

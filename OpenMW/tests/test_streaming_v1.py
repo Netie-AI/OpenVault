@@ -249,7 +249,14 @@ def test_gateway_stream_keeps_reservation_when_usage_absent(
 
         return 200, _gen()
 
-    app = create_app(vault=vault, mock_health=True, enable_precheck_loop=False)
+    clock = _FreezeClock()
+    limiter = TokenBudgetLimiter(clock=clock)
+    app = create_app(
+        vault=vault,
+        mock_health=True,
+        enable_precheck_loop=False,
+        rate_limiter=limiter,
+    )
     client = TestClient(app, client=("127.0.0.1", 5555))
     identity, headers = issue_key(client)
     before = client.get(
@@ -281,7 +288,7 @@ def test_gateway_stream_keeps_reservation_when_usage_absent(
         "/api/freeroute/ratelimit", params={"tier": "free", "identity": identity}
     ).json()["token_remaining"]
     spent = before - after
-    # Conservative keep-reservation (~prompt+500); allow small refill noise.
+    # Conservative keep-reservation (~prompt+500); clock frozen so refill cannot eat it.
     assert spent > 400, f"expected keep-reservation (~501), spent={spent}"
 
 
@@ -302,7 +309,14 @@ def test_gateway_stream_ignores_usage_without_include_usage(
     async def _fake_prepare(*_args: Any, **_kwargs: Any) -> tuple[int, AsyncIterator[bytes]]:
         return 200, _stream_with_usage_chunks()
 
-    app = create_app(vault=vault, mock_health=True, enable_precheck_loop=False)
+    clock = _FreezeClock()
+    limiter = TokenBudgetLimiter(clock=clock)
+    app = create_app(
+        vault=vault,
+        mock_health=True,
+        enable_precheck_loop=False,
+        rate_limiter=limiter,
+    )
     client = TestClient(app, client=("127.0.0.1", 5555))
     identity, headers = issue_key(client)
     before = client.get(
