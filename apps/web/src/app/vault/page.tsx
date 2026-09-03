@@ -34,6 +34,7 @@ import {
   fetchCoverage,
   fetchOpenFreeBudget,
   fetchKeyHealth,
+  fetchVaultKeyUsage,
   KEY_ROLES,
   type EnvCandidate,
   type KeyRole,
@@ -43,6 +44,7 @@ import {
   type ProviderSpec,
   type CoverageReport,
   type OpenFreeBudget,
+  type VaultKeyUsage,
 } from "@/lib/api/keys";
 import {
   readRegisterIntent,
@@ -50,6 +52,7 @@ import {
   type RegisterIntent,
 } from "@/lib/vault/registerIntent";
 import { KeyHealthSpark } from "@/components/vault/KeyHealthSpark";
+import { KeyUsageStrip } from "@/components/vault/KeyUsageStrip";
 import { SecretsPanel } from "@/components/vault/SecretsPanel";
 import { AddKeyDialog } from "./AddKeyDialog";
 
@@ -87,6 +90,7 @@ export default function VaultPage() {
   const [coverage, setCoverage] = useState<CoverageReport | null>(null);
   const [budget, setBudget] = useState<OpenFreeBudget | null>(null);
   const [healthById, setHealthById] = useState<Record<string, KeyHealth>>({});
+  const [usageById, setUsageById] = useState<Record<string, VaultKeyUsage>>({});
 
   const refresh = useCallback(async () => {
     setKeys(await listKeys());
@@ -157,6 +161,33 @@ export default function VaultPage() {
         if (row) next[row[0]] = row[1];
       }
       setHealthById(next);
+    })();
+    return () => ac.abort();
+  }, [keys]);
+
+  useEffect(() => {
+    if (keys.length === 0) {
+      setUsageById({});
+      return;
+    }
+    const ac = new AbortController();
+    void (async () => {
+      const entries = await Promise.all(
+        keys.slice(0, 40).map(async (k) => {
+          try {
+            const u = await fetchVaultKeyUsage(k.id, ac.signal);
+            return [k.id, u] as const;
+          } catch {
+            return null;
+          }
+        }),
+      );
+      if (ac.signal.aborted) return;
+      const next: Record<string, VaultKeyUsage> = {};
+      for (const row of entries) {
+        if (row) next[row[0]] = row[1];
+      }
+      setUsageById(next);
     })();
     return () => ac.abort();
   }, [keys]);
@@ -372,6 +403,38 @@ export default function VaultPage() {
 
       {keys.length === 0 ? (
         <div className="mb-5 space-y-4">
+          <ol
+            data-testid="first-run-register"
+            className="rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground"
+          >
+            <li className="text-foreground">
+              1. Get a free key
+              {freeSuggest?.register_url ? (
+                <>
+                  {" "}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="ml-2"
+                    onClick={() =>
+                      startRegister(
+                        freeSuggest.id,
+                        freeSuggest.name,
+                        freeSuggest.register_url as string,
+                      )
+                    }
+                  >
+                    Open {freeSuggest.name}
+                  </Button>
+                </>
+              ) : (
+                <span> (no register_url in catalog)</span>
+              )}
+              {pendingRegister ? " -- signup tab open. Copy the key. Never auto-signup." : "."}
+            </li>
+            <li>2. Paste it into the drop below. OpenVault stores it sealed.</li>
+            <li>3. Precheck runs on save. Healthy hops join FreeRoute fallback.</li>
+          </ol>
           <ClipDropZone
             hero
             onSecret={onClipSecret}
@@ -538,6 +601,16 @@ export default function VaultPage() {
                                 samples={healthById[key.id].samples}
                                 uptimePct={healthById[key.id].uptime_pct}
                                 p95Ms={healthById[key.id].p95_latency_ms}
+                              />
+                            ) : null}
+                            {usageById[key.id] ? (
+                              <KeyUsageStrip
+                                requests={Number(usageById[key.id].requests ?? 0)}
+                                totalTokens={Number(usageById[key.id].total_tokens ?? 0)}
+                                estimatedTokens={Number(
+                                  usageById[key.id].estimated_tokens ?? 0,
+                                )}
+                                priced={Boolean(usageById[key.id].priced)}
                               />
                             ) : null}
                           </div>

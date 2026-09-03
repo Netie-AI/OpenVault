@@ -13,6 +13,7 @@ import { PageContainer } from "@/components/ui/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Tabs } from "@/components/ui/Tabs";
 import { cn } from "@/lib/utils";
+import { FreeRouteSmoke } from "@/components/FreeRouteSmoke";
 
 type TabKey = "strategy" | "hops" | "breakers" | "metrics";
 
@@ -20,6 +21,9 @@ type StrategyResponse = {
   strategy: string;
   strategies: string[];
   orderedExecutionKeys: string[];
+  priced?: boolean;
+  costOptimizedAvailable?: boolean;
+  unavailableStrategies?: string[];
 };
 
 type RouteTarget = {
@@ -54,6 +58,35 @@ type MetricsResponse = {
   metrics: Record<string, TargetMetrics>;
 };
 
+type RateLimitSnapshot = {
+  tier?: string;
+  token_remaining?: number;
+  token_capacity?: number;
+  request_remaining?: number;
+  request_capacity?: number;
+  remaining_tokens?: number;
+};
+
+type UsageEventRow = {
+  provider?: string;
+  model_served?: string;
+  total_tokens?: number;
+  cache_hit?: boolean;
+  status?: number;
+  estimated?: boolean;
+};
+
+type UsageSummary = {
+  requests?: number;
+  prompt_tokens?: number;
+  completion_tokens?: number;
+  billable_tokens?: number;
+  estimated_tokens?: number;
+  cache_hits?: number;
+  failed_requests?: number;
+  priced?: boolean;
+};
+
 type BreakerStatus = {
   name: string;
   state: string;
@@ -82,6 +115,7 @@ type Hop = {
   failures: number;
   last_error: string | null;
   last_latency_ms: number | null;
+  remaining_cooldown_ms?: number;
 };
 
 type FallbackConfig = {
@@ -103,6 +137,8 @@ const TAB_DEFS: { key: TabKey; label: string }[] = [
 ];
 
 function formatStrategyLabel(name: string): string {
+  if (name === "auto") return "Auto (fallback chain)";
+  if (name === "reset-aware") return "Reset-aware (Retry-After)";
   return name
     .split("-")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
@@ -171,6 +207,9 @@ export default function RoutePage() {
   const [strategyData, setStrategyData] = useState<StrategyResponse | null>(null);
   const [targetsData, setTargetsData] = useState<TargetsResponse | null>(null);
   const [metricsData, setMetricsData] = useState<MetricsResponse | null>(null);
+  const [usageSummary, setUsageSummary] = useState<UsageSummary | null>(null);
+  const [usageEvents, setUsageEvents] = useState<UsageEventRow[]>([]);
+  const [rateLimit, setRateLimit] = useState<RateLimitSnapshot | null>(null);
   const [breakersData, setBreakersData] = useState<BreakersResponse | null>(null);
   const [fallbackStatus, setFallbackStatus] = useState<FallbackStatus | null>(null);
 
@@ -208,12 +247,14 @@ export default function RoutePage() {
       apiGet<MetricsResponse>("/api/route/metrics"),
       apiGet<BreakersResponse>("/api/route/breakers"),
       apiGet<FallbackStatus>("/api/fallback/status"),
+      apiGet<{ summary?: UsageSummary; events?: UsageEventRow[] }>("/api/usage"),
+      apiGet<RateLimitSnapshot>("/api/freeroute/ratelimit"),
     ]);
 
     const labels = ["strategy", "targets", "metrics", "breakers", "fallback status"];
     const errors: string[] = [];
 
-    const [strategyRes, targetsRes, metricsRes, breakersRes, fallbackRes] = results;
+    const [strategyRes, targetsRes, metricsRes, breakersRes, fallbackRes, usageRes, rateRes] = results;
 
     if (strategyRes.status === "fulfilled") {
       setStrategyData(strategyRes.value);
@@ -261,6 +302,20 @@ export default function RoutePage() {
       );
     }
 
+    if (usageRes.status === "fulfilled") {
+      setUsageSummary(usageRes.value.summary ?? null);
+      setUsageEvents(usageRes.value.events ?? []);
+    } else {
+      setUsageSummary(null);
+      setUsageEvents([]);
+    }
+
+    if (rateRes.status === "fulfilled") {
+      setRateLimit(rateRes.value);
+    } else {
+      setRateLimit(null);
+    }
+
     setErr(errors.length === results.length ? errors.join(" · ") : errors.join(" · "));
     setLoading(false);
   }, []);
@@ -279,16 +334,8 @@ export default function RoutePage() {
       });
       setStrategyData((prev) =>
         prev
-          ? {
-              ...prev,
-              strategy: data.strategy,
-              orderedExecutionKeys: data.orderedExecutionKeys,
-            }
-          : {
-              strategy: data.strategy,
-              strategies: [],
-              orderedExecutionKeys: data.orderedExecutionKeys,
-            },
+          ? { ...prev, ...data }
+          : data,
       );
       setSelectedStrategy(data.strategy);
       setStrategyMsg("Strategy saved.");
@@ -356,6 +403,95 @@ export default function RoutePage() {
         </Button>
       </div>
 
+      <div className="mb-5">
+        <FreeRouteSmoke onSent={() => void load()} />
+      </div>
+
+      <div
+        data-glass
+        className="mb-5 rounded-2xl border border-border bg-card p-4 text-sm"
+      >
+        <p className="font-medium text-foreground">Meters (priced stays false)</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Token ledger from this vault. Cache hits spend 0. Estimates stay labelled.
+          No USD — inventing a rate would look like a real bill (DR-0009).
+        </p>
+        {usageSummary ? (
+          <dl className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+            <div>
+              <dt className="text-muted-foreground">Requests</dt>
+              <dd className="font-medium">{usageSummary.requests ?? 0}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Billable tokens</dt>
+              <dd className="font-medium">{usageSummary.billable_tokens ?? 0}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Cache hits</dt>
+              <dd className="font-medium">{usageSummary.cache_hits ?? 0}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Estimated tokens</dt>
+              <dd className="font-medium">{usageSummary.estimated_tokens ?? 0}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Priced</dt>
+              <dd className="font-medium">{usageSummary.priced ? "true" : "false"}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">
+                Remaining tokens{rateLimit?.tier ? ` (${rateLimit.tier})` : ""}
+              </dt>
+              <dd className="font-medium">
+                {rateLimit
+                  ? `${rateLimit.token_remaining ?? rateLimit.remaining_tokens ?? 0} / ${rateLimit.token_capacity ?? "—"}`
+                  : "—"}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Remaining requests</dt>
+              <dd className="font-medium">
+                {rateLimit
+                  ? `${rateLimit.request_remaining ?? 0} / ${rateLimit.request_capacity ?? "—"}`
+                  : "—"}
+              </dd>
+            </div>
+          </dl>
+        ) : (
+          <p className="mt-2 text-xs text-muted-foreground">Usage ledger unavailable.</p>
+        )}
+        {usageEvents.length > 0 ? (
+          <div className="mt-3 overflow-x-auto">
+            <p className="text-xs font-medium text-foreground">Recent hops (tokens, not dollars)</p>
+            <table className="mt-1 w-full text-left text-[11px] text-muted-foreground">
+              <thead>
+                <tr>
+                  <th className="pr-2 font-medium">Provider</th>
+                  <th className="pr-2 font-medium">Model</th>
+                  <th className="pr-2 font-medium">Tokens</th>
+                  <th className="pr-2 font-medium">Cache</th>
+                  <th className="font-medium">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {usageEvents.slice(-8).reverse().map((row, i) => (
+                  <tr key={`${row.provider ?? "hop"}-${i}`}>
+                    <td className="pr-2">{row.provider || "—"}</td>
+                    <td className="pr-2 font-mono">{row.model_served || "—"}</td>
+                    <td className="pr-2">
+                      {row.total_tokens ?? 0}
+                      {row.estimated ? " est" : ""}
+                    </td>
+                    <td className="pr-2">{row.cache_hit ? "hit" : "miss"}</td>
+                    <td>{row.status ?? "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+      </div>
+
       {justWired ? (
         <div
           data-glass
@@ -394,8 +530,10 @@ export default function RoutePage() {
                 <p className="mt-1 text-lg font-semibold text-foreground">
                   {formatStrategyLabel(strategyData.strategy)}
                 </p>
-                <p className="mt-0.5 font-mono text-xs text-muted-foreground">
-                  {strategyData.strategy}
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Meters on. Pricing is false. Auto walks the fallback chain (OmniRoute
+                  gateway). Anthropic hops use Messages API with pinned Claude ids.
+                  It does not classify intent like NVIDIA llm-router.
                 </p>
               </div>
 
@@ -410,6 +548,7 @@ export default function RoutePage() {
                   {(strategies.length > 0
                     ? strategies
                     : [
+                        "auto",
                         "priority",
                         "weighted",
                         "fill-first",
@@ -418,15 +557,23 @@ export default function RoutePage() {
                         "random",
                         "least-used",
                         "cost-optimized",
+                        "reset-aware",
                       ]).map((name) => {
                     const active = selectedStrategy === name;
+                    const blocked =
+                      name === "cost-optimized" &&
+                      strategyData.costOptimizedAvailable === false;
                     return (
                       <button
                         key={name}
                         type="button"
-                        onClick={() => setSelectedStrategy(name)}
+                        disabled={blocked}
+                        onClick={() => {
+                          if (!blocked) setSelectedStrategy(name);
+                        }}
                         className={cn(
                           "rounded-xl border px-4 py-3 text-left transition-colors",
+                          blocked && "cursor-not-allowed opacity-50",
                           active
                             ? "border-primary bg-primary/10"
                             : "border-border bg-muted/20 hover:bg-muted/40",
@@ -436,7 +583,7 @@ export default function RoutePage() {
                           {formatStrategyLabel(name)}
                         </span>
                         <span className="mt-0.5 block font-mono text-[10px] text-muted-foreground">
-                          {name}
+                          {blocked ? "needs a real cost (priced=false)" : name}
                         </span>
                       </button>
                     );
@@ -685,6 +832,14 @@ export default function RoutePage() {
                           {hop.last_latency_ms != null
                             ? `${Math.round(hop.last_latency_ms)} ms`
                             : "—"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">Cooldown</dt>
+                        <dd className="font-medium text-foreground">
+                          {hop.remaining_cooldown_ms && hop.remaining_cooldown_ms > 0
+                            ? `${Math.ceil(hop.remaining_cooldown_ms / 1000)}s`
+                            : "ready"}
                         </dd>
                       </div>
                       {hop.last_error ? (

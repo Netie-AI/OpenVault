@@ -5,6 +5,7 @@ import {
   Network,
   Rocket,
   Route,
+  MessageSquare,
   Server,
   Shield,
 } from "lucide-react";
@@ -42,6 +43,12 @@ const LINKS = [
     title: "Route",
     body: "LLM proxy strategies, breakers, fallback — OmniRoute algorithms on our backend.",
     icon: Route,
+  },
+  {
+    href: "/playground",
+    title: "Playground",
+    body: "FreeRoute smoke via POST /v1/chat/completions plus register help. Not PlaygroundStudio.",
+    icon: MessageSquare,
   },
   {
     href: "/peers",

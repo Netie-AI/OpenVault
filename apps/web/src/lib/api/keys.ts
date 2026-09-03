@@ -222,3 +222,23 @@ export function fetchOpenFreeBudget(signal?: AbortSignal): Promise<OpenFreeBudge
     query: { identity: "local", tier: "free" },
   });
 }
+
+/** Tokens this vault key actually served. Never a dollar figure. */
+export interface VaultKeyUsage {
+  requests?: number;
+  total_tokens?: number;
+  billable_tokens?: number;
+  estimated_tokens?: number;
+  priced?: boolean;
+}
+
+export async function fetchVaultKeyUsage(
+  vaultKeyId: string,
+  signal?: AbortSignal,
+): Promise<VaultKeyUsage> {
+  const data = await apiGet<{ summary?: VaultKeyUsage }>("/api/usage", {
+    signal,
+    query: { vault_key_id: vaultKeyId, limit: 1 },
+  });
+  return data.summary ?? { priced: false };
+}

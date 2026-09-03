@@ -34,6 +34,7 @@ export default function ShipCicdPage() {
   const [status, setStatus] = useState<Record<string, unknown> | null>(null);
   const [planOut, setPlanOut] = useState<Record<string, unknown> | null>(null);
   const [awsOut, setAwsOut] = useState<Record<string, unknown> | null>(null);
+  const [wfOut, setWfOut] = useState<Record<string, unknown> | null>(null);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -94,6 +95,28 @@ export default function ShipCicdPage() {
         { timeoutMs: LONG_TIMEOUT_MS },
       );
       setAwsOut(out);
+    } catch (e) {
+      setErr(isApiError(e) ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function writeWorkflow() {
+    if (!path.trim()) {
+      setErr("Project path required to write the GitHub Actions workflow");
+      return;
+    }
+    setBusy(true);
+    setErr("");
+    try {
+      const out = await apiPost<Record<string, unknown>>("/api/ship/cicd/write", {
+        project_path: path.trim(),
+      });
+      setWfOut(out);
+      if (out.public_url) {
+        setErr("Refuse: workflow write must not return a live URL");
+      }
     } catch (e) {
       setErr(isApiError(e) ? e.message : String(e));
     } finally {
@@ -169,6 +192,13 @@ export default function ShipCicdPage() {
           <Button variant="ghost" disabled={busy} onClick={() => void refresh()}>
             Refresh list
           </Button>
+          <Button
+            variant="outline"
+            disabled={busy || !path.trim()}
+            onClick={() => void writeWorkflow()}
+          >
+            Write git-push workflow
+          </Button>
         </div>
       </div>
 
@@ -211,8 +241,13 @@ export default function ShipCicdPage() {
         </pre>
       ) : null}
       {awsOut ? (
-        <pre className="max-h-48 overflow-auto rounded-xl bg-background/80 p-3 font-mono text-[11px] text-muted-foreground">
+        <pre className="mb-4 max-h-48 overflow-auto rounded-xl bg-background/80 p-3 font-mono text-[11px] text-muted-foreground">
           {JSON.stringify(awsOut, null, 2)}
+        </pre>
+      ) : null}
+      {wfOut ? (
+        <pre className="max-h-48 overflow-auto rounded-xl bg-background/80 p-3 font-mono text-[11px] text-muted-foreground">
+          {JSON.stringify(wfOut, null, 2)}
         </pre>
       ) : null}
     </PageContainer>

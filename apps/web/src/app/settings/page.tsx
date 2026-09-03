@@ -19,6 +19,7 @@ declare global {
       isDesktop?: boolean;
       getClipboardWatch?: () => Promise<{ enabled: boolean }>;
       setClipboardWatch?: (enabled: boolean) => Promise<{ enabled: boolean }>;
+      onClipboardSecret?: (cb: (secret: string) => void) => () => void;
     };
   }
 }

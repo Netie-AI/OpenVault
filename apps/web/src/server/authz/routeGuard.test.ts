@@ -55,6 +55,7 @@ assert.equal(isLocalOnlyPath("/ov-api/api/peers"), false);
 
 // Next.js pages are not backend routes and must stay reachable.
 assert.equal(isLocalOnlyPath("/vault"), false);
+assert.equal(isLocalOnlyPath("/playground"), false);
 assert.equal(isLocalOnlyPath("/_next/static/chunk.js"), false);
 
 console.log("routeGuard smoke: ok");

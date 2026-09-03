@@ -15,6 +15,7 @@ type Deployment = {
   target?: string;
   ready?: boolean;
   public_url?: string;
+  local_preview_url?: string;
   project_path?: string;
   mode?: string;
   steps?: Array<{ id?: string; title?: string; status?: string; detail?: string }>;
@@ -47,7 +48,13 @@ export default function ShipDeployPage() {
     <PageContainer>
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <PageHeader
-          title="Deploy live"
+          title={
+            dep?.public_url
+              ? "Deploy live"
+              : dep?.mode === "simulated"
+                ? "Simulated deploy"
+                : "Deploy"
+          }
           description={
             dep
               ? `${dep.target || "target"} · ${dep.mode || "engine"} · ${id.slice(0, 8)}…`
@@ -72,6 +79,23 @@ export default function ShipDeployPage() {
           >
             {dep.public_url}
           </a>
+        </p>
+      ) : dep?.local_preview_url ? (
+        <p className="mb-4 text-sm">
+          Local preview (not live, not HT1):{" "}
+          <a
+            className="text-primary underline"
+            href={dep.local_preview_url}
+            target="_blank"
+            rel="noreferrer"
+          >
+            {dep.local_preview_url}
+          </a>
+        </p>
+      ) : dep ? (
+        <p className="mb-4 text-sm text-muted-foreground">
+          No live URL. Simulate does not invent one. A loopback preview needs a built
+          artifact. A real openable host URL is HT1.
         </p>
       ) : null}
 

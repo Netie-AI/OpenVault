@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FolderOpen, Rocket, Upload } from "lucide-react";
+import { FolderOpen, Eye, Rocket, Upload } from "lucide-react";
 import {
   LONG_TIMEOUT_MS,
   apiFetch,
@@ -11,6 +11,7 @@ import {
   isApiError,
   ovUrl,
 } from "@/lib/api/client";
+import { listKeys, type KeyRow } from "@/lib/api/keys";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -71,10 +72,11 @@ export default function ShipPage() {
   const [vpsHost, setVpsHost] = useState("");
   const [stack, setStack] = useState<Stack | null>(null);
   const [recommend, setRecommend] = useState<Recommend | null>(null);
-  const [target, setTarget] = useState("cloudflare_pages");
+  const [target, setTarget] = useState("spaceship_ftp");
   const [targets, setTargets] = useState<TargetCard[]>(TARGETS_DEFAULT);
   const [preflight, setPreflight] = useState<Preflight | null>(null);
   const [deployOut, setDeployOut] = useState<Record<string, unknown> | null>(null);
+  const [previewUrl, setPreviewUrl] = useState("");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const [phase, setPhase] = useState("");
@@ -82,11 +84,31 @@ export default function ShipPage() {
   const [ghBusy, setGhBusy] = useState(false);
   const [ghNotice, setGhNotice] = useState("");
   const [pat, setPat] = useState("");
+  const [vaultKeys, setVaultKeys] = useState<KeyRow[]>([]);
+  const [injectIds, setInjectIds] = useState<Record<string, boolean>>({});
+  const [ht1, setHt1] = useState<{
+    live_public_url: string | null;
+    human_test_gate?: string;
+    host_adapters?: string[];
+    vercel_job?: { note?: string; preview?: string; git_push?: string; env?: string; dotenv_upload?: string };
+  } | null>(null);
 
   const loadTargets = useCallback(async () => {
     try {
-      const data = await apiGet<{ targets?: TargetCard[] }>("/api/ship/targets");
+      const data = await apiGet<{
+        targets?: TargetCard[];
+        live_public_url?: string | null;
+        human_test_gate?: string;
+        host_adapters?: string[];
+        vercel_job?: { note?: string; preview?: string; git_push?: string; env?: string; dotenv_upload?: string };
+      }>("/api/ship/targets");
       setTargets(data.targets || []);
+      setHt1({
+        live_public_url: data.live_public_url ?? null,
+        human_test_gate: data.human_test_gate,
+        host_adapters: data.host_adapters,
+        vercel_job: data.vercel_job,
+      });
     } catch {
       /* targets optional at paint */
     }
@@ -104,6 +126,9 @@ export default function ShipPage() {
   useEffect(() => {
     void loadTargets();
     void loadGitHub();
+    void listKeys()
+      .then(setVaultKeys)
+      .catch(() => setVaultKeys([]));
   }, [loadTargets, loadGitHub]);
 
   async function connectGhCli() {
@@ -164,6 +189,65 @@ export default function ShipPage() {
     }
   }
 
+  async function writeWorkflow() {
+    if (!path.trim()) {
+      setErr("Project path required to write the GitHub Actions workflow");
+      return;
+    }
+    setBusy(true);
+    setErr("");
+    setGhNotice("");
+    try {
+      const out = await apiPost<{ detail?: string; public_url?: string | null }>(
+        "/api/ship/cicd/write",
+        { project_path: path.trim() },
+      );
+      if (out.public_url) {
+        setErr("Refuse: workflow write must not return a live URL");
+        return;
+      }
+      setGhNotice(out.detail || "Workflow written. No live URL.");
+    } catch (e) {
+      setErr(isApiError(e) ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function previewLocal() {
+    if (!path.trim()) {
+      setErr("Choose a folder or drop a zip first.");
+      return;
+    }
+    setBusy(true);
+    setErr("");
+    setPreviewUrl("");
+    setPhase("Previewing…");
+    try {
+      const out = await apiPost<{
+        ok?: boolean;
+        local_preview_url?: string;
+        public_url?: string | null;
+        live?: boolean;
+        blocker?: string;
+      }>("/api/ship/preview", { project_path: path.trim() });
+      if (out.public_url || out.live) {
+        setErr("Refuse: local preview must not return a live URL");
+        return;
+      }
+      if (!out.ok) {
+        setErr(out.blocker || "No previewable artifact. Not a live URL.");
+        return;
+      }
+      setPreviewUrl(out.local_preview_url || "");
+    } catch (e) {
+      setErr(isApiError(e) ? e.message : String(e));
+    } finally {
+      setBusy(false);
+      setPhase("");
+    }
+  }
+
   async function afterPath(projectPath: string, detected?: Stack) {
     setPath(projectPath);
     setErr("");
@@ -185,7 +269,7 @@ export default function ShipPage() {
         stack: st,
       });
       setRecommend(rec);
-      const nextTarget = rec.target || "cloudflare_pages";
+      const nextTarget = rec.target || "spaceship_ftp";
       setTarget(nextTarget);
       setPhase("Preflight…");
       const pre = await apiPost<Preflight>("/api/ship/preflight", {
@@ -310,6 +394,12 @@ export default function ShipPage() {
           // -- which also uploads a built directory -- permanently unable to
           // publish from here.
           run_build: false,
+          secrets: vaultKeys
+            .filter((k) => injectIds[k.id])
+            .map((k) => ({
+              env_name: `${k.provider.toUpperCase()}_API_KEY`,
+              key_id: k.id,
+            })),
         },
         { timeoutMs: LONG_TIMEOUT_MS },
       );
@@ -348,6 +438,24 @@ export default function ShipPage() {
         title="Ship"
         description="Your machine builds. Your cloud account hosts. Your domain points at it. One Deploy — we detect, pick the target, and preflight first."
       />
+
+      {ht1 ? (
+        <div
+          data-glass
+          className="mb-5 rounded-2xl border border-border bg-card p-4 text-sm"
+        >
+          <p className="font-medium text-foreground">
+            {ht1.host_adapters?.length ?? 0} host adapters. Zero live URL (HT1).
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {ht1.host_adapters?.join(", ") || "spaceship_ftp, cloudflare_pages, coolify, netlify, vps_ssh"}.
+            Spaceship FTP reuses the host you already pay for. Simulate never invents a production URL. Loopback preview of a built artifact is not live. .env files stay off
+            the public upload; vault env needs a non-public FTP dir. A real openable host URL is HT1 and
+            is not agent-closeable. This is not Vercel
+            {ht1.vercel_job?.git_push ? ` (git-push: ${ht1.vercel_job.git_push})` : ""}.
+          </p>
+        </div>
+      ) : null}
 
       <div
         data-glass
@@ -439,6 +547,21 @@ export default function ShipPage() {
             <Rocket className="size-4" />
             {phase || "Deploy"}
           </Button>
+          <Button
+            variant="outline"
+            disabled={busy || !path.trim()}
+            onClick={() => void writeWorkflow()}
+          >
+            Write git-push workflow
+          </Button>
+          <Button
+            variant="outline"
+            disabled={busy || !path.trim()}
+            onClick={() => void previewLocal()}
+          >
+            <Eye className="size-4" />
+            Preview locally
+          </Button>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
@@ -499,7 +622,7 @@ export default function ShipPage() {
             </p>
             <p className="mt-1 text-sm text-muted-foreground">{recommend.reason}</p>
             <div className="mt-3 flex flex-wrap gap-2">
-              {(targets.length ? targets : [{ id: "cloudflare_pages", title: "Cloudflare Pages", blurb: "" }]).map(
+              {(targets.length ? targets : [{ id: "spaceship_ftp", title: "Spaceship FTP (existing host)", blurb: "" }]).map(
                 (t) => (
                   <button
                     key={t.id}
@@ -546,6 +669,36 @@ export default function ShipPage() {
           </div>
         ) : null}
 
+        {vaultKeys.length > 0 ? (
+          <div className="mt-4 rounded-xl border border-border p-4 text-sm">
+            <p className="font-medium">Inject vaulted keys</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Names only in the UI. Values go to the host, never into logs.
+              Payment cards cannot be injected.
+            </p>
+            <ul className="mt-3 space-y-2">
+              {vaultKeys
+                .filter((k) => k.enabled !== false)
+                .slice(0, 12)
+                .map((k) => (
+                  <li key={k.id} className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id={`inject-${k.id}`}
+                      checked={Boolean(injectIds[k.id])}
+                      onChange={(e) =>
+                        setInjectIds((prev) => ({ ...prev, [k.id]: e.target.checked }))
+                      }
+                    />
+                    <label htmlFor={`inject-${k.id}`} className="text-xs">
+                      {k.label || k.provider} → {k.provider.toUpperCase()}_API_KEY
+                    </label>
+                  </li>
+                ))}
+            </ul>
+          </div>
+        ) : null}
+
         {err ? <p className="mt-4 text-sm text-destructive">{err}</p> : null}
 
         {stack ? (
@@ -565,10 +718,20 @@ export default function ShipPage() {
           </dl>
         ) : (
           <p className="mt-4 text-sm text-muted-foreground">
-            Choose a folder or drop a zip — we detect the stack, pick Cloudflare Pages
-            when it is static, and refuse Deploy until preflight passes.
+            Choose a folder or drop a zip — we detect the stack, prefer Spaceship
+            FTP when you already pay for that host, and refuse Deploy until
+            preflight passes. No invented preview URL.
           </p>
         )}
+
+        {previewUrl ? (
+          <p className="mt-4 text-sm">
+            Local preview (not live, not HT1):{" "}
+            <a className="text-primary underline" href={previewUrl} target="_blank" rel="noreferrer">
+              {previewUrl}
+            </a>
+          </p>
+        ) : null}
 
         {publicUrl ? (
           <p className="mt-4 text-sm">

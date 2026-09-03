@@ -72,6 +72,7 @@ export interface VaultStatus {
   sealed: boolean;
   passphrase_configured: boolean;
   wrap_method: string | null;
+  plaintext_backup_present?: boolean;
 }
 
 export async function listSecrets(
@@ -136,4 +137,14 @@ export function unsealVault(passphrase: string): Promise<VaultStatus> {
 
 export function lockVault(): Promise<VaultStatus> {
   return apiPost<VaultStatus>("/api/vault/lock");
+}
+
+export function setVaultPassphrase(passphrase: string): Promise<VaultStatus> {
+  return apiPost<VaultStatus>("/api/vault/passphrase", { passphrase });
+}
+
+export function retirePlaintextBackup(passphrase?: string): Promise<VaultStatus> {
+  return apiPost<VaultStatus>("/api/vault/backup/retire", {
+    passphrase: passphrase ?? "",
+  });
 }

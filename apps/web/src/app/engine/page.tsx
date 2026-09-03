@@ -71,7 +71,7 @@ export default function EnginePage() {
       <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
         <PageHeader
           title="Engine"
-          description="Cortex mesh selection — models filtered by vault keys in OpenMW."
+          description="Cortex mesh selection — models filtered by vault keys. HT4: this page must show Cortex online, with no second key vault."
         />
         <Button size="sm" variant="outline" disabled={busy} onClick={() => void load()}>
           {busy ? "Refreshing…" : "Refresh"}

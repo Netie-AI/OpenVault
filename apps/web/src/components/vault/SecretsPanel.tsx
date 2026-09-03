@@ -20,9 +20,12 @@ import {
   deleteSecret,
   fetchVaultStatus,
   listSecrets,
+  lockVault,
   revealSecretValue,
+  retirePlaintextBackup,
   revokeSecret,
   rotateSecret,
+  setVaultPassphrase,
   unsealVault,
   type SecretRow,
   type VaultStatus,
@@ -40,6 +43,8 @@ export function SecretsPanel() {
   const [busy, setBusy] = useState<string | null>(null);
   const [revealed, setRevealed] = useState<Record<string, string>>({});
   const [passphrase, setPassphrase] = useState("");
+  const [newPassphrase, setNewPassphrase] = useState("");
+  const [confirmPassphrase, setConfirmPassphrase] = useState("");
   const [createMode, setCreateMode] = useState<CreateMode>(null);
   const [rotateTarget, setRotateTarget] = useState<RotateTarget>(null);
 
@@ -112,6 +117,67 @@ export function SecretsPanel() {
       setNotice(done);
     } catch (err) {
       setNotice(isApiError(err) ? err.message : "That did not work");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function onRetireBackup() {
+    setBusy("retire-backup");
+    setNotice("");
+    try {
+      const st = await retirePlaintextBackup(
+        status?.passphrase_configured ? passphrase : "",
+      );
+      setStatus(st);
+      await refresh();
+      setNotice(
+        st.plaintext_backup_present
+          ? "Plaintext backup still present"
+          : "Plaintext master-key backup retired",
+      );
+    } catch (err) {
+      setNotice(isApiError(err) ? err.message : "Could not retire backup");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function onLock() {
+    setBusy("lock");
+    setNotice("");
+    try {
+      const st = await lockVault();
+      setStatus(st);
+      await refresh();
+      setNotice(st.sealed ? "Vault locked" : "Lock did not seal the vault");
+    } catch (err) {
+      setNotice(isApiError(err) ? err.message : "Lock failed");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function onSetPassphrase() {
+    if (!newPassphrase || newPassphrase !== confirmPassphrase) {
+      setNotice("Passphrase and confirmation must match");
+      return;
+    }
+    setBusy("set-passphrase");
+    setNotice("");
+    try {
+      const st = await setVaultPassphrase(newPassphrase);
+      setStatus(st);
+      setNewPassphrase("");
+      setConfirmPassphrase("");
+      await refresh();
+      setNotice(
+        st.passphrase_configured
+          ? "Passphrase set — lock or restart to require it"
+          : "Passphrase was not stored",
+      );
+    } catch (err) {
+      setNotice(isApiError(err) ? err.message : "Could not set passphrase");
     } finally {
       setBusy(null);
     }
@@ -270,6 +336,43 @@ export function SecretsPanel() {
         </div>
       </div>
 
+      {status?.plaintext_backup_present ? (
+        <div
+          data-glass
+          className="rounded-2xl border border-warning-border bg-warning-bg px-4 py-3 text-sm text-foreground"
+        >
+          <p className="font-medium">
+            Plaintext master-key backup is on disk. Copying this vault folder can
+            open every secret with no passphrase.
+          </p>
+          <div className="mt-3 flex flex-wrap items-end gap-2">
+            {status.passphrase_configured && !sealed ? (
+              <div className="min-w-[12rem] flex-1">
+                <Label htmlFor="vault-retire-passphrase">Passphrase to verify</Label>
+                <Input
+                  id="vault-retire-passphrase"
+                  type="password"
+                  autoComplete="current-password"
+                  value={passphrase}
+                  onChange={(e) => setPassphrase(e.target.value)}
+                />
+              </div>
+            ) : null}
+            <Button
+              size="sm"
+              disabled={busy === "retire-backup" || sealed}
+              onClick={() => void onRetireBackup()}
+            >
+              {busy === "retire-backup"
+                ? "Retiring..."
+                : sealed
+                  ? "Unseal to retire"
+                  : "Retire backup"}
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
       {status ? (
         <div
           data-glass
@@ -306,16 +409,59 @@ export function SecretsPanel() {
                   disabled={busy === "unseal"}
                   onClick={() => void onUnseal()}
                 >
-                  {busy === "unseal" ? "Unsealing…" : "Unseal"}
+                  {busy === "unseal" ? "Unsealing..." : "Unseal"}
                 </Button>
               </div>
             </div>
           ) : (
-            <p>
-              Vault open
-              {status.wrap_method ? ` · wrap=${status.wrap_method}` : ""}
-              {status.passphrase_configured ? " · passphrase configured" : ""}
-            </p>
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p>
+                  Vault open
+                  {status.wrap_method ? ` · wrap=${status.wrap_method}` : ""}
+                  {status.passphrase_configured ? " · passphrase configured" : ""}
+                </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={busy === "lock"}
+                  onClick={() => void onLock()}
+                >
+                  {busy === "lock" ? "Locking..." : "Lock"}
+                </Button>
+              </div>
+              {!status.passphrase_configured ? (
+                <div className="flex flex-wrap items-end gap-2">
+                  <div className="min-w-[10rem] flex-1">
+                    <Label htmlFor="vault-new-passphrase">Set passphrase</Label>
+                    <Input
+                      id="vault-new-passphrase"
+                      type="password"
+                      autoComplete="new-password"
+                      value={newPassphrase}
+                      onChange={(e) => setNewPassphrase(e.target.value)}
+                    />
+                  </div>
+                  <div className="min-w-[10rem] flex-1">
+                    <Label htmlFor="vault-confirm-passphrase">Confirm</Label>
+                    <Input
+                      id="vault-confirm-passphrase"
+                      type="password"
+                      autoComplete="new-password"
+                      value={confirmPassphrase}
+                      onChange={(e) => setConfirmPassphrase(e.target.value)}
+                    />
+                  </div>
+                  <Button
+                    size="sm"
+                    disabled={busy === "set-passphrase"}
+                    onClick={() => void onSetPassphrase()}
+                  >
+                    {busy === "set-passphrase" ? "Saving..." : "Set passphrase"}
+                  </Button>
+                </div>
+              ) : null}
+            </div>
           )}
         </div>
       ) : null}
