@@ -1,26 +1,54 @@
 #!/usr/bin/env python3
-"""AirGPT demo shell — stand-in when D:\\AirGPT is not cloned.
+"""AirGPT demo shell - stand-in when D:\\AirGPT is not cloned.
 
-Serves OpenIDE-shaped UI on :8765 so OpenVault mesh + Playwright recorders
-can demo the three-surface contract (PRODUCT_ROLES).
+Serves an OpenIDE-shaped UI on :8765 (the port AirGPT owns per PRODUCT_ROLES
+and ``openmw.openvault.ports``) so the OpenVault mesh and the Playwright
+recorders can demo the three-surface contract without the real AirGPT repo.
 
-Real AirGPT (local-only git at D:\\AirGPT) should replace this in production demos.
+It is a thin client: every button that touches state calls OpenVault's own
+routes (``/api/local/*``, ``/api/keyvault/snapshot``, ``/api/cloud/*``) through
+same-origin proxies, so the demo exercises the real custody API rather than a
+mock of it. Stdlib only, so any Python the launcher has can run it.
+
+Real AirGPT (local-only git at D:\\AirGPT) replaces this in production demos.
+
+Environment:
+    OPENIDE_HOST / OPENIDE_PORT   bind address, default 127.0.0.1:8765
+    OPENVAULT_URL                 custody API, default http://127.0.0.1:$OPENVAULT_API_PORT
+    CORTEX_URL                    Cortex engine, default http://127.0.0.1:8000
 """
 
 from __future__ import annotations
 
 import json
+import logging
 import os
 import urllib.error
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from typing import Any
+
+log = logging.getLogger("airgpt_demo_shell")
 
 HOST = os.environ.get("OPENIDE_HOST", "127.0.0.1")
 PORT = int(os.environ.get("OPENIDE_PORT", "8765"))
-OPENVAULT = os.environ.get("OPENVAULT_URL", "http://127.0.0.1:5000").rstrip("/")
+SELF_URL = f"http://{HOST}:{PORT}"
+OPENVAULT = os.environ.get(
+    "OPENVAULT_URL",
+    f"http://127.0.0.1:{os.environ.get('OPENVAULT_API_PORT', '5000')}",
+).rstrip("/")
 CORTEX = os.environ.get("CORTEX_URL", "http://127.0.0.1:8000").rstrip("/")
 
-HTML = """<!DOCTYPE html>
+#: Errors a proxied call to OpenVault or Cortex can raise: URLError, HTTPError and
+#: timeouts are all OSError; a non-JSON body is a ValueError.
+_UPSTREAM_ERRORS = (OSError, ValueError)
+
+_FONTS_URL = (
+    "https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700"
+    "&family=IBM+Plex+Mono:wght@400;500&display=swap"
+)
+
+_HTML_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -28,7 +56,7 @@ HTML = """<!DOCTYPE html>
   <title>AirGPT — host shell</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link href="__FONTS__" rel="stylesheet" />
   <style>
     :root {
       --ink: #0f1419;
@@ -133,7 +161,8 @@ HTML = """<!DOCTYPE html>
       <div class="grid">
         <div class="card">
           <h2>Live session</h2>
-          <pre id="sessionLog">Ready. Peer contract: AirGPT :8765 → OpenVault :5000 → Cortex :8000</pre>
+          <pre id="sessionLog">Ready.
+Peer contract: AirGPT __SELF__ &rarr; OpenVault __OPENVAULT__ &rarr; Cortex __CORTEX__</pre>
         </div>
         <div class="card">
           <h2>Mesh snapshot</h2>
@@ -210,7 +239,7 @@ HTML = """<!DOCTYPE html>
     }
 
     document.getElementById("btnCreate").onclick = () => {
-      log("Create app → scaffolding local OpenIDE workspace");
+      log("Create app -> scaffolding local OpenIDE workspace");
       openModal("Create app", "Scaffolded apps/hello on this host. Secrets stay in OpenVault.");
     };
     document.getElementById("btnKeys").onclick = () =>
@@ -226,17 +255,23 @@ HTML = """<!DOCTYPE html>
     };
     document.getElementById("btnNew").onclick = () => openModal("New", "New agent thread (local).");
     document.getElementById("btnRun").onclick = () => {
-      log("Run → Cortex orchestration request (gated by OpenVault)");
-      openModal("Run", "Asked Cortex to plan; OpenVault gate decides if anything may leave the machine.");
+      log("Run -> Cortex orchestration request (gated by OpenVault)");
+      openModal("Run",
+        "Asked Cortex to plan; OpenVault gate decides if anything may leave the machine.");
     };
-    document.getElementById("btnAgents").onclick = () => openModal("Agents", "Multiplayer agent session ready to host.");
-    document.getElementById("btnIDE").onclick = () => { showOpenIDEPage(); openModal("IDE", "OpenIDE surface active."); };
+    document.getElementById("btnAgents").onclick = () =>
+      openModal("Agents", "Multiplayer agent session ready to host.");
+    document.getElementById("btnIDE").onclick = () => {
+      showOpenIDEPage();
+      openModal("IDE", "OpenIDE surface active.");
+    };
     document.getElementById("btnShare").onclick = async () => {
       try {
         const r = await fetch("/api/share-lan", { method: "POST" });
         const j = await r.json();
-        log("Share LAN → " + JSON.stringify(j).slice(0, 180));
-        openModal("Share LAN", j.ok ? ("Share code " + (j.share?.id || "issued")) : JSON.stringify(j));
+        log("Share LAN -> " + JSON.stringify(j).slice(0, 180));
+        openModal("Share LAN",
+          j.ok ? ("Share code " + (j.share?.id || "issued")) : JSON.stringify(j));
       } catch (e) {
         openModal("Share LAN", String(e));
       }
@@ -245,7 +280,7 @@ HTML = """<!DOCTYPE html>
       try {
         const r = await fetch("/api/join-session", { method: "POST" });
         const j = await r.json();
-        log("Join session → " + JSON.stringify(j).slice(0, 180));
+        log("Join session -> " + JSON.stringify(j).slice(0, 180));
         openModal("Join session", JSON.stringify(j).slice(0, 400));
       } catch (e) {
         openModal("Join session", String(e));
@@ -259,21 +294,43 @@ HTML = """<!DOCTYPE html>
   </script>
 </body>
 </html>
-""".replace("__OPENVAULT__", OPENVAULT).replace("__CORTEX__", CORTEX)
+"""
+
+HTML = (
+    _HTML_TEMPLATE.replace("__FONTS__", _FONTS_URL)
+    .replace("__SELF__", SELF_URL)
+    .replace("__OPENVAULT__", OPENVAULT)
+    .replace("__CORTEX__", CORTEX)
+)
 
 
-def _get_json(url: str) -> dict:
+def _get_json(url: str) -> dict[str, Any]:
     with urllib.request.urlopen(url, timeout=5) as resp:
         return json.loads(resp.read().decode("utf-8") or "{}")
 
 
-def _post_json(url: str, payload: dict) -> dict:
+def _post_json(url: str, payload: dict[str, Any]) -> dict[str, Any]:
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
         url, data=data, headers={"Content-Type": "application/json"}, method="POST"
     )
     with urllib.request.urlopen(req, timeout=8) as resp:
         return json.loads(resp.read().decode("utf-8") or "{}")
+
+
+def _upstream_failure(exc: BaseException) -> tuple[int, dict[str, Any]]:
+    """Turn an upstream error into (status, body) without losing the vault's verdict.
+
+    A 403 from ``/api/cloud/*`` carries the firewall decision in its body; that is
+    the demo's evidence, so it is passed through rather than flattened to 503.
+    """
+    if isinstance(exc, urllib.error.HTTPError):
+        try:
+            detail = json.loads(exc.read().decode("utf-8") or "{}")
+        except (OSError, ValueError):
+            detail = {}
+        return exc.code, {"ok": False, "error": str(exc), "detail": detail}
+    return 503, {"ok": False, "error": str(exc)}
 
 
 def announce() -> None:
@@ -283,14 +340,16 @@ def announce() -> None:
             {
                 "peer_kind": "airgpt",
                 "name": "AirGPT demo shell",
-                "base_url": f"http://{HOST}:{PORT}",
+                "base_url": SELF_URL,
                 "capabilities": ["signin", "passkey", "editor", "shell", "demo"],
                 "auto_approve": True,
             },
         )
-        print("announced:", json.dumps(result.get("handshake", result), indent=2)[:400])
-    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError) as exc:
-        print("announce deferred:", exc)
+    except _UPSTREAM_ERRORS as exc:
+        log.warning("announce deferred (start OpenVault first): %s", exc)
+        return
+    handshake = result.get("handshake", result)
+    log.info("announced to %s: %s", OPENVAULT, json.dumps(handshake)[:400])
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -302,17 +361,25 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def _json(self, code: int, payload: dict) -> None:
+    def _json(self, code: int, payload: dict[str, Any]) -> None:
         self._send(code, json.dumps(payload).encode("utf-8"), "application/json")
 
-    def do_OPTIONS(self) -> None:  # noqa: N802
+    def _proxy_get(self, url: str, wrap: str | None = None) -> None:
+        try:
+            remote = _get_json(url)
+        except _UPSTREAM_ERRORS as exc:
+            self._json(*_upstream_failure(exc))
+            return
+        self._json(200, {"ok": True, wrap: remote} if wrap else remote)
+
+    def do_OPTIONS(self) -> None:
         self.send_response(204)
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.end_headers()
 
-    def do_GET(self) -> None:  # noqa: N802
+    def do_GET(self) -> None:
         path = self.path.split("?", 1)[0]
         if path in ("/", "/index.html"):
             self._send(200, HTML.encode("utf-8"), "text/html; charset=utf-8")
@@ -330,40 +397,24 @@ class Handler(BaseHTTPRequestHandler):
             )
             return
         if path == "/api/openvault/ping":
-            try:
-                remote = _get_json(f"{OPENVAULT}/api/healthz")
-                self._json(200, {"ok": True, "openvault": remote})
-            except Exception as exc:  # noqa: BLE001
-                self._json(503, {"ok": False, "error": str(exc)})
+            self._proxy_get(f"{OPENVAULT}/api/healthz", wrap="openvault")
             return
         if path == "/api/cortex/ping":
-            try:
-                remote = _get_json(f"{CORTEX}/health")
-                self._json(200, {"ok": True, "cortex": remote})
-            except Exception as exc:  # noqa: BLE001
-                self._json(503, {"ok": False, "error": str(exc)})
+            self._proxy_get(f"{CORTEX}/health", wrap="cortex")
             return
         if path == "/api/mesh-proxy":
-            try:
-                pack = _get_json(f"{OPENVAULT}/api/local/connect-pack")
-                self._json(200, pack)
-            except Exception as exc:  # noqa: BLE001
-                self._json(503, {"ok": False, "error": str(exc)})
+            self._proxy_get(f"{OPENVAULT}/api/local/connect-pack")
             return
         if path == "/api/keyvault-proxy":
-            try:
-                snap = _get_json(f"{OPENVAULT}/api/keyvault/snapshot")
-                self._json(200, snap)
-            except Exception as exc:  # noqa: BLE001
-                self._json(503, {"ok": False, "error": str(exc)})
+            self._proxy_get(f"{OPENVAULT}/api/keyvault/snapshot")
             return
         self._json(404, {"error": "not found"})
 
-    def do_POST(self) -> None:  # noqa: N802
+    def do_POST(self) -> None:
         path = self.path.split("?", 1)[0]
         if path == "/api/share-lan":
             try:
-                # Honest path: firewall check must not honor bypass
+                # Honest path: the firewall check must not honour a bypass flag.
                 deny = _post_json(
                     f"{OPENVAULT}/api/cloud/firewall/check",
                     {"action": "share_lan", "bypass": True},
@@ -376,9 +427,17 @@ class Handler(BaseHTTPRequestHandler):
                         "owner": "airgpt-demo",
                     },
                 )
-                self._json(200, {"ok": True, "firewall_bypass_denied": deny, "share": share.get("share", share)})
-            except Exception as exc:  # noqa: BLE001
-                self._json(503, {"ok": False, "error": str(exc)})
+            except _UPSTREAM_ERRORS as exc:
+                self._json(*_upstream_failure(exc))
+                return
+            self._json(
+                200,
+                {
+                    "ok": True,
+                    "firewall_bypass_denied": deny,
+                    "share": share.get("share", share),
+                },
+            )
             return
         if path == "/api/join-session":
             try:
@@ -393,20 +452,25 @@ class Handler(BaseHTTPRequestHandler):
                         f"{OPENVAULT}/api/cloud/sessions/{sid}/join",
                         {"user": "teammate-2", "peer_ip": "127.0.0.1"},
                     )
-                self._json(200, {"ok": True, "created": created, "joined": joined})
-            except Exception as exc:  # noqa: BLE001
-                self._json(503, {"ok": False, "error": str(exc)})
+            except _UPSTREAM_ERRORS as exc:
+                self._json(*_upstream_failure(exc))
+                return
+            self._json(200, {"ok": True, "created": created, "joined": joined})
             return
         self._json(404, {"error": "not found"})
 
     def log_message(self, fmt: str, *args: object) -> None:
-        print(f"[airgpt] {self.address_string()} {fmt % args}")
+        log.info("%s %s", self.address_string(), fmt % args)
 
 
 def main() -> None:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [airgpt] %(levelname)s %(message)s",
+    )
     announce()
     server = ThreadingHTTPServer((HOST, PORT), Handler)
-    print(f"AirGPT demo shell http://{HOST}:{PORT} → OV {OPENVAULT} · CX {CORTEX}")
+    log.info("AirGPT demo shell %s -> OpenVault %s, Cortex %s", SELF_URL, OPENVAULT, CORTEX)
     server.serve_forever()
 
 
