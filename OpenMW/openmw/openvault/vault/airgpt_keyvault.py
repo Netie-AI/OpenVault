@@ -1,4 +1,4 @@
-"""AirGPT / OpenIDE Key Vault snapshot — OpenVault is SoT for keys.
+"""AirGPT / FreeIDE Key Vault snapshot — OpenVault is SoT for keys.
 
 Maps provider catalog + vault records into the AirGPT popup shape so shells
 stay thin clients (PRODUCT_ROLES.md).
@@ -20,8 +20,19 @@ ENV_KEY_TO_PROVIDER: dict[str, ProviderKind] = {
     "GROQ_API_KEY": "groq",
     "OPENROUTER_API_KEY": "openrouter",
     "GOOGLE_API_KEY": "google",
+    "GOOGLE_AISTUDIO_FREE": "google",
+    "GEMINI_API_KEY": "google",
     "DEEPSEEK_API_KEY": "deepseek",
     "SEA_LION_API_KEY": "custom",
+    "CEREBRAS_API_KEY": "cerebras",
+    "MISTRAL_API_KEY": "mistral",
+    "NVIDIA_API_KEY": "nvidia",
+    "NVIDIA_NIM_API_KEY": "nvidia",
+    "FREENVIDIA_API_KEY": "nvidia",
+    "TOGETHER_API_KEY": "together",
+    "FIREWORKS_API_KEY": "fireworks",
+    "SILICONFLOW_API_KEY": "siliconflow",
+    "DEEPGRAM_API_KEY": "deepgram",
     "ANTHROPIC_API_KEY": "anthropic",
     "OPENAI_API_KEY": "openai",
     "OLLAMA_API_KEY": "ollama",
@@ -43,21 +54,19 @@ PROVIDER_TO_ENV: dict[str, str] = {
     "cortex": "NETIE_ENGINE_KEY",
     "huggingface": "HF_TOKEN",
     "mistral": "MISTRAL_API_KEY",
+    "nvidia": "NVIDIA_API_KEY",
     "together": "TOGETHER_API_KEY",
     "fireworks": "FIREWORKS_API_KEY",
     "cerebras": "CEREBRAS_API_KEY",
     "litellm": "LITELLM_API_KEY",
     "github_models": "GITHUB_TOKEN",
     "siliconflow": "SILICONFLOW_API_KEY",
+    "deepgram": "DEEPGRAM_API_KEY",
 }
 
 
 def _best_key(keys: list[KeyRecord], provider: str) -> KeyRecord | None:
-    matches = [
-        k
-        for k in keys
-        if k.provider == provider and k.enabled and k.lifecycle == "active"
-    ]
+    matches = [k for k in keys if k.provider == provider and k.enabled and k.lifecycle == "active"]
     if not matches:
         return None
     matches.sort(key=lambda k: (k.priority, k.updated_at))
@@ -99,24 +108,31 @@ def keyvault_snapshot(vault: KeyVault, *, openvault_url: str = "") -> dict[str, 
             }
         )
 
-    # Extra AirGPT cards not in OV catalog (CLI / OpenFree / OpenShip) as custom slots
+    # Extra AirGPT cards not in OV catalog (CLI / FreeRoute / FreeBuild) as custom slots
     extras = (
         (
             "omniroute",
-            "OpenFree",
+            "FreeRoute",
             "OMNIROUTE_API_KEY",
             "gateway",
-            "OpenFree (ours) — OmniRoute-inspired free gateway; AirGPT enables it, OpenVault routes/custody",
+            "FreeRoute (ours) -- OmniRoute-inspired free gateway; AirGPT enables "
+            "it, OpenVault routes/custody",
         ),
         (
             "openship",
-            "OpenShip (OpenVault)",
+            "FreeBuild (OpenVault)",
             "OPENSHIP_API_TOKEN",
             "deploy",
-            "OpenShip is implemented in OpenVault ship/ — optional external URL/token",
+            "FreeBuild is implemented in OpenVault ship/ — optional external URL/token",
         ),
-        ("github_cli", "GitHub CLI token", "GH_TOKEN", "cli", "gh auth status / repo scope (login is out-of-band)"),
-        ("cursor", "Cursor SDK", "CURSOR_API_KEY", "cloud", "OpenIDE Cursor backends"),
+        (
+            "github_cli",
+            "GitHub CLI token",
+            "GH_TOKEN",
+            "cli",
+            "gh auth status / repo scope (login is out-of-band)",
+        ),
+        ("cursor", "Cursor SDK", "CURSOR_API_KEY", "cloud", "FreeIDE Cursor backends"),
     )
     for pid, label, env_key, group, note in extras:
         rec = next(
@@ -125,7 +141,10 @@ def keyvault_snapshot(vault: KeyVault, *, openvault_url: str = "") -> dict[str, 
                 for k in keys
                 if k.enabled
                 and k.lifecycle == "active"
-                and (k.label.lower().startswith(pid) or (k.provider == "custom" and pid in k.label.lower()))
+                and (
+                    k.label.lower().startswith(pid)
+                    or (k.provider == "custom" and pid in k.label.lower())
+                )
             ),
             None,
         )
@@ -154,7 +173,7 @@ def keyvault_snapshot(vault: KeyVault, *, openvault_url: str = "") -> dict[str, 
         "providers": providers,
         "policy": (
             "OpenVault Key Vault — single custody for keys, gateways, and CLI tokens. "
-            "AirGPT/OpenIDE link here; env.local is an offline cache only. "
+            "AirGPT/FreeIDE link here; env.local is an offline cache only. "
             "Account signup stays a human step."
         ),
         "product_name": "OpenVault Key Vault",
@@ -187,6 +206,7 @@ def upsert_env_secret(
         "groq",
         "google",
         "mistral",
+        "nvidia",
         "deepseek",
         "together",
         "fireworks",

@@ -15,7 +15,7 @@ def probe_control_capabilities() -> dict[str, Any]:
 
         gpu_read = True
         gpu_detail = "NVML readable"
-    except Exception as exc:  # noqa: BLE001 — capability probe must not raise
+    except Exception as exc:
         gpu_detail = f"NVML unavailable: {exc}"
 
     fan_write = False

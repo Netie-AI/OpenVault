@@ -1,16 +1,15 @@
-"""OpenShip control plane — in-repo under OpenVault (not a separate AirGPT product).
+"""FreeBuild control plane — in-repo under OpenVault (not a separate AirGPT product).
 
-OpenShip operator loop lives here so custody + deploy gate stay with OpenVault:
+FreeBuild operator loop lives here so custody + deploy gate stay with OpenVault:
   subdomain → TLS plan → build → mail DNS → apps/services install|update → roll/rollback
 
-AirGPT/OpenIDE are thin clients: request ship via OpenVault APIs; do not re-host this loop.
+AirGPT/FreeIDE are thin clients: request ship via OpenVault APIs; do not re-host this loop.
 """
 
 from __future__ import annotations
 
 import json
 import os
-import shutil
 import subprocess
 import time
 import uuid
@@ -23,6 +22,8 @@ import structlog
 from openmw.openvault.paths import ensure_home
 from openmw.openvault.ship.detect import DetectedStack, detect_project
 from openmw.openvault.ship.email_gates import check_email_auth
+from openmw.openvault.ship.inject import scrub_mapping
+from openmw.openvault.ship.openship_client import OpenShipClient, adapter_status
 
 log = structlog.get_logger()
 
@@ -74,18 +75,21 @@ def _ships_dir() -> Path:
 
 
 def adapter_presence() -> dict[str, Any]:
-    cli = os.environ.get("OPENSHIP_CLI", "openship")
-    url = os.environ.get("OPENSHIP_URL", "").rstrip("/")
-    which = shutil.which(cli)
-    mode = os.environ.get("OPENSHIP_MODE", "auto")  # auto | simulate | cli | api
+    """Prefer real FreeBuild API status; keep legacy keys for older UI."""
+    status = adapter_status()
     return {
-        "cli_configured": cli,
-        "cli_found": which is not None,
-        "cli_path": which,
-        "api_url": url or None,
-        "mode": mode,
-        "ready": which is not None or bool(url) or mode == "simulate",
+        "cli_configured": os.environ.get("OPENSHIP_CLI", "openship"),
+        "cli_found": bool(status.get("cli_found")),
+        "cli_path": status.get("cli_path"),
+        "api_url": status.get("api_url"),
+        "mode": status.get("mode", "auto"),
+        "effective": status.get("effective"),
+        "api_ready": bool(status.get("api_ready")),
+        "ready": status.get("effective") in ("api", "cli", "simulate"),
         "in_repo_clone": True,
+        "honest": status.get("honest"),
+        "docs": status.get("docs"),
+        "install_hint": status.get("install_hint"),
     }
 
 
@@ -96,7 +100,7 @@ def build_openship_plan(
     action: Action = "install",
     sending_ip: str | None = None,
 ) -> OpenShipPlan:
-    """Full OpenShip checklist — every surface the scale deploy needs."""
+    """Full FreeBuild checklist — every surface the scale deploy needs."""
     stack = detect_project(project_path)
     ship_id = uuid.uuid4().hex[:12]
     adapter = adapter_presence()
@@ -191,8 +195,6 @@ def build_openship_plan(
                 command=" && ".join(stack.suggested_build),
             )
         )
-    elif stack.framework == "static" or stack.category == "static":
-        steps.append(ShipStep("build", "Build / rebuild", "pass", "static site — publish as-is"))
     else:
         steps.append(ShipStep("build", "Build / rebuild", "fail", "no suggested build commands"))
 
@@ -295,13 +297,104 @@ def execute_openship_plan(
     plan: OpenShipPlan,
     *,
     simulate: bool | None = None,
+    deploy_target: str = "cloud",
+    project_id: str | None = None,
+    branch: str = "main",
+    cloud_tier: str = "low",
+    server_id: str | None = None,
+    github_url: str | None = None,
+    env_vars: dict[str, str] | None = None,
+    secrets_injected: list[str] | None = None,
 ) -> OpenShipPlan:
-    """Execute the OpenShip plan via CLI, API marker, or local simulator."""
+    """Execute via FreeBuild HTTP API, CLI, or local simulator.
+
+    Prefer ``OPENSHIP_URL`` + ``OPENSHIP_TOKEN`` → ``POST /deployments/build/access``.
+
+    ``env_vars`` are vault-resolved secrets for the host only. They must never
+    appear in step detail, adapter JSON, logs, or the returned plan dict.
+    ``secrets_injected`` is the name-only summary for UI/audit.
+    """
     adapter = adapter_presence()
-    mode = adapter["mode"]
+    mode = str(adapter.get("effective") or adapter.get("mode") or "simulate")
     force_sim = (
-        simulate if simulate is not None else (mode == "simulate" or not adapter["cli_found"])
+        simulate
+        if simulate is not None
+        else (mode == "simulate" or not (adapter.get("api_ready") or adapter.get("cli_found")))
     )
+    inject_names = list(secrets_injected or (list(env_vars.keys()) if env_vars else []))
+    inject_values = list(env_vars.values()) if env_vars else []
+
+    if not force_sim and adapter.get("api_ready"):
+        client = OpenShipClient()
+        body: dict[str, Any] = {
+            "branch": branch,
+            "deployTarget": (
+                deploy_target if deploy_target in ("local", "server", "cloud") else "cloud"
+            ),
+            "envVars": dict(env_vars) if env_vars else {},
+        }
+        if project_id:
+            body["projectId"] = project_id
+        if server_id:
+            body["serverId"] = server_id
+        if deploy_target == "cloud":
+            body["cloudResourceTier"] = cloud_tier
+        if plan.subdomain:
+            body["publicEndpoints"] = [
+                {
+                    "domainType": "custom" if "." in plan.subdomain else "free",
+                    "domain": plan.subdomain,
+                }
+            ]
+        if github_url:
+            prep = client.prepare({"repoUrl": github_url, "branch": branch})
+            for step in plan.steps:
+                if step.id == "detect":
+                    step.status = "pass" if prep.get("ok", True) else "fail"
+                    step.detail = json.dumps(scrub_mapping(prep, inject_values))[:2000]
+        result = (
+            client.build_access(body)
+            if project_id
+            else {
+                "ok": False,
+                "error": (
+                    "project_id required for FreeBuild build/access — "
+                    "create project in FreeBuild UI or pass projectId"
+                ),
+                "prepare_hint": github_url or plan.project_path,
+            }
+        )
+        client.close()
+        safe_result = scrub_mapping(result, inject_values)
+        dep_id = result.get("deployment_id") or result.get("deploymentId")
+        status = int(result.get("http_status", 500) or 500)
+        ok = bool(dep_id) or (
+            status < 400 and bool(result.get("ok", False)) and "error" not in result
+        )
+        for step in plan.steps:
+            if step.status == "fail":
+                continue
+            step.status = "pass" if ok else "fail"
+            step.detail = (
+                json.dumps(safe_result) if isinstance(safe_result, dict) else str(safe_result)
+            )[:2000]
+        plan.executed = True
+        plan.ready = ok
+        plan.adapter = {
+            **adapter,
+            "last_result": safe_result if isinstance(safe_result, dict) else {"ok": ok},
+            "deployment_id": dep_id,
+            "secrets_injected": inject_names,
+        }
+        save_ship_plan(plan)
+        log.info(
+            "openship_execute_api",
+            ship_id=plan.ship_id,
+            ready=plan.ready,
+            deployment_id=dep_id,
+            secrets_injected=len(inject_names),
+        )
+        return plan
 
     for step in plan.steps:
         if step.status == "fail":
@@ -310,26 +403,33 @@ def execute_openship_plan(
             step.status = "simulated"
             step.detail = f"simulated: {step.detail}"
             continue
-        if adapter["cli_found"] and step.command:
-            # Prefer structured openship subcommands when binary exists.
+        if adapter.get("cli_found") and step.command:
             ok, detail = _run_checked(step.command.split(), timeout=180.0)
             step.status = "pass" if ok else "fail"
-            step.detail = detail[:2000]
-        elif adapter["api_url"]:
+            step.detail = str(scrub_mapping(detail, inject_values))[:2000]
+        elif adapter.get("api_url"):
             step.status = "pending"
-            step.detail = f"POST {adapter['api_url']}/v1/execute — wire remote control plane"
+            step.detail = "Set OPENSHIP_TOKEN — API URL alone cannot authenticate"
         else:
             step.status = "simulated"
             step.detail = f"no CLI/API — simulated {step.id}"
 
     plan.executed = True
     plan.ready = all(s.status in ("pass", "simulated", "skipped") for s in plan.steps)
-    plan.adapter = adapter
+    simulated = force_sim or mode == "simulate" or any(s.status == "simulated" for s in plan.steps)
+    # Simulate is a valid local path — label it; never invent a live host URL here.
+    plan.adapter = {
+        **adapter,
+        "non_production": simulated,
+        "public_url": "",
+        "secrets_injected": inject_names,
+    }
     save_ship_plan(plan)
     log.info(
         "openship_execute",
         ship_id=plan.ship_id,
         ready=plan.ready,
-        simulated=force_sim,
+        simulated=simulated,
+        secrets_injected=len(inject_names),
     )
     return plan

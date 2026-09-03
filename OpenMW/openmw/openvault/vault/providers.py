@@ -29,10 +29,34 @@ class ProviderSpec:
     needed_by: tuple[str, ...] = ()
     status_page: str = ""
     placeholder_secret: str = ""  # e.g. ollama ignores key
+    # Model ids this provider actually serves, strongest first. The proxy used to
+    # forward the caller's `model` verbatim to every hop, so a request for "auto"
+    # reached Groq as a model named "auto" and came back 404 - a healthy key that
+    # looked like a dead provider. Resolution needs a per-provider list.
+    chat_models: tuple[str, ...] = ()
+    # Subset that accepts images. Empty means text-only, and a multimodal request
+    # must skip this provider rather than silently drop the image.
+    vision_models: tuple[str, ...] = ()
+    # Largest input this provider accepts, in tokens. 0 means UNKNOWN, and every
+    # reader treats unknown as "do not refuse" — an assumed window would reject
+    # work that would have succeeded (R-0005). Populate only from a cited source,
+    # the same discipline chat_models follows; operators can supply a table via
+    # OPENVAULT_CONTEXT_WINDOWS until one is verified here.
+    context_window: int = 0
+    # Models that spend completion budget on reasoning tokens BEFORE writing content.
+    # Measured on gpt-oss-120b: max_tokens=32 produced 30 reasoning tokens and an
+    # empty string with finish_reason=length; the same prompt at 512 answered fine
+    # after 159 reasoning tokens. Callers that treat empty content as a dead provider
+    # (AirGPT does) would cascade away from a perfectly healthy key, so these need a
+    # budget floor rather than a blanket "empty means broken".
+    reasoning_models: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         d = asdict(self)
         d["needed_by"] = list(self.needed_by)
+        d["chat_models"] = list(self.chat_models)
+        d["vision_models"] = list(self.vision_models)
+        d["reasoning_models"] = list(self.reasoning_models)
         return d
 
 
@@ -49,6 +73,31 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
         health_path="/models",
         needed_by=("cortex", "airgpt", "openvault"),
         status_page="https://status.openai.com/",
+        # Pinned from https://developers.openai.com/api/docs/models (2026-08).
+        # gpt-5.6 is an alias for gpt-5.6-sol. gpt-4o* remain in API for callers
+        # that still name them; auto prefers the current frontier line.
+        chat_models=(
+            "gpt-5.6-sol",
+            "gpt-5.6-terra",
+            "gpt-5.6-luna",
+            "gpt-5.6",
+            "gpt-4o",
+            "gpt-4o-mini",
+        ),
+        vision_models=(
+            "gpt-5.6-sol",
+            "gpt-5.6-terra",
+            "gpt-5.6-luna",
+            "gpt-5.6",
+            "gpt-4o",
+            "gpt-4o-mini",
+        ),
+        reasoning_models=(
+            "gpt-5.6-sol",
+            "gpt-5.6-terra",
+            "gpt-5.6-luna",
+            "gpt-5.6",
+        ),
     ),
     ProviderSpec(
         id="anthropic",
@@ -75,6 +124,14 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
         free_notes="20+ free models via :free suffix; single key marketplace",
         needed_by=("cortex", "airgpt", "openvault"),
         status_page="https://status.openrouter.ai/",
+        # Verified against https://openrouter.ai/api/v1/models. The previously pinned
+        # google/gemini-2.0-flash-001 had been retired and answered 404, which read as
+        # "OpenRouter is down" for weeks.
+        chat_models=(
+            "google/gemini-2.5-flash",
+            "meta-llama/llama-3.3-70b-instruct",
+        ),
+        vision_models=("google/gemini-2.5-flash",),
     ),
     ProviderSpec(
         id="groq",
@@ -87,18 +144,62 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
         health_path="/models",
         free_notes="Fast free tier RPM; great fallback hop",
         needed_by=("cortex", "airgpt"),
+        # Verified against https://api.groq.com/openai/v1/models. Limits are per
+        # model per day (1K RPD, 8K TPM each), so listing several multiplies the
+        # usable budget instead of dying on the first 429.
+        chat_models=(
+            "openai/gpt-oss-120b",
+            "qwen/qwen3.6-27b",
+            "openai/gpt-oss-20b",
+            "llama-3.3-70b-versatile",
+            "llama-3.1-8b-instant",
+        ),
+        vision_models=("qwen/qwen3.6-27b",),
+        reasoning_models=(
+            "openai/gpt-oss-120b",
+            "openai/gpt-oss-20b",
+            "qwen/qwen3.6-27b",
+        ),
     ),
     ProviderSpec(
         id="google",
         name="Google AI Studio",
-        base_url="https://generativelanguage.googleapis.com/v1beta",
+        # OpenAI-compat base so FreeRoute proxy can keep Bearer + /chat/completions.
+        # Native /v1beta rejects Bearer (expects x-goog-api-key) and has no
+        # /chat/completions path — that mismatch was the false 401 on healthy keys.
+        # Docs: https://ai.google.dev/gemini-api/docs/openai
+        base_url="https://generativelanguage.googleapis.com/v1beta/openai",
         default_role="free",
         tier="freemium",
         register_url="https://aistudio.google.com/apikey",
-        docs_url="https://ai.google.dev/gemini-api/docs",
+        docs_url="https://ai.google.dev/gemini-api/docs/openai",
         health_path="/models",
-        free_notes="Gemini free tier via AI Studio",
+        free_notes="Gemini free tier via AI Studio (OpenAI-compat endpoint)",
         needed_by=("cortex", "airgpt"),
+        # Ordered by live probe 2026-08-03 against OpenAI-compat chat.
+        # gemini-2.5-flash / -lite return 404 "no longer available to new users".
+        chat_models=(
+            "gemini-3.5-flash",
+            "gemini-3.6-flash",
+            "gemini-3-flash-preview",
+            "gemini-flash-latest",
+            "gemini-3.1-flash-lite",
+        ),
+        vision_models=(
+            "gemini-3.5-flash",
+            "gemini-3.6-flash",
+            "gemini-3-flash-preview",
+            "gemini-flash-latest",
+        ),
+        # Gemini 3.x often spends the completion budget on thought signatures before
+        # content (observed: max_tokens=32 -> empty message, finish_reason=length).
+        reasoning_models=(
+            "gemini-3.5-flash",
+            "gemini-3.6-flash",
+            "gemini-3-flash-preview",
+            "gemini-flash-latest",
+            "gemini-3.1-flash-lite",
+        ),
     ),
     ProviderSpec(
         id="mistral",
@@ -111,6 +212,31 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
         health_path="/models",
         free_notes="Experiment / free credits on signup",
         needed_by=("cortex",),
+        chat_models=(
+            "mistral-small-latest",
+            "ministral-8b-latest",
+            "open-mistral-nemo",
+        ),
+        vision_models=("mistral-small-latest",),
+    ),
+    ProviderSpec(
+        id="nvidia",
+        name="NVIDIA NIM",
+        base_url="https://integrate.api.nvidia.com/v1",
+        default_role="cheap",
+        tier="freemium",
+        register_url="https://build.nvidia.com/",
+        docs_url="https://docs.api.nvidia.com/",
+        health_path="/models",
+        free_notes="build.nvidia.com / NIM OpenAI-compatible; keys typically nvapi-…",
+        needed_by=("airgpt", "cortex"),
+        chat_models=(
+            "meta/llama-3.1-8b-instruct",
+            "meta/llama-3.1-70b-instruct",
+            "mistralai/mistral-nemotron",
+            "nvidia/llama-3.1-nemotron-70b-instruct",
+        ),
+        reasoning_models=("nvidia/llama-3.1-nemotron-70b-instruct",),
     ),
     ProviderSpec(
         id="deepseek",
@@ -123,6 +249,16 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
         health_path="/models",
         free_notes="Low-cost coding models; often used as cheap hop",
         needed_by=("cortex", "airgpt"),
+        # Legacy deepseek-chat / deepseek-reasoner retired 2026-07-24.
+        # Current ids: https://api-docs.deepseek.com/quick_start/pricing
+        chat_models=(
+            "deepseek-v4-pro",
+            "deepseek-v4-flash",
+        ),
+        reasoning_models=(
+            "deepseek-v4-pro",
+            "deepseek-v4-flash",
+        ),
     ),
     ProviderSpec(
         id="together",
@@ -158,6 +294,13 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
         health_path="/models",
         free_notes="High-speed free tier for Llama/Qwen",
         needed_by=("airgpt",),
+        # From D:\Netie\Free APIs for OpenVault Free\Free API.txt (2026-08).
+        chat_models=(
+            "gpt-oss-120b",
+            "llama-3.3-70b",
+            "llama3.1-8b",
+        ),
+        reasoning_models=("gpt-oss-120b",),
     ),
     ProviderSpec(
         id="huggingface",
@@ -184,11 +327,21 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
         free_notes="100% free local; api_key can be 'ollama'",
         needed_by=("cortex", "airgpt", "openvault"),
         placeholder_secret="ollama",
+        # Tags commonly served by a stock Ollama install. Missing pull -> real
+        # upstream 404, not a dishonest "no catalogued model" skip.
+        chat_models=(
+            "llama3.2",
+            "qwen2.5",
+            "llama3.1",
+            "mistral",
+            "llama3.2-vision",
+        ),
+        vision_models=("llama3.2-vision",),
     ),
     ProviderSpec(
         id="cortex",
         name="Netie Cortex",
-        base_url="http://127.0.0.1:8000",
+        base_url="http://127.0.0.1:8010",
         default_role="primary",
         tier="local",
         register_url="https://github.com/Netie-AI/Cortex",
@@ -198,6 +351,12 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
         free_notes="Local Netie Engine — BYOK via OpenVault",
         needed_by=("airgpt", "openvault"),
         placeholder_secret="cortex-local",
+        # Align with OpenMW model_manager tier defaults / models.json ids.
+        chat_models=(
+            "qwen3.5-9b",
+            "qwen2.5-14b",
+            "phi-4-mini",
+        ),
     ),
     ProviderSpec(
         id="litellm",
@@ -211,6 +370,17 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
         free_notes="Self-hosted OpenAI-compatible multi-provider proxy",
         needed_by=("cortex", "openvault"),
         placeholder_secret="sk-litellm",
+        # Common LiteLLM proxy aliases; operator config may remap. auto needs
+        # a concrete id so the hop is attempted rather than skipped.
+        chat_models=(
+            "gpt-4o-mini",
+            "gpt-4o",
+            "claude-3-5-sonnet",
+        ),
+        vision_models=(
+            "gpt-4o-mini",
+            "gpt-4o",
+        ),
     ),
     ProviderSpec(
         id="github_models",
@@ -223,6 +393,20 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
         health_path="/models",
         free_notes="Free tier via GitHub token for many models",
         needed_by=("airgpt",),
+    ),
+    ProviderSpec(
+        id="deepgram",
+        name="Deepgram",
+        base_url="https://api.deepgram.com/v1",
+        default_role="primary",
+        tier="paid",
+        register_url="https://console.deepgram.com/",
+        docs_url="https://developers.deepgram.com/",
+        health_path="/projects",
+        openai_compatible=False,
+        free_notes="Speech-to-text (Nova-3 streaming). Not a chat provider - no chat_models.",
+        needed_by=("openwillow",),
+        status_page="https://status.deepgram.com/",
     ),
     ProviderSpec(
         id="siliconflow",
@@ -349,7 +533,7 @@ def catalog_coverage_report(vault_provider_ids: set[str] | frozenset[str]) -> di
         "free_or_local_catalog": free,
         "catalog_size": len(PROVIDER_CATALOG),
         "omniroute_absorb_notes": (
-            "OpenFree (AirGPT product name) absorbs OmniRoute patterns: 4-tier fallback, "
+            "FreeRoute (AirGPT product name) absorbs OmniRoute patterns: 4-tier fallback, "
             "free-tier surface, register links, downtime probes, circuit breaker. "
             "Not cloned: 250-provider matrix, compression engines, quota-share DRR. "
             "Custody + routing SoT stays OpenVault; AirGPT only enables the sidecar."
@@ -359,7 +543,10 @@ def catalog_coverage_report(vault_provider_ids: set[str] | frozenset[str]) -> di
             {"id": "litellm", "why": "self-hosted OpenAI-compatible proxy"},
             {"id": "ollama", "why": "local free forever OpenAI-compatible"},
             {"id": "portkey", "why": "gateway + guardrails (pattern only)"},
-            {"id": "omniroute", "why": "inspiration for OpenFree auto-fallback + free-tier aggregation"},
+            {
+                "id": "omniroute",
+                "why": "inspiration for FreeRoute auto-fallback + free-tier aggregation",
+            },
             {"id": "openfree", "why": "our gateway brand — enable in AirGPT, route via OpenVault"},
         ],
     }
@@ -367,3 +554,79 @@ def catalog_coverage_report(vault_provider_ids: set[str] | frozenset[str]) -> di
 
 # Keep for type checkers / seed helpers
 ESSENTIAL_PROVIDER_IDS: frozenset[str] = frozenset(s.id for s in PROVIDER_CATALOG if s.needed_by)
+
+
+# Aliases callers use when they do not care which model answers. The proxy used to
+# forward these straight through, so an upstream saw a model literally named "auto".
+_AUTO_ALIASES: frozenset[str] = frozenset({"", "auto", "default", "openvault/auto", "free", "any"})
+
+
+def resolve_model(provider: str, requested: str | None, *, multimodal: bool = False) -> str | None:
+    """Pick a model id `provider` will actually accept.
+
+    Returns ``None`` when the provider cannot serve the request at all, so the caller
+    skips the hop instead of sending something that 404s. Rules, in order:
+
+    1. An id this provider really serves is honoured as-is.
+    2. An alias ("auto", "", "default", ...) becomes the provider's first choice.
+    3. A concrete id belonging to some *other* provider - `gpt-4o` arriving at Groq -
+       is treated as "caller had a preference we cannot meet" and falls back to this
+       provider's first choice rather than 404ing. Routing across heterogeneous
+       providers is the entire point of the proxy.
+    4. `multimodal=True` restricts to `vision_models`; a text-only provider returns
+       None rather than quietly discarding the image.
+    """
+    spec = get_provider(provider)
+    if spec is None:
+        # Unknown provider: only a caller-supplied concrete id can work.
+        want = (requested or "").strip()
+        return None if want.lower() in _AUTO_ALIASES else want or None
+
+    pool = spec.vision_models if multimodal else spec.chat_models
+    if not pool:
+        # Nothing catalogued for this modality yet. Remaining empty entries
+        # (anthropic Messages API, speech-only, etc.) still need concrete caller
+        # ids to stay usable; only an alias is unresolvable here, and guessing
+        # is what sent "auto" upstream as a model name in the first place.
+        want = (requested or "").strip()
+        if want and want.lower() not in _AUTO_ALIASES:
+            return want
+        return None
+
+    want = (requested or "").strip()
+    if want and want.lower() not in _AUTO_ALIASES and want in pool:
+        return want
+    return pool[0]
+
+
+def models_for(provider: str, *, multimodal: bool = False) -> tuple[str, ...]:
+    """Every id this provider can serve, strongest first. Empty if unsupported."""
+    spec = get_provider(provider)
+    if spec is None:
+        return ()
+    return spec.vision_models if multimodal else spec.chat_models
+
+
+# A reasoning model emits its chain of thought from the same completion budget as the
+# answer, so a small max_tokens is consumed entirely before any content is written.
+# Measured on gpt-oss-120b: 30 reasoning tokens at max_tokens=32 -> content "",
+# finish_reason "length". 159 reasoning tokens at 512 -> a normal answer.
+MIN_REASONING_BUDGET = 512
+
+
+def is_reasoning_model(provider: str, model: str) -> bool:
+    spec = get_provider(provider)
+    return bool(spec and model in spec.reasoning_models)
+
+
+def budget_for(provider: str, model: str, requested: int | None) -> int | None:
+    """Raise a too-small completion budget to the floor a reasoning model needs.
+
+    Returns the budget to send, or None to leave the caller's body untouched. Never
+    lowers a budget - the caller may have a cost reason for a large one.
+    """
+    if requested is None or not is_reasoning_model(provider, model):
+        return None
+    if requested >= MIN_REASONING_BUDGET:
+        return None
+    return MIN_REASONING_BUDGET

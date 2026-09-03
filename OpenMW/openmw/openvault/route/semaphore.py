@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import threading
 import time
+from collections.abc import Callable
+from contextlib import suppress
 from dataclasses import dataclass, field
-from typing import Callable
 
 SEMAPHORE_QUEUE_FULL = "SEMAPHORE_QUEUE_FULL"
 SEMAPHORE_TIMEOUT = "SEMAPHORE_TIMEOUT"
@@ -133,10 +134,8 @@ def acquire(
         with _gate_lock:
             gate = _gates.get(model_str)
             if gate is not None:
-                try:
+                with suppress(ValueError):
                     gate.queue.remove(item)
-                except ValueError:
-                    pass
                 if gate.running == 0 and not gate.queue:
                     _gates.pop(model_str, None)
         raise SemaphoreTimeoutError(model_str, timeout_ms)

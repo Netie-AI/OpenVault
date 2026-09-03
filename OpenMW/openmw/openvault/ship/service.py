@@ -90,8 +90,7 @@ SKUS: dict[SkuId, ServiceSku] = {
         laptop=False,
         customer_pays_infra=True,
         detail=(
-            "Log into AWS (MCP / SSM / instance profile). "
-            "They pay AWS; we charge the platform fee."
+            "Log into AWS (MCP / SSM / instance profile). They pay AWS; we charge the platform fee."
         ),
         stripe_price_id="price_1U8SQbFV5wcFod2fv5r1WD8o",
     ),

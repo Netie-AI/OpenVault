@@ -1,6 +1,6 @@
 # OpenVault Rust Console
 
-Secure local console written in Rust: username/password signup → Gmail verify → phone verify → `username@netie.ai` assignment → **passkey-default laptop login**, plus OmniRoute catalog, OpenShip plan/execute, and encrypted password/API vault.
+Secure local console written in Rust: username/password signup → Gmail verify → phone verify → `username@netie.ai` assignment → **passkey-default laptop login**, plus OmniRoute catalog, FreeBuild plan/execute, and encrypted password/API vault.
 
 ## Run the UI
 
@@ -35,7 +35,7 @@ Env:
 - Accounts custody list
 - Password / API vault (store, reveal, revoke, incident kill)
 - OmniRoute provider catalog + fallback roles
-- OpenShip full gate plan + simulate execute
+- FreeBuild full gate plan + simulate execute
 
 ## Tests
 

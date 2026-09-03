@@ -51,7 +51,8 @@ def order_by_p2c(targets: list[T], metrics: ComboMetrics | None) -> list[T]:
         second_idx += 1
     first = targets[first_idx]
     second = targets[second_idx]
-    winner_idx = second_idx if _p2c_score(second, metrics) > _p2c_score(first, metrics) else first_idx
+    second_wins = _p2c_score(second, metrics) > _p2c_score(first, metrics)
+    winner_idx = second_idx if second_wins else first_idx
     winner = targets[winner_idx]
     rest = [t for i, t in enumerate(targets) if i != winner_idx]
     return [winner, *rest]

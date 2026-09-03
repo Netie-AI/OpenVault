@@ -6,7 +6,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from openmw.openvault.route.registry import get_route_state, reset_route_state, set_targets
+from openmw.openvault.route.registry import reset_route_state, set_targets
 from openmw.openvault.route.rr_state import reset_decks
 from openmw.openvault.route.strategies import apply_strategy
 from openmw.openvault.route.types import ComboMetrics, RouteTarget
@@ -63,7 +63,7 @@ def test_route_api_strategy_roundtrip() -> None:
     reset_route_state()
     app = FastAPI()
     app.include_router(route_router)
-    client = TestClient(app)
+    client = TestClient(app, client=("127.0.0.1", 5555))
 
     put = client.put("/api/route/strategy", json={"strategy": "cost-optimized"})
     assert put.status_code == 200
@@ -78,7 +78,7 @@ def test_route_api_breakers_empty() -> None:
     reset_route_state()
     app = FastAPI()
     app.include_router(route_router)
-    client = TestClient(app)
+    client = TestClient(app, client=("127.0.0.1", 5555))
     resp = client.get("/api/route/breakers")
     assert resp.status_code == 200
     assert "breakers" in resp.json()

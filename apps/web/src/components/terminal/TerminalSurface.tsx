@@ -1,0 +1,185 @@
+"use client";
+
+import React, { useEffect, useRef } from "react";
+import type { RefObject } from "react";
+import type { Terminal } from "@xterm/xterm";
+import "@xterm/xterm/css/xterm.css";
+
+type TerminalTheme = "light" | "dark";
+
+interface TerminalSurfaceProps {
+  /** Hand in a ref to write into the terminal from outside (SSE log frames). */
+  terminalRef?: RefObject<Terminal | null>;
+  onReady?: (terminal: Terminal) => void;
+  className?: string;
+  theme?: TerminalTheme;
+}
+
+const lightTheme = {
+  background: "#ffffff",
+  foreground: "#1a1a1a",
+  cursor: "#000000",
+  cursorAccent: "#ffffff",
+  selectionBackground: "#d1d5da",
+  black: "#1a1a1a",
+  red: "#d73a49",
+  green: "#22863a",
+  yellow: "#b08800",
+  blue: "#0366d6",
+  magenta: "#6f42c1",
+  cyan: "#1b7c83",
+  white: "#6a737d",
+  brightBlack: "#959da5",
+  brightRed: "#cb2431",
+  brightGreen: "#22863a",
+  brightYellow: "#dbab09",
+  brightBlue: "#0366d6",
+  brightMagenta: "#6f42c1",
+  brightCyan: "#1b7c83",
+  brightWhite: "#1a1a1a",
+};
+
+const darkTheme = {
+  background: "#000000",
+  foreground: "#cccccc",
+  cursor: "#ffffff",
+  cursorAccent: "#000000",
+  selectionBackground: "#444444",
+  black: "#000000",
+  red: "#cd3131",
+  green: "#0dbc79",
+  yellow: "#e5e510",
+  blue: "#2472c8",
+  magenta: "#bc3fbc",
+  cyan: "#11a8cd",
+  white: "#e5e5e5",
+  brightBlack: "#666666",
+  brightRed: "#f14c4c",
+  brightGreen: "#23d18b",
+  brightYellow: "#f5f543",
+  brightBlue: "#3b8eea",
+  brightMagenta: "#d670d6",
+  brightCyan: "#29b8db",
+  brightWhite: "#e5e5e5",
+};
+
+function themeFor(mode: TerminalTheme) {
+  return mode === "light" ? lightTheme : darkTheme;
+}
+
+/**
+ * xterm host. The library and its addons touch `window` at module scope, so
+ * they are imported dynamically inside the effect — a static import breaks the
+ * server render of any page that mounts this.
+ */
+const TerminalSurface: React.FC<TerminalSurfaceProps> = ({
+  terminalRef,
+  onReady,
+  className = "",
+  theme = "dark",
+}) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const internalTerminalRef = useRef<Terminal | null>(null);
+  const targetRef = terminalRef ?? internalTerminalRef;
+
+  useEffect(() => {
+    let cleanup: (() => void) | undefined;
+    let cancelled = false;
+
+    const initialize = async () => {
+      if (!containerRef.current || targetRef.current) return;
+
+      const { Terminal: XTerm } = await import("@xterm/xterm");
+      const { FitAddon } = await import("@xterm/addon-fit");
+      const { WebLinksAddon } = await import("@xterm/addon-web-links");
+
+      if (cancelled || !containerRef.current) return;
+
+      const terminal = new XTerm({
+        fontFamily: "Consolas, ui-monospace, monospace",
+        fontSize: 14,
+        lineHeight: 1.0,
+        letterSpacing: 0,
+        theme: themeFor(theme),
+        cursorBlink: true,
+        scrollback: 1000,
+        convertEol: true,
+      });
+      const fitAddon = new FitAddon();
+
+      terminal.loadAddon(fitAddon);
+      terminal.loadAddon(new WebLinksAddon());
+      terminal.open(containerRef.current);
+      targetRef.current = terminal;
+
+      const containerElement = containerRef.current;
+      const fit = () => {
+        // xterm's fit()/scrollToBottom() reach into the renderer, which has no
+        // `dimensions` until the container is actually laid out. Calling them on
+        // a 0-size or detached node (hidden panel, mid mount/unmount) leaves the
+        // renderer half-initialized and throws "reading 'dimensions'" in a LATER
+        // animation frame — outside this try/catch — which both crashes the
+        // overlay and corrupts the terminal so the stream won't paint until a
+        // refresh. Skip until it's visible and still mounted.
+        if (targetRef.current !== terminal) return;
+        if (!containerElement.isConnected) return;
+        if (containerElement.offsetWidth === 0 || containerElement.offsetHeight === 0) return;
+        try {
+          fitAddon.fit();
+          terminal.scrollToBottom();
+        } catch (error) {
+          console.error("Error fitting terminal:", error);
+        }
+      };
+
+      window.setTimeout(fit, 100);
+      const resizeObserver = new ResizeObserver(fit);
+      resizeObserver.observe(containerElement);
+      window.addEventListener("resize", fit);
+
+      onReady?.(terminal);
+
+      cleanup = () => {
+        resizeObserver.disconnect();
+        window.removeEventListener("resize", fit);
+        terminal.dispose();
+        if (targetRef.current === terminal) {
+          targetRef.current = null;
+        }
+      };
+    };
+
+    void initialize();
+
+    return () => {
+      cancelled = true;
+      cleanup?.();
+    };
+    // Mount-only on purpose: the terminal instance outlives prop changes, and
+    // re-running this would dispose a terminal that is mid-stream.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const terminal = targetRef.current;
+    if (!terminal) return;
+    terminal.options.theme = themeFor(theme);
+  }, [theme, targetRef]);
+
+  return (
+    <div
+      ref={containerRef}
+      className={`terminal-container w-full h-full ${className}`}
+      style={{
+        height: "100%",
+        width: "100%",
+        overflow: "hidden",
+        padding: "8px",
+        WebkitFontSmoothing: "antialiased",
+        MozOsxFontSmoothing: "grayscale",
+      }}
+    />
+  );
+};
+
+export default TerminalSurface;

@@ -38,7 +38,7 @@ class GpuClass(str, Enum):
 
 
 class HopId(str, Enum):
-    """Data-path hop identifiers (PARKINGLOT.md crown jewel)."""
+    """Data-path hop identifiers (PARKING_LOT.md crown jewel)."""
 
     SSD_ADMIN = "ssd_admin"
     DRIVER_IOCTL = "driver_ioctl"

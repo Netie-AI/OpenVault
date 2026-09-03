@@ -1,0 +1,124 @@
+/*
+ * ─────────────────────────────────────────────────────────────────
+ *  SKIN: "ink"  —  high-contrast near-black
+ *
+ *  The opposite trade to "glass": nothing is translucent, borders are
+ *  loud, and every text alias is pushed toward white. This is the skin
+ *  to pick on a glossy panel in daylight, or when the theme.css `dark`
+ *  hairlines (.06–.08 alpha) vanish entirely on your display.
+ *
+ *  Same contract as every skin: it redefines the SAME --th-* names, so
+ *  components keep consuming `bg-card` / `border-border` unchanged.
+ *  Dark-based, so it is registered in the `dark:` custom-variant in
+ *  globals.css.
+ *
+ *  Loaded AFTER theme.css — equal specificity, source order decides.
+ * ─────────────────────────────────────────────────────────────────
+ */
+
+[data-theme="ink"] {
+
+  /* Foreground scale - the primitives keep their literal meaning
+     ("foreground at N%"). Contrast is bought in the aliases below, not
+     by lying about the scale. */
+  --th-on-05: rgba(255,255,255,.05);
+  --th-on-08: rgba(255,255,255,.08);
+  --th-on-10: rgba(255,255,255,.10);
+  --th-on-12: rgba(255,255,255,.12);
+  --th-on-16: rgba(255,255,255,.16);
+  --th-on-20: rgba(255,255,255,.20);
+  --th-on-30: rgba(255,255,255,.30);
+  --th-on-40: rgba(255,255,255,.40);
+  --th-on-50: rgba(255,255,255,.50);
+  --th-on-60: rgba(255,255,255,.60);
+  --th-on-70: rgba(255,255,255,.70);
+  --th-on-80: rgba(255,255,255,.80);
+  --th-on-90: rgba(255,255,255,.90);
+  --th-on-95: rgba(255,255,255,.95);
+
+  /* Surface fill scale - opaque grays, not washes. A .02 white wash over
+     #000 is invisible; these still read as distinct steps. */
+  --th-sf-01: #060606;
+  --th-sf-02: #0a0a0a;
+  --th-sf-03: #0e0e0e;
+  --th-sf-04: #121212;
+  --th-sf-05: #161616;
+  --th-sf-06: #1a1a1a;
+  --th-sf-08: #212121;
+
+  /* ─ Text ─ Every tier above the WCAG AA floor on #000. "muted" is a
+     rank in the hierarchy here, not permission to be unreadable. */
+  --th-text-heading:   #ffffff;
+  --th-text-title:     #ffffff;
+  --th-text-strong:    rgba(255,255,255,.96);
+  --th-text-body:      rgba(255,255,255,.90);
+  --th-text-secondary: rgba(255,255,255,.84);
+  --th-text-muted:     rgba(255,255,255,.76);
+  --th-text-label:     rgba(255,255,255,.76);
+  --th-text-hint:      rgba(255,255,255,.66);
+  --th-text-ghost:     rgba(255,255,255,.44);
+
+  /* ─ Page / layout ─ */
+  --th-bg-page:        #000000;
+  --th-bg-card:        #080808;
+  --th-bg-subtle:      #0d0d0d;
+  --th-bg-hover:       #1c1c1c;
+  --th-bg-inset:       #050505;
+
+  /* ─ Borders ─ The point of the skin: structure you can see. */
+  --th-bd-default:     rgba(255,255,255,.32);
+  --th-bd-subtle:      rgba(255,255,255,.20);
+  --th-bd-strong:      rgba(255,255,255,.55);
+  --th-bd-card:        rgba(255,255,255,.28);
+
+  /* ─ Input ─ */
+  --th-input-bg:           #000000;
+  --th-input-bd:           rgba(255,255,255,.38);
+  --th-input-text:         #ffffff;
+  --th-input-placeholder:  rgba(255,255,255,.56);
+  --th-input-bg-focus:     #000000;
+  --th-input-bd-focus:     #ffffff;
+
+  /* ─ Button - primary ─ */
+  --th-btn-bg:       #ffffff;
+  --th-btn-text:     #000000;
+  --th-btn-bg-hover: rgba(255,255,255,.86);
+
+  /* ─ Button - ghost / outline ─ */
+  --th-btn-ghost-bd:         rgba(255,255,255,.38);
+  --th-btn-ghost-text:       rgba(255,255,255,.86);
+  --th-btn-ghost-bd-hover:   #ffffff;
+  --th-btn-ghost-text-hover: #ffffff;
+  --th-btn-ghost-bg-hover:   rgba(255,255,255,.12);
+
+  /* ─ Card ─ */
+  --th-card-bg:       #080808;
+  --th-card-bg-solid: #080808;
+  --th-card-bd:       rgba(255,255,255,.28);
+  --th-card-bd-hover: rgba(255,255,255,.55);
+  --th-card-shadow:   none;
+
+  /* ─ Divider ─ */
+  --th-divider:       rgba(255,255,255,.24);
+
+  /* ─ Overlay ─ */
+  --th-overlay:       rgba(0,0,0,.82);
+
+  /* ─ Dropdown ─ A shadow cannot separate black from black, so the
+     separation is an explicit ring instead. */
+  --th-dropdown-bg:     #0a0a0a;
+  --th-dropdown-bd:     rgba(255,255,255,.36);
+  --th-dropdown-shadow: 0 0 0 1px rgba(255,255,255,.14), 0 24px 56px rgba(0,0,0,.90);
+
+  /* ─ Spinner ─ */
+  --th-spinner-track:   rgba(255,255,255,.22);
+  --th-spinner-fill:    #ffffff;
+
+  /* ─ Semantic status ─ Brighter hues and heavier fills than `dark`;
+     the -400 tones it uses fall under AA against pure #000. */
+  --st-success-fg: #4ade80;  --st-success-bg: rgba(74,222,128,.18);  --st-success-bd: rgba(74,222,128,.45);
+  --st-danger-fg:  #ff8080;  --st-danger-bg:  rgba(255,128,128,.18); --st-danger-bd:  rgba(255,128,128,.45);
+  --st-warning-fg: #fcd34d;  --st-warning-bg: rgba(252,211,77,.18);  --st-warning-bd:  rgba(252,211,77,.45);
+  --st-info-fg:    #7dd3fc;  --st-info-bg:    rgba(125,211,252,.18); --st-info-bd:    rgba(125,211,252,.45);
+  --st-neutral-fg: rgba(255,255,255,.86);  --st-neutral-bg: #161616;  --st-neutral-bd: rgba(255,255,255,.34);
+}

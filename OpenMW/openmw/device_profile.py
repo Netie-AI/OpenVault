@@ -10,10 +10,12 @@ import sys
 import tempfile
 import threading
 import time
+from collections.abc import Callable
+from contextlib import suppress
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Callable, TypeVar
+from typing import TypeVar
 
 import psutil
 import structlog
@@ -26,6 +28,14 @@ _SENTINEL = object()
 # Wall-clock cap on subprocess-backed probes (PowerShell discovery) and as the default
 # budget passed into list_devices(). subprocess.run(timeout=) kills the child on expiry.
 _HARDWARE_PROBE_TIMEOUT_S = 5.0
+
+# Device enumeration gets its own, far longer budget. It shells out to
+# PowerShell, whose start-up cost is machine-dependent (8.3s measured on a
+# laptop booted from external storage). Expiring it does not degrade the
+# result gracefully — it returns no devices, which used to make this module
+# conclude there was no NVMe at all and substitute a fabricated profile.
+# The profile is cached per boot, so this is paid once.
+_INVENTORY_PROBE_TIMEOUT_S = 20.0
 
 # Full benchmark when NVMe identity is known; shorter run when select_nvme degraded.
 _BENCHMARK_DURATION_S = 5.0
@@ -158,14 +168,12 @@ def _probe_nvidia_gpu() -> tuple[str | None, float]:
         mem = pynvml.nvmlDeviceGetMemoryInfo(handle)
         vram_gb = float(mem.total) / (1024**3)
         return gpu_name, vram_gb
-    except Exception as exc:  # noqa: BLE001 — NVML errors vary by driver state
+    except Exception as exc:
         log.debug("nvml_probe_failed", error=str(exc))
         return None, 0.0
     finally:
-        try:
+        with suppress(Exception):
             pynvml.nvmlShutdown()
-        except Exception:  # noqa: BLE001
-            pass
 
 
 def _run_cmd(argv: list[str], timeout: float = 15.0) -> tuple[int, str]:
@@ -182,20 +190,54 @@ def _run_cmd(argv: list[str], timeout: float = 15.0) -> tuple[int, str]:
         return -1, str(exc)
 
 
+def _probe_windows_display_gpu() -> tuple[str | None, float]:
+    """Any GPU Windows itself knows about, via Win32_VideoController.
+
+    The vendor CLIs (nvidia-smi, rocm-smi) are the accurate sources but are
+    absent on an ordinary Windows box, which previously left AMD and Intel
+    machines reporting *no GPU at all*. The display driver always knows.
+
+    AdapterRAM is uint32 and saturates at 4 GiB, and on an integrated GPU it
+    describes a shared carve-out rather than dedicated memory, so it is
+    reported as 0.0 (unknown) rather than as a VRAM figure we would be
+    inventing. The name is the part we can trust.
+    """
+    if sys.platform != "win32":
+        return None, 0.0
+    code, text = _run_cmd(
+        [
+            "powershell",
+            "-NoProfile",
+            "-NonInteractive",
+            "-Command",
+            "(Get-CimInstance Win32_VideoController | "
+            "Where-Object { $_.Name } | Select-Object -First 1).Name",
+        ]
+    )
+    if code != 0:
+        return None, 0.0
+    name = text.strip().splitlines()[0].strip() if text.strip() else ""
+    # Basic display adapters are not compute devices; treating one as a GPU
+    # would just move the lie rather than remove it.
+    if not name or "Basic Display" in name or "Basic Render" in name:
+        return None, 0.0
+    return name, 0.0
+
+
 def _probe_amd_gpu() -> tuple[str | None, float]:
-    """Best-effort AMD GPU detection via rocm-smi."""
+    """Best-effort non-NVIDIA GPU detection: rocm-smi, else the display driver."""
     rocm_smi = shutil.which("rocm-smi")
     if rocm_smi is None:
-        return None, 0.0
+        return _probe_windows_display_gpu()
     code, text = _run_cmd([rocm_smi, "--showproductname"])
     if code != 0 or not text:
-        return None, 0.0
+        return _probe_windows_display_gpu()
     for line in text.splitlines():
         if "Card series" in line or "GPU" in line:
             parts = line.split(":", maxsplit=1)
             if len(parts) == 2:
                 return parts[1].strip(), 0.0
-    return None, 0.0
+    return _probe_windows_display_gpu()
 
 
 def _probe_apple_silicon() -> tuple[str | None, bool]:
@@ -217,20 +259,50 @@ def _probe_cpu_cores() -> int:
     return max(int(count or 1), 1)
 
 
+def _select_primary_nvme_windows_fallback() -> tuple[str | None, str | None]:
+    """Identify the primary NVMe from Storage Spaces, with no admin rights.
+
+    Get-PhysicalDisk is readable by an ordinary user and reports BusType, so it
+    answers "which drive is this" even when the sentinel's richer discovery
+    path is unavailable. It cannot give us a device path usable for admin
+    passthrough, hence the None — callers must treat identity and access as
+    separate capabilities.
+    """
+    if sys.platform != "win32":
+        return None, None
+    code, text = _run_cmd(
+        [
+            "powershell",
+            "-NoProfile",
+            "-NonInteractive",
+            "-Command",
+            "(Get-PhysicalDisk | Where-Object BusType -eq 'NVMe' | "
+            "Sort-Object DeviceId | Select-Object -First 1).FriendlyName",
+        ]
+    )
+    if code != 0 or not text.strip():
+        return None, None
+    return text.strip().splitlines()[0].strip() or None, None
+
+
 def _select_primary_nvme(
     *,
-    timeout_s: float = _HARDWARE_PROBE_TIMEOUT_S,
+    timeout_s: float = _INVENTORY_PROBE_TIMEOUT_S,
 ) -> tuple[str | None, str | None]:
     """Return (model, device_path) for the boot or first NVMe drive."""
     try:
         from nvme_sentinel.inventory.discovery import list_devices
     except ImportError:
-        return None, None
+        return _select_primary_nvme_windows_fallback()
 
     devices = list_devices(timeout_s=timeout_s)
     nvme_devices = [d for d in devices if d.is_nvme]
     if not nvme_devices:
-        return None, None
+        # Discovery can come back empty on a slow or externally-booted box
+        # without the drive being absent. Ask Windows directly before
+        # concluding there is no NVMe — reporting "unknown" here is what used
+        # to trigger the fabricated-profile substitution downstream.
+        return _select_primary_nvme_windows_fallback()
 
     boot_candidates = [
         d
@@ -257,7 +329,7 @@ def _estimate_endurance_tbw(device_path: str | None) -> float:
         bytes_written = smart.data_units_written * 512 * 1000
         rated_bytes = bytes_written / (smart.percentage_used / 100.0)
         return float(rated_bytes / 1e12)
-    except Exception as exc:  # noqa: BLE001 — hardware/mock paths vary
+    except Exception as exc:
         log.debug("endurance_probe_failed", device=device_path, error=str(exc))
         return 0.0
 
@@ -396,8 +468,8 @@ def _detect_uncached(
 
     log.info("detect_stage", stage="select_nvme_start")
     try:
-        nvme_model, nvme_path = _select_primary_nvme(timeout_s=_HARDWARE_PROBE_TIMEOUT_S)
-    except Exception as exc:  # noqa: BLE001 — inventory paths vary by platform
+        nvme_model, nvme_path = _select_primary_nvme(timeout_s=_INVENTORY_PROBE_TIMEOUT_S)
+    except Exception as exc:
         log.debug("select_nvme_failed", error=str(exc))
         nvme_model, nvme_path = None, None
     log.info("detect_stage", stage="select_nvme_done", nvme_model=nvme_model)

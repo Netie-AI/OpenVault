@@ -63,9 +63,7 @@ def test_stripe_modules_do_not_import_airgpt_or_dms() -> None:
                 assert "trust_root" not in lower
 
 
-def test_simulate_checkout_then_webhook(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_simulate_checkout_then_webhook(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("OPENVAULT_HOME", str(tmp_path / "ovhome"))
     monkeypatch.setenv("STRIPE_MODE", "simulate")
     session = login_service(email="ops@netie.ai", display_name="ops")
@@ -113,9 +111,7 @@ def test_ship_to_netie_pipeline(tmp_path: Path, monkeypatch: pytest.MonkeyPatch)
     assert result["server"]["health_url"] == "https://demo.netie.ai/healthz"
 
 
-def test_api_checkout_and_ship_netie(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_api_checkout_and_ship_netie(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("OPENVAULT_HOME", str(tmp_path / "ovhome"))
     monkeypatch.setenv("STRIPE_MODE", "simulate")
     (tmp_path / "index.html").write_text("<h1>ok</h1>\n", encoding="utf-8")

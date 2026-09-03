@@ -342,8 +342,11 @@ class TrustStore:
         chain = b64u(
             root_private.sign(
                 binding_bytes(
-                    kid=kid, subject=subject.strip(), public_key_b64=public_b64,
-                    nbf=now, exp=expires,
+                    kid=kid,
+                    subject=subject.strip(),
+                    public_key_b64=public_b64,
+                    nbf=now,
+                    exp=expires,
                 )
             )
         )
@@ -452,9 +455,7 @@ def verify_chain(root_public_b64: str, jwk: dict[str, Any]) -> bool:
     point of a trust root is that trusting the transport is optional.
     """
     try:
-        root = Ed25519PublicKey.from_public_bytes(
-            base64.urlsafe_b64decode(root_public_b64 + "==")
-        )
+        root = Ed25519PublicKey.from_public_bytes(base64.urlsafe_b64decode(root_public_b64 + "=="))
         signature = base64.urlsafe_b64decode(str(jwk["netie_chain_signature"]) + "==")
         root.verify(
             signature,

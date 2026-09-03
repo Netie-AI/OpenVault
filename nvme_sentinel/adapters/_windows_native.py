@@ -1,4 +1,4 @@
-"""Windows STORAGE_PROTOCOL_COMMAND layout from ntddstor.h (implementation_plan.md §4.6)."""
+"""Windows STORAGE_PROTOCOL_COMMAND layout from ntddstor.h (nvme-sentinel-spec.md §4.6)."""
 
 from __future__ import annotations
 

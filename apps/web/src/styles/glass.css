@@ -1,0 +1,169 @@
+/*
+ * ─────────────────────────────────────────────────────────────────
+ *  SKIN: "glass"  —  liquid glass
+ *
+ *  A skin, not a second design system. It redefines the SAME --th-*
+ *  names theme.css defines, so every component that already consumes
+ *  `bg-card` / `border-border` / `.th-card` inherits it for free and
+ *  liquid glass stays ONE entry in the theme picker.
+ *
+ *  Why the full token set and not just the five surface tokens:
+ *  glass is a DARK-based skin (it is in the `dark:` custom-variant in
+ *  globals.css). Overriding only the surfaces would leave it inheriting
+ *  :root's black-on-white text scale and render unreadable.
+ *
+ *  Loaded AFTER theme.css. Equal specificity to theme.css's own
+ *  [data-theme] blocks, so source order decides — do not move it above
+ *  the theme.css import.
+ * ─────────────────────────────────────────────────────────────────
+ */
+
+/* Non-glass themes must resolve this to something, or the shared
+   backdrop-filter rules below would compute to `initial`. */
+:root {
+  --th-backdrop: none;
+}
+
+[data-theme="glass"] {
+
+  --th-backdrop: blur(24px) saturate(180%);
+
+  /* Foreground scale - white on a deep cool base */
+  --th-on-05: rgba(255,255,255,.05);
+  --th-on-08: rgba(255,255,255,.08);
+  --th-on-10: rgba(255,255,255,.10);
+  --th-on-12: rgba(255,255,255,.12);
+  --th-on-16: rgba(255,255,255,.16);
+  --th-on-20: rgba(255,255,255,.20);
+  --th-on-30: rgba(255,255,255,.30);
+  --th-on-40: rgba(255,255,255,.40);
+  --th-on-50: rgba(255,255,255,.50);
+  --th-on-60: rgba(255,255,255,.60);
+  --th-on-70: rgba(255,255,255,.70);
+  --th-on-80: rgba(255,255,255,.80);
+  --th-on-90: rgba(255,255,255,.90);
+  --th-on-95: rgba(255,255,255,.95);
+
+  /* Surface fill scale */
+  --th-sf-01: rgba(255,255,255,.01);
+  --th-sf-02: rgba(255,255,255,.02);
+  --th-sf-03: rgba(255,255,255,.03);
+  --th-sf-04: rgba(255,255,255,.04);
+  --th-sf-05: rgba(255,255,255,.05);
+  --th-sf-06: rgba(255,255,255,.06);
+  --th-sf-08: rgba(255,255,255,.08);
+
+  /* ─ Text ─ Lifted a step above `dark`: text sits on translucent
+     panels here, and whatever shows through eats apparent contrast. */
+  --th-text-heading:   #ffffff;
+  --th-text-title:     rgba(255,255,255,.96);
+  --th-text-strong:    rgba(255,255,255,.88);
+  --th-text-body:      rgba(255,255,255,.76);
+  --th-text-secondary: rgba(255,255,255,.68);
+  --th-text-muted:     rgba(255,255,255,.60);
+  --th-text-label:     rgba(255,255,255,.60);
+  --th-text-hint:      rgba(255,255,255,.48);
+  --th-text-ghost:     rgba(255,255,255,.28);
+
+  /* ─ Page / layout ─ Opaque and cool; the ambience layer below gives
+     backdrop-filter something with structure to actually blur. */
+  --th-bg-page:        #0a0d16;
+  --th-bg-card:        rgba(255,255,255,.06);
+  --th-bg-subtle:      rgba(255,255,255,.04);
+  --th-bg-hover:       rgba(255,255,255,.09);
+  --th-bg-inset:       rgba(255,255,255,.03);
+
+  /* ─ Borders ─ Brighter than `dark`; the lit edge is what separates a
+     glass panel from the blur behind it. */
+  --th-bd-default:     rgba(255,255,255,.14);
+  --th-bd-subtle:      rgba(255,255,255,.09);
+  --th-bd-strong:      rgba(255,255,255,.24);
+  --th-bd-card:        rgba(255,255,255,.16);
+
+  /* ─ Input ─ */
+  --th-input-bg:           rgba(255,255,255,.07);
+  --th-input-bd:           rgba(255,255,255,.16);
+  --th-input-text:         rgba(255,255,255,.90);
+  --th-input-placeholder:  rgba(255,255,255,.38);
+  --th-input-bg-focus:     rgba(255,255,255,.11);
+  --th-input-bd-focus:     rgba(255,255,255,.32);
+
+  /* ─ Button - primary ─ Stays opaque. A translucent primary action on
+     a translucent panel has no reliable contrast floor. */
+  --th-btn-bg:       rgba(255,255,255,.92);
+  --th-btn-text:     #05070d;
+  --th-btn-bg-hover: #ffffff;
+
+  /* ─ Button - ghost / outline ─ */
+  --th-btn-ghost-bd:         rgba(255,255,255,.18);
+  --th-btn-ghost-text:       rgba(255,255,255,.72);
+  --th-btn-ghost-bd-hover:   rgba(255,255,255,.34);
+  --th-btn-ghost-text-hover: #ffffff;
+  --th-btn-ghost-bg-hover:   rgba(255,255,255,.10);
+
+  /* ─ Card ─ `-bg-solid` stays translucent on purpose: Modal.tsx feeds it
+     through color-mix and adds its own backdrop-blur, so a translucent
+     value is what makes the modal read as glass instead of a dark slab. */
+  --th-card-bg:       rgba(255,255,255,.07);
+  --th-card-bg-solid: rgba(20,24,38,.72);
+  --th-card-bd:       rgba(255,255,255,.16);
+  --th-card-bd-hover: rgba(255,255,255,.28);
+  --th-card-shadow:   0 8px 32px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.10);
+
+  /* ─ Divider ─ */
+  --th-divider:       rgba(255,255,255,.12);
+
+  /* ─ Overlay ─ */
+  --th-overlay:       rgba(6,8,16,.55);
+
+  /* ─ Dropdown ─ */
+  --th-dropdown-bg:     rgba(20,24,38,.72);
+  --th-dropdown-bd:     rgba(255,255,255,.18);
+  --th-dropdown-shadow: 0 24px 56px rgba(0,0,0,.50), inset 0 1px 0 rgba(255,255,255,.12);
+
+  /* ─ Spinner ─ */
+  --th-spinner-track:   rgba(255,255,255,.12);
+  --th-spinner-fill:    #ffffff;
+
+  /* ─ Semantic status ─ Same hues as `dark`, heavier fills: a .10 wash
+     over a translucent panel disappears into whatever is behind it. */
+  --st-success-fg: #34d399;  --st-success-bg: rgba(16,185,129,.16);  --st-success-bd: rgba(16,185,129,.32);
+  --st-danger-fg:  #f87171;  --st-danger-bg:  rgba(239,68,68,.16);   --st-danger-bd:  rgba(239,68,68,.32);
+  --st-warning-fg: #fbbf24;  --st-warning-bg: rgba(245,158,11,.16);  --st-warning-bd: rgba(245,158,11,.32);
+  --st-info-fg:    #60a5fa;  --st-info-bg:    rgba(59,130,246,.16);  --st-info-bd:    rgba(59,130,246,.32);
+  --st-neutral-fg: rgba(255,255,255,.66);  --st-neutral-bg: rgba(255,255,255,.09);  --st-neutral-bd: rgba(255,255,255,.18);
+}
+
+/*
+ * The blur itself. Tokens can carry the colour but not the filter, so the
+ * skin attaches it to the surfaces the design system actually renders:
+ * theme.css's own .th-* classes and the Tailwind utilities the copied
+ * primitives use (card.tsx → `bg-card`, popover surfaces → `bg-popover`).
+ * `[data-glass]` is the opt-in hook for anything else (app bar, drawers).
+ *
+ * Known limit: opacity-modified utilities compile to different class names
+ * (`bg-card/50`), so they are not matched here. Use [data-glass] on those.
+ */
+[data-theme="glass"] .th-card,
+[data-theme="glass"] .th-dropdown,
+[data-theme="glass"] .th-input,
+[data-theme="glass"] .bg-card,
+[data-theme="glass"] .bg-popover,
+[data-theme="glass"] [data-glass] {
+  backdrop-filter: var(--th-backdrop);
+  -webkit-backdrop-filter: var(--th-backdrop);
+}
+
+/*
+ * Ambience. backdrop-filter over a flat fill is a no-op — blurring the same
+ * opaque page colour gives the same colour back. Put the soft lights on the
+ * body itself (under translucent cards) instead of a z-index:-1 pseudo that
+ * sits behind an opaque background and never paints.
+ */
+[data-theme="glass"] body {
+  background-color: var(--th-bg-page);
+  background-image:
+    radial-gradient(72rem 48rem at 12% -10%, rgba(99,102,241,.28), transparent 62%),
+    radial-gradient(60rem 40rem at 92% 8%, rgba(20,184,166,.20), transparent 60%);
+  background-attachment: fixed;
+}

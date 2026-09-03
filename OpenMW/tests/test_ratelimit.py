@@ -1,16 +1,18 @@
-"""OpenFree token-budget rate limiter — unit + gateway tests."""
+"""FreeRoute token-budget rate limiter — unit + gateway tests."""
 
 from __future__ import annotations
 
 from pathlib import Path
 
 import pytest
+from conftest import issue_key
 from cryptography.fernet import Fernet
 from fastapi.testclient import TestClient
 
 from openmw.openvault.app import create_app
 from openmw.openvault.vault.crypto import Seal
 from openmw.openvault.vault.ratelimit import (
+    SseUsageCapture,
     TierLimits,
     TokenBudgetLimiter,
     estimate_prompt_tokens,
@@ -57,6 +59,32 @@ def test_usage_total_tokens() -> None:
     assert usage_total_tokens({"usage": {"prompt_tokens": 10, "completion_tokens": 7}}) == 17
     assert usage_total_tokens({"choices": []}) is None
     assert usage_total_tokens("raw text") is None
+
+
+def test_sse_usage_capture_across_chunk_boundaries() -> None:
+    """Usage may arrive split across aiter_bytes chunks; never invent tokens."""
+    cap = SseUsageCapture()
+    cap.feed(b'data: {"choices":[{"delta":{"content":"hi"}}]}\n\n')
+    assert cap.total_tokens is None
+    part = (
+        b'data: {"choices":[],"usage":{"prompt_tokens":10,'
+        b'"completion_tokens":20,"total_tokens":30}}\n\n'
+    )
+    mid = len(part) // 2
+    cap.feed(part[:mid])
+    assert cap.total_tokens is None
+    cap.feed(part[mid:])
+    cap.feed(b"data: [DONE]\n\n")
+    cap.finish()
+    assert cap.total_tokens == 30
+
+
+def test_sse_usage_capture_absent_stays_none() -> None:
+    cap = SseUsageCapture()
+    cap.feed(b'data: {"id":"1"}\n\n')
+    cap.feed(b"data: [DONE]\n\n")
+    cap.finish()
+    assert cap.total_tokens is None
 
 
 def test_token_budget_blocks_oversized_request() -> None:
@@ -113,6 +141,57 @@ def test_isolated_identities_do_not_share_budget() -> None:
     assert limiter.reserve("bob", prompt_tokens=1, max_tokens=1).allowed is True
 
 
+def test_settle_with_reservation_id_is_idempotent() -> None:
+    clock = FakeClock()
+    limiter = _limiter(clock, requests_per_min=60, tokens_per_min=10_000)
+    decision = limiter.reserve("once", prompt_tokens=1, max_tokens=100)
+    assert decision.allowed and decision.reservation_id
+    after_reserve = limiter.status("once", tier="t")["token_remaining"]
+    limiter.settle(
+        "once",
+        tier="t",
+        reserved_tokens=decision.reserved_tokens,
+        actual_tokens=20,
+        reservation_id=decision.reservation_id,
+    )
+    after_once = limiter.status("once", tier="t")["token_remaining"]
+    limiter.settle(
+        "once",
+        tier="t",
+        reserved_tokens=decision.reserved_tokens,
+        actual_tokens=20,
+        reservation_id=decision.reservation_id,
+    )
+    after_twice = limiter.status("once", tier="t")["token_remaining"]
+    assert after_once > after_reserve
+    assert after_twice == after_once
+
+
+def test_settle_twice_stacks_refunds_callers_must_guard() -> None:
+    """Without reservation_id, settle stacks — stream path must pass the id."""
+    clock = FakeClock()
+    limiter = _limiter(clock, requests_per_min=60, tokens_per_min=10_000)
+    decision = limiter.reserve("double", prompt_tokens=1, max_tokens=100)
+    assert decision.allowed
+    after_reserve = limiter.status("double", tier="t")["token_remaining"]
+    limiter.settle(
+        "double",
+        tier="t",
+        reserved_tokens=decision.reserved_tokens,
+        actual_tokens=20,
+    )
+    after_once = limiter.status("double", tier="t")["token_remaining"]
+    limiter.settle(
+        "double",
+        tier="t",
+        reserved_tokens=decision.reserved_tokens,
+        actual_tokens=20,
+    )
+    after_twice = limiter.status("double", tier="t")["token_remaining"]
+    assert after_once > after_reserve
+    assert after_twice > after_once
+
+
 def test_gateway_returns_429_when_request_bucket_drained(
     vault: KeyVault, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
@@ -123,8 +202,8 @@ def test_gateway_returns_429_when_request_bucket_drained(
         enable_precheck_loop=False,
         cortex_url="http://127.0.0.1:9",
     )
-    client = TestClient(app)
-    headers = {"x-openfree-tier": "free", "x-openfree-identity": "tester"}
+    client = TestClient(app, client=("127.0.0.1", 5555))
+    _identity, headers = issue_key(client)
     body = {"model": "auto", "messages": [{"role": "user", "content": "hi"}]}
     saw_429 = False
     for _ in range(25):  # free tier allows 20 requests/min before the QPS bucket drains
@@ -145,8 +224,8 @@ def test_openfree_ratelimit_status_endpoint(
 ) -> None:
     monkeypatch.setenv("OPENVAULT_HOME", str(tmp_path / "home"))
     app = create_app(vault=vault, mock_health=True, enable_precheck_loop=False)
-    client = TestClient(app)
-    resp = client.get("/api/openfree/ratelimit", params={"tier": "free", "identity": "x"})
+    client = TestClient(app, client=("127.0.0.1", 5555))
+    resp = client.get("/api/freeroute/ratelimit", params={"tier": "free", "identity": "x"})
     assert resp.status_code == 200
     data = resp.json()
     assert data["tier"] == "free"

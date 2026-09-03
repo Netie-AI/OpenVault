@@ -13,7 +13,9 @@ from typing import Any, Literal
 import structlog
 
 from openmw.openvault.paths import ensure_home
+from openmw.openvault.ship.cicd import CicdReport, detect_cicd
 from openmw.openvault.ship.detect import DetectedStack, detect_project
+from openmw.openvault.ship.domain_guide import DomainGuide, build_domain_guide
 from openmw.openvault.ship.email_gates import check_email_auth
 from openmw.openvault.ship.openship import (
     adapter_presence,
@@ -54,6 +56,8 @@ class DeployPlan:
     smoke_url: str = ""
     ship_id: str | None = None
     smoke_id: str | None = None
+    domain_guide: dict[str, Any] = field(default_factory=dict)
+    cicd: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -71,6 +75,8 @@ class DeployPlan:
             "smoke_url": self.smoke_url,
             "ship_id": self.ship_id,
             "smoke_id": self.smoke_id,
+            "domain_guide": self.domain_guide,
+            "cicd": self.cicd,
         }
 
 
@@ -108,6 +114,8 @@ def load_plan(deploy_id: str) -> DeployPlan | None:
         smoke_url=raw.get("smoke_url", ""),
         ship_id=raw.get("ship_id"),
         smoke_id=raw.get("smoke_id"),
+        domain_guide=dict(raw.get("domain_guide", {})),
+        cicd=dict(raw.get("cicd", {})),
     )
 
 
@@ -166,7 +174,8 @@ def build_deploy_plan(
     key_detail = "no vault"
     key_status: GateStatus = "pending"
     if vault is not None:
-        enabled = vault.enabled_ordered()
+        # Pooled only: the gate reports what a deploy could actually spend.
+        enabled = vault.pooled_ordered()
         ok = [k for k in enabled if k.precheck_status == "ok"]
         if not enabled:
             key_status = "fail"
@@ -204,7 +213,7 @@ def build_deploy_plan(
                 "subdomain",
                 "Subdomain / public hostname",
                 "pass",
-                f"Target host {subdomain} (TLS via OpenShip/Let's Encrypt when adapter runs)",
+                f"Target host {subdomain} (TLS via FreeBuild/Let's Encrypt when adapter runs)",
                 True,
             )
         )
@@ -266,16 +275,6 @@ def build_deploy_plan(
                 True,
             )
         )
-    elif stack.framework == "static" or stack.category == "static":
-        gates.append(
-            Gate(
-                "build",
-                "Build / rebuild plan",
-                "pass",
-                "static site — publish as-is (no compile)",
-                True,
-            )
-        )
     else:
         gates.append(
             Gate("build", "Build / rebuild plan", "fail", "No suggested build commands", True)
@@ -311,7 +310,7 @@ def build_deploy_plan(
             )
         )
 
-    # 8) OpenShip full clone plan
+    # 8) FreeBuild full clone plan
     ship = adapter_presence()
     ship_id: str | None = None
     if subdomain and stack.primary != "unknown":
@@ -328,7 +327,7 @@ def build_deploy_plan(
         gates.append(
             Gate(
                 "openship",
-                "OpenShip full plan (apps + services + TLS + mail)",
+                "FreeBuild full plan (apps + services + TLS + mail)",
                 ship_status,
                 (
                     f"ship_id={ship_id} ready={ship_plan.ready} "
@@ -342,7 +341,7 @@ def build_deploy_plan(
         gates.append(
             Gate(
                 "openship",
-                "OpenShip full plan (apps + services + TLS + mail)",
+                "FreeBuild full plan (apps + services + TLS + mail)",
                 "pass",
                 f"cli={ship['cli_path'] or 'n/a'} api={ship['api_url'] or 'n/a'}",
                 True,
@@ -352,14 +351,61 @@ def build_deploy_plan(
         gates.append(
             Gate(
                 "openship",
-                "OpenShip full plan (apps + services + TLS + mail)",
+                "FreeBuild full plan (apps + services + TLS + mail)",
                 "pending",
                 "Set OPENSHIP_MODE=simulate or OPENSHIP_CLI / OPENSHIP_URL",
                 True,
             )
         )
 
-    # 9) Roll updates
+    # 9) CI/CD present or suggested (non-blocking — FreeBuild remains executor)
+    cicd_report: CicdReport = detect_cicd(project_path)
+    if cicd_report.status == "present":
+        cicd_status: GateStatus = "pass"
+        cicd_detail = (
+            f"{', '.join(cicd_report.detected)} · "
+            f"{len(cicd_report.workflow_paths)} workflow file(s)"
+        )
+    else:
+        cicd_status = "pending"
+        cicd_detail = (
+            "No CI found — suggested "
+            f"{cicd_report.suggested_workflow_path} (calls OpenVault gates → execute)"
+        )
+    gates.append(
+        Gate(
+            "cicd",
+            "CI/CD (GitHub Actions / etc.)",
+            cicd_status,
+            cicd_detail,
+            False,
+        )
+    )
+
+    # 10) Domain / DNS guide for bought hostname
+    domain: DomainGuide = build_domain_guide(subdomain)
+    if subdomain and "." in subdomain:
+        gates.append(
+            Gate(
+                "domain_guide",
+                "Domain DNS + TLS checklist",
+                "pass",
+                f"apex={domain.apex} · {len(domain.records)} DNS record hint(s)",
+                False,
+            )
+        )
+    else:
+        gates.append(
+            Gate(
+                "domain_guide",
+                "Domain DNS + TLS checklist",
+                "fail",
+                "Set subdomain to your bought host (app.example.com)",
+                False,
+            )
+        )
+
+    # 11) Roll updates
     gates.append(
         Gate(
             "roll",
@@ -391,6 +437,8 @@ def build_deploy_plan(
         smoke_url=target_smoke,
         ship_id=ship_id,
         smoke_id=smoke_id,
+        domain_guide=domain.to_dict(),
+        cicd=cicd_report.to_dict(),
     )
     save_plan(plan)
     log.info(
@@ -430,8 +478,14 @@ def run_deploy_smoke(plan: DeployPlan, *, url: str | None = None) -> DeployPlan:
     return plan
 
 
-def execute_deploy(plan: DeployPlan, *, simulate: bool | None = None) -> DeployPlan:
-    """Run the OpenShip executor for this deploy and mark roll gate."""
+def execute_deploy(
+    plan: DeployPlan,
+    *,
+    simulate: bool | None = None,
+    env_vars: dict[str, str] | None = None,
+    secrets_injected: list[str] | None = None,
+) -> DeployPlan:
+    """Run the FreeBuild executor for this deploy and mark roll gate."""
     if not plan.ship_id:
         ship_plan = build_openship_plan(
             project_path=plan.project_path,
@@ -450,7 +504,12 @@ def execute_deploy(plan: DeployPlan, *, simulate: bool | None = None) -> DeployP
         )
         plan.ship_id = ship_plan.ship_id
 
-    executed = execute_openship_plan(ship_plan, simulate=simulate)
+    executed = execute_openship_plan(
+        ship_plan,
+        simulate=simulate,
+        env_vars=env_vars,
+        secrets_injected=secrets_injected,
+    )
     plan.openship = {
         **plan.openship,
         **executed.adapter,
@@ -481,6 +540,10 @@ def _recompute_ready(plan: DeployPlan) -> None:
     plan.ready_to_scale = len(blockers) == 0 and len(pending_blockers) == 0
 
 
+def _hard_fail_blockers(plan: DeployPlan) -> list[Gate]:
+    return [g for g in plan.gates if g.blocker and g.status == "fail"]
+
+
 def one_press_deploy(
     *,
     project_path: str,
@@ -497,10 +560,11 @@ def one_press_deploy(
     simulate: bool = True,
     auto_execute: bool = True,
 ) -> dict[str, Any]:
-    """Detect + gate + optional OpenShip execute in one call."""
-    from openmw.openvault.ship.domain_guide import build_domain_guide
-    from openmw.openvault.ship.hosting import ready_to_ship
+    """Detect → gate → (optional) FreeBuild execute + domain/CI payload in one call.
 
+    ``roll`` stays pending until execute; one-press may still simulate-execute when
+    there are no hard-fail blockers (keys/stack/subdomain/openship fail).
+    """
     plan = build_deploy_plan(
         project_path=project_path,
         subdomain=subdomain,
@@ -514,10 +578,23 @@ def one_press_deploy(
         smoke_url=smoke_url,
         run_smoke=run_smoke,
     )
-    if auto_execute:
+    hard = _hard_fail_blockers(plan)
+    executed = False
+    if auto_execute and not hard:
         plan = execute_deploy(plan, simulate=simulate)
+        executed = True
     payload = plan.to_dict()
-    if subdomain:
-        payload["domain_guide"] = build_domain_guide(subdomain).to_dict()
+    # Same gates the auto-ship router reports (detect / commands / domain /
+    # runtime); lazy import because hosting pulls in origin + server.
+    from openmw.openvault.ship.hosting import ready_to_ship
+
     payload["ready_report"] = ready_to_ship(project_path, hostname=subdomain).to_dict()
+    payload["one_press"] = {
+        "executed": executed,
+        "simulate": simulate,
+        "hard_fail_blockers": [asdict(g) for g in hard],
+        "demo_hint": (
+            f"Open {plan.console_url} · path={plan.project_path} · host={plan.subdomain}"
+        ),
+    }
     return payload

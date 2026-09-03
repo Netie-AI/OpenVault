@@ -55,6 +55,15 @@ MOCK_ENV = "OPENVAULT_SENTINEL_MOCK"
 # responsive without ever serving a stale device list to a human.
 _INVENTORY_TTL_S = 10.0
 
+# PowerShell start-up dominates enumeration and is wildly machine-dependent:
+# measured at 8.3s on a busy laptop booted from external storage, against the
+# library's 5s default. Timing out there does not report "slow" — it reports
+# ZERO DEVICES, which downstream reads as "this machine has no NVMe" and
+# silently degrades Sentinel and the path trace to mock. Being slow once is
+# strictly better than being confidently wrong, and the TTL cache means the
+# cost is paid once per 10s rather than per request.
+_INVENTORY_TIMEOUT_S = 20.0
+
 # SMART reports how many error-log entries exist; cap the read so a controller
 # claiming thousands cannot turn one HTTP request into a multi-megabyte transfer.
 _MAX_ERROR_ENTRIES = 64
@@ -134,7 +143,7 @@ def _inventory(*, refresh: bool = False) -> list[InventoryDevice]:
         if now - stamped < _INVENTORY_TTL_S:
             return cached
     try:
-        devices = list_devices()
+        devices = list_devices(timeout_s=_INVENTORY_TIMEOUT_S)
     except (OSError, ValueError):  # PowerShell missing or emitting non-JSON
         devices = []
     _inventory_cache = (now, devices)
@@ -503,7 +512,9 @@ def identify_payload(*, device: str | None = None, mock: bool = False) -> dict[s
                 "namespace_ids": nsids,
                 "namespaces": namespaces,
                 "degraded": mock,
-                "degraded_reason": "fixture Identify payload — not your controller" if mock else None,
+                "degraded_reason": (
+                    "fixture Identify payload -- not your controller" if mock else None
+                ),
             }
         )
         return payload
@@ -675,9 +686,7 @@ def build_snapshot(device_path: str, *, mock: bool) -> tuple[DeviceSnapshot, str
         wmi_counters = _wmi_counters(device_path)
         source = TelemetrySource.WMI if wmi_counters else TelemetrySource.USB_BRIDGE_DEGRADED
         degraded_reason = (
-            f"adapter fell back to WMI ({failure.reason})"
-            if wmi_counters
-            else failure.reason
+            f"adapter fell back to WMI ({failure.reason})" if wmi_counters else failure.reason
         )
 
     snapshot = DeviceSnapshot(
