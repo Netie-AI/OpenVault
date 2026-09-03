@@ -5,10 +5,11 @@
 
 Last reconciled: 2026-08-27. **HUMAN_STOP** still in force for #18 HT1-HT5.
 Epic #13 F17/F18 children: #37 closed; #38 and #39 independently verified on
-`origin/main` (`3030cad` / PR #43).
+`origin/main` (`3030cad` / PR #43). Skills SoT is Netie-KB `:8030`
+([`DR-0012`](docs/decisions/DR-0012-skills-kb-crew-wiring.md)); OpenVault
+`POST /api/crew/gate` shipped. Cortex-crew merge blocked (repo 404).
 
-**UI:** `:3010` / `:5000`. Scripted demo:
-`cd OpenMW && uv run --no-sync python scripts/one_seat_demo.py`
+**UI:** `:3010` / `:5000`. Scripted demo: `cd OpenMW && uv run --no-sync python scripts/one_seat_demo.py`
 
 ## Distance
 
@@ -31,7 +32,8 @@ Founder authorized #13 under HUMAN_STOP (2026-08-22 yes-now). Do not claim HT1-H
 | #33 EPIC host+meter | Open — children closed; blocked on #18 HT1 |
 | #38 PM CSV ingest | **CLOSED.** Independent verify 8/8 on origin/main |
 | #39 agent retrieve | **CLOSED.** Independent verify 3/3; hard-denies PAN |
-| Pricing / skills library | **NEEDS-YOU.** Not tickets |
+| **Skills / KB / crew** | Keys=OpenVault. Skills=Netie-KB `:8030`. Cortex stirs. `POST /api/crew/gate` shipped. Cortex-crew merge blocked (404) |
+| Pricing | **NEEDS-YOU.** Not a ticket. DR-0009 (a) — we carry provider cost |
 
 ## Clone-and-verify
 

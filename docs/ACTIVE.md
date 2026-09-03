@@ -17,7 +17,7 @@ What exists in this repo and where. Update when structure changes, not when stat
 | `OpenMW/scripts/one_seat_demo.py` | Auto-safe one-seat evidence path (vault → FreeRoute refuse → ship allow → deny); see [`ONE_SEAT_DEMO.md`](ONE_SEAT_DEMO.md) |
 | `apps/shell/` | Electron desktop shell |
 | `docs/reference/` | Protocol/technical reference docs still live and current |
-| `docs/decisions/` | Decision records, `DR-####-kebab-title.md`, MADR format (see `docs/decisions/DR-0001-record-decisions.md`) |
+| `docs/decisions/` | Decision records, `DR-####-kebab-title.md`, MADR format (see `DR-0001`). Proposed: [`DR-0012`](decisions/DR-0012-skills-kb-crew-wiring.md) skills/KB/crew wiring |
 | `scripts/windows/` | `Start-OpenVaultDemo.ps1`, `Start-NetieStack.ps1`, `Start-LocalMesh.ps1` |
 | `scripts/` | `start_local_mesh.sh` (Linux/macOS mesh bring-up: custody API `:5000`, approve Cortex + OpenIDE, demo shell when AirGPT is absent) · `airgpt_demo_shell.py` (stdlib AirGPT/OpenIDE stand-in on `:8765`) |
 | `bin/` | Quarantine — dead/orphaned files pending the founder's final review and removal |
