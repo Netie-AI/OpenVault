@@ -25,6 +25,45 @@ Append-only. Never edited, only added to. Newest first.
   `apps/web/src/types/openvault-window.d.ts`. No CI job runs the web build yet, so this had
   been failing silently on main.
 
+## 2026-08-25 - Skill SoT is Netie-KB :8030, not Cortex (DR-0012)
+
+- Founder/constitution answer landed: **keys = OpenVault**, **skills+MCP
+  catalog = Netie-KB R-0016 at 127.0.0.1:8030**, **Cortex stirs**. Access ids
+  are `netie-kb.skills` / `netie-kb.mcp`. Connect pack publishes `netie_kb` and
+  a Constructor pointer (consumer skin, not merged). Grok is a model slot, not
+  an app. Netie Control is the supervised shell; Cortex does not grow a UI.
+- Cortex-crew is a Cortex **worktree branch**. This agent still cannot merge it
+  (`Netie-AI/Cortex` 404). Estate-gate FAILING lives in netie-control, also 404.
+
+## 2026-08-25 - Cortex crew gate + skill/mcp signposts (DR-0012 wire)
+
+- **Cortex agents have an OpenVault number to call.** `POST /api/crew/gate`
+  is resolve + audit (`parent_run_id`, `child_id`, `deficit`). Location and
+  allowed, never a skill body. Connect pack publishes `crew_gate`,
+  `access_resolve`, and Cortex's `skills` / `crew` / `mcp` URLs.
+- **Access kinds `skill` and `mcp`** signpost `cortex.skills` and `cortex.mcp`
+  the same way `cortex.memory` already works. `runtime.crew` points at Cortex
+  `/api/crew`. Indexes `GET /api/cortex/skills` and `/api/cortex/crew` strip
+  `skill_body` / `transcript` if Cortex ever sends them.
+- **Cortex code is not in this tree.** `Netie-AI/Cortex` is 404 with this
+  agent's GitHub token. The registry, parent/child loop, and next-email skill
+  load still have to land there once the repo is on the environment.
+
+## 2026-08-25 - Skills, KB, and Cortex crew: name the three stores (DR-0012, proposed)
+
+- **The skill library is still not here.** Reviews of agent outreach, human-email
+  skills for Grok, internal system skills, and Cortex crew A2A need one loop, not
+  a catalog in the vault. [`DR-0012`](docs/decisions/DR-0012-skills-kb-crew-wiring.md)
+  is the RFC: Cortex stirs (load skill this turn, crew parent-task, deficit
+  `need skill X`), OpenVault signposts and gates (same shape as memory resolve),
+  Netie KB is the one skill registry (R-0016, `:8030`). Immediate next-email use
+  loads from that registry, not a second Cortex catalog and not a vault store.
+- **OpenVault's slice is the negative space.** Tests now fail if `/api/skills`
+  (or agent-skills / omni-skills) appears, if the access registry grows
+  skill-body fields, or if PRODUCT_ROLES stops saying the agent loop is not
+  ours. Compatible later work: access kinds `skill`/`mcp` as location+gate only,
+  and #39 custody MCP. Distill ingest and crew scheduler stay out.
+
 ## 2026-08-25 - Custody reopen lands on GitHub (F17 bak + F18 CSV + agent retrieve)
 
 - **#37 re-landed on the branch that GitHub actually has.** Independent verify had
