@@ -2,6 +2,12 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-09-04 - Lazy openmw import so console and one-seat demo skip numpy
+
+- `openmw/__init__.py` no longer imports `openmw.run` at module load. Offload
+  helpers resolve via `__getattr__`. `import openmw.openvault.app` (one-seat
+  demo, FreeRoute console) no longer requires a working numpy DLL.
+
 ## 2026-09-03 - Friendly key UI: Cortex subscribe, honest BYOK, easy free register (#42)
 
 - **Subscribe shows a Cortex API key only.** `POST /api/keys/cortex` and
