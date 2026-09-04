@@ -584,6 +584,11 @@ def one_press_deploy(
         plan = execute_deploy(plan, simulate=simulate)
         executed = True
     payload = plan.to_dict()
+    # Same gates the auto-ship router reports (detect / commands / domain /
+    # runtime); lazy import because hosting pulls in origin + server.
+    from openmw.openvault.ship.hosting import ready_to_ship
+
+    payload["ready_report"] = ready_to_ship(project_path, hostname=subdomain).to_dict()
     payload["one_press"] = {
         "executed": executed,
         "simulate": simulate,

@@ -25,6 +25,32 @@ Append-only. Never edited, only added to. Newest first.
   `apps/web/src/types/openvault-window.d.ts`. No CI job runs the web build yet, so this had
   been failing silently on main.
 
+## 2026-09-03 - OpenVault Service SKUs, Stripe checkout (simulate), ship to netie.ai (PR #40)
+
+- **OpenVault owns HTTP; Cursor Origin stays source-only.** `ship/server.py` emits the
+  Caddyfile (TLS + `reverse_proxy` / `file_server` + `/healthz`), the systemd unit and an
+  AWS SSM restart; `ship/origin.py` plans the Origin push (`ORIGIN_MODE=simulate` default);
+  `ship/hosting.py` maps `host_kind` (`static_http` / `edge_http` / `process` /
+  `container`) onto that runtime and reports ready-to-ship gates. `cicd_plan` writes
+  `.github/workflows/openvault-ship.yml` (build, scp, restart, reload caddy, curl
+  `/healthz`); `vercel.json` is a detect hint only.
+- **Service login + SKUs** (`ship/service.py`): customers log into OpenVault Service, not
+  the laptop. `ov_hosted` $24 (wraps Lightsail + VPS), `ov_fast` $79, `byo_aws` / `byo_vps`
+  $9 platform fee. Connect secrets are never persisted.
+- **Stripe Hosted Checkout** (`ship/stripe_billing.py`, `httpx` only): NETIE test-mode
+  prices `price_1U8SQSFV5wcFod2fggATWBtT` (hosted), `price_1U8SQbFV5wcFod2fBfkEFyl4`
+  (fast), `price_1U8SQbFV5wcFod2fv5r1WD8o` (byo_aws), `price_1U8SQcFV5wcFod2fw5s1cqSs`
+  (byo_vps). `STRIPE_MODE=simulate` default; live only with `STRIPE_MODE=live` and
+  `STRIPE_SECRET_KEY`. `POST /api/service/ship-netie` runs login -> checkout -> confirm ->
+  Caddy/systemd onto `{slug}.netie.ai`; flags `airgpt: false`, `dms: false`.
+- **Merge with main (#9, #43, #41, #45):** the PR's stub copies of `aws_guide`, `cicd`,
+  `cloud_targets`, `engine`, `github_auth`, `library`, `openship_client`, `pick_folder`,
+  `stacks`, `redis_store` yielded to main's implementations; `DetectedStack.host_kind`,
+  `Stack.host_kind` / `origin_http`, the `CicdReport` HTTP-ship fields and `cicd_plan`
+  were carried over onto them. `tomli` is now declared (main's `languages.py` already
+  imported it on 3.10). The PR's `OpenMW/webui/index.html` edits were dropped with the
+  webui main removed; `openvault_hosted` / `hetzner` / `aws` targets live on the ship
+  router, not on `/api/ship/engine`.
 ## 2026-08-25 - Skill SoT is Netie-KB :8030, not Cortex (DR-0012)
 
 - Founder/constitution answer landed: **keys = OpenVault**, **skills+MCP
