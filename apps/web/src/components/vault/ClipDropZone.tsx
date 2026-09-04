@@ -19,15 +19,6 @@ interface Props {
   providerNames?: ReadonlyMap<string, string>;
 }
 
-declare global {
-  interface Window {
-    openvault?: {
-      isDesktop?: boolean;
-      onClipboardSecret?: (cb: (secret: string) => void) => () => void;
-    };
-  }
-}
-
 export function ClipDropZone({
   onSecret,
   hero = false,

@@ -41,7 +41,7 @@ openmw_demo_ui/
 .vscode/
 .idea/
 
-# Node / Next build output
+# Node / Next build output (covers apps/web/node_modules)
 node_modules/
 .next/
 .turbo/

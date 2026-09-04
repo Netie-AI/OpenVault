@@ -13,16 +13,6 @@ import { Switch } from "@/components/ui/Switch";
 
 const CLIPBOARD_PREF_KEY = "openvault.clipboard_watch";
 
-declare global {
-  interface Window {
-    openvault?: {
-      isDesktop?: boolean;
-      getClipboardWatch?: () => Promise<{ enabled: boolean }>;
-      setClipboardWatch?: (enabled: boolean) => Promise<{ enabled: boolean }>;
-    };
-  }
-}
-
 export default function SettingsPage() {
   const isDesktop = Boolean(
     typeof window !== "undefined" && window.openvault?.isDesktop,

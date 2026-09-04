@@ -2,6 +2,29 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-09-03 - Friendly key UI: Cortex subscribe, honest BYOK, easy free register (#42)
+
+- **Subscribe shows a Cortex API key only.** `POST /api/keys/cortex` and
+  `POST /api/accounts/{id}/cortex-key` mint an `ov_` token, store it as `provider=cortex`,
+  and frame it as a Cortex key. No hop vendor or fake vendor string on that screen;
+  `GET /api/keys/ui-copy` serves the locked copy and `OpenMW/tests/test_key_ui.py` plus
+  `apps/web/src/keys/*.test.ts` fail if any surface drifts from it.
+- **Bring your key shows the provider name the user pasted** (`apps/web/src/keys/byok.ts`);
+  an `ov_` token is never labelled as another vendor. **Free keys** are two steps: Register,
+  then Install.
+- **Landed in the Next console, not the retired webui.** The branch had added a Keys tab to
+  `OpenMW/webui/index.html`, which main had already deleted (`:5000/` redirects to the app).
+  The tab is ported to `apps/web/src/app/keys/page.tsx` (`/keys`, nav "Keys"); Operator hop
+  status stays on `/vault` (R-0011). The loopback proof server (`npm run serve`) keeps its
+  `127.0.0.1:3010` default; set `KEY_UI_PORT` to run it beside `next dev`.
+- **Custody kept honest on merge.** An account-issued Cortex key is stored `custody=tenant`
+  (DR-0009, #41) so the metered gateway never spends it, and the mint routes run the same
+  loopback + unsealed guards and custody audit line as every other vault mutation.
+- **`next build` type-checks again.** Settings and ClipDropZone each declared a different
+  shape for `window.openvault`, which TypeScript rejects; the bridge is now declared once in
+  `apps/web/src/types/openvault-window.d.ts`. No CI job runs the web build yet, so this had
+  been failing silently on main.
+
 ## 2026-09-03 - OpenVault Service SKUs, Stripe checkout (simulate), ship to netie.ai (PR #40)
 
 - **OpenVault owns HTTP; Cursor Origin stays source-only.** `ship/server.py` emits the

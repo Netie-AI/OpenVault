@@ -111,6 +111,7 @@ from openmw.openvault.vault.airgpt_keyvault import keyvault_snapshot, upsert_env
 from openmw.openvault.vault.api_keys import ApiKeyError, ApiKeyStore
 from openmw.openvault.vault.auth import AuthRefusedError, resolve_caller
 from openmw.openvault.vault.budget import configured_ceiling
+from openmw.openvault.vault.cortex_key import tenant_key_payload
 from openmw.openvault.vault.crypto import Seal, VaultCryptoError, VaultSealedError
 from openmw.openvault.vault.env_ingest import ingest_environment, scan_environment
 from openmw.openvault.vault.fallback import FallbackConfig, FallbackManager
@@ -134,7 +135,13 @@ from openmw.openvault.vault.ratelimit import (
 from openmw.openvault.vault.redis_store import try_make_redis_store
 from openmw.openvault.vault.secrets import SecretKind, SecretStore, SecretValidationError
 from openmw.openvault.vault.seed import seed_essentials
-from openmw.openvault.vault.store import KeyCustody, KeyRole, KeyVault, ProviderKind
+from openmw.openvault.vault.store import (
+    KeyCustody,
+    KeyRecord,
+    KeyRole,
+    KeyVault,
+    ProviderKind,
+)
 from openmw.openvault.vault.usage_store import HopTrace, UsageEvent, UsageStore
 
 log = structlog.get_logger()
@@ -926,6 +933,7 @@ def create_app(
 
     # Stage-3 integrator mount: routers own their paths; app.py only wires them.
     from openmw.openvault.routers.health import build_health_router
+    from openmw.openvault.routers.key_ui import build_key_ui_router
     from openmw.openvault.routers.keys import router as keys_router
     from openmw.openvault.routers.route import router as route_router
     from openmw.openvault.routers.sentinel import router as sentinel_router
@@ -936,6 +944,25 @@ def create_app(
     app.include_router(route_router)
     app.include_router(keys_router)
     app.include_router(build_health_router(state_vault))
+
+    def _key_ui_guard(request: Request, action: str) -> None:
+        # A Cortex key mint is a custody write: same controls as POST /api/keys.
+        _require_loopback(request, action)
+        _require_unsealed(state_seal, action)
+
+    def _key_ui_audit(request: Request, record: KeyRecord) -> None:
+        _audit_custody(
+            "cortex_key_issued",
+            request,
+            key_id=record.id,
+            provider=record.provider,
+            account_id=record.account_id,
+            custody=record.custody,
+        )
+
+    app.include_router(
+        build_key_ui_router(state_vault, state_accounts, guard=_key_ui_guard, audit=_key_ui_audit)
+    )
 
     @app.get("/api/healthz")
     def healthz() -> dict[str, Any]:
@@ -1113,6 +1140,7 @@ def create_app(
         _require_unsealed(state_seal, "key create")
         if state_accounts.get(account_id) is None:
             raise HTTPException(status_code=404, detail="account not found")
+        # Tenant BYOK: account-scoped only. Do not mark pooled / spend this row.
         record = state_vault.create(
             label=body.label,
             provider=body.provider,
@@ -1126,7 +1154,7 @@ def create_app(
         _audit_custody(
             "key_create", request, key_id=record.id, provider=record.provider, account_id=account_id
         )
-        return asdict(record)
+        return tenant_key_payload(record)
 
     @app.post("/api/accounts/{account_id}/incident")
     def account_incident(account_id: str, body: IncidentBody, request: Request) -> dict[str, Any]:
