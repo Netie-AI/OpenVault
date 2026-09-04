@@ -238,7 +238,14 @@ def _require_loopback(request: Request, action: str) -> str:
 #: trigger a remote build, or SSH in and restart containers. `local_demo` only
 #: simulates and `aws_guide` only writes a plan, so neither needs the gate.
 _REMOTE_SHIP_TARGETS = frozenset(
-    {"cloudflare_pages", "coolify", "netlify", "openship_cloud", "vps_ssh"}
+    {
+        "spaceship_ftp",
+        "cloudflare_pages",
+        "coolify",
+        "netlify",
+        "openship_cloud",
+        "vps_ssh",
+    }
 )
 
 
@@ -611,6 +618,7 @@ class GitHubPatBody(BaseModel):
 
 class ShipEngineBody(BaseModel):
     target: Literal[
+        "spaceship_ftp",
         "cloudflare_pages",
         "coolify",
         "netlify",
@@ -627,10 +635,15 @@ class ShipEngineBody(BaseModel):
     monthly_cap_usd: float | None = None
     run_build: bool = False
     prefer_remote_openship: bool = False
+    #: Vault refs to inject at host time. Each item needs env_name plus
+    #: exactly one of key_id / secret_id. Spaceship writes them to a
+    #: non-public FTP dir only (SPACESHIP_FTP_ENV_DIR != SPACESHIP_FTP_DIR).
+    secrets: list[dict[str, str]] = Field(default_factory=list)
 
 
 class ShipPreflightBody(BaseModel):
     target: Literal[
+        "spaceship_ftp",
         "cloudflare_pages",
         "coolify",
         "netlify",
@@ -2076,6 +2089,46 @@ def create_app(
                 "facts": pre.facts,
                 "real_publish": True,
             }
+        if body.target == "spaceship_ftp":
+            from openmw.openvault.ship.hosts.spaceship_ftp import (
+                SpaceshipFtpAdapter,
+                from_vault,
+            )
+
+            def _ss_secret(provider: str) -> str | None:
+                for rec in state_vault.list_keys():
+                    if (
+                        rec.enabled
+                        and rec.lifecycle == "active"
+                        and (
+                            rec.provider == provider
+                            or provider in (rec.label or "").lower()
+                            or "spaceship" in (rec.label or "").lower()
+                        )
+                    ):
+                        return state_vault.get_secret(rec.id)
+                return None
+
+            try:
+                adapter = from_vault(_ss_secret)
+            except Exception:
+                adapter = SpaceshipFtpAdapter(
+                    host=os.environ.get("SPACESHIP_FTP_HOST"),
+                    user=os.environ.get("SPACESHIP_FTP_USER"),
+                    password=os.environ.get("SPACESHIP_FTP_PASS"),
+                    remote_dir=os.environ.get("SPACESHIP_FTP_DIR"),
+                    public_url=os.environ.get("SPACESHIP_PUBLIC_URL"),
+                    env_dir=os.environ.get("SPACESHIP_FTP_ENV_DIR"),
+                )
+            pre = adapter.preflight()
+            return {
+                "ok": pre.ready,
+                "ready": pre.ready,
+                "target": body.target,
+                "blocker": pre.blocker,
+                "facts": pre.facts,
+                "real_publish": True,
+            }
         if body.target == "vps_ssh":
             from openmw.openvault.ship.hosts.vps_ssh import VpsSshAdapter, from_vault
 
@@ -2125,9 +2178,9 @@ def create_app(
             "ready": False,
             "target": body.target,
             "blocker": (
-                f"{body.target} is not a real host adapter yet — use Cloudflare Pages, "
-                "Coolify, Netlify, or your own VPS (vps_ssh) for a real publish, or "
-                "local_demo to simulate."
+                f"{body.target} is not a real host adapter yet — use Spaceship FTP, "
+                "Cloudflare Pages, Coolify, Netlify, or your own VPS (vps_ssh) for a "
+                "real publish, or local_demo to simulate."
             ),
             "facts": {},
             "real_publish": False,
@@ -2143,7 +2196,14 @@ def create_app(
             stack = detect_project(body.project_path.strip()).to_dict()
         sponsored = {t.id for t in TARGET_CARDS if t.sponsored}
         vps = (body.vps_host or "").strip() or os.environ.get("OPENVAULT_VPS_HOST", "").strip()
-        out = recommend_target(stack, sponsored_ids=sponsored, vps_configured=bool(vps))
+        from openmw.openvault.ship.hosts.spaceship_ftp import host_configured
+
+        out = recommend_target(
+            stack,
+            sponsored_ids=sponsored,
+            vps_configured=bool(vps),
+            spaceship_configured=host_configured(),
+        )
         out["stack"] = stack
         return out
 
@@ -2195,8 +2255,14 @@ def create_app(
                 destination=body.hostname,
                 request=request,
             )
+        ship_env, inject_summary = _resolve_ship_inject(
+            body.secrets,
+            vault=state_vault,
+            secrets=state_secrets,
+            request=request,
+        )
         try:
-            return run_ship_engine(
+            payload = run_ship_engine(
                 target=body.target,
                 project_path=body.project_path,
                 github_url=body.github_url,
@@ -2206,6 +2272,7 @@ def create_app(
                 monthly_cap_usd=body.monthly_cap_usd,
                 run_build=body.run_build,
                 prefer_remote_openship=body.prefer_remote_openship,
+                ship_env=ship_env or None,
             )
         except DeployInProgressError as exc:
             raise HTTPException(
@@ -2220,6 +2287,11 @@ def create_app(
                     "since": exc.since,
                 },
             ) from exc
+        if ship_env:
+            payload = scrub_mapping(payload, list(ship_env.values()))
+        if inject_summary.get("count"):
+            payload["secrets_injected"] = inject_summary
+        return payload
 
     @app.get("/api/ship/engine/{deployment_id}")
     def ship_engine_get(deployment_id: str) -> dict[str, Any]:

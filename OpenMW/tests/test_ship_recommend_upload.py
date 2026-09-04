@@ -26,6 +26,16 @@ _HOST_CREDENTIALS = (
     "COOLIFY_URL",
     "COOLIFY_APP_UUID",
     "OPENSHIP_TOKEN",
+    # Spaceship recommend/preflight read host+user from the shell. A developer
+    # machine with SPACESHIP_FTP_* set must not flip static recommend to Spaceship
+    # or make preflight look ready when the vault is empty.
+    "SPACESHIP_FTP_HOST",
+    "SPACESHIP_FTP_USER",
+    "SPACESHIP_FTP_PASS",
+    "SPACESHIP_FTP_DIR",
+    "SPACESHIP_PUBLIC_URL",
+    "SPACESHIP_FTP_ENV_DIR",
+    "OPENVAULT_SPACESHIP_ALLOW_PUBLISH",
 )
 
 
@@ -134,6 +144,17 @@ def test_preflight_netlify_missing_token() -> None:
     assert body["real_publish"] is True
     assert "token" in body["blocker"].lower()
     assert body["blocker"]
+
+
+def test_preflight_spaceship_missing_host_is_actionable() -> None:
+    app = create_app(mock_health=True)
+    client = TestClient(app, client=("127.0.0.1", 5555))
+    res = client.post("/api/ship/preflight", json={"target": "spaceship_ftp"})
+    assert res.status_code == 200
+    body = res.json()
+    assert body["ready"] is False
+    assert body["real_publish"] is True
+    assert "SPACESHIP_FTP_HOST" in body["blocker"]
 
 
 def test_recommend_server_prefers_the_users_own_vps_when_connected() -> None:

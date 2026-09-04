@@ -49,6 +49,7 @@ def recommend_target(
     *,
     sponsored_ids: frozenset[str] | set[str] | None = None,
     vps_configured: bool = False,
+    spaceship_configured: bool = False,
 ) -> dict[str, Any]:
     """Pick one target with a human reason. User may override; blank picker is wrong.
 
@@ -83,20 +84,36 @@ def recommend_target(
             )
             real_publish = False
     elif primary in _STATIC_PRIMARY or category in _STATIC_CATEGORY or output_dir:
-        target = "cloudflare_pages"
-        reason = (
-            "Static/SSG (or known output folder) → Cloudflare Pages: free tier, "
-            "one API token, custom domain as a first-class API object. Your machine "
-            "builds; their account hosts."
-        )
-        real_publish = True
+        if spaceship_configured:
+            target = "spaceship_ftp"
+            reason = (
+                "Static/SSG (or known output folder) -> existing Spaceship FTP host. "
+                "This estate already pays for it. Upload a subfolder; never invent a URL."
+            )
+            real_publish = True
+        else:
+            target = "cloudflare_pages"
+            reason = (
+                "Static/SSG (or known output folder) -> Cloudflare Pages: free tier, "
+                "one API token, custom domain as a first-class API object. Your machine "
+                "builds; their account hosts."
+            )
+            real_publish = True
     else:
-        target = "cloudflare_pages"
-        reason = (
-            "Defaulting to Cloudflare Pages for a free first deploy. Override to "
-            "FreeBuild/VPS if this app needs a server process."
-        )
-        real_publish = True
+        if spaceship_configured:
+            target = "spaceship_ftp"
+            reason = (
+                "Defaulting to the existing Spaceship FTP host. Override to "
+                "FreeBuild/VPS if this app needs a server process."
+            )
+            real_publish = True
+        else:
+            target = "cloudflare_pages"
+            reason = (
+                "Defaulting to Cloudflare Pages for a free first deploy. Override to "
+                "FreeBuild/VPS if this app needs a server process."
+            )
+            real_publish = True
 
     # Hard line: if organic pick is sponsored, fall back to local_demo rather than
     # preselecting a paid placement ("we chose this for you" must never be an ad).

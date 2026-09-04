@@ -71,6 +71,7 @@ def test_ship_api_routes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Non
     targets = client.get("/api/ship/targets")
     assert targets.status_code == 200
     ids = {t["id"] for t in targets.json()["targets"]}
+    assert "spaceship_ftp" in ids
     assert "openship_cloud" in ids
     assert "vps_ssh" in ids
     assert "aws_guide" in ids

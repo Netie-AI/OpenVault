@@ -488,6 +488,24 @@ export default function ShipPage() {
           </div>
         ) : null}
 
+        {target === "spaceship_ftp" ? (
+          <div className="mt-4 rounded-xl border border-border bg-background/50 p-4 text-sm text-muted-foreground">
+            <p className="font-medium text-foreground">Spaceship FTP (existing host)</p>
+            <p className="mt-1">
+              Live overwrite needs{" "}
+              <code className="text-xs">OPENVAULT_SPACESHIP_ALLOW_PUBLISH=1</code> on
+              the API process. We never invent a public URL — only return{" "}
+              <code className="text-xs">SPACESHIP_PUBLIC_URL</code> after a probe.
+            </p>
+            <p className="mt-1">
+              Vault env inject writes to{" "}
+              <code className="text-xs">SPACESHIP_FTP_ENV_DIR</code> only when it
+              differs from the public upload dir. Public{" "}
+              <code className="text-xs">.env</code> is refused.
+            </p>
+          </div>
+        ) : null}
+
         {recommend ? (
           <div className="mt-5 rounded-xl border border-border bg-background/50 p-4">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
