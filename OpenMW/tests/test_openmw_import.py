@@ -7,10 +7,7 @@ import sys
 
 
 def test_openmw_import_does_not_load_numpy() -> None:
-    script = (
-        "import openmw, sys; "
-        "raise SystemExit(0 if 'numpy' not in sys.modules else 1)"
-    )
+    script = "import openmw, sys; raise SystemExit(0 if 'numpy' not in sys.modules else 1)"
     completed = subprocess.run(
         [sys.executable, "-c", script],
         check=False,
