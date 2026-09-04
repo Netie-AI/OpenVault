@@ -20,7 +20,7 @@ restart-sealed check. HT1 live URL is up. #33 stays OPEN. #13 CLOSED.
 |---|--------|
 | #18 DEMO epic | HT1+HT5 live evidence; HT3 needs human passphrase then Lock/Unseal/Retire bak |
 | #33 EPIC host+meter | Open - children closed; HT1 URL exists, epic stays open per founder |
-| **Spaceship FTP PR** | Branch open — adapter + recommend/preflight/engine; await merge (not on origin/main yet) |
+| **Spaceship FTP PR** | [#47](https://github.com/Netie-AI/OpenVault/pull/47) open — await merge (not on origin/main yet) |
 | Pricing | **NEEDS-YOU.** Not a ticket. DR-0009 (a) - we carry provider cost |
 
 ## HT1 / HT5
