@@ -84,9 +84,7 @@ def host_configured(
 
 
 def publish_allowed(raw: str | None = None) -> bool:
-    env_raw = raw if raw is not None else os.environ.get(
-        "OPENVAULT_SPACESHIP_ALLOW_PUBLISH", ""
-    )
+    env_raw = raw if raw is not None else os.environ.get("OPENVAULT_SPACESHIP_ALLOW_PUBLISH", "")
     return env_raw.strip() in {"1", "true", "TRUE", "yes", "YES"}
 
 
@@ -240,9 +238,7 @@ class SpaceshipFtpAdapter:
         self._password = (password or "").strip()
         self._remote_dir = (remote_dir or "").strip()
         self._public_url = normalize_public_url(public_url or "")
-        env_raw = (
-            env_dir if env_dir is not None else os.environ.get("SPACESHIP_FTP_ENV_DIR", "")
-        )
+        env_raw = env_dir if env_dir is not None else os.environ.get("SPACESHIP_FTP_ENV_DIR", "")
         self._env_dir = env_raw.strip()
         if allow_publish is None:
             self._allow_publish = publish_allowed()
@@ -287,8 +283,7 @@ class SpaceshipFtpAdapter:
             facts["env"] = "vault-inject-refused-public-ftp"
         if not self._allow_publish:
             facts["note"] = (
-                "Preflight can be ready; live overwrite needs "
-                "OPENVAULT_SPACESHIP_ALLOW_PUBLISH=1"
+                "Preflight can be ready; live overwrite needs OPENVAULT_SPACESHIP_ALLOW_PUBLISH=1"
             )
         return Preflight(ready=True, facts=facts)
 

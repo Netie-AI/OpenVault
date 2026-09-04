@@ -57,9 +57,7 @@ class TestRegistry:
 
 class TestPreflightAndDeploy:
     def test_missing_host_is_actionable(self) -> None:
-        pre = SpaceshipFtpAdapter(
-            host=None, user="ship@x", password="secret"
-        ).preflight()
+        pre = SpaceshipFtpAdapter(host=None, user="ship@x", password="secret").preflight()
         assert pre.ready is False
         assert "SPACESHIP_FTP_HOST" in pre.blocker
 
@@ -79,9 +77,7 @@ class TestPreflightAndDeploy:
         assert result.url == ""
         assert "ALLOW_PUBLISH" in result.detail
 
-    def test_upload_without_configured_url_does_not_invent(
-        self, tmp_path: Path
-    ) -> None:
+    def test_upload_without_configured_url_does_not_invent(self, tmp_path: Path) -> None:
         artifact = tmp_path / "out"
         artifact.mkdir()
         (artifact / "index.html").write_text("ok", encoding="utf-8")
@@ -174,9 +170,7 @@ class TestEnvInject:
         (artifact / "index.html").write_text("ok", encoding="utf-8")
         captured: dict[str, object] = {}
 
-        def _write(
-            host: str, user: str, password: str, env_dir: str, env: dict[str, str]
-        ) -> None:
+        def _write(host: str, user: str, password: str, env_dir: str, env: dict[str, str]) -> None:
             captured["dir"] = env_dir
             captured["env"] = dict(env)
 
