@@ -25,6 +25,8 @@ import {
   revokeSecret,
   rotateSecret,
   unsealVault,
+  lockVault,
+  setVaultPassphrase,
   type SecretRow,
   type VaultStatus,
 } from "@/lib/api/secrets";
@@ -129,6 +131,40 @@ export function SecretsPanel() {
       setNotice(st.sealed ? "Still sealed" : "Vault unsealed");
     } catch (err) {
       setNotice(isApiError(err) ? err.message : "Unseal failed");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function onLock() {
+    setBusy("lock");
+    setNotice("");
+    try {
+      const st = await lockVault();
+      setStatus(st);
+      setNotice(st.sealed ? "Vault locked" : "Lock did not seal");
+    } catch (err) {
+      setNotice(isApiError(err) ? err.message : "Lock failed");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function onSetPassphrase() {
+    setBusy("set-passphrase");
+    setNotice("");
+    try {
+      const st = await setVaultPassphrase(passphrase);
+      setStatus(st);
+      setPassphrase("");
+      await refresh();
+      setNotice(
+        st.passphrase_configured
+          ? "Passphrase configured. Lock, then Unseal, then retire the bak."
+          : "Passphrase was not stored",
+      );
+    } catch (err) {
+      setNotice(isApiError(err) ? err.message : "Set passphrase failed");
     } finally {
       setBusy(null);
     }
@@ -331,11 +367,47 @@ export function SecretsPanel() {
               </div>
             </div>
           ) : (
-            <p>
-              Vault open
-              {status.wrap_method ? ` · wrap=${status.wrap_method}` : ""}
-              {status.passphrase_configured ? " · passphrase configured" : ""}
-            </p>
+            <div className="space-y-3">
+              <p>
+                Vault open
+                {status.wrap_method ? ` · wrap=${status.wrap_method}` : ""}
+                {status.passphrase_configured ? " · passphrase configured" : ""}
+              </p>
+              <div className="flex flex-wrap items-end gap-2">
+                {!status.passphrase_configured ? (
+                  <>
+                    <div className="min-w-[12rem] flex-1">
+                      <Label htmlFor="vault-set-passphrase">New passphrase</Label>
+                      <Input
+                        id="vault-set-passphrase"
+                        type="password"
+                        autoComplete="new-password"
+                        value={passphrase}
+                        onChange={(e) => setPassphrase(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") void onSetPassphrase();
+                        }}
+                      />
+                    </div>
+                    <Button
+                      size="sm"
+                      disabled={busy === "set-passphrase" || !passphrase}
+                      onClick={() => void onSetPassphrase()}
+                    >
+                      {busy === "set-passphrase" ? "Saving..." : "Set passphrase"}
+                    </Button>
+                  </>
+                ) : null}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={busy === "lock"}
+                  onClick={() => void onLock()}
+                >
+                  {busy === "lock" ? "Locking..." : "Lock"}
+                </Button>
+              </div>
+            </div>
           )}
         </div>
       ) : null}

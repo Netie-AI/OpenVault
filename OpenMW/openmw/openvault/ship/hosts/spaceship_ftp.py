@@ -11,6 +11,7 @@ Without it, deploy refuses with an empty URL (HT1 stays human).
 
 from __future__ import annotations
 
+import contextlib
 import ftplib
 import os
 from collections.abc import Callable, Mapping
@@ -83,8 +84,10 @@ def host_configured(
 
 
 def publish_allowed(raw: str | None = None) -> bool:
-    value = (raw if raw is not None else os.environ.get("OPENVAULT_SPACESHIP_ALLOW_PUBLISH", "")).strip()
-    return value in {"1", "true", "TRUE", "yes", "YES"}
+    env_raw = raw if raw is not None else os.environ.get(
+        "OPENVAULT_SPACESHIP_ALLOW_PUBLISH", ""
+    )
+    return env_raw.strip() in {"1", "true", "TRUE", "yes", "YES"}
 
 
 def iter_upload_relpaths(artifact_dir: Path) -> list[str]:
@@ -124,6 +127,14 @@ def probe_url(url: str, *, client: httpx.Client | None = None) -> bool:
             http.close()
 
 
+def _ftp_disconnect(ftp: ftplib.FTP) -> None:
+    try:
+        ftp.quit()
+    except Exception:
+        with contextlib.suppress(Exception):
+            ftp.close()
+
+
 def _ftp_upload(
     host: str,
     user: str,
@@ -155,13 +166,7 @@ def _ftp_upload(
             uploaded += 1
         return uploaded
     finally:
-        try:
-            ftp.quit()
-        except Exception:
-            try:
-                ftp.close()
-            except Exception:
-                pass
+        _ftp_disconnect(ftp)
 
 
 def _ftp_write_env(
@@ -187,13 +192,7 @@ def _ftp_write_env(
             ftp.cwd(env_dir)
         ftp.storbinary("STOR .env", BytesIO(payload))
     finally:
-        try:
-            ftp.quit()
-        except Exception:
-            try:
-                ftp.close()
-            except Exception:
-                pass
+        _ftp_disconnect(ftp)
 
 
 def _ensure_remote_dir(ftp: ftplib.FTP, rel: str) -> None:
@@ -241,7 +240,10 @@ class SpaceshipFtpAdapter:
         self._password = (password or "").strip()
         self._remote_dir = (remote_dir or "").strip()
         self._public_url = normalize_public_url(public_url or "")
-        self._env_dir = (env_dir if env_dir is not None else os.environ.get("SPACESHIP_FTP_ENV_DIR", "")).strip()
+        env_raw = (
+            env_dir if env_dir is not None else os.environ.get("SPACESHIP_FTP_ENV_DIR", "")
+        )
+        self._env_dir = env_raw.strip()
         if allow_publish is None:
             self._allow_publish = publish_allowed()
         else:

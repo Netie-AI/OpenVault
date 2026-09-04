@@ -3,36 +3,30 @@
 > Canonical "what's true right now." History: [`CHANGELOG.md`](CHANGELOG.md). Deferred:
 > [`PARKING_LOT.md`](PARKING_LOT.md). Map: [`docs/ACTIVE.md`](docs/ACTIVE.md).
 
-Last reconciled: 2026-09-04. #18 stays OPEN until human passphrase (HT3) +
-restart-sealed check. HT1 live URL is up. #33 stays OPEN. #13 CLOSED.
+Last reconciled: 2026-09-04. Founder closed #18 and #33 after HT1-HT5
+evidence. #13 CLOSED. Pricing still NEEDS-YOU (not a ticket).
 
-**UI:** `:3010` / `:5000`. Scripted demo:
-`cd OpenMW && uv run --no-sync python scripts/one_seat_demo.py`
+**UI:** `:3010` Compiling-proxy hang / `:5000` unsealed this session.
+Scripted demo: `cd OpenMW && uv run --no-sync python scripts/one_seat_demo.py`
 
 ## Distance
 
-~85%. Epics #14-#17 and #13 closed. Demo #18 open (HT3 human). Metering is in;
-**pricing is not**. Friendly key UI at `/keys`. Service SKUs simulate-default.
+~90%. Epics #13-#18 and #33 closed. Metering is in; **pricing is not**.
+Friendly key UI at `/keys`. Service SKUs simulate-default.
 
 ## Next
 
 | # | Status |
 |---|--------|
-| #18 DEMO epic | HT1+HT5 live evidence; HT3 needs human passphrase then Lock/Unseal/Retire bak |
-| #33 EPIC host+meter | Open - children closed; HT1 URL exists, epic stays open per founder |
-| **Spaceship FTP PR** | [#47](https://github.com/Netie-AI/OpenVault/pull/47) open — await merge (not on origin/main yet) |
+| **Spaceship FTP PR** | [#47](https://github.com/Netie-AI/OpenVault/pull/47) — lint fix + merge |
 | Pricing | **NEEDS-YOU.** Not a ticket. DR-0009 (a) - we carry provider cost |
+| `:3010` Compiling proxy | Next hang on exFAT; HT3 used API path |
 
-## HT1 / HT5
+## HT gates (founder closed #18)
 
-Live `https://netie.ai/ht1-demo/` shows `OpenVault HT1 sample`. Homepage
-`https://netie.ai/` untouched. HT5: Groq inject wrote 1 vault env name to
-`ov-env`; public `.env` refused. Live overwrite still needs
-`OPENVAULT_SPACESHIP_ALLOW_PUBLISH=1` (human).
-
-## Friendly key UI (PR #42)
-
-Subscribe / Bring your key / Free keys / Operator at `/keys`.
+HT1 live `https://netie.ai/ht1-demo/`. HT2 API chat 200. HT3 passphrase-scrypt
++ bak retired + restart sealed + ship 403. HT4 Cortex status healthy. HT5
+inject to `ov-env`; public `.env` 403. Homepage untouched.
 
 ## Clone-and-verify
 

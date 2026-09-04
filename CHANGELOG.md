@@ -2,6 +2,16 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-09-04 - HT3 passphrase + vault Lock/Set-passphrase UI; founder closed #18 #33
+
+- Human HT3: wrap=`passphrase-scrypt`, bak retired, restart boots sealed,
+  sealed `POST /api/ship/engine` spaceship_ftp returns 403. API path used
+  because `:3010` stayed on Compiling proxy.
+- Vault page: Set passphrase / Lock wired to `/api/vault/passphrase` and
+  `/api/vault/lock` (unseal + retire bak already existed).
+- Founder closed demo epic #18 and host+meter epic #33. Pricing stays
+  NEEDS-YOU, not a ticket.
+
 ## 2026-09-04 - Spaceship FTP host adapter (existing estate host)
 
 - **Real publish path for the FTP account this estate already pays for.**
