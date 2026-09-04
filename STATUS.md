@@ -1,10 +1,11 @@
 # OpenVault - Status
 
-> Canonical "what's true right now." History: [`CHANGELOG.md`](CHANGELOG.md). Deferred:
+> Canonical "what's true now." History: [`CHANGELOG.md`](CHANGELOG.md). Deferred:
 > [`PARKING_LOT.md`](PARKING_LOT.md). Map: [`docs/ACTIVE.md`](docs/ACTIVE.md).
 
-Last reconciled: 2026-09-04. Founder closed #18 and #33 after HT1-HT5
-evidence. #13 CLOSED. Pricing still NEEDS-YOU (not a ticket).
+Last reconciled: 2026-09-04. #13 #18 #33 CLOSED (founder). Spaceship FTP
+on main via [#47](https://github.com/Netie-AI/OpenVault/pull/47) `2feaf1eb`.
+Pricing still NEEDS-YOU (not a ticket).
 
 **UI:** `:3010` Compiling-proxy hang / `:5000` unsealed this session.
 Scripted demo: `cd OpenMW && uv run --no-sync python scripts/one_seat_demo.py`
@@ -18,7 +19,6 @@ Friendly key UI at `/keys`. Service SKUs simulate-default.
 
 | # | Status |
 |---|--------|
-| **Spaceship FTP PR** | [#47](https://github.com/Netie-AI/OpenVault/pull/47) — lint fix + merge |
 | Pricing | **NEEDS-YOU.** Not a ticket. DR-0009 (a) - we carry provider cost |
 | `:3010` Compiling proxy | Next hang on exFAT; HT3 used API path |
 
