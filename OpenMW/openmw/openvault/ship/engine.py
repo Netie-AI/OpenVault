@@ -423,6 +423,38 @@ def _host_cloudflare_pages(
     )
 
 
+def _host_spaceship_ftp(
+    *,
+    work_path: Path,
+    stack: Any,
+    hostname: str,
+    ship_env: Mapping[str, str] | None,
+) -> tuple[EngineStep, str]:
+    """Publish static files to the existing Spaceship FTP account.
+
+    Never invents ``https://netie.ai``. URL comes from SPACESHIP_PUBLIC_URL
+    only after a successful probe.
+    """
+    from openmw.openvault.ship.hosts.spaceship_ftp import SpaceshipFtpAdapter
+
+    output_dir = (getattr(stack, "output_directory", "") or "").strip() or "."
+    root = getattr(stack, "root_directory", "") or ""
+    artifact = work_path / root / output_dir
+    project = hostname.split(".")[0] if hostname else work_path.name
+    adapter = SpaceshipFtpAdapter(
+        host=os.environ.get("SPACESHIP_FTP_HOST"),
+        user=os.environ.get("SPACESHIP_FTP_USER"),
+        password=os.environ.get("SPACESHIP_FTP_PASS"),
+        remote_dir=os.environ.get("SPACESHIP_FTP_DIR"),
+        public_url=os.environ.get("SPACESHIP_PUBLIC_URL"),
+        env_dir=os.environ.get("SPACESHIP_FTP_ENV_DIR"),
+    )
+    result = adapter.deploy(artifact, project=project, env=dict(ship_env or {}))
+    if not result.ok:
+        return EngineStep("host", "Spaceship FTP", "fail", result.detail), ""
+    return EngineStep("host", "Spaceship FTP", "pass", result.detail), result.url or ""
+
+
 def _host_coolify(
     *,
     work_path: Path,
@@ -800,6 +832,15 @@ def _run_ship_engine_locked(
         ok_b, detail = _run_build(stack.suggested_build, Path(work_path, stack.root_directory))
         steps[-1].status = "pass" if ok_b else "fail"
         steps[-1].detail = detail
+    elif build_here:
+        steps.append(
+            EngineStep(
+                "build",
+                "Build plan",
+                "pass",
+                "no compile step - artifact is the project folder",
+            )
+        )
     else:
         steps.append(
             EngineStep(
@@ -812,12 +853,29 @@ def _run_ship_engine_locked(
 
     # Target-specific closing step.
     # Honesty rule: never invent a live-looking host URL. Only real adapters
-    # (Cloudflare Pages, Coolify, Netlify, or a remote FreeBuild response that
-    # already carries an observed URL) may set public_url. Simulate / teach /
-    # pending host paths stay labeled non-production and leave public_url empty.
+    # (Spaceship FTP, Cloudflare Pages, Coolify, Netlify, or a remote FreeBuild
+    # response that already carries an observed URL) may set public_url.
     public = ""
     dep_mode = "local_engine"
-    if target == "cloudflare_pages":
+    if target == "spaceship_ftp":
+        step, public = _host_spaceship_ftp(
+            work_path=Path(work_path),
+            stack=stack,
+            hostname=hostname,
+            ship_env=ship_env or {},
+        )
+        steps.append(step)
+        if step.status == "pass" and public:
+            dep_mode = "live"
+        elif step.status == "pass" and not public:
+            steps[-1] = EngineStep(
+                "host",
+                "Spaceship FTP",
+                "fail",
+                "deploy reported success but no observed public URL - refusing to invent one",
+            )
+            public = ""
+    elif target == "cloudflare_pages":
         # Requires a real build — nothing to upload otherwise.
         step, public = _host_cloudflare_pages(
             work_path=Path(work_path),

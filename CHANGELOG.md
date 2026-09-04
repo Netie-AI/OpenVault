@@ -2,6 +2,24 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-09-04 - Spaceship FTP host adapter (existing estate host)
+
+- **Real publish path for the FTP account this estate already pays for.**
+  `ship/hosts/spaceship_ftp.py` uploads a built folder, probes
+  `SPACESHIP_PUBLIC_URL`, and returns that URL only after a successful probe —
+  never invents `https://netie.ai`. Live overwrite is opt-in via
+  `OPENVAULT_SPACESHIP_ALLOW_PUBLISH=1`.
+- **Recommend prefers Spaceship when FTP host+user are configured** for static
+  stacks; otherwise Cloudflare Pages stays the free default.
+  Preflight/engine/target cards wire the new id through `app.py`.
+- **Vault env inject refuses public FTP.** Secrets write only when
+  `SPACESHIP_FTP_ENV_DIR` is set and differs from the upload dir; `.env` files
+  stay out of the upload set. Ship UI shows the ALLOW_PUBLISH + env-dir honesty
+  when Spaceship is selected.
+- **Tests:** `test_hosts_spaceship_ftp.py` plus targets/preflight coverage in
+  `test_ship_cloud.py` / `test_ship_recommend_upload.py` (SPACESHIP_* cleared
+  in the isolated env fixture).
+
 ## 2026-09-04 - Lazy openmw import so console and one-seat demo skip numpy
 
 - `openmw/__init__.py` no longer imports `openmw.run` at module load. Offload

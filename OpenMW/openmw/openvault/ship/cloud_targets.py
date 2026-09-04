@@ -26,6 +26,7 @@ from openmw.openvault.ship.openship_client import adapter_status
 # ship/hosts/ for the distinction and docs/BACKEND_HONESTY_AUDIT.md for why it
 # matters that the two are never conflated.
 ShipTarget = Literal[
+    "spaceship_ftp",
     "cloudflare_pages",
     "coolify",
     "netlify",
@@ -116,6 +117,19 @@ class TargetCard:
 
 
 TARGET_CARDS: tuple[TargetCard, ...] = (
+    TargetCard(
+        id="spaceship_ftp",
+        title="Spaceship FTP (existing host)",
+        blurb=(
+            "Real publish to the host this estate already pays for. "
+            "Upload a folder over existing FTP. Never invents a URL. "
+            "Live overwrite needs OPENVAULT_SPACESHIP_ALLOW_PUBLISH=1."
+        ),
+        instant_host=True,
+        needs=["SPACESHIP_FTP_HOST", "SPACESHIP_FTP_USER", "SPACESHIP_FTP_PASS"],
+        register_url="",
+        estimated_min_usd=0.0,
+    ),
     TargetCard(
         id="cloudflare_pages",
         title="Cloudflare Pages",
@@ -241,7 +255,15 @@ def build_ship_blueprint(
     )
 
     steps: list[dict[str, str]] = []
-    if target == "cloudflare_pages":
+    if target == "spaceship_ftp":
+        steps = [
+            "Load existing Spaceship FTP host/user/pass into the API process env",
+            "Set SPACESHIP_FTP_DIR to a subfolder (default ht1-demo), never the homepage",
+            "Set SPACESHIP_PUBLIC_URL to the configured public path and probe it",
+            "Set OPENVAULT_SPACESHIP_ALLOW_PUBLISH=1 only when a human asked to overwrite",
+            "Vault env inject uses a different SPACESHIP_FTP_ENV_DIR (never the public dir)",
+        ]
+    elif target == "cloudflare_pages":
         steps = [
             "Add CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID to the vault (or env)",
             "Install wrangler once: npm install -g wrangler",
