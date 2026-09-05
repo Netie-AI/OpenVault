@@ -28,6 +28,7 @@ PCI posture, stated plainly because it constrains the whole module:
 
 from __future__ import annotations
 
+import json
 import re
 import sqlite3
 import time
@@ -39,8 +40,23 @@ from typing import Literal, cast
 from openmw.openvault.paths import keys_db_path
 from openmw.openvault.vault.crypto import Seal
 
-SecretKind = Literal["password", "payment_card"]
+SecretKind = Literal["password", "payment_card", "recovery_codes", "identity"]
 SecretLifecycle = Literal["active", "revoked", "rotated", "compromised"]
+
+# Government and institutional identifiers. Deliberately not "PII" as a blanket:
+# a name and a home address are ordinary profile fields and belong in the
+# profile store, where a form-fill can read them. These are the subset where
+# disclosure is not recoverable - you cannot rotate an IC number after it leaks
+# - and that irreversibility, not sensitivity in general, is what makes them
+# vault material.
+IdentityDocType = Literal[
+    "nric",
+    "passport",
+    "driving_licence",
+    "tax_id",
+    "national_id",
+    "other",
+]
 
 CardBrand = Literal[
     "visa",
@@ -124,6 +140,87 @@ def mask_password(password: str) -> str:
     return "•" * min(len(password), 12)
 
 
+def normalize_recovery_codes(raw: str | list[str]) -> list[str]:
+    """Accept how a human actually pastes backup codes, reject an empty set.
+
+    Providers hand these over as a block from a screen or a downloaded .txt, so
+    the input is a blob of newline- or space-separated tokens as often as it is
+    a list. Codes are kept EXACTLY as issued apart from surrounding whitespace:
+    they have to be typed back character-for-character, and helpfully stripping
+    a dash out of ``abcd-efgh`` produces a code that no longer works.
+
+    Order is preserved and duplicates are dropped. A duplicate is a paste
+    accident, and silently keeping it would overstate how many logins you have
+    left - which is the one number this record exists to tell you.
+    """
+    if isinstance(raw, str):
+        # ONE PER LINE, and nothing smarter. Splitting on whitespace looks more
+        # forgiving and is actively dangerous: providers print codes as
+        # "1234 5678", so a space-split turns every code into two codes that
+        # will never work AND doubles the count of logins you think you have.
+        # That failure is silent until you are locked out, which is the exact
+        # moment this record is for. A single-line paste instead stores one
+        # obviously-wrong code, which is visible immediately and recoverable.
+        tokens = raw.splitlines()
+    else:
+        tokens = [str(t) for t in (raw or [])]
+
+    codes: list[str] = []
+    seen: set[str] = set()
+    for token in tokens:
+        # Providers number the list on screen ("1. abcd-efgh", "2) ..."), and
+        # that prefix is not part of the code.
+        code = re.sub(r"^\s*(?:\d{1,2}\s*[.)]|[-*•])\s*", "", token).strip()
+        if not code:
+            continue
+        if len(code) > 128:
+            raise SecretValidationError("a recovery code longer than 128 characters is not a code")
+        if code in seen:
+            continue
+        seen.add(code)
+        codes.append(code)
+
+    if not codes:
+        raise SecretValidationError("no recovery codes found in the input")
+    if len(codes) > 64:
+        raise SecretValidationError("more than 64 recovery codes - is this the right paste?")
+    return codes
+
+
+def mask_recovery_codes(unused: int, total: int) -> str:
+    """The only thing worth showing about a code set is how much is left."""
+    return f"{unused} of {total} unused"
+
+
+def normalize_identity_number(raw: str) -> str:
+    """Trim, but do not reformat.
+
+    An IC is written ``900101-01-1234`` and a passport ``A12345678``; both are
+    typed back into forms in the shape the document uses. Normalising the
+    punctuation away here would mean every consumer has to guess it back.
+    """
+    number = " ".join((raw or "").split())
+    if not number:
+        raise SecretValidationError("identity number must not be empty")
+    if not 4 <= len(number) <= 64:
+        raise SecretValidationError("identity number must be 4-64 characters")
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9 \-/]*", number):
+        raise SecretValidationError(
+            "identity number may contain only letters, digits, spaces, dashes and slashes"
+        )
+    return number
+
+
+def mask_identity(number: str) -> str:
+    """Last four only, derived at write time like the card mask.
+
+    Four is enough for the owner to tell two documents apart and not enough to
+    reconstruct a checksummed national id from the mask alone.
+    """
+    tail = re.sub(r"[^A-Za-z0-9]", "", number or "")[-4:]
+    return f"•••• {tail.upper()}" if tail else "••••"
+
+
 def validate_expiry(month: int, year: int) -> tuple[int, int]:
     if not 1 <= month <= 12:
         raise SecretValidationError("expiry month must be 1-12")
@@ -160,6 +257,14 @@ class SecretRecord:
     exp_month: int | None = None
     exp_year: int | None = None
     cardholder: str = ""
+    # recovery_codes-only. Counts are stored in the clear, like brand/last4:
+    # "how many logins do I have left" is the question this row exists to
+    # answer, and answering it must not require unsealing the vault.
+    codes_total: int | None = None
+    codes_unused: int | None = None
+    # identity-only. The document TYPE is a chooser field, not a secret; the
+    # number it describes is sealed.
+    doc_type: str = ""
 
 
 class SecretStore:
@@ -199,6 +304,9 @@ class SecretStore:
                   exp_month INTEGER,
                   exp_year INTEGER,
                   cardholder TEXT NOT NULL DEFAULT '',
+                  codes_total INTEGER,
+                  codes_unused INTEGER,
+                  doc_type TEXT NOT NULL DEFAULT '',
                   created_at REAL NOT NULL,
                   updated_at REAL NOT NULL,
                   last_revealed_at REAL
@@ -206,6 +314,19 @@ class SecretStore:
                 """
             )
             conn.execute("CREATE INDEX IF NOT EXISTS idx_secrets_kind ON secrets(kind)")
+            # Databases created before recovery codes and identity documents
+            # existed have the table already, so CREATE TABLE IF NOT EXISTS is a
+            # no-op for them and the new columns would simply be missing. Add
+            # what is absent rather than versioning the schema: these are
+            # nullable additions with defaults, so the migration is total.
+            have = {row["name"] for row in conn.execute("PRAGMA table_info(secrets)")}
+            for column, ddl in (
+                ("codes_total", "codes_total INTEGER"),
+                ("codes_unused", "codes_unused INTEGER"),
+                ("doc_type", "doc_type TEXT NOT NULL DEFAULT ''"),
+            ):
+                if column not in have:
+                    conn.execute(f"ALTER TABLE secrets ADD COLUMN {ddl}")
             conn.commit()
 
     def _row_to_record(self, row: sqlite3.Row) -> SecretRecord:
@@ -227,6 +348,9 @@ class SecretStore:
             exp_month=row["exp_month"],
             exp_year=row["exp_year"],
             cardholder=row["cardholder"],
+            codes_total=row["codes_total"],
+            codes_unused=row["codes_unused"],
+            doc_type=row["doc_type"],
         )
 
     # --- read ---
@@ -267,10 +391,19 @@ class SecretStore:
         """
         with self._connect() as conn:
             row = conn.execute(
-                "SELECT secret_blob FROM secrets WHERE id = ?", (secret_id,)
+                "SELECT secret_blob, kind FROM secrets WHERE id = ?", (secret_id,)
             ).fetchone()
             if row is None:
                 return None
+            if row["kind"] == "recovery_codes":
+                # This path hands back one sealed payload, and for a code set
+                # that payload is EVERY code at once. A backup code is spent by
+                # being used, so anything that reads the set without marking a
+                # code used desynchronises the count and quietly re-issues
+                # codes that no longer work. Callers take one at a time.
+                raise SecretValidationError(
+                    "recovery codes are consumed one at a time - use consume_recovery_code"
+                )
             conn.execute(
                 "UPDATE secrets SET last_revealed_at = ? WHERE id = ?", (time.time(), secret_id)
             )
@@ -308,6 +441,163 @@ class SecretStore:
                     account_id,
                     username,
                     url,
+                    now,
+                    now,
+                ),
+            )
+            conn.commit()
+        record = self.get(secret_id)
+        assert record is not None
+        return record
+
+    def create_recovery_codes(
+        self,
+        *,
+        label: str,
+        codes: str | list[str],
+        username: str = "",
+        url: str = "",
+        account_id: str | None = None,
+    ) -> SecretRecord:
+        """Store a set of single-use backup codes as one sealed blob.
+
+        One blob rather than a row per code, deliberately. A row per code would
+        make the remaining count a cheap ``COUNT(*)``, but it would also mean
+        that leaking one row leaks one working code with a label attached to it.
+        Sealed as a set, the codes are atomic: you cannot read any of them
+        without unsealing all of them, which is the same bar as the password
+        next to them. The count lives in its own clear column instead, so
+        listing still never decrypts.
+        """
+        normalized = normalize_recovery_codes(codes)
+        payload = json.dumps([{"code": code, "used_at": None} for code in normalized])
+        total = len(normalized)
+        secret_id = uuid.uuid4().hex
+        now = time.time()
+        with self._connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO secrets (
+                  id, kind, label, secret_blob, masked, account_id, lifecycle,
+                  username, url, codes_total, codes_unused, created_at, updated_at
+                ) VALUES (?, 'recovery_codes', ?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    secret_id,
+                    label,
+                    self._seal.encrypt(payload),
+                    mask_recovery_codes(total, total),
+                    account_id,
+                    username,
+                    url,
+                    total,
+                    total,
+                    now,
+                    now,
+                ),
+            )
+            conn.commit()
+        record = self.get(secret_id)
+        assert record is not None
+        return record
+
+    def consume_recovery_code(self, secret_id: str) -> str | None:
+        """Hand out the next unused code and mark it spent, in one transaction.
+
+        A backup code works once. Returning one without marking it is how the
+        same code gets typed into two prompts, the second is rejected, and the
+        user concludes their codes are broken. Marking one without returning it
+        silently burns a login. So both happen together or neither does, and an
+        exhausted set returns ``None`` rather than a stale code.
+
+        ``BEGIN IMMEDIATE`` on a connection with autocommit off is what makes
+        two concurrent callers take two different codes instead of the same one.
+        """
+        conn = self._connect()
+        try:
+            conn.isolation_level = None
+            conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute(
+                "SELECT secret_blob, kind, codes_total FROM secrets WHERE id = ?", (secret_id,)
+            ).fetchone()
+            if row is None or row["kind"] != "recovery_codes":
+                conn.execute("ROLLBACK")
+                return None
+
+            entries = json.loads(self._seal.decrypt(row["secret_blob"]))
+            nxt = next((e for e in entries if e.get("used_at") is None), None)
+            if nxt is None:
+                conn.execute("ROLLBACK")
+                return None
+
+            now = time.time()
+            nxt["used_at"] = now
+            unused = sum(1 for e in entries if e.get("used_at") is None)
+            total = int(row["codes_total"] or len(entries))
+            conn.execute(
+                """
+                UPDATE secrets
+                   SET secret_blob = ?, codes_unused = ?, masked = ?,
+                       updated_at = ?, last_revealed_at = ?
+                 WHERE id = ?
+                """,
+                (
+                    self._seal.encrypt(json.dumps(entries)),
+                    unused,
+                    mask_recovery_codes(unused, total),
+                    now,
+                    now,
+                    secret_id,
+                ),
+            )
+            conn.execute("COMMIT")
+            return cast(str, nxt["code"])
+        except BaseException:
+            try:
+                conn.execute("ROLLBACK")
+            except sqlite3.Error:
+                pass
+            raise
+        finally:
+            conn.close()
+
+    def create_identity(
+        self,
+        *,
+        label: str,
+        doc_type: IdentityDocType,
+        number: str,
+        account_id: str | None = None,
+    ) -> SecretRecord:
+        """Store a government or institutional identifier.
+
+        Only the number is sealed, and only the document type and a last-four
+        mask are kept in the clear - the same split the card path uses, for the
+        same reason: a chooser UI needs to tell two documents apart without the
+        vault being unsealed.
+
+        Name, address and date of birth are NOT stored here. They are ordinary
+        profile fields that a form-fill legitimately reads, and putting them
+        behind the seal would mean unsealing the vault to type an address.
+        """
+        normalized = normalize_identity_number(number)
+        secret_id = uuid.uuid4().hex
+        now = time.time()
+        with self._connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO secrets (
+                  id, kind, label, secret_blob, masked, account_id, lifecycle,
+                  doc_type, created_at, updated_at
+                ) VALUES (?, 'identity', ?, ?, ?, ?, 'active', ?, ?, ?)
+                """,
+                (
+                    secret_id,
+                    label,
+                    self._seal.encrypt(normalized),
+                    mask_identity(normalized),
+                    account_id,
+                    doc_type,
                     now,
                     now,
                 ),

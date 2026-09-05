@@ -133,7 +133,6 @@ from openmw.openvault.vault.ratelimit import (
     usage_total_tokens,
 )
 from openmw.openvault.vault.redis_store import try_make_redis_store
-from openmw.openvault.vault.secrets import SecretKind, SecretStore, SecretValidationError
 from openmw.openvault.vault.seed import seed_essentials
 from openmw.openvault.vault.store import (
     KeyCustody,
@@ -476,6 +475,36 @@ class CardCreate(BaseModel):
     # Present so the refusal is explicit rather than a silently ignored field.
     # See vault/secrets.create_card.
     cvv: str | None = None
+
+
+class RecoveryCodesCreate(BaseModel):
+    """A set of single-use backup codes, e.g. Google's 2FA recovery codes.
+
+    ``codes`` takes a list, or the raw block exactly as pasted. The string form
+    is split ONE PER LINE and never on spaces - see
+    ``vault/secrets.normalize_recovery_codes`` for why a space-split silently
+    destroys codes that are printed as "1234 5678".
+    """
+
+    label: str
+    codes: list[str] | str
+    username: str = ""
+    url: str = ""
+    account_id: str | None = None
+
+
+class IdentityCreate(BaseModel):
+    """A government or institutional identifier: IC, passport, licence, tax id.
+
+    Name, address and date of birth are deliberately NOT accepted here. They are
+    ordinary profile fields a form-fill legitimately reads, and sealing them
+    would mean unsealing the vault to type an address.
+    """
+
+    label: str
+    doc_type: IdentityDocType
+    number: str
+    account_id: str | None = None
 
 
 class SecretUpdate(BaseModel):
@@ -1616,6 +1645,116 @@ def create_app(
         )
         return asdict(record)
 
+    @app.post("/api/secrets/recovery-codes")
+    def create_recovery_codes(body: RecoveryCodesCreate, request: Request) -> dict[str, Any]:
+        """Store a set of single-use backup codes.
+
+        This is the place for the codes a provider hands you when you turn on
+        2FA - the ones that are currently kept in a downloads folder or a photo
+        because there was nowhere else to put them. The response carries counts
+        and a mask, never a code.
+        """
+        _require_loopback(request, "recovery codes create")
+        _require_unsealed(state_seal, "recovery codes create")
+        if body.account_id and state_accounts.get(body.account_id) is None:
+            raise HTTPException(status_code=404, detail="account not found")
+        try:
+            record = state_secrets.create_recovery_codes(
+                label=body.label,
+                codes=body.codes,
+                username=body.username,
+                url=body.url,
+                account_id=body.account_id,
+            )
+        except SecretValidationError as exc:
+            # The codes are in the request body; the rejection carries only the
+            # reason, never the input that failed.
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        _audit_custody(
+            "recovery_codes_create", request, secret_id=record.id, label=record.label,
+            total=record.codes_total,
+        )
+        return asdict(record)
+
+    @app.post("/api/secrets/{secret_id}/consume-code")
+    def consume_recovery_code(secret_id: str, request: Request) -> dict[str, Any]:
+        """Spend the next unused backup code and return it.
+
+        Same gate as reveal, because the response is plaintext. Unlike reveal
+        this is a WRITE: the code is marked used inside the same transaction
+        that hands it over, so the same code can never be issued twice and the
+        remaining count in the record is always what is actually left.
+
+        A caller that asks for a code it does not end up using has burned one.
+        That is the correct trade - the alternative is a code that is handed out
+        twice and rejected the second time, with no way to tell which.
+        """
+        client_host = _require_loopback(request, "recovery code consume")
+        _require_reveal_intent(request)
+        _require_unsealed(state_seal, "recovery code consume")
+
+        record = state_secrets.get(secret_id)
+        if record is None:
+            raise HTTPException(status_code=404, detail="secret not found")
+        if record.kind != "recovery_codes":
+            raise HTTPException(
+                status_code=409, detail=f"secret {secret_id} is a {record.kind}, not recovery codes"
+            )
+
+        try:
+            code = state_secrets.consume_recovery_code(secret_id)
+        except VaultSealedError as exc:
+            raise HTTPException(status_code=403, detail=_VAULT_SEALED_DETAIL) from exc
+        except VaultCryptoError as exc:
+            raise HTTPException(status_code=409, detail="unable to decrypt vault secret") from exc
+        if code is None:
+            # Exhausted is not "not found": the user needs to be told to
+            # generate a new set, not that their record has vanished.
+            raise HTTPException(
+                status_code=409,
+                detail="every recovery code in this set has been used - generate a new set",
+            )
+
+        after = state_secrets.get(secret_id)
+        remaining = after.codes_unused if after else None
+        _write_secret_audit(
+            {
+                "event": "recovery_code_consume",
+                "secret_id": secret_id,
+                "label": record.label,
+                "remaining": remaining,
+                "client": client_host,
+                "user_agent": request.headers.get("user-agent", "")[:200],
+            }
+        )
+        return {"id": secret_id, "kind": record.kind, "code": code, "remaining": remaining}
+
+    @app.post("/api/secrets/identity")
+    def create_identity(body: IdentityCreate, request: Request) -> dict[str, Any]:
+        """Store a government or institutional identifier.
+
+        The number is sealed; the document type and a last-four mask stay in the
+        clear so a chooser can tell two documents apart without unsealing.
+        """
+        _require_loopback(request, "identity create")
+        _require_unsealed(state_seal, "identity create")
+        if body.account_id and state_accounts.get(body.account_id) is None:
+            raise HTTPException(status_code=404, detail="account not found")
+        try:
+            record = state_secrets.create_identity(
+                label=body.label,
+                doc_type=body.doc_type,
+                number=body.number,
+                account_id=body.account_id,
+            )
+        except SecretValidationError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        _audit_custody(
+            "identity_create", request, secret_id=record.id, label=record.label,
+            doc_type=record.doc_type,
+        )
+        return asdict(record)
+
     @app.patch("/api/secrets/{secret_id}")
     def patch_secret(secret_id: str, body: SecretUpdate, request: Request) -> dict[str, Any]:
         _require_loopback(request, "secret update")
@@ -1695,7 +1834,19 @@ def create_app(
         if record is None:
             raise HTTPException(status_code=404, detail="secret not found")
 
-        plaintext = state_secrets.reveal(secret_id)
+        try:
+            plaintext = state_secrets.reveal(secret_id)
+        except SecretValidationError as exc:
+            # A code set cannot be revealed wholesale - one payload here is
+            # EVERY code, and reading them without spending one desynchronises
+            # the remaining count. Point at the route that does it properly.
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        except VaultSealedError as exc:
+            raise HTTPException(status_code=403, detail=_VAULT_SEALED_DETAIL) from exc
+        except VaultCryptoError as exc:
+            raise HTTPException(
+                status_code=409, detail="unable to decrypt vault secret"
+            ) from exc
         if plaintext is None:
             raise HTTPException(status_code=404, detail="secret not found")
 
