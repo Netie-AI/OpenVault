@@ -299,6 +299,23 @@ Next step if this needs to be real: a Windows named pipe or a Unix socket
 instead of a TCP port, which gets peer-process identity for free. TLS on
 loopback would encrypt a channel that is not the weak part.
 
+### 4.1a App grants: the pairing code is the process boundary
+
+`POST /api/local/grants/{id}/decide` used to need only loopback plus
+`{"approve": true}`, so any process on the box could approve any other app's
+grant and take the `ov_` token. The grant now mints a pairing code that is
+returned **once**, to the app that asked, and the decision must carry it back
+(`hmac.compare_digest`, so a rejected guess does not report how much of the
+code was right). `GET /api/local/grants` and `GET /api/local/grants/{id}` no
+longer include the code -- if they did, a second process would just read it and
+replay it. Five wrong codes burn the grant, because 4 hex characters is 65536
+guesses and loopback rate-limits nothing.
+
+What this does **not** fix: a hostile process running as the user still reads
+`master.key` and `keys.db` off disk, and can still start grants of its own that
+the human might approve. The code binds *which asking process an approval
+belongs to*. It is not a sandbox. See KB `A-0009`.
+
 ### 4.2 Netie's offline cache is plaintext, not DPAPI
 
 The handoff assumed "DPAPI cache = AI keys only". Half of that is right and the

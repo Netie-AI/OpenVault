@@ -111,6 +111,7 @@ from openmw.openvault.vault.accounts import AccountStore, AuthProvider
 from openmw.openvault.vault.airgpt_keyvault import keyvault_snapshot, upsert_env_secret
 from openmw.openvault.vault.api_keys import ApiKeyError, ApiKeyStore
 from openmw.openvault.vault.app_grants import (
+    GrantRefusedError,
     decide_grant,
     list_pending,
     poll_grant,
@@ -835,6 +836,10 @@ class GrantStartBody(BaseModel):
 
 class GrantDecision(BaseModel):
     approve: bool = True
+    #: The code the asking app printed. Defaults to empty so an old client gets
+    #: a 403 that names the problem rather than a 422 about a missing field --
+    #: but empty never matches, so the default is a refusal, not a bypass.
+    user_code: str = ""
 
 
 class OpenIdeInvoke(BaseModel):
@@ -1174,6 +1179,9 @@ def create_app(
     def local_grants_decide(
         grant_id: str, body: GrantDecision, request: Request
     ) -> dict[str, Any]:
+        # Loopback says "this machine", not "this process" -- so the pairing
+        # code, not the gate above, is what binds this decision to the app that
+        # asked (A-0009). A wrong or missing code is refused, never warned about.
         _require_loopback(request, "decide app grant")
 
         def _issue(label: str) -> tuple[str, str]:
@@ -1181,9 +1189,23 @@ def create_app(
             return record.key_id, token
 
         try:
-            row = decide_grant(grant_id, approve=body.approve, issue=_issue)
+            row = decide_grant(
+                grant_id,
+                approve=body.approve,
+                user_code=body.user_code,
+                issue=_issue,
+            )
         except KeyError as exc:
             raise HTTPException(status_code=404, detail="grant not found") from exc
+        except GrantRefusedError as exc:
+            _audit_custody(
+                "app_grant_code_refused",
+                request,
+                grant_id=grant_id,
+                approve=body.approve,
+                code_supplied=bool(body.user_code.strip()),
+            )
+            raise HTTPException(status_code=403, detail=str(exc)) from exc
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         _audit_custody(

@@ -4,14 +4,18 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { apiGet, apiPost, isApiError } from "@/lib/api/client";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { PageContainer } from "@/components/ui/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 
+// No user_code here on purpose. The API only returns the code to the app that
+// asked for the grant; the human reads it off that app's screen and types it
+// below. If this page could display it, any other local process could read it
+// back off the same endpoint and approve its own grant (KB A-0009).
 type GrantView = {
   grant_id?: string;
   client_name?: string;
   label?: string;
-  user_code?: string;
   status?: string;
 };
 
@@ -19,6 +23,7 @@ export default function GrantDecidePage() {
   const params = useParams<{ id: string }>();
   const id = String(params?.id || "");
   const [row, setRow] = useState<GrantView | null>(null);
+  const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -41,7 +46,10 @@ export default function GrantDecidePage() {
   async function decide(approve: boolean) {
     setBusy(true);
     try {
-      const data = await apiPost<GrantView>(`/api/local/grants/${id}/decide`, { approve });
+      const data = await apiPost<GrantView>(`/api/local/grants/${id}/decide`, {
+        approve,
+        user_code: code.trim(),
+      });
       setRow(data);
       setError("");
     } catch (err) {
@@ -52,6 +60,7 @@ export default function GrantDecidePage() {
   }
 
   const pending = row?.status === "pending";
+  const armed = pending && code.trim().length > 0;
 
   return (
     <PageContainer>
@@ -65,20 +74,37 @@ export default function GrantDecidePage() {
           <>
             <p className="text-sm text-muted-foreground">App</p>
             <p className="text-lg font-semibold text-foreground">{row.client_name}</p>
-            <p className="mt-3 text-sm text-muted-foreground">Match this code</p>
-            <p className="font-mono text-2xl tracking-widest text-foreground">{row.user_code}</p>
             <p className="mt-3 text-xs text-muted-foreground">Status: {row.status}</p>
           </>
         )}
         {pending && (
-          <div className="mt-5 flex flex-wrap gap-2">
-            <Button onClick={() => void decide(true)} disabled={busy}>
-              Grant
-            </Button>
-            <Button variant="outline" onClick={() => void decide(false)} disabled={busy}>
-              Deny
-            </Button>
-          </div>
+          <>
+            <p className="mt-4 text-sm text-muted-foreground">
+              Type the code that app is showing. Only the app that asked knows it, so this is
+              what says which process you are approving.
+            </p>
+            <Input
+              className="mt-2 max-w-[10rem] font-mono text-lg uppercase tracking-widest"
+              value={code}
+              onChange={(event) => setCode(event.target.value)}
+              placeholder="A1B2"
+              autoComplete="off"
+              spellCheck={false}
+              aria-label="Pairing code"
+            />
+            <div className="mt-5 flex flex-wrap gap-2">
+              <Button onClick={() => void decide(true)} disabled={busy || !armed}>
+                Grant
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => void decide(false)}
+                disabled={busy || !armed}
+              >
+                Deny
+              </Button>
+            </div>
+          </>
         )}
         {row?.status === "ready" && (
           <p className="mt-4 text-sm text-muted-foreground">

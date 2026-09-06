@@ -2,6 +2,28 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-09-06 - The app-grant pairing code is real (KB A-0009)
+
+- **Was decorative:** `decide_grant()` rendered a code nothing compared, so the
+  only gates on approving a grant were loopback and a client-supplied header.
+  `docs/SECRETS_CUSTODY.md` already said loopback does not separate processes,
+  which means any process running as the user could approve any other app's
+  grant and collect the `ov_` token.
+- **Now:** `decide_grant(..., user_code=...)` compares with
+  `hmac.compare_digest`. `POST /api/local/grants/{id}/decide` takes `user_code`;
+  wrong or missing is **403 refused**, not a warning, and audits as
+  `app_grant_code_refused`. Five wrong codes burn the grant.
+- **The code leaves once:** only `POST /api/local/grants` returns it, to the app
+  that asked. `GET /api/local/grants` and `GET /api/local/grants/{id}` no longer
+  carry it, so a second local process cannot read it back and replay it. The
+  `/grant/<id>` screen now asks the human to type it instead of displaying it.
+- **Not this:** peer-process identity. A hostile process as the user still reads
+  `master.key` off disk. Named pipe / Unix socket is still the real fix.
+- **Tests:** `OpenMW/tests/test_app_grants.py` - 11 passing, six of them
+  negative (no code, wrong code, wrong-code deny, second loopback client with
+  byte-identical headers, brute-force burn, non-ASCII code). All six fail if the
+  compare is removed.
+
 ## 2026-09-05 - Passkeys unseal the vault (DR-0014, F22)
 
 - **Windows Hello / Face ID / fingerprint**, plus optional **iPhone** (hybrid

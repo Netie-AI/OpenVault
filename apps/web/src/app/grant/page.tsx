@@ -6,10 +6,11 @@ import { apiGet, isApiError } from "@/lib/api/client";
 import { PageContainer } from "@/components/ui/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 
+// No user_code: the list is readable by anything on loopback, and the code is
+// the one thing that must not be. See the note in grant/[id]/page.tsx.
 type GrantView = {
   grant_id: string;
   client_name: string;
-  user_code: string;
   status: string;
 };
 
@@ -46,7 +47,7 @@ export default function GrantListPage() {
                 className="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3 text-sm hover:bg-accent/40"
               >
                 <span className="font-medium text-foreground">{row.client_name}</span>
-                <span className="font-mono text-muted-foreground">{row.user_code}</span>
+                <span className="text-muted-foreground">Waiting for code</span>
               </Link>
             </li>
           ))}
