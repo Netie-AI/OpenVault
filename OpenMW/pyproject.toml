@@ -98,6 +98,13 @@ ignore_missing_imports = true
 # twice and numpy 2.x warns/reloads C extensions under pytest-cov.
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# A module that cannot be imported is a FAILING module, not a missing one (R-0002),
+# but it must not veto the suite. Without this, five uncollectable offload tests
+# (scipy _propack DLL load) abort collection for all 74 files, so every vault test
+# silently never runs while the documented clone-and-verify command still looks
+# like it did something. Collection errors are now reported by name and the run
+# still exits non-zero - loud, named, and non-blocking (R-0001, R-0011).
+addopts = ["--continue-on-collection-errors"]
 
 [project.optional-dependencies]
 training = []
