@@ -213,10 +213,14 @@ class Seal:
     def encrypt(self, plaintext: str) -> bytes:
         return self._require_open().encrypt(plaintext.encode("utf-8"))
 
-    def decrypt(self, token: bytes) -> str:
+    def decrypt(self, token: bytes | str | memoryview | bytearray) -> str:
+        if isinstance(token, str):
+            token = token.encode("utf-8")
+        elif not isinstance(token, (bytes, bytearray)):
+            token = bytes(token)
         try:
-            return self._require_open().decrypt(token).decode("utf-8")
-        except InvalidToken as exc:
+            return self._require_open().decrypt(bytes(token)).decode("utf-8")
+        except (InvalidToken, UnicodeDecodeError) as exc:
             raise VaultCryptoError("unable to decrypt vault secret") from exc
 
     def unseal(self, passphrase: str = "") -> None:
@@ -242,6 +246,24 @@ class Seal:
             raise VaultCryptoError(str(exc)) from exc
         self._activate(key, wrap_method=used)
         log.info("vault_unsealed", wrap_method=used)
+
+    def activate_from_master_key(self, key: bytes) -> None:
+        """Load an already-unwrapped master key. Does not rewrite the on-disk wrap."""
+        if not key:
+            raise VaultCryptoError("empty master key")
+        try:
+            self._activate(key, wrap_method=None)
+        except (ValueError, TypeError) as exc:
+            raise VaultCryptoError("passkey unsealed an unusable master key") from exc
+        log.info("vault_unsealed", wrap_method=self._wrap_method, via="webauthn")
+
+    def copy_master_key(self) -> bytes:
+        """Bytes of the live Fernet key. Caller must not log them."""
+        if self.is_sealed or self._master_key is None:
+            raise VaultSealedError(
+                "vault is sealed; POST /api/vault/unseal with the passphrase first"
+            )
+        return bytes(self._master_key)
 
     def lock(self) -> None:
         """Drop in-process key material. Passphrase vaults stay sealed until unseal."""

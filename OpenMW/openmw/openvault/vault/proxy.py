@@ -16,7 +16,8 @@ from openmw.openvault.vault.budget import estimate_tokens_for_body, prepare_hop_
 from openmw.openvault.vault.fallback import FallbackManager
 from openmw.openvault.vault.precheck import _default_base_url
 from openmw.openvault.vault.providers import resolve_model
-from openmw.openvault.vault.store import KeyVault
+from openmw.openvault.vault.crypto import VaultCryptoError, VaultSealedError
+from openmw.openvault.vault.store import KeyRecord, KeyVault
 from openmw.openvault.vault.usage_store import HopTrace
 
 log = structlog.get_logger()
@@ -81,6 +82,22 @@ def _no_candidates_refusal(vault: KeyVault) -> dict[str, Any]:
             "type": "openvault_no_keys",
         }
     }
+
+
+def _secret_for_hop(vault: KeyVault, record: KeyRecord, errors: list[str]) -> str | None:
+    """Decrypt one hop secret. None means skip (never raise into a gateway 500)."""
+    try:
+        return vault.get_secret(record.id)
+    except VaultSealedError:
+        raise
+    except VaultCryptoError:
+        log.warning(
+            "openvault_hop_decrypt_failed",
+            key_ref=record.id[:8],
+            provider=record.provider,
+        )
+        errors.append(f"{record.label}: decrypt failed")
+        return None
 
 
 def affinity_key_for(body: dict[str, Any], *, tenant: str = "") -> str:
@@ -238,7 +255,11 @@ async def chat_completions(
                 errors.append(f"{record.label}: provider circuit open")
                 continue
 
-            secret = vault.get_secret(record.id)
+            try:
+                secret = _secret_for_hop(vault, record, errors)
+            except VaultSealedError:
+                trace.error_type = "openvault_vault_sealed"
+                return _sealed_refusal()
             if secret is None:
                 continue
             base = _default_base_url(record.provider, record.base_url)
@@ -310,7 +331,7 @@ async def chat_completions(
                 )
                 errors.append(f"{record.label}: timeout")
                 continue
-            except httpx.HTTPError as exc:
+            except (httpx.HTTPError, OSError) as exc:
                 outcome = classify_attempt(None, str(exc))
                 _apply_outcome(
                     vault,
@@ -430,7 +451,12 @@ async def prepare_chat_stream(
                 errors.append(f"{record.label}: provider circuit open")
                 continue
 
-            secret = vault.get_secret(record.id)
+            try:
+                secret = _secret_for_hop(vault, record, errors)
+            except VaultSealedError:
+                await _close_client()
+                trace.error_type = "openvault_vault_sealed"
+                return _sealed_refusal()
             if secret is None:
                 continue
             base = _default_base_url(record.provider, record.base_url)
@@ -504,7 +530,7 @@ async def prepare_chat_stream(
                 )
                 errors.append(f"{record.label}: timeout")
                 continue
-            except httpx.HTTPError as exc:
+            except (httpx.HTTPError, OSError) as exc:
                 outcome = classify_attempt(None, str(exc))
                 _apply_outcome(
                     vault,
