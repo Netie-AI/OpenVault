@@ -3,30 +3,30 @@
 > Canonical "what's true now." History: [`CHANGELOG.md`](CHANGELOG.md). Deferred:
 > [`PARKING_LOT.md`](PARKING_LOT.md). Map: [`docs/ACTIVE.md`](docs/ACTIVE.md).
 
-Last reconciled: 2026-09-04. #13 #18 #33 CLOSED (founder). Spaceship FTP
-on main via [#47](https://github.com/Netie-AI/OpenVault/pull/47) `2feaf1eb`.
-Pricing still NEEDS-YOU (not a ticket).
+Last reconciled: 2026-09-05. GitHub issues #12-#39 CLOSED (no READY tickets).
+Packs DR-0013. Desktop+Grant F20. Passkeys unseal DR-0014 / F22.
 
-**UI:** `:3010` Compiling-proxy hang / `:5000` unsealed this session.
-Scripted demo: `cd OpenMW && uv run --no-sync python scripts/one_seat_demo.py`
+**UI:** `:3010` Compiling-proxy hang this session. Desktop: `openvault app`
+or Desktop shortcut from `Install-OpenVaultDesktopShortcut.ps1`.
 
 ## Distance
 
-~90%. Epics #13-#18 and #33 closed. Metering is in; **pricing is not**.
-Friendly key UI at `/keys`. Service SKUs simulate-default.
+Checked: homepage, `/keys`, Electron `apps/shell`, mesh handshake,
+`openvault secret get`. New: WebAuthn unseal APIs + `/vault` SealBar (not
+browser-clicked this session; `:3010` Compiling-proxy hang). Autofill OOS.
 
 ## Next
 
 | # | Status |
 |---|--------|
-| Pricing | **NEEDS-YOU.** Not a ticket. DR-0009 (a) - we carry provider cost |
-| `:3010` Compiling proxy | Next hang on exFAT; HT3 used API path |
+| Desktop shortcut | Run `scripts/windows/Install-OpenVaultDesktopShortcut.ps1` once |
+| Register passkey | Vault page, unsealed: Windows Hello / Face ID / fingerprint, or iPhone |
+| Live Stripe pack ids | Unlock when founder creates products |
 
 ## HT gates (founder closed #18)
 
 HT1 live `https://netie.ai/ht1-demo/`. HT2 API chat 200. HT3 passphrase-scrypt
-+ bak retired + restart sealed + ship 403. HT4 Cortex status healthy. HT5
-inject to `ov-env`; public `.env` 403. Homepage untouched.
++ bak retired. HT4 Cortex healthy. HT5 inject; public `.env` 403.
 
 ## Clone-and-verify
 

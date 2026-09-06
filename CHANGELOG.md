@@ -2,6 +2,60 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-09-05 - Passkeys unseal the vault (DR-0014, F22)
+
+- **Windows Hello / Face ID / fingerprint**, plus optional **iPhone** (hybrid
+  QR / nearby). Second wrap of the live master key under the authenticator PRF
+  (`OPENVAULT_HOME/webauthn_unlock.json`). Passphrase wrap on disk stays backup.
+- **Loopback APIs:** `POST /api/vault/webauthn/register/{begin,finish}`,
+  `POST /api/vault/webauthn/unseal/{begin,finish}`, `POST /api/vault/webauthn/clear`.
+  Register requires an open vault. Unseal-with-passkey works while sealed.
+- **UI:** `/vault` SecretsPanel. Hidden when `PublicKeyCredential` is missing.
+  Electron + Next send `Permissions-Policy` for WebAuthn.
+- **Not this:** browser autofill, login-agent, iCloud dump (F18 + PRD §3).
+  Agents still use `openvault secret get` after the vault is open.
+- **Tests:** `OpenMW/tests/test_webauthn_unlock.py` (PRF wrap + crafted ES256;
+  no live Hello in CI). GitHub has no open tickets.
+
+## 2026-09-05 - FreeRoute 500 was decrypt, not "no keys"
+
+- **Symptom:** loopback `POST /v1/chat/completions` returned plain
+  `Internal Server Error`. `GET /api/keys/{id}/secret` 500d the same way.
+  Usage ledger wrote nothing. Live listener was a worktree console with
+  `--mock-health` and `cortex_url` on Constructor `:8010`.
+- **Fix:** hop walk catches `VaultCryptoError` and skips that key.
+  Reveal returns 409. Chat maps remaining exceptions to JSON 500 with a
+  type. `Start-NetieStack.ps1` pins OpenVault to engine `:8011` when `:8010`
+  is Constructor. Canonical console is `D:\OpenVault` on `:5000`.
+- **Not this:** auto-unseal. Passphrase wrap still starts sealed.
+
+## 2026-09-04 - Desktop app + loopback Grant (F20)
+
+- **Open like an app:** `scripts/windows/Start-OpenVaultApp.bat` +
+  `Install-OpenVaultDesktopShortcut.ps1` (Desktop + Start Menu). Electron still
+  runs `next dev` so this repo's UI changes reload. DevTools only if
+  `OPENVAULT_DEVTOOLS=1`. Protocol `openvault://grant/<id>` focuses the window.
+- **Other local app gets a key:** `POST /api/local/grants` then human Grant on
+  `/grant/<id>`. The app polls once for the `ov_` token (never written to
+  disk). CLI: `openvault grant request --client MyApp`. Loopback only.
+- **Not this:** passkeys, browser autofill, login-agent, LAN/SaaS embed (F13).
+  Agents already retrieve keys/passwords with `openvault secret get` (never cards).
+
+## 2026-09-04 - Experience packs $10/$30/$100/$500 (DR-0013, F14/F19)
+
+- **Founder pick for STATUS pricing:** prepaid mixed-hop credit on pooled keys
+  (DR-0009 a), not hosting SKUs (`ov_hosted` $24 / `ov_fast` $79 / `byo_*` $9)
+  and not a 1% skim invoice. Starter $10 (~$8 credit), then $30/$100/$500.
+- **`vault/route_packs.py`:** estimated spend = billable tokens *
+  `OPENVAULT_BLEND_USD_PER_1M` (default 0.20), labeled estimated. Exhausted
+  pack -> HTTP 402 `openvault_pack_exhausted` with Register / Install / BYOK
+  next-steps. No pack on an `ov_` key keeps existing rate limits. Loopback
+  stays free. Checkout is simulate; no live pack price ids.
+- **Surfaces:** `GET /api/keys/packs`, `POST /api/keys/packs/simulate`,
+  optional `pack_id` on `POST /api/apikeys`. `/keys` subscribe names prices
+  without hop-vendor strings.
+- **Tests:** `OpenMW/tests/test_route_packs.py` plus subscribe copy lock.
+
 ## 2026-09-04 - HT3 passphrase + vault Lock/Set-passphrase UI; founder closed #18 #33
 
 - Human HT3: wrap=`passphrase-scrypt`, bak retired, restart boots sealed,
