@@ -24,7 +24,7 @@ import { PageContainer } from "@/components/ui/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Tabs, type TabDef } from "@/components/ui/Tabs";
 import { apiPost, isApiError } from "@/lib/api/client";
-import { createKey, listFreeProviders, type ProviderSpec } from "@/lib/api/keys";
+import { createKey, listFreeProviders, listRoutePacks, type ProviderSpec, type RoutePack } from "@/lib/api/keys";
 import { guessByokProvider, honestByokLabel } from "@/keys/byok";
 
 type KeyPath = "subscribe" | "byok" | "free" | "operator";
@@ -88,6 +88,7 @@ export default function KeysPage() {
   const [byokMsg, setByokMsg] = useState("");
 
   const [catalog, setCatalog] = useState<ProviderSpec[]>([]);
+  const [packs, setPacks] = useState<RoutePack[]>([]);
 
   useEffect(() => {
     setPath(pathFromHash(window.location.hash));
@@ -97,6 +98,9 @@ export default function KeysPage() {
     const ac = new AbortController();
     listFreeProviders(ac.signal)
       .then(setCatalog)
+      .catch(() => undefined);
+    listRoutePacks(ac.signal)
+      .then(setPacks)
       .catch(() => undefined);
     return () => ac.abort();
   }, []);
@@ -204,6 +208,26 @@ export default function KeysPage() {
               Safety: Cortex uses this key. OpenVault keeps it in one vault. Do not share it. Ship
               and leave-machine still go through the gate. Powered by top-tier AI.
             </p>
+            <div className="mt-5 border-t border-border pt-4">
+              <p className="text-sm font-medium text-foreground">Start the ecosystem</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                $10 to start (about $8 mixed-hop credit). Then $30, $100, $500. If credit runs
+                out: stay on free hops, Register then Install, or Bring your own key. Simulate
+                only -- no live card charge.
+              </p>
+              {packs.length > 0 && (
+                <ul className="mt-3 flex flex-wrap gap-2">
+                  {packs.map((pack) => (
+                    <li
+                      key={pack.id}
+                      className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground"
+                    >
+                      ${pack.price_usd} {pack.title} (~${pack.api_credit_usd} credit)
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
         </section>
       )}
@@ -333,10 +357,18 @@ export default function KeysPage() {
             </p>
             <p className="mt-3 text-sm text-muted-foreground">
               Stored keys, the fallback chain, precheck and reveal live on the Vault page.
+              Another local app can run{" "}
+              <code className="text-foreground">openvault grant request --client Name</code> then
+              Grant here. Agents already use{" "}
+              <code className="text-foreground">openvault secret get</code> for keys and site
+              passwords (never cards).
             </p>
-            <div className="mt-4">
+            <div className="mt-4 flex flex-wrap gap-2">
               <Button asChild>
                 <Link href="/vault">Open the operator vault</Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link href="/grant">Pending grants</Link>
               </Button>
             </div>
           </div>
