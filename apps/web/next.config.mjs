@@ -12,6 +12,19 @@ const nextConfig = {
       { source: "/ov-api", destination: `${ov}/` },
     ];
   },
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          {
+            key: "Permissions-Policy",
+            value: "publickey-credentials-get=(self), publickey-credentials-create=(self)",
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

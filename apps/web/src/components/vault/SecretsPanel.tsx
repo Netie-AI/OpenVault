@@ -5,7 +5,7 @@
  *
  * Masks in the list; reveal only on click (cleared after a short window).
  * No CVV field — backend refuses CVV with 400 and that refusal must stay visible.
- * Sealed vault: honest lock banner + unseal, not a blank hang.
+ * Sealed vault: parent shows VaultSealBar; this panel only disables mutate.
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -18,17 +18,11 @@ import {
   createCard,
   createPassword,
   deleteSecret,
-  fetchVaultStatus,
   listSecrets,
   revealSecretValue,
-  retirePlaintextBackup,
   revokeSecret,
   rotateSecret,
-  unsealVault,
-  lockVault,
-  setVaultPassphrase,
   type SecretRow,
-  type VaultStatus,
 } from "@/lib/api/secrets";
 
 const REVEAL_TTL_MS = 15_000;
@@ -36,13 +30,11 @@ const REVEAL_TTL_MS = 15_000;
 type CreateMode = "password" | "card" | null;
 type RotateTarget = { row: SecretRow } | null;
 
-export function SecretsPanel() {
+export function SecretsPanel({ sealed }: { sealed: boolean }) {
   const [secrets, setSecrets] = useState<SecretRow[]>([]);
-  const [status, setStatus] = useState<VaultStatus | null>(null);
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [revealed, setRevealed] = useState<Record<string, string>>({});
-  const [passphrase, setPassphrase] = useState("");
   const [createMode, setCreateMode] = useState<CreateMode>(null);
   const [rotateTarget, setRotateTarget] = useState<RotateTarget>(null);
 
@@ -65,12 +57,7 @@ export function SecretsPanel() {
   const [rotateYear, setRotateYear] = useState("");
 
   const refresh = useCallback(async (signal?: AbortSignal) => {
-    const [rows, st] = await Promise.all([
-      listSecrets({ signal }),
-      fetchVaultStatus(signal),
-    ]);
-    setSecrets(rows);
-    setStatus(st);
+    setSecrets(await listSecrets({ signal }));
   }, []);
 
   useEffect(() => {
@@ -85,7 +72,7 @@ export function SecretsPanel() {
       }
     })();
     return () => ac.abort();
-  }, [refresh]);
+  }, [refresh, sealed]);
 
   // Clear revealed plaintext on a timer so it does not linger in React state.
   useEffect(() => {
@@ -115,74 +102,6 @@ export function SecretsPanel() {
       setNotice(done);
     } catch (err) {
       setNotice(isApiError(err) ? err.message : "That did not work");
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  async function onUnseal() {
-    setBusy("unseal");
-    setNotice("");
-    try {
-      const st = await unsealVault(passphrase);
-      setStatus(st);
-      setPassphrase("");
-      await refresh();
-      setNotice(st.sealed ? "Still sealed" : "Vault unsealed");
-    } catch (err) {
-      setNotice(isApiError(err) ? err.message : "Unseal failed");
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  async function onLock() {
-    setBusy("lock");
-    setNotice("");
-    try {
-      const st = await lockVault();
-      setStatus(st);
-      setNotice(st.sealed ? "Vault locked" : "Lock did not seal");
-    } catch (err) {
-      setNotice(isApiError(err) ? err.message : "Lock failed");
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  async function onSetPassphrase() {
-    setBusy("set-passphrase");
-    setNotice("");
-    try {
-      const st = await setVaultPassphrase(passphrase);
-      setStatus(st);
-      setPassphrase("");
-      await refresh();
-      setNotice(
-        st.passphrase_configured
-          ? "Passphrase configured. Lock, then Unseal, then retire the bak."
-          : "Passphrase was not stored",
-      );
-    } catch (err) {
-      setNotice(isApiError(err) ? err.message : "Set passphrase failed");
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  async function onRetireBackup() {
-    setBusy("retire-bak");
-    setNotice("");
-    try {
-      const st = await retirePlaintextBackup(passphrase);
-      setStatus(st);
-      setNotice(
-        st.plaintext_backup_present
-          ? "Plaintext backup still present"
-          : "Plaintext master-key backup retired",
-      );
-    } catch (err) {
-      setNotice(isApiError(err) ? err.message : "Retire failed");
     } finally {
       setBusy(null);
     }
@@ -292,8 +211,6 @@ export function SecretsPanel() {
     }
   }
 
-  const sealed = status?.sealed === true;
-  const bakPresent = status?.plaintext_backup_present === true;
   const passwords = secrets.filter((s) => s.kind === "password");
   const cards = secrets.filter((s) => s.kind === "payment_card");
 
@@ -325,115 +242,6 @@ export function SecretsPanel() {
           </Button>
         </div>
       </div>
-
-      {status ? (
-        <div
-          data-glass
-          className={`rounded-2xl border px-4 py-3 text-sm ${
-            sealed
-              ? "border-warning-border bg-warning-bg text-foreground"
-              : "border-border bg-card text-muted-foreground"
-          }`}
-        >
-          {sealed ? (
-            <div className="space-y-3">
-              <p className="font-medium text-foreground">
-                Vault is sealed
-                {status.passphrase_configured
-                  ? " — enter the passphrase to create, reveal, or change secrets."
-                  : " — unlock before mutating secrets."}
-              </p>
-              <div className="flex flex-wrap items-end gap-2">
-                <div className="min-w-[12rem] flex-1">
-                  <Label htmlFor="vault-passphrase">Passphrase</Label>
-                  <Input
-                    id="vault-passphrase"
-                    type="password"
-                    autoComplete="current-password"
-                    value={passphrase}
-                    onChange={(e) => setPassphrase(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") void onUnseal();
-                    }}
-                  />
-                </div>
-                <Button
-                  size="sm"
-                  disabled={busy === "unseal"}
-                  onClick={() => void onUnseal()}
-                >
-                  {busy === "unseal" ? "Unsealing…" : "Unseal"}
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <p>
-                Vault open
-                {status.wrap_method ? ` · wrap=${status.wrap_method}` : ""}
-                {status.passphrase_configured ? " · passphrase configured" : ""}
-              </p>
-              <div className="flex flex-wrap items-end gap-2">
-                {!status.passphrase_configured ? (
-                  <>
-                    <div className="min-w-[12rem] flex-1">
-                      <Label htmlFor="vault-set-passphrase">New passphrase</Label>
-                      <Input
-                        id="vault-set-passphrase"
-                        type="password"
-                        autoComplete="new-password"
-                        value={passphrase}
-                        onChange={(e) => setPassphrase(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") void onSetPassphrase();
-                        }}
-                      />
-                    </div>
-                    <Button
-                      size="sm"
-                      disabled={busy === "set-passphrase" || !passphrase}
-                      onClick={() => void onSetPassphrase()}
-                    >
-                      {busy === "set-passphrase" ? "Saving..." : "Set passphrase"}
-                    </Button>
-                  </>
-                ) : null}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={busy === "lock"}
-                  onClick={() => void onLock()}
-                >
-                  {busy === "lock" ? "Locking..." : "Lock"}
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
-      ) : null}
-
-      {bakPresent ? (
-        <div
-          data-glass
-          className="rounded-2xl border border-warning-border bg-warning-bg px-4 py-3 text-sm text-foreground"
-        >
-          <p className="font-medium">
-            Plaintext master-key backup is on disk (master.key.v0.bak).
-          </p>
-          <p className="mt-1 text-muted-foreground">
-            Copying this vault folder can open sealed rows without the passphrase.
-            Retire it after the live wrapped key verifies.
-          </p>
-          <Button
-            size="sm"
-            className="mt-3"
-            disabled={sealed || busy === "retire-bak"}
-            onClick={() => void onRetireBackup()}
-          >
-            {busy === "retire-bak" ? "Retiring..." : "Retire plaintext backup"}
-          </Button>
-        </div>
-      ) : null}
 
       {notice ? <p className="text-sm text-muted-foreground">{notice}</p> : null}
 
