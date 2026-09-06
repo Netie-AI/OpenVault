@@ -3,6 +3,8 @@
 
   openvault up          # OpenMW custody API (:5000) + Next OpenVault app (:3010) + browser
   openvault app         # Electron desktop shell -> wraps the same two processes
+  openvault grant request --client MyApp   # other local app: wait for Grant
+  openvault doctor      # environment preflight (filesystem, node, npm, ports)
   openvault doctor      # environment preflight (filesystem, node, npm, ports)
   openvault demo        # mock-health demo: API + app + open browser
   openvault demo-path   # scripted vault->FreeRoute refuse->ship allow->deny (mocks only)
@@ -22,6 +24,7 @@ import socket
 import subprocess
 import sys
 import time
+import urllib.error
 import urllib.request
 import webbrowser
 from pathlib import Path
@@ -420,6 +423,57 @@ def cmd_app(_: argparse.Namespace) -> int:
     return subprocess.call([_npm(), "run", "dev"], cwd=str(SHELL))
 
 
+def _http_json(method: str, url: str, payload: dict | None = None) -> tuple[int, dict]:
+    data = None if payload is None else json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(url, data=data, method=method)
+    if payload is not None:
+        req.add_header("Content-Type", "application/json")
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            raw = resp.read().decode("utf-8") or "{}"
+            return int(resp.status), json.loads(raw)
+    except urllib.error.HTTPError as exc:
+        raw = exc.read().decode("utf-8") if exc.fp else ""
+        try:
+            body = json.loads(raw) if raw else {"detail": str(exc)}
+        except json.JSONDecodeError:
+            body = {"detail": raw or str(exc)}
+        return int(exc.code), body
+
+
+def cmd_grant_request(args: argparse.Namespace) -> int:
+    """Ask this laptop's OpenVault for an ov_ key, then wait for Grant."""
+    base = args.base_url or f"http://127.0.0.1:{API_PORT}"
+    code, started = _http_json(
+        "POST",
+        f"{base.rstrip('/')}/api/local/grants",
+        {"client_name": args.client, "label": args.label or args.client},
+    )
+    if code != 200:
+        print(json.dumps(started, indent=2), file=sys.stderr)
+        return 1
+    grant_id = started["grant_id"]
+    print(f"Open OpenVault and Grant. Code {started['user_code']}")
+    print(started.get("approve_url") or "")
+    if not args.no_open:
+        webbrowser.open(started.get("approve_url") or f"http://127.0.0.1:{WEB_PORT}/grant/{grant_id}")
+    deadline = time.time() + max(15, int(args.timeout))
+    while time.time() < deadline:
+        poll_code, body = _http_json(
+            "POST", f"{base.rstrip('/')}/api/local/grants/{grant_id}/poll"
+        )
+        status = str(body.get("status") or "")
+        if poll_code == 200 and body.get("token"):
+            print(json.dumps(body, indent=2))
+            return 0
+        if status in ("denied", "expired", "missing"):
+            print(json.dumps(body, indent=2), file=sys.stderr)
+            return 1
+        time.sleep(1)
+    print("timed out waiting for Grant", file=sys.stderr)
+    return 1
+
+
 def main() -> int:
     ensure_utf8_stdio()
     parser = argparse.ArgumentParser(prog="openvault")
@@ -454,6 +508,16 @@ def main() -> int:
     demo_path.set_defaults(func=cmd_demo_path)
 
     sub.add_parser("app", help="Electron desktop shell").set_defaults(func=cmd_app)
+
+    grant = sub.add_parser("grant", help="Ask the local OpenVault app to mint a key")
+    grant_sub = grant.add_subparsers(dest="grant_cmd", required=True)
+    grant_req = grant_sub.add_parser("request", help="Other app: wait until the human Grants")
+    grant_req.add_argument("--client", required=True, help="Name shown on the Grant screen")
+    grant_req.add_argument("--label", default="", help="Label stored on the issued key")
+    grant_req.add_argument("--timeout", type=int, default=180)
+    grant_req.add_argument("--no-open", action="store_true")
+    grant_req.add_argument("--base-url", default=None)
+    grant_req.set_defaults(func=cmd_grant_request)
     sub.add_parser("doctor", help="Environment preflight").set_defaults(func=cmd_doctor)
 
     secret = sub.add_parser("secret", help="Agent retrieve: keys and site passwords (never cards)")

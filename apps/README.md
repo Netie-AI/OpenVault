@@ -19,7 +19,10 @@ powershell -ExecutionPolicy Bypass -File D:\OpenVault\scripts\windows\Start-Open
 
 That starts the custody API on `:5000` (mock health for a full demo) and the app
 on `:3010`, installing web dependencies on first run. `openvault doctor` checks
-the environment first. Everyday non-demo: `openvault up`.
+the environment first. Everyday non-demo: `openvault up`. Desktop app: `openvault app` or
+`scripts\windows\Install-OpenVaultDesktopShortcut.ps1` then double-click
+OpenVault (uses `next dev`, so this repo's UI changes show up). Another local
+app: `openvault grant request --client MyApp`.
 
 ## The toolchain constraint — read this before touching dependencies
 
