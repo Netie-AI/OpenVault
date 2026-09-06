@@ -279,6 +279,8 @@ class UsageStore:
             "failed_requests": int(row["failed"]),
             # No price. Pricing is a founder decision (STATUS.md NEEDS-YOU), and
             # a rate invented here would be indistinguishable from a real one.
+            # Experience packs (DR-0013) price estimated spend in route_packs,
+            # not in this ledger.
             "priced": False,
         }
 
