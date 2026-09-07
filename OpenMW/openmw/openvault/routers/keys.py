@@ -13,8 +13,9 @@ a missing JWKS.
 
 Reads here are unauthenticated on purpose. A JWKS is public key material; a
 verifier that had to authenticate to learn a public key would be a verifier
-that stops working the moment credentials expire. Everything that *mints* is
-loopback-only and, for issuance, bearer-authenticated.
+that stops working the moment credentials expire. Service registration is
+loopback plus ``OPENVAULT_SERVICES_ALLOW`` (prove VPC peers). Intermediate
+issue and revoke stay loopback-only, and issuance is bearer-authenticated.
 """
 
 from __future__ import annotations
@@ -50,6 +51,17 @@ def _guards() -> tuple[Any, Any, Any]:
     from openmw.openvault.app import _audit_custody, _require_loopback, _require_reveal_intent
 
     return _require_loopback, _require_reveal_intent, _audit_custody
+
+
+def _service_registration_guards() -> tuple[Any, Any, Any]:
+    """Guards for ``POST /keys/services`` only -- not a widening of loopback."""
+    from openmw.openvault.app import (
+        _audit_custody,
+        _require_reveal_intent,
+        _require_signing_service_peer,
+    )
+
+    return _require_signing_service_peer, _require_reveal_intent, _audit_custody
 
 
 class ServiceRegistration(BaseModel):
@@ -112,11 +124,12 @@ def register_service(body: ServiceRegistration, request: Request) -> dict[str, s
     intent header the plaintext-secret route uses: a page the user happens to
     have open cannot mint a service identity with a drive-by POST.
 
+    Peer check is loopback plus configured prove CIDRs, not world-open mint.
     Only the token's SHA-256 is kept. Re-registering the same service_id issues
     a new token and invalidates the old one, which is the rotation path.
     """
-    require_loopback, require_intent, audit = _guards()
-    require_loopback(request, "signing service registration")
+    require_peer, require_intent, audit = _service_registration_guards()
+    require_peer(request, "signing service registration")
     require_intent(request)
     try:
         token = _store().register_service(body.service_id)

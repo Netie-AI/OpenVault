@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import ipaddress
 import os
 import time
 from collections.abc import AsyncIterator
@@ -151,6 +152,10 @@ log = structlog.get_logger()
 _LOOPBACK_HOSTS = frozenset({"127.0.0.1", "::1", "localhost"})
 _REVEAL_INTENT_HEADER = "X-OpenVault-Reveal"
 _VAULT_SEALED_DETAIL = "vault is sealed; POST /api/vault/unseal with the passphrase first"
+# POST /keys/services only (#52). Loopback stays allowed separately. Extra CIDRs
+# come from OPENVAULT_SERVICES_ALLOW so ops can extend without a code change.
+_SERVICES_ALLOW_ENV = "OPENVAULT_SERVICES_ALLOW"
+_DEFAULT_SERVICES_ALLOW = ("10.128.0.3", "34.30.222.22")
 
 
 def _write_secret_audit(entry: dict[str, Any]) -> None:
@@ -233,6 +238,75 @@ def _require_loopback(request: Request, action: str) -> str:
         log.warning("custody_request_rejected", reason="non_loopback", action=action, client=host)
         raise HTTPException(status_code=403, detail=f"{action} is loopback-only")
     return host
+
+
+def _services_allow_networks() -> tuple[ipaddress.IPv4Network | ipaddress.IPv6Network, ...]:
+    """Default prove peers plus extra CIDRs from ``OPENVAULT_SERVICES_ALLOW``.
+
+    Defaults stay on so an env typo cannot drop Cortex prove. The env value
+    only adds networks. Loopback is not listed here; ``_LOOPBACK_HOSTS`` covers
+    OpenVault self. Invalid tokens are skipped rather than failing open or 500.
+    """
+    extra = (os.environ.get(_SERVICES_ALLOW_ENV) or "").strip()
+    raw = ",".join(_DEFAULT_SERVICES_ALLOW)
+    if extra:
+        raw = f"{raw},{extra}"
+    networks: list[ipaddress.IPv4Network | ipaddress.IPv6Network] = []
+    seen: set[str] = set()
+    for token in raw.replace(";", ",").replace(" ", ",").split(","):
+        token = token.strip()
+        if not token:
+            continue
+        try:
+            network = ipaddress.ip_network(token, strict=False)
+        except ValueError:
+            log.warning("services_allow_invalid_entry", entry=token)
+            continue
+        key = str(network)
+        if key in seen:
+            continue
+        seen.add(key)
+        networks.append(network)
+    return tuple(networks)
+
+
+def _host_in_services_allow(host: str) -> bool:
+    """True for loopback or an OPENVAULT_SERVICES_ALLOW / default prove peer.
+
+    Uses ``_normalise_host`` (same as the loopback gate) so IPv4-mapped IPv6
+    and port-suffixed forms match. Reads ``request.client.host`` via the caller,
+    never ``X-Forwarded-For`` itself.
+    """
+    normalised = _normalise_host(host)
+    if normalised in _LOOPBACK_HOSTS:
+        return True
+    try:
+        addr = ipaddress.ip_address(normalised)
+    except ValueError:
+        return False
+    return any(addr in network for network in _services_allow_networks())
+
+
+def _require_signing_service_peer(request: Request, action: str) -> str:
+    """Custody gate for ``POST /keys/services`` only.
+
+    Loopback always. Configured prove CIDRs/IPs additionally. Secret reveal,
+    key create, intermediate issue, and every other ``_require_loopback`` site
+    stay loopback-only — do not route them through this helper.
+    """
+    host = _client_host(request)
+    if _host_in_services_allow(host):
+        return host
+    log.warning(
+        "custody_request_rejected",
+        reason="peer_not_allowlisted",
+        action=action,
+        client=host,
+    )
+    raise HTTPException(
+        status_code=403,
+        detail=f"{action} is limited to loopback and OPENVAULT_SERVICES_ALLOW peers",
+    )
 
 
 #: Targets whose adapters mutate something outside this machine — upload files,

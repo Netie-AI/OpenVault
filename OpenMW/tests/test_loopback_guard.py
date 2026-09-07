@@ -111,6 +111,17 @@ def test_the_lan_still_cannot_create_a_key(host: str, tmp_path) -> None:
     assert "loopback-only" in res.text
 
 
+def test_prove_peer_still_cannot_create_a_provider_key(tmp_path) -> None:
+    """#52 must not widen _require_loopback. Prove IPs may mint services only."""
+    client = _client_from("10.128.0.3", tmp_path / "prove")
+    res = client.post(
+        "/api/keys",
+        json={"label": "probe", "provider": "google", "secret": "x" * 24, "role": "free"},
+    )
+    assert res.status_code == 403
+    assert "loopback-only" in res.text
+
+
 def test_normalisation_matches_the_typescript_guard() -> None:
     """One rule, two implementations -- the drift between them was the bug.
 
