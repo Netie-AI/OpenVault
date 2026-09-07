@@ -11,13 +11,13 @@ What exists in this repo and where. Update when structure changes, not when stat
 | `Profiler/` | PathTrace + capability probe (library, own `uv sync` root) |
 | `OpenMW/openmw/openvault/` | App tiers (own `uv sync` root) — see table below |
 | `OpenMW/` | Custody API on `:5000` (redirects `/` to the app) |
-| `OpenMW/rust/openvault-console/` | Optional Rust sandbox on `:5055`. Builds; 2 tests. Not identity SoT (DR-0015). Mesh still advertises `#auth` when down |
+| `OpenMW/rust/openvault-console/` | Optional Rust sandbox on `:5055`. Builds; 2 tests. Not identity SoT (DR-0015 accepted). Connect-pack `auth_ui` is null when the probe is down |
 | `apps/web/` | OpenVault UI on `:3010` (Next 16, wired exclusively to `:5000` — see `docs/decisions/DR-0003-openship-app-plan.md`) |
-| `apps/cli/` | `openvault_cli.py` — `up` / `demo` / `demo-path` / `app` / `doctor` |
+| `apps/cli/` | `openvault_cli.py` — `up` / `demo` / `demo-path` / `app` / `doctor` / `home pack` / `home unpack` |
 | `OpenMW/scripts/one_seat_demo.py` | Auto-safe one-seat evidence path (vault → FreeRoute refuse → ship allow → deny); see [`ONE_SEAT_DEMO.md`](ONE_SEAT_DEMO.md) |
 | `apps/shell/` | Electron desktop shell |
 | `docs/reference/` | Protocol/technical reference docs still live and current |
-| `docs/decisions/` | Decision records, `DR-####-kebab-title.md`, MADR format (see `DR-0001`). Proposed: [`DR-0012`](decisions/DR-0012-skills-kb-crew-wiring.md) skills/KB/crew wiring. Packs: [`DR-0013`](decisions/DR-0013-experience-route-packs.md). Passkeys: [`DR-0014`](decisions/DR-0014-passkeys-vault-unseal.md) |
+| `docs/decisions/` | Decision records, `DR-####-kebab-title.md`, MADR format (see `DR-0001`). Proposed: [`DR-0012`](decisions/DR-0012-skills-kb-crew-wiring.md) skills/KB/crew wiring. Packs: [`DR-0013`](decisions/DR-0013-experience-route-packs.md). Passkeys: [`DR-0014`](decisions/DR-0014-passkeys-vault-unseal.md). Vault line + rust optional: [`DR-0015`](decisions/DR-0015-what-belongs-in-the-vault.md) |
 | `scripts/windows/` | `Start-OpenVaultDemo.ps1`, `Start-NetieStack.ps1`, `Start-LocalMesh.ps1` |
 | `scripts/` | `start_local_mesh.sh` (Linux/macOS mesh bring-up: custody API `:5000`, approve Cortex + OpenIDE, demo shell when AirGPT is absent) · `airgpt_demo_shell.py` (stdlib AirGPT/OpenIDE stand-in on `:8765`) |
 | `bin/` | Quarantine — dead/orphaned files pending the founder's final review and removal |

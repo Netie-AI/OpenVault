@@ -1,6 +1,7 @@
 ---
-status: proposed
+status: accepted
 date: 2026-09-06
+accepted: 2026-09-07
 decision-makers: founder
 ---
 
@@ -127,14 +128,12 @@ crate. Custody waits on a human prompt, not on CPU. Space's `netie-pdf-detect`
 is the existing Rust hot-loop. Growing a second accounts table and a second
 secrets table to get a faster login page is the wrong half of the repo.
 
-**Revised recommendation (still founder-owed):** keep the crate optional. Do not
-move Python `accounts` into it. Do not add phone-verification against either
-store until this record is accepted. If the mesh keeps a rust_console URL, the
-connect-pack must name `status` and must not present `#auth` as a live UI when
-the probe is not online. Phone work in Pointer `DR-0004` stays blocked on this
-call, not on `cargo test`.
-
-Not decided here. It needs the founder.
+**Accepted 2026-09-07:** keep the crate optional. Do not move Python `accounts`
+into it. Do not add phone-verification against either store. The mesh may keep a
+`rust_console` URL; the connect-pack must name `status` and must not present
+`#auth` as a live UI when the probe is not online. Phone work in Pointer
+`DR-0004` stays blocked on this call, not on `cargo test`. DR-0014 Python
+WebAuthn unseal remains the real passkey path.
 
 ## Consequences
 
@@ -153,7 +152,10 @@ Not decided here. It needs the founder.
   reveal refuses a code set; identity numbers are sealed on disk and absent from
   listings; the new write routes are loopback-only; the audit records counts and
   document types, never a code or a number.
+- `OpenMW/tests/test_local_mesh.py` - connect-pack `auth_ui` is null when rust
+  is offline; `register_passkey` does not hand out `/#auth` for a down process.
 - Re-run `pytest tests/test_recovery_codes_identity.py tests/test_secrets_custody.py
-  tests/test_secret_reveal_gate.py` before accepting.
+  tests/test_secret_reveal_gate.py tests/test_local_mesh.py tests/test_contract.py`
+  after accepting.
 - Rust console sandbox (does not decide this record): `cd OpenMW/rust/openvault-console
   && cargo test` - 2 passed 2026-09-06. Do not read that as identity SoT.

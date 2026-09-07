@@ -2,6 +2,26 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-09-07 - DR-0015 accepted; mesh stops advertising a down rust #auth
+
+- Vault line accepted: irreversible IDs and 2FA recovery codes live in OpenVault;
+  name/address/phone/email/DOB stay in Cortex memory. Rust console stays an
+  optional sandbox. Python `accounts` are not moved into it. Phone-verify stays
+  off. Pointer `DR-0004` Ask 3 stays blocked.
+- Connect-pack `rust_console.auth_ui` is null unless the last probe is
+  `online`/`approved`. `register_passkey` no longer hands out `:5055/#auth`
+  when the process is down. Handshake no longer stamps `approved` over `offline`.
+- Tests: `OpenMW/tests/test_local_mesh.py` rust auth_ui cases;
+  `tests/test_recovery_codes_identity.py` still the identity gate.
+
+## 2026-09-07 - Sealed home pack for another laptop you own (F31)
+
+- `openvault home pack` / `home unpack`: zip of `OPENVAULT_HOME` as it sits on
+  disk. No decrypt. No CSV. Refuses DPAPI, plain wrap, and `master.key.v0.bak`.
+  Skips `import/` staging. Passkey unseal stays on the source box.
+- Tests: `OpenMW/tests/test_vault_home_pack.py`. Not cloud containers, not
+  Control-hosted Cortex, not SSH.
+
 ## 2026-09-07 - Board empty: #48 already on main
 
 - GitHub OPEN count is 0. Control-plane ticket #48 CLOSED after PR #49

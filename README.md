@@ -61,7 +61,7 @@ Libraries for measurement stay at the repo root; the operator console lives in O
 2. **Slots** — every local + Cortex model acknowledged (`/api/slots`)
 3. **Keys** — encrypted vault + fallback proxy
 4. **Ship** — FreeBuild / deploy gates / email DNS checks
-5. **Mesh** — OpenVault `:5000` ↔ Cortex `:8000` ↔ FreeIDE `:8765` ↔ Rust `:5055`
+5. **Mesh** — OpenVault `:5000` ↔ Cortex `:8000` ↔ FreeIDE `:8765`. Optional Rust sandbox `:5055` (not identity SoT; omitted from `auth_ui` when down).
 6. **Fix** — GPU/CPU/fan control with `dry_run` default (`/api/control/*`)
 
 ---
@@ -108,7 +108,8 @@ uv run pytest tests/unit tests/integration -q
 ```
 FreeIDE :8765  ──handshake──►  OpenVault :5000  ◄──engines──  Cortex :8000
                                   │
-                                  └── passkeys ──► Rust :5055
+                                  └── passkeys ──► Python /vault (DR-0014)
+                                  └── optional ──► Rust :5055 (sandbox only)
 ```
 
 1. Start Cortex on `:8000` yourself (e.g. from `D:\Cortex`).

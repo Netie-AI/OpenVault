@@ -6,7 +6,7 @@
 |------|------|
 | `apps/web` | **The OpenVault app.** Next 16 + Tailwind v4, wearing FreeBuild's token system |
 | `apps/shell` | **Electron desktop shell**, adapted from `vendor/OmniRoute/electron` |
-| `apps/cli/openvault_cli.py` | CLI: `up` / `demo` / `app` / `doctor` |
+| `apps/cli/openvault_cli.py` | CLI: `up` / `demo` / `app` / `doctor` / `home pack` / `home unpack` |
 | `vendor/*` | Upstream clones we copy **from**. Gitignored. Not services we run |
 
 ## Run
@@ -23,6 +23,20 @@ the environment first. Everyday non-demo: `openvault up`. Desktop app: `openvaul
 `scripts\windows\Install-OpenVaultDesktopShortcut.ps1` then double-click
 OpenVault (uses `next dev`, so this repo's UI changes show up). Another local
 app: `openvault grant request --client MyApp`.
+
+### Another laptop you own (sealed home, not CSV)
+
+1. This laptop: passphrase set, bak retired, then
+   `python apps/cli/openvault_cli.py home pack --out D:\openvault-home.ovpack.zip`
+2. Copy the zip (USB / your LAN). Not email. Not chat.
+3. Other laptop: clone this repo, `cd OpenMW && uv sync`, npm in `apps/web`.
+4. `python apps/cli/openvault_cli.py home unpack ZIP --to C:\Users\You\.openvault`
+5. `set OPENVAULT_HOME=C:\Users\You\.openvault` then `openvault up`. Unseal with
+   the **same passphrase**. Register Windows Hello on that laptop (old passkey
+   does not travel).
+
+Grant stays per laptop (loopback). Cloud containers and Control hosting are
+not this path.
 
 ## The toolchain constraint — read this before touching dependencies
 

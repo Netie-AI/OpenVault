@@ -237,6 +237,26 @@ security-code columns are stripped with an explicit reason and never stored.
 Empty passwords are skipped. Synthetic fixtures only in git — never commit a
 real dump. No scraping Google/iCloud. No autofill.
 
+### Another laptop you own (`openvault home pack`)
+
+Not CSV. Not a cloud export. Not decrypt. Copies the **already sealed**
+`OPENVAULT_HOME` into a zip (`openvault-home.ovpack.zip`).
+
+- Allowed only when `master.key` is `passphrase-scrypt` and `master.key.v0.bak`
+  is gone.
+- DPAPI / plain wrap is refused (that pair is this Windows user only).
+- `import/` staging is left out (those files are plaintext).
+- Windows Hello / iPhone passkey does **not** travel. Unseal on laptop 2 with
+  the same passphrase, then register a passkey on that box.
+
+```
+python apps/cli/openvault_cli.py home pack --out D:\openvault-home.ovpack.zip
+python apps/cli/openvault_cli.py home unpack D:\openvault-home.ovpack.zip --to C:\Users\You\.openvault
+```
+
+Then on laptop 2: clone this repo, `cd OpenMW && uv sync`, npm in `apps/web`,
+`OPENVAULT_HOME` = the unpacked folder, `openvault up`, unseal.
+
 ---
 
 ## 4. Netie Space retrieve contract

@@ -4,6 +4,8 @@
   openvault up          # OpenMW custody API (:5000) + Next OpenVault app (:3010) + browser
   openvault app         # Electron desktop shell -> wraps the same two processes
   openvault grant request --client MyApp   # other local app: wait for Grant
+  openvault home pack                      # sealed home zip for another laptop you own
+  openvault home unpack ZIP --to DIR       # restore that zip (passphrase unseal there)
   openvault doctor      # environment preflight (filesystem, node, npm, ports)
   openvault doctor      # environment preflight (filesystem, node, npm, ports)
   openvault demo        # mock-health demo: API + app + open browser
@@ -399,6 +401,45 @@ def cmd_demo_path(args: argparse.Namespace) -> int:
     return subprocess.call(cmd, cwd=str(OPENMW))
 
 
+def cmd_home_pack(args: argparse.Namespace) -> int:
+    """Zip the sealed home. Never decrypts. Passphrase-scrypt only."""
+    cli_dir = str(Path(__file__).resolve().parent)
+    if cli_dir not in sys.path:
+        sys.path.insert(0, cli_dir)
+    from vault_home_pack import PackError, pack_home
+
+    home = _home_dir()
+    dest = Path(args.out) if args.out else home.parent / "openvault-home.ovpack.zip"
+    try:
+        manifest = pack_home(home, dest)
+    except PackError as exc:
+        print(str(exc), file=sys.stderr)
+        return int(exc.status)
+    print(json.dumps(manifest, indent=2))
+    return 0
+
+
+def cmd_home_unpack(args: argparse.Namespace) -> int:
+    cli_dir = str(Path(__file__).resolve().parent)
+    if cli_dir not in sys.path:
+        sys.path.insert(0, cli_dir)
+    from vault_home_pack import PackError, unpack_home
+
+    dest = Path(args.to)
+    try:
+        result = unpack_home(Path(args.zip), dest, force=bool(args.force))
+    except PackError as exc:
+        print(str(exc), file=sys.stderr)
+        return int(exc.status)
+    print(json.dumps(result, indent=2))
+    print(
+        "Set OPENVAULT_HOME to that folder, clone this repo, then openvault up. "
+        "Unseal with the same passphrase. Passkey on the old laptop does not travel.",
+        file=sys.stderr,
+    )
+    return 0
+
+
 def cmd_secret_get(args: argparse.Namespace) -> int:
     """Thin HTTP retrieve. Never caches. Hard-denies payment_card / PAN."""
     cli_dir = str(Path(__file__).resolve().parent)
@@ -538,6 +579,28 @@ def main() -> int:
         help="custody API (default http://127.0.0.1:$OPENVAULT_API_PORT)",
     )
     secret_get.set_defaults(func=cmd_secret_get)
+
+    home_p = sub.add_parser("home", help="Carry a sealed vault home to another laptop you own")
+    home_sub = home_p.add_subparsers(dest="home_cmd", required=True)
+    home_pack = home_sub.add_parser(
+        "pack",
+        help="Zip OPENVAULT_HOME (passphrase-scrypt only; no CSV; no decrypt)",
+    )
+    home_pack.add_argument(
+        "--out",
+        default=None,
+        help="zip path (default: sibling openvault-home.ovpack.zip)",
+    )
+    home_pack.set_defaults(func=cmd_home_pack)
+    home_unpack = home_sub.add_parser("unpack", help="Restore a home pack zip")
+    home_unpack.add_argument("zip", help="openvault-home.ovpack.zip")
+    home_unpack.add_argument("--to", required=True, help="destination OPENVAULT_HOME")
+    home_unpack.add_argument(
+        "--force",
+        action="store_true",
+        help="overwrite an existing keys.db at --to",
+    )
+    home_unpack.set_defaults(func=cmd_home_unpack)
 
     args = parser.parse_args()
     return int(args.func(args))
