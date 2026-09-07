@@ -142,6 +142,7 @@ from openmw.openvault.vault.store import (
     KeyVault,
     ProviderKind,
 )
+from openmw.openvault.vault.system_plane import EntitlementStore
 from openmw.openvault.vault.usage_store import HopTrace, UsageEvent, UsageStore
 
 log = structlog.get_logger()
@@ -897,6 +898,9 @@ def create_app(
     # same keys.db as the vault - one backup surface, no second store.
     state_api_keys = ApiKeyStore()
     state_usage = UsageStore()
+    # Plan + seats live in accounts.db (same file as AccountStore). Not a
+    # second vault; not the public rate page.
+    state_entitlements = EntitlementStore(db_path=state_accounts.db_path)
     # Our own address, as the registry should advertise it. Matches how
     # mesh/local_mesh.py builds the self peer, so the two never disagree.
     self_url = f"http://127.0.0.1:{os.environ.get('OPENVAULT_PORT', '5000')}"
@@ -951,6 +955,7 @@ def create_app(
     from openmw.openvault.routers.route import router as route_router
     from openmw.openvault.routers.sentinel import router as sentinel_router
     from openmw.openvault.routers.ship import router as ship_router
+    from openmw.openvault.routers.system import build_system_router
 
     app.include_router(ship_router)
     app.include_router(sentinel_router)
@@ -975,6 +980,22 @@ def create_app(
 
     app.include_router(
         build_key_ui_router(state_vault, state_accounts, guard=_key_ui_guard, audit=_key_ui_audit)
+    )
+
+    def _system_guard(request: Request, action: str) -> None:
+        _require_loopback(request, action)
+
+    def _system_audit(request: Request, event: str) -> None:
+        _audit_custody(event, request)
+
+    app.include_router(
+        build_system_router(
+            state_accounts,
+            state_entitlements,
+            state_usage,
+            guard=_system_guard,
+            audit=_system_audit,
+        )
     )
 
     @app.get("/api/healthz")
@@ -1136,6 +1157,7 @@ def create_app(
             raise HTTPException(status_code=404, detail="account not found")
         keys = [asdict(k) for k in state_vault.list_keys(account_id=account_id)]
         bundle["keys"] = keys
+        bundle["entitlement"] = state_entitlements.get(account_id).to_dict()
         return bundle
 
     @app.post("/api/accounts/{account_id}/relay")
@@ -3025,8 +3047,11 @@ def run_console(
 ) -> None:
     import uvicorn
 
+    from openmw.openvault.vault.system_plane import require_private_bind
+
     if cortex_url is None:
         cortex_url = cortex_base_url()
+    host = require_private_bind(host)
     app = create_app(
         cortex_url=cortex_url,
         mock_health=mock_health,

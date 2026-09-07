@@ -3,23 +3,25 @@
 > Canonical "what's true now." History: [`CHANGELOG.md`](CHANGELOG.md). Deferred:
 > [`PARKING_LOT.md`](PARKING_LOT.md). Map: [`docs/ACTIVE.md`](docs/ACTIVE.md).
 
-Last reconciled: 2026-09-04. #13 #18 #33 CLOSED (founder). Spaceship FTP
+Last reconciled: 2026-09-07. #48 SYSTEM control plane (this branch): display
+SKUs locked; usage $/unit still NEEDS-YOU. #13 #18 #33 CLOSED. Spaceship FTP
 on main via [#47](https://github.com/Netie-AI/OpenVault/pull/47) `2feaf1eb`.
-Pricing still NEEDS-YOU (not a ticket).
 
-**UI:** `:3010` Compiling-proxy hang / `:5000` unsealed this session.
-Scripted demo: `cd OpenMW && uv run --no-sync python scripts/one_seat_demo.py`
+**UI:** `:3010` Compiling-proxy hang / `:5000` stays loopback (no public bind).
+Writers: `http://35.253.229.206:8080`. Demo:
+`cd OpenMW && uv run --no-sync python scripts/one_seat_demo.py`
 
 ## Distance
 
-~90%. Epics #13-#18 and #33 closed. Metering is in; **pricing is not**.
-Friendly key UI at `/keys`. Service SKUs simulate-default.
+~90%. Epics #13-#18 and #33 closed. Metering is in. Display SKUs are locked
+(#48, DR-0013). **Usage unit price is not.** Friendly key UI at `/keys`.
+Service SKUs simulate-default.
 
 ## Next
 
 | # | Status |
 |---|--------|
-| Pricing | **NEEDS-YOU.** Not a ticket. DR-0009 (a) - we carry provider cost |
+| Usage $/unit | **NEEDS-YOU.** Not a ticket. Display SKUs are locked. DR-0009 (a) we carry provider cost |
 | `:3010` Compiling proxy | Next hang on exFAT; HT3 used API path |
 
 ## HT gates (founder closed #18)

@@ -63,6 +63,11 @@ class AccountStore:
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
         self._init_schema()
 
+    @property
+    def db_path(self) -> Path:
+        """Same accounts.db the control plane entitlements table lives in."""
+        return self._db_path
+
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(str(self._db_path))
         conn.row_factory = sqlite3.Row

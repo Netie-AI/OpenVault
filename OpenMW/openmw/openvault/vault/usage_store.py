@@ -32,6 +32,10 @@ from typing import Any
 
 from openmw.openvault.paths import keys_db_path
 
+#: Usage $/unit is a founder decision. A number here would read as a real rate.
+USAGE_UNIT_USD: float | None = None
+USAGE_UNIT_STATUS = "NEEDS-YOU"
+
 
 @dataclass
 class UsageEvent:
@@ -277,10 +281,12 @@ class UsageStore:
             "estimated_tokens": int(row["estimated"]),
             "cache_hits": int(row["cache_hits"]),
             "failed_requests": int(row["failed"]),
-            # No price. Pricing is a founder decision (STATUS.md NEEDS-YOU), and
-            # a rate invented here would be indistinguishable from a real one.
+            # No price. Display SKUs live on the system control plane; usage
+            # $/unit stays NEEDS-YOU so a number here cannot look measured.
             "priced": False,
+            "usage_unit_usd": USAGE_UNIT_USD,
+            "usage_unit_status": USAGE_UNIT_STATUS,
         }
 
 
-__all__ = ["HopTrace", "UsageEvent", "UsageStore"]
+__all__ = ["USAGE_UNIT_STATUS", "USAGE_UNIT_USD", "HopTrace", "UsageEvent", "UsageStore"]

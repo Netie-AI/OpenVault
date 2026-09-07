@@ -2,6 +2,23 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-09-07 - SYSTEM control plane: entitlements / routing / unlock / metering / seats (#48)
+
+- **Locked display SKUs** (not a public rate page): Individual Basic USD10 /
+  Pro USD100 / Ultra USD500; Team USD10 / Team Ultra USD500 / Team Giga USD1000;
+  team seat USD30. Usage credits 20% cheaper on Ultra/Giga; normal on Pro and
+  the USD30 seat. Usage $/unit stays `None` / `NEEDS-YOU` -- no invented rate.
+- **Loopback `/api/system/*`**: catalog, bind, entitlements, unlock, lock, seats,
+  route (maps onto existing `free`/`pro` limiter tiers), metering overlay.
+  Extends `GET /api/accounts/{id}` with an entitlement snapshot. Same
+  `accounts.db`, one vault. Hardware `/api/control/*` is unchanged.
+- **No public :5000 bind.** Default host stays `127.0.0.1`. Internal writers
+  URL is `http://35.253.229.206:8080`. `0.0.0.0` refuses unless
+  `OPENVAULT_ALLOW_PUBLIC_BIND=1`.
+- **Tests:** `OpenMW/tests/test_control_plane.py`. Existing usage summary still
+  asserts `priced is False` and now also `usage_unit_status == NEEDS-YOU`.
+- **DR-0013** proposed. Decision Agent does not merge.
+
 ## 2026-09-04 - HT3 passphrase + vault Lock/Set-passphrase UI; founder closed #18 #33
 
 - Human HT3: wrap=`passphrase-scrypt`, bak retired, restart boots sealed,
