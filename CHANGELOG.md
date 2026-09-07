@@ -2,6 +2,24 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-09-07 - #52 VPC allowlist for POST /keys/services (not public :5000)
+
+- **Scoped helper, not a widened loopback gate.** `POST /keys/services` now
+  accepts loopback plus configured prove peers. Secret reveal, key create,
+  intermediate issue/revoke, and every other `_require_loopback` site stay
+  loopback-only. No public `:5000` bind.
+- **Defaults:** Cortex prove `10.128.0.3` and `34.30.222.22`. Ops extend with
+  `OPENVAULT_SERVICES_ALLOW` (comma/CIDR/IP list). Defaults stay on so an env
+  typo cannot drop prove. Unlisted remotes get 403 naming the env var, not the
+  peer list. `X-Forwarded-For` is not read by this gate (`_client_host` /
+  `_normalise_host` only).
+- **Tests:** loopback allow, default prove IPs allow, env CIDR allow, unlisted
+  deny, XFF spoof deny, allowlisted peer still cannot issue intermediates or
+  create provider keys. `mint_loopback_only` on `/api/system/bind` still means
+  not world-open; `services_allow_env` names the CIDR list.
+- **Cite only:** dms#116 remount context in the other repo. This PR does not
+  change dms.
+
 ## 2026-09-07 - #50 JWKS pin kids + FreeRoute register (no public mint)
 
 - **JWKS bind (Platform/Decision addendum):** `GET /.well-known/jwks.json` and

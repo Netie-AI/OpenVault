@@ -3,12 +3,10 @@
 > Canonical "what's true now." History: [`CHANGELOG.md`](CHANGELOG.md). Deferred:
 > [`PARKING_LOT.md`](PARKING_LOT.md). Map: [`docs/ACTIVE.md`](docs/ACTIVE.md).
 
-Last reconciled: 2026-09-07. #50 JWKS pin: `GET /.well-known/jwks.json` (and
-`/keys/jwks`) publishes the trust-root kid as `netie_verify_only` so Cortex
-prove can bind without a public mint. `POST /keys/services` stays loopback 403.
-#48 SYSTEM control plane: display SKUs locked USD (`USD10` / `$10`); usage
-$/unit still `USD NEEDS-YOU`. #13 #18 #33 CLOSED. Spaceship FTP on main via
-[#47](https://github.com/Netie-AI/OpenVault/pull/47) `2feaf1eb`.
+Last reconciled: 2026-09-07. #52 `POST /keys/services`: loopback plus
+`OPENVAULT_SERVICES_ALLOW` (defaults `10.128.0.3`, `34.30.222.22`). Other
+custody stays loopback. No public `:5000`. #50 JWKS pin kids. #48 display
+SKUs locked USD; usage $/unit still `USD NEEDS-YOU`. #13 #18 #33 CLOSED.
 
 **UI:** `:3010` Compiling-proxy hang / `:5000` stays loopback (no public bind).
 Writers: `http://35.253.229.206:8080`. JWKS:
@@ -18,7 +16,8 @@ Writers: `http://35.253.229.206:8080`. JWKS:
 
 ## Distance
 
-~92%. JWKS kids without public mint. Display SKUs locked (#48, DR-0013).
+~92%. JWKS kids without public mint. Prove VMs can register signing services
+(#52) without a public `:5000`. Display SKUs locked (#48, DR-0013).
 **Usage unit price is not.** FreeRoute register at `/tool/register`. Friendly
 key UI at `/keys`. Service SKUs simulate-default.
 
