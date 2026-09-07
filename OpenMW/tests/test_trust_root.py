@@ -73,12 +73,18 @@ def test_root_private_half_is_sealed_not_plaintext(store: TrustStore, home: Path
     assert blob.startswith(b"gAAAAA"), "root private half is not sealed"
 
 
-def test_root_is_not_published_in_the_jwks(store: TrustStore) -> None:
-    """Nothing should ever accept a manifest signed directly by the root."""
+def test_root_is_published_in_jwks_as_verify_only_pin(store: TrustStore) -> None:
+    """Cortex must obtain a kid without a public mint. Root is pin-only."""
     store.ensure_root()
     store.issue_intermediate("dms")
-    kinds = {k["kid"].split("-")[0] for k in store.jwks()["keys"]}
-    assert kinds == {"int"}
+    keys = store.jwks()["keys"]
+    kinds = {k["kid"].split("-")[0] for k in keys}
+    assert kinds == {"root", "int"}
+    root_jwk = next(k for k in keys if str(k["kid"]).startswith("root-"))
+    assert root_jwk["netie_role"] == "trust-root"
+    assert root_jwk["netie_verify_only"] is True
+    assert "private_key" not in root_jwk
+    assert "d" not in root_jwk
 
 
 # ── intermediates ────────────────────────────────────────────────────────────
@@ -143,13 +149,13 @@ def test_ttl_is_bounded(store: TrustStore) -> None:
 def test_chain_verifies_against_the_pinned_root(store: TrustStore) -> None:
     root = store.ensure_root()
     store.issue_intermediate("dms", ttl_s=120)
-    jwk = store.jwks()["keys"][0]
+    jwk = next(k for k in store.jwks()["keys"] if str(k["kid"]).startswith("int-"))
     assert verify_chain(root.public_key, jwk) is True
 
 
 def test_chain_fails_under_a_different_root(store: TrustStore, home: Path) -> None:
     store.issue_intermediate("dms", ttl_s=120)
-    jwk = store.jwks()["keys"][0]
+    jwk = next(k for k in store.jwks()["keys"] if str(k["kid"]).startswith("int-"))
     other = TrustStore(db_path=home / "other.db", seal=Seal(Fernet.generate_key()))
     assert verify_chain(other.ensure_root().public_key, jwk) is False
 
@@ -158,7 +164,7 @@ def test_chain_binds_the_subject_and_the_window(store: TrustStore) -> None:
     """Otherwise the root attests to a key without saying who may use it, or until when."""
     root = store.ensure_root()
     store.issue_intermediate("dms", ttl_s=120)
-    jwk = dict(store.jwks()["keys"][0])
+    jwk = dict(next(k for k in store.jwks()["keys"] if str(k["kid"]).startswith("int-")))
     assert verify_chain(root.public_key, {**jwk, "netie_subject": "someone-else"}) is False
     assert verify_chain(root.public_key, {**jwk, "exp": jwk["exp"] + 86400}) is False
 
@@ -200,7 +206,11 @@ def test_jwks_is_served_and_is_public(home: Path) -> None:
     client = _client()
     response = client.get("/keys/jwks")
     assert response.status_code == 200
-    assert response.json() == {"keys": []}
+    keys = response.json()["keys"]
+    assert keys, "empty JWKS cannot bind Cortex"
+    assert all(k.get("kid") for k in keys)
+    assert any(str(k["kid"]).startswith("root-") for k in keys)
+    assert any(k.get("netie_verify_only") is True for k in keys)
 
 
 def test_root_document_is_served(home: Path) -> None:
@@ -209,6 +219,7 @@ def test_root_document_is_served(home: Path) -> None:
     body = response.json()
     assert body["kty"] == "OKP" and body["crv"] == "Ed25519"
     assert body["netie_role"] == "trust-root"
+    assert body["netie_verify_only"] is True
 
 
 def test_full_issue_flow_over_http(home: Path) -> None:
@@ -227,8 +238,11 @@ def test_full_issue_flow_over_http(home: Path) -> None:
     assert payload["alg"] == "EdDSA" and payload["crv"] == "Ed25519"
 
     published = client.get("/keys/jwks").json()["keys"]
-    assert [k["kid"] for k in published] == [payload["kid"]]
-    assert verify_chain(client.get("/keys/root").json()["x"], published[0]) is True
+    kids = [k["kid"] for k in published]
+    assert payload["kid"] in kids
+    assert any(str(k).startswith("root-") for k in kids)
+    int_jwk = next(k for k in published if k["kid"] == payload["kid"])
+    assert verify_chain(client.get("/keys/root").json()["x"], int_jwk) is True
 
 
 def test_issue_without_a_token_is_refused(home: Path) -> None:

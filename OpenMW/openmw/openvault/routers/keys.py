@@ -6,8 +6,10 @@ declares the routes and owns nothing else.
 Path shape is deliberately ``/keys/*`` rather than ``/api/keys/*``. ``/api/keys``
 is the provider-credential vault — a different thing with different custody —
 and a consumer fetching a public JWKS should not have to reason about which
-``keys`` it is talking to. ``GET /keys/jwks`` is also a published contract:
-Cortex's manifest verifier fetches exactly that path.
+``keys`` it is talking to. ``GET /keys/jwks`` and ``GET /.well-known/jwks.json``
+are the published contracts: Cortex's JWKS refresh fetches a public kid set
+without minting. ``/api/keys`` returning ``keys=[]`` is an empty *vault*, not
+a missing JWKS.
 
 Reads here are unauthenticated on purpose. A JWKS is public key material; a
 verifier that had to authenticate to learn a public key would be a verifier
@@ -20,6 +22,7 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from openmw.openvault.vault.trust import (
@@ -59,26 +62,45 @@ class IntermediateRequest(BaseModel):
     ttl_s: int = Field(default=DEFAULT_INTERMEDIATE_TTL_S, ge=1, le=MAX_INTERMEDIATE_TTL_S)
 
 
+_JWKS_HEADERS = {
+    "Cache-Control": "public, max-age=60, must-revalidate",
+    # Public pin material. Cortex prove is on another host; browser dashboards
+    # may also fetch this. Mint routes do not get this header.
+    "Access-Control-Allow-Origin": "*",
+}
+
+
+def _jwks_response() -> JSONResponse:
+    return JSONResponse(content=_store().jwks(), headers=_JWKS_HEADERS)
+
+
+@router.get("/.well-known/jwks.json")
+def well_known_jwks() -> JSONResponse:
+    """RFC 7517 well-known JWKS. Same document as ``GET /keys/jwks``."""
+    return _jwks_response()
+
+
 @router.get("/keys/jwks")
-def keys_jwks() -> dict[str, Any]:
-    """Public keys for every currently valid intermediate.
+def keys_jwks() -> JSONResponse:
+    """Public JWKS: trust-root pin kid plus any live intermediates.
 
     Consumers cache this to disk and verify against the cache, so an outage
     here must not stop them verifying. Expired intermediates simply stop being
     listed; their ``exp`` already told the consumer when to stop trusting them.
+    The root kid is always present (DR-0014) so Cortex can bind without mint.
     """
-    return _store().jwks()
+    return _jwks_response()
 
 
 @router.get("/keys/root")
-def keys_root() -> dict[str, Any]:
+def keys_root() -> JSONResponse:
     """The trust root's public half, for pinning at install time.
 
     Served separately from the JWKS so that pinning is a deliberate act, and so
     that nothing signed directly by the root is ever accepted as an ordinary
-    signing key.
+    signing key. Same CORS as JWKS: Cortex prove is on another origin.
     """
-    return _store().root_document()
+    return JSONResponse(content=_store().root_document(), headers=_JWKS_HEADERS)
 
 
 @router.post("/keys/services")

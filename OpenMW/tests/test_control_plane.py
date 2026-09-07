@@ -162,6 +162,9 @@ def test_catalog_and_bind_are_loopback_only(client: TestClient) -> None:
     assert body["bind"]["internal_writers_only"] is True
     assert "35.253.229.206:8080" in body["bind"]["internal_writers_url"]
     assert client.get("/api/system/bind").json()["internal_writers_only"] is True
+    bind = client.get("/api/system/bind").json()
+    assert bind["jwks_uri"] == "/.well-known/jwks.json"
+    assert bind["mint_loopback_only"] is True
 
     remote = TestClient(client.app, client=("8.8.8.8", 5555))
     assert remote.get("/api/system/catalog").status_code == 403

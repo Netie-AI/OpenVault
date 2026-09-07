@@ -184,6 +184,8 @@ def require_private_bind(host: str) -> str:
 
 
 def bind_policy() -> dict[str, Any]:
+    writers = INTERNAL_WRITERS_URL.rstrip("/")
+    live_key_id = _safe_live_key_id()
     return {
         "public_bind_allowed": False,
         "default_host": DEFAULT_BIND_HOST,
@@ -192,7 +194,24 @@ def bind_policy() -> dict[str, Any]:
         "internal_writers_only": True,
         "public_rate_page": False,
         "escape_hatch_env": _PUBLIC_BIND_ENV,
+        # Cortex prove fetches JWKS here. Public pin kids; mint stays loopback.
+        "jwks_uri": "/.well-known/jwks.json",
+        "jwks_alt": "/keys/jwks",
+        "root_uri": "/keys/root",
+        "jwks_url": f"{writers}/.well-known/jwks.json",
+        "mint_loopback_only": True,
+        "live_key_id_env": "LIVE_KEY_ID",
+        "live_key_secret_manager": "openvault-dms-writer-token",
+        "live_key_id": live_key_id,
     }
+
+
+def _safe_live_key_id() -> str | None:
+    """Echo the sealed caller id only. Never an ``ov_`` token."""
+    raw = (os.environ.get("OPENVAULT_LIVE_KEY_ID") or os.environ.get("LIVE_KEY_ID") or "").strip()
+    if not raw or raw.startswith("ov_") or len(raw) > 64:
+        return None
+    return raw
 
 
 def catalog_payload() -> dict[str, Any]:

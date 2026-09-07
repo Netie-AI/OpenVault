@@ -5,7 +5,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "OpenVault",
-  description: "Custody · Keys · OpenShip · OmniRoute · Netie Engine",
+  description: "Custody · Keys · FreeRoute · FreeBuild · Cortex",
 };
 
 export default function RootLayout({

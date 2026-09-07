@@ -26,6 +26,18 @@ const LINKS = [
     icon: KeyRound,
   },
   {
+    href: "/keys",
+    title: "Keys",
+    body: "Cortex API key, BYOK, free register + install. One vault.",
+    icon: KeyRound,
+  },
+  {
+    href: "/freeroute",
+    title: "FreeRoute",
+    body: "Pooled spend hops, JWKS bind kids, register deep-links.",
+    icon: Route,
+  },
+  {
     href: "/ship",
     title: "Ship",
     body: "Pick a folder or GitHub repo → auto-detect stack → deploy.",
@@ -40,7 +52,7 @@ const LINKS = [
   {
     href: "/proxy",
     title: "Route",
-    body: "LLM proxy strategies, breakers, fallback — OmniRoute algorithms on our backend.",
+    body: "LLM proxy strategies, breakers, fallback -- FreeRoute algorithms on our backend.",
     icon: Route,
   },
   {

@@ -17,6 +17,8 @@ import {
   Server,
   Settings,
   Shield,
+  SlidersHorizontal,
+  Waypoints,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import DropdownMenu, { type MenuAction } from "@/components/ui/DropdownMenu";
@@ -31,11 +33,13 @@ const NAV = [
   { href: "/detect", label: "Detect", icon: Activity },
   { href: "/vault", label: "Vault", icon: KeyRound },
   { href: "/keys", label: "Keys", icon: KeySquare },
+  { href: "/freeroute", label: "FreeRoute", icon: Waypoints },
   { href: "/providers", label: "Providers", icon: Boxes },
   { href: "/engine", label: "Engine", icon: Server },
   { href: "/ship", label: "Ship", icon: Rocket },
   { href: "/ship/cicd", label: "CI/CD", icon: GitBranch },
   { href: "/proxy", label: "Route", icon: Route },
+  { href: "/system", label: "Control", icon: SlidersHorizontal },
   { href: "/peers", label: "Peers", icon: Network },
   { href: "/gate", label: "Gate", icon: Shield },
   { href: "/settings", label: "Settings", icon: Settings },
