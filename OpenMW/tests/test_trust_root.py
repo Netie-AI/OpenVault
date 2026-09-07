@@ -17,7 +17,11 @@ from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from fastapi.testclient import TestClient
 
-from openmw.openvault.app import create_app
+from openmw.openvault.app import (
+    _DEFAULT_SERVICES_ALLOW,
+    _host_in_services_allow,
+    create_app,
+)
 from openmw.openvault.vault.crypto import Seal
 from openmw.openvault.vault.trust import TrustError, TrustStore, verify_chain
 
@@ -73,12 +77,18 @@ def test_root_private_half_is_sealed_not_plaintext(store: TrustStore, home: Path
     assert blob.startswith(b"gAAAAA"), "root private half is not sealed"
 
 
-def test_root_is_not_published_in_the_jwks(store: TrustStore) -> None:
-    """Nothing should ever accept a manifest signed directly by the root."""
+def test_root_is_published_in_jwks_as_verify_only_pin(store: TrustStore) -> None:
+    """Cortex must obtain a kid without a public mint. Root is pin-only."""
     store.ensure_root()
     store.issue_intermediate("dms")
-    kinds = {k["kid"].split("-")[0] for k in store.jwks()["keys"]}
-    assert kinds == {"int"}
+    keys = store.jwks()["keys"]
+    kinds = {k["kid"].split("-")[0] for k in keys}
+    assert kinds == {"root", "int"}
+    root_jwk = next(k for k in keys if str(k["kid"]).startswith("root-"))
+    assert root_jwk["netie_role"] == "trust-root"
+    assert root_jwk["netie_verify_only"] is True
+    assert "private_key" not in root_jwk
+    assert "d" not in root_jwk
 
 
 # ── intermediates ────────────────────────────────────────────────────────────
@@ -143,13 +153,13 @@ def test_ttl_is_bounded(store: TrustStore) -> None:
 def test_chain_verifies_against_the_pinned_root(store: TrustStore) -> None:
     root = store.ensure_root()
     store.issue_intermediate("dms", ttl_s=120)
-    jwk = store.jwks()["keys"][0]
+    jwk = next(k for k in store.jwks()["keys"] if str(k["kid"]).startswith("int-"))
     assert verify_chain(root.public_key, jwk) is True
 
 
 def test_chain_fails_under_a_different_root(store: TrustStore, home: Path) -> None:
     store.issue_intermediate("dms", ttl_s=120)
-    jwk = store.jwks()["keys"][0]
+    jwk = next(k for k in store.jwks()["keys"] if str(k["kid"]).startswith("int-"))
     other = TrustStore(db_path=home / "other.db", seal=Seal(Fernet.generate_key()))
     assert verify_chain(other.ensure_root().public_key, jwk) is False
 
@@ -158,7 +168,7 @@ def test_chain_binds_the_subject_and_the_window(store: TrustStore) -> None:
     """Otherwise the root attests to a key without saying who may use it, or until when."""
     root = store.ensure_root()
     store.issue_intermediate("dms", ttl_s=120)
-    jwk = dict(store.jwks()["keys"][0])
+    jwk = dict(next(k for k in store.jwks()["keys"] if str(k["kid"]).startswith("int-")))
     assert verify_chain(root.public_key, {**jwk, "netie_subject": "someone-else"}) is False
     assert verify_chain(root.public_key, {**jwk, "exp": jwk["exp"] + 86400}) is False
 
@@ -200,7 +210,11 @@ def test_jwks_is_served_and_is_public(home: Path) -> None:
     client = _client()
     response = client.get("/keys/jwks")
     assert response.status_code == 200
-    assert response.json() == {"keys": []}
+    keys = response.json()["keys"]
+    assert keys, "empty JWKS cannot bind Cortex"
+    assert all(k.get("kid") for k in keys)
+    assert any(str(k["kid"]).startswith("root-") for k in keys)
+    assert any(k.get("netie_verify_only") is True for k in keys)
 
 
 def test_root_document_is_served(home: Path) -> None:
@@ -209,6 +223,7 @@ def test_root_document_is_served(home: Path) -> None:
     body = response.json()
     assert body["kty"] == "OKP" and body["crv"] == "Ed25519"
     assert body["netie_role"] == "trust-root"
+    assert body["netie_verify_only"] is True
 
 
 def test_full_issue_flow_over_http(home: Path) -> None:
@@ -227,8 +242,11 @@ def test_full_issue_flow_over_http(home: Path) -> None:
     assert payload["alg"] == "EdDSA" and payload["crv"] == "Ed25519"
 
     published = client.get("/keys/jwks").json()["keys"]
-    assert [k["kid"] for k in published] == [payload["kid"]]
-    assert verify_chain(client.get("/keys/root").json()["x"], published[0]) is True
+    kids = [k["kid"] for k in published]
+    assert payload["kid"] in kids
+    assert any(str(k).startswith("root-") for k in kids)
+    int_jwk = next(k for k in published if k["kid"] == payload["kid"])
+    assert verify_chain(client.get("/keys/root").json()["x"], int_jwk) is True
 
 
 def test_issue_without_a_token_is_refused(home: Path) -> None:
@@ -270,11 +288,89 @@ def test_registration_requires_the_intent_header(home: Path) -> None:
     assert response.status_code == 428
 
 
-def test_minting_routes_are_loopback_only(home: Path) -> None:
+def test_minting_routes_deny_unlisted_remote(home: Path) -> None:
+    """Unlisted remotes stay 403. Prove peers are allowlisted only on /keys/services."""
     remote = _client(host="10.0.0.9")
     register = remote.post("/keys/services", json={"service_id": "dms"}, headers=INTENT)
     assert register.status_code == 403
+    assert "OPENVAULT_SERVICES_ALLOW" in register.json()["detail"]
     assert remote.post("/keys/intermediate", json={"service_id": "dms"}).status_code == 403
+
+
+@pytest.mark.parametrize("host", ["127.0.0.1", "::1", "::ffff:127.0.0.1"])
+def test_service_registration_allows_loopback(home: Path, host: str) -> None:
+    client = _client(host=host)
+    registered = client.post("/keys/services", json={"service_id": "dms"}, headers=INTENT)
+    assert registered.status_code == 200, registered.text
+    assert registered.json()["service_id"] == "dms"
+    assert registered.json()["token"]
+
+
+@pytest.mark.parametrize("host", ["10.128.0.3", "34.30.222.22", "::ffff:10.128.0.3"])
+def test_service_registration_allows_default_prove_peers(home: Path, host: str) -> None:
+    client = _client(host=host)
+    registered = client.post("/keys/services", json={"service_id": "dms"}, headers=INTENT)
+    assert registered.status_code == 200, registered.text
+    assert registered.json()["service_id"] == "dms"
+
+
+def test_service_registration_allows_env_cidr(home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("OPENVAULT_SERVICES_ALLOW", "10.9.0.0/24")
+    allowed = _client(host="10.9.0.50")
+    denied = _client(host="10.9.1.50")
+    ok = allowed.post("/keys/services", json={"service_id": "dms"}, headers=INTENT)
+    assert ok.status_code == 200, ok.text
+    blocked = denied.post("/keys/services", json={"service_id": "other"}, headers=INTENT)
+    assert blocked.status_code == 403
+    assert "OPENVAULT_SERVICES_ALLOW" in blocked.json()["detail"]
+
+
+def test_forwarded_for_does_not_impersonate_a_prove_peer(home: Path) -> None:
+    """_client_host reads the socket peer, not an attacker-supplied XFF."""
+    remote = _client(host="8.8.8.8")
+    register = remote.post(
+        "/keys/services",
+        json={"service_id": "dms"},
+        headers={**INTENT, "X-Forwarded-For": "10.128.0.3"},
+    )
+    assert register.status_code == 403
+    assert "OPENVAULT_SERVICES_ALLOW" in register.json()["detail"]
+
+
+def test_allowlisted_peer_cannot_issue_intermediate(home: Path) -> None:
+    """#52 widens registration only. Intermediate issue stays loopback-only."""
+    peer = _client(host="10.128.0.3")
+    registered = peer.post("/keys/services", json={"service_id": "dms"}, headers=INTENT)
+    assert registered.status_code == 200
+    token = registered.json()["token"]
+    issued = peer.post(
+        "/keys/intermediate",
+        json={"service_id": "dms"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert issued.status_code == 403
+    assert "loopback-only" in issued.json()["detail"]
+
+
+def test_default_prove_peers_are_the_founder_go_addresses() -> None:
+    assert _DEFAULT_SERVICES_ALLOW == ("10.128.0.3", "34.30.222.22")
+    assert _host_in_services_allow("127.0.0.1") is True
+    assert _host_in_services_allow("10.128.0.3") is True
+    assert _host_in_services_allow("34.30.222.22") is True
+    assert _host_in_services_allow("10.0.0.9") is False
+
+
+def test_invalid_services_allow_entry_is_skipped(
+    home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("OPENVAULT_SERVICES_ALLOW", "not-a-cidr,10.20.0.8")
+    allowed = _client(host="10.20.0.8")
+    ok = allowed.post("/keys/services", json={"service_id": "dms"}, headers=INTENT)
+    assert ok.status_code == 200, ok.text
+    still_denied = _client(host="203.0.113.9").post(
+        "/keys/services", json={"service_id": "ghost"}, headers=INTENT
+    )
+    assert still_denied.status_code == 403
 
 
 def test_no_key_material_appears_in_an_error_body(home: Path) -> None:

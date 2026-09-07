@@ -6,13 +6,16 @@ declares the routes and owns nothing else.
 Path shape is deliberately ``/keys/*`` rather than ``/api/keys/*``. ``/api/keys``
 is the provider-credential vault — a different thing with different custody —
 and a consumer fetching a public JWKS should not have to reason about which
-``keys`` it is talking to. ``GET /keys/jwks`` is also a published contract:
-Cortex's manifest verifier fetches exactly that path.
+``keys`` it is talking to. ``GET /keys/jwks`` and ``GET /.well-known/jwks.json``
+are the published contracts: Cortex's JWKS refresh fetches a public kid set
+without minting. ``/api/keys`` returning ``keys=[]`` is an empty *vault*, not
+a missing JWKS.
 
 Reads here are unauthenticated on purpose. A JWKS is public key material; a
 verifier that had to authenticate to learn a public key would be a verifier
-that stops working the moment credentials expire. Everything that *mints* is
-loopback-only and, for issuance, bearer-authenticated.
+that stops working the moment credentials expire. Service registration is
+loopback plus ``OPENVAULT_SERVICES_ALLOW`` (prove VPC peers). Intermediate
+issue and revoke stay loopback-only, and issuance is bearer-authenticated.
 """
 
 from __future__ import annotations
@@ -20,8 +23,10 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
+from openmw.openvault.vault.crypto import VaultSealedError
 from openmw.openvault.vault.trust import (
     DEFAULT_INTERMEDIATE_TTL_S,
     MAX_INTERMEDIATE_TTL_S,
@@ -32,8 +37,9 @@ from openmw.openvault.vault.trust import (
 router = APIRouter(tags=["keys"])
 
 
-def _store() -> TrustStore:
-    return TrustStore()
+def _store(request: Request) -> TrustStore:
+    """Use the process Seal. A new Seal() stays sealed after passphrase unseal."""
+    return TrustStore(seal=getattr(request.app.state, "seal", None))
 
 
 def _guards() -> tuple[Any, Any, Any]:
@@ -49,6 +55,17 @@ def _guards() -> tuple[Any, Any, Any]:
     return _require_loopback, _require_reveal_intent, _audit_custody
 
 
+def _service_registration_guards() -> tuple[Any, Any, Any]:
+    """Guards for ``POST /keys/services`` only -- not a widening of loopback."""
+    from openmw.openvault.app import (
+        _audit_custody,
+        _require_reveal_intent,
+        _require_signing_service_peer,
+    )
+
+    return _require_signing_service_peer, _require_reveal_intent, _audit_custody
+
+
 class ServiceRegistration(BaseModel):
     service_id: str = Field(min_length=1, max_length=128)
 
@@ -59,26 +76,45 @@ class IntermediateRequest(BaseModel):
     ttl_s: int = Field(default=DEFAULT_INTERMEDIATE_TTL_S, ge=1, le=MAX_INTERMEDIATE_TTL_S)
 
 
+_JWKS_HEADERS = {
+    "Cache-Control": "public, max-age=60, must-revalidate",
+    # Public pin material. Cortex prove is on another host; browser dashboards
+    # may also fetch this. Mint routes do not get this header.
+    "Access-Control-Allow-Origin": "*",
+}
+
+
+def _jwks_response(request: Request) -> JSONResponse:
+    return JSONResponse(content=_store(request).jwks(), headers=_JWKS_HEADERS)
+
+
+@router.get("/.well-known/jwks.json")
+def well_known_jwks(request: Request) -> JSONResponse:
+    """RFC 7517 well-known JWKS. Same document as ``GET /keys/jwks``."""
+    return _jwks_response(request)
+
+
 @router.get("/keys/jwks")
-def keys_jwks() -> dict[str, Any]:
-    """Public keys for every currently valid intermediate.
+def keys_jwks(request: Request) -> JSONResponse:
+    """Public JWKS: trust-root pin kid plus any live intermediates.
 
     Consumers cache this to disk and verify against the cache, so an outage
     here must not stop them verifying. Expired intermediates simply stop being
     listed; their ``exp`` already told the consumer when to stop trusting them.
+    The root kid is always present (DR-0014) so Cortex can bind without mint.
     """
-    return _store().jwks()
+    return _jwks_response(request)
 
 
 @router.get("/keys/root")
-def keys_root() -> dict[str, Any]:
+def keys_root(request: Request) -> JSONResponse:
     """The trust root's public half, for pinning at install time.
 
     Served separately from the JWKS so that pinning is a deliberate act, and so
     that nothing signed directly by the root is ever accepted as an ordinary
-    signing key.
+    signing key. Same CORS as JWKS: Cortex prove is on another origin.
     """
-    return _store().root_document()
+    return JSONResponse(content=_store(request).root_document(), headers=_JWKS_HEADERS)
 
 
 @router.post("/keys/services")
@@ -90,14 +126,15 @@ def register_service(body: ServiceRegistration, request: Request) -> dict[str, s
     intent header the plaintext-secret route uses: a page the user happens to
     have open cannot mint a service identity with a drive-by POST.
 
+    Peer check is loopback plus configured prove CIDRs, not world-open mint.
     Only the token's SHA-256 is kept. Re-registering the same service_id issues
     a new token and invalidates the old one, which is the rotation path.
     """
-    require_loopback, require_intent, audit = _guards()
-    require_loopback(request, "signing service registration")
+    require_peer, require_intent, audit = _service_registration_guards()
+    require_peer(request, "signing service registration")
     require_intent(request)
     try:
-        token = _store().register_service(body.service_id)
+        token = _store(request).register_service(body.service_id)
     except TrustError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     audit("signing_service_registered", request, service_id=body.service_id)
@@ -124,7 +161,7 @@ def issue_intermediate(body: IntermediateRequest, request: Request) -> dict[str,
             ),
         )
 
-    store = _store()
+    store = _store(request)
     if not store.verify_service(body.service_id, token.strip()):
         # Same response for an unknown service and a wrong token: telling them
         # apart turns this into a service-name oracle.
@@ -133,6 +170,11 @@ def issue_intermediate(body: IntermediateRequest, request: Request) -> dict[str,
 
     try:
         issued = store.issue_intermediate(body.subject or body.service_id, ttl_s=body.ttl_s)
+    except VaultSealedError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail="vault is sealed; POST /api/vault/unseal with the passphrase first",
+        ) from exc
     except TrustError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -156,7 +198,7 @@ def revoke_intermediate(kid: str, request: Request) -> dict[str, Any]:
     """
     require_loopback, _intent, audit = _guards()
     require_loopback(request, "intermediate key revoke")
-    revoked = _store().revoke_key(kid)
+    revoked = _store(request).revoke_key(kid)
     if not revoked:
         raise HTTPException(status_code=404, detail="intermediate key not found")
     audit("signing_key_revoked", request, kid=kid)

@@ -1,4 +1,4 @@
-"""Prepaid experience packs for mixed-hop credit (DR-0013).
+"""Prepaid experience packs for mixed-hop credit (DR-0016).
 
 Not hosting SKUs. Not a live Stripe charge. 80% of the sticker is estimated
 API credit on pooled hops. Exhaustion is a typed 402 with a free/BYOK path.

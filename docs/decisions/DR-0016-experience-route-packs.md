@@ -4,7 +4,10 @@ date: 2026-09-04
 decision-makers: founder
 ---
 
-# DR-0013 - Experience route packs ($10 / $30 / $100 / $500)
+# DR-0016 - Experience route packs ($10 / $30 / $100 / $500)
+
+Renumbered from a draft DR-0013 on 2026-09-07: `main` already shipped
+`DR-0013-control-plane-locked-rates.md`. IDs are never reused.
 
 ## Context and Problem Statement
 

@@ -1,7 +1,7 @@
 # OpenVault Rust Console
 
 **DR-0015:** optional sandbox, not identity SoT. Python `accounts.db` and
-WebAuthn unseal (DR-0014) are the real path. The mesh will not advertise
+WebAuthn unseal (DR-0017) are the real path. The mesh will not advertise
 `/#auth` unless this process answers a probe.
 
 Secure local console written in Rust: username/password signup → Gmail verify → phone verify → `username@netie.ai` assignment → **passkey-default laptop login**, plus OmniRoute catalog, FreeBuild plan/execute, and encrypted password/API vault.

@@ -16,7 +16,7 @@ database, not a second scheme and not a second vault (PRODUCT_ROLES lock 1).
 
 What this module does NOT do: decide prices. It records a tier, and the tier
 maps to limits in ``vault/ratelimit.py``. Experience-pack credit lives in
-``vault/route_packs.py`` (DR-0013) and reads the usage ledger.
+``vault/route_packs.py`` (DR-0016) and reads the usage ledger.
 """
 
 from __future__ import annotations

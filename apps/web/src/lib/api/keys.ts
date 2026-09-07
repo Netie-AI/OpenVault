@@ -56,6 +56,8 @@ export interface ProviderSpec {
   needed_by: string[];
   status_page: string;
   placeholder_secret: string;
+  chat_models?: string[];
+  spendable?: boolean;
 }
 
 /** Masked by construction — `scan_environment` never returns raw values. */

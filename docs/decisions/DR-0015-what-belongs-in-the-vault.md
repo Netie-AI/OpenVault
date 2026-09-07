@@ -88,13 +88,13 @@ already existed. The backup codes now have somewhere to go.
 
 "use Microsoft like hello and macbook need phone passkey" is mostly built and
 not surfaced: `/api/vault/webauthn/register/begin|finish` and
-`/api/vault/webauthn/unseal/begin|finish` exist, and `DR-0014` accepted passkeys
+`/api/vault/webauthn/unseal/begin|finish` exist, and `DR-0017` accepted passkeys
 as a vault-unseal mechanism. Windows Hello is a platform authenticator and works
 through the same WebAuthn path.
 
 Two things are genuinely missing, and both are UI rather than crypto: nothing
 walks a first-time user through registering an authenticator, and nothing tells
-them the vault is sealed when a fill fails. `DR-0014`'s fence still holds - this
+them the vault is sealed when a fill fails. `DR-0017`'s fence still holds - this
 is unsealing the vault, not autofilling the web.
 
 ## Open - the Rust console, assessed 2026-09-06
@@ -121,7 +121,7 @@ What it duplicates, which lock 5 forbids:
 - Identity: Python `AccountStore` / `accounts.db` vs Rust `accounts` in `rust-auth.db`
 - Secrets: Python vault vs Rust `vault_secrets` plus a server-minted
   `demo_private_key` on `POST /api/auth/passkey/register/begin` (`api.rs`). That is
-  not WebAuthn. DR-0014 already shipped real passkey unseal in the Python app.
+  not WebAuthn. DR-0017 already shipped real passkey unseal in the Python app.
 
 The founder's steer "I need rust for efficiency" does not point at promoting this
 crate. Custody waits on a human prompt, not on CPU. Space's `netie-pdf-detect`
@@ -132,7 +132,7 @@ secrets table to get a faster login page is the wrong half of the repo.
 into it. Do not add phone-verification against either store. The mesh may keep a
 `rust_console` URL; the connect-pack must name `status` and must not present
 `#auth` as a live UI when the probe is not online. Phone work in Pointer
-`DR-0004` stays blocked on this call, not on `cargo test`. DR-0014 Python
+`DR-0004` stays blocked on this call, not on `cargo test`. DR-0017 Python
 WebAuthn unseal remains the real passkey path.
 
 ## Consequences

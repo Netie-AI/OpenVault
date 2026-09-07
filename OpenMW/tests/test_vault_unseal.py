@@ -187,3 +187,30 @@ def test_seal_unit_lock_drops_key(tmp_path: Path) -> None:
     assert sealed.is_sealed
     with pytest.raises(VaultSealedError):
         sealed.decrypt(token)
+
+
+def test_unseal_lets_dms_mint_an_intermediate(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Passphrase vault: status unsealed must share the Seal with TrustStore.
+
+    A fresh Seal() in /keys/intermediate stays sealed and 500s while
+    /api/vault/status reports sealed=false. That is the live DMS ask path.
+    """
+    client, _key_id = _set_passphrase_and_restart(tmp_path, monkeypatch)
+    opened = client.post("/api/vault/unseal", json={"passphrase": PASSPHRASE})
+    assert opened.status_code == 200, opened.text
+    assert opened.json()["sealed"] is False
+
+    registered = client.post(
+        "/keys/services", json={"service_id": "dms"}, headers=REVEAL_HEADER
+    )
+    assert registered.status_code == 200, registered.text
+    token = registered.json()["token"]
+    issued = client.post(
+        "/keys/intermediate",
+        json={"service_id": "dms", "subject": "dms-manifest-signer", "ttl_s": 300},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert issued.status_code == 200, issued.text
+    assert issued.json()["crv"] == "Ed25519"

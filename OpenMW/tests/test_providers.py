@@ -24,6 +24,9 @@ def test_catalog_has_openrouter_ollama_litellm() -> None:
     free = list_catalog(free_only=True)
     assert any(p["id"] == "openrouter" for p in free)
     assert all("register_url" in p for p in free)
+    spendable_ids = {p["id"] for p in list_catalog() if p.get("spendable")}
+    assert "together" in spendable_ids
+    assert "siliconflow" in spendable_ids
 
 
 def test_essentials_for_cortex_airgpt() -> None:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import ipaddress
 import os
 import time
 from collections.abc import AsyncIterator
@@ -162,6 +163,7 @@ from openmw.openvault.vault.store import (
     KeyVault,
     ProviderKind,
 )
+from openmw.openvault.vault.system_plane import EntitlementStore
 from openmw.openvault.vault.usage_store import HopTrace, UsageEvent, UsageStore
 
 log = structlog.get_logger()
@@ -170,6 +172,10 @@ log = structlog.get_logger()
 _LOOPBACK_HOSTS = frozenset({"127.0.0.1", "::1", "localhost"})
 _REVEAL_INTENT_HEADER = "X-OpenVault-Reveal"
 _VAULT_SEALED_DETAIL = "vault is sealed; POST /api/vault/unseal with the passphrase first"
+# POST /keys/services only (#52). Loopback stays allowed separately. Extra CIDRs
+# come from OPENVAULT_SERVICES_ALLOW so ops can extend without a code change.
+_SERVICES_ALLOW_ENV = "OPENVAULT_SERVICES_ALLOW"
+_DEFAULT_SERVICES_ALLOW = ("10.128.0.3", "34.30.222.22")
 
 
 def _write_secret_audit(entry: dict[str, Any]) -> None:
@@ -252,6 +258,75 @@ def _require_loopback(request: Request, action: str) -> str:
         log.warning("custody_request_rejected", reason="non_loopback", action=action, client=host)
         raise HTTPException(status_code=403, detail=f"{action} is loopback-only")
     return host
+
+
+def _services_allow_networks() -> tuple[ipaddress.IPv4Network | ipaddress.IPv6Network, ...]:
+    """Default prove peers plus extra CIDRs from ``OPENVAULT_SERVICES_ALLOW``.
+
+    Defaults stay on so an env typo cannot drop Cortex prove. The env value
+    only adds networks. Loopback is not listed here; ``_LOOPBACK_HOSTS`` covers
+    OpenVault self. Invalid tokens are skipped rather than failing open or 500.
+    """
+    extra = (os.environ.get(_SERVICES_ALLOW_ENV) or "").strip()
+    raw = ",".join(_DEFAULT_SERVICES_ALLOW)
+    if extra:
+        raw = f"{raw},{extra}"
+    networks: list[ipaddress.IPv4Network | ipaddress.IPv6Network] = []
+    seen: set[str] = set()
+    for token in raw.replace(";", ",").replace(" ", ",").split(","):
+        token = token.strip()
+        if not token:
+            continue
+        try:
+            network = ipaddress.ip_network(token, strict=False)
+        except ValueError:
+            log.warning("services_allow_invalid_entry", entry=token)
+            continue
+        key = str(network)
+        if key in seen:
+            continue
+        seen.add(key)
+        networks.append(network)
+    return tuple(networks)
+
+
+def _host_in_services_allow(host: str) -> bool:
+    """True for loopback or an OPENVAULT_SERVICES_ALLOW / default prove peer.
+
+    Uses ``_normalise_host`` (same as the loopback gate) so IPv4-mapped IPv6
+    and port-suffixed forms match. Reads ``request.client.host`` via the caller,
+    never ``X-Forwarded-For`` itself.
+    """
+    normalised = _normalise_host(host)
+    if normalised in _LOOPBACK_HOSTS:
+        return True
+    try:
+        addr = ipaddress.ip_address(normalised)
+    except ValueError:
+        return False
+    return any(addr in network for network in _services_allow_networks())
+
+
+def _require_signing_service_peer(request: Request, action: str) -> str:
+    """Custody gate for ``POST /keys/services`` only.
+
+    Loopback always. Configured prove CIDRs/IPs additionally. Secret reveal,
+    key create, intermediate issue, and every other ``_require_loopback`` site
+    stay loopback-only — do not route them through this helper.
+    """
+    host = _client_host(request)
+    if _host_in_services_allow(host):
+        return host
+    log.warning(
+        "custody_request_rejected",
+        reason="peer_not_allowlisted",
+        action=action,
+        client=host,
+    )
+    raise HTTPException(
+        status_code=403,
+        detail=f"{action} is limited to loopback and OPENVAULT_SERVICES_ALLOW peers",
+    )
 
 
 #: Targets whose adapters mutate something outside this machine — upload files,
@@ -712,7 +787,7 @@ class ApiKeyIssueBody(BaseModel):
     label: str
     #: `local` is refused by the store — it is the unmetered loopback tier.
     tier: str = "free"
-    #: Optional experience pack (DR-0013). Simulate attach only.
+    #: Optional experience pack (DR-0016). Simulate attach only.
     pack_id: str = ""
 
 
@@ -988,6 +1063,9 @@ def create_app(
     # same keys.db as the vault - one backup surface, no second store.
     state_api_keys = ApiKeyStore()
     state_usage = UsageStore()
+    # Plan + seats live in accounts.db (same file as AccountStore). Not a
+    # second vault; not the public rate page.
+    state_entitlements = EntitlementStore(db_path=state_accounts.db_path)
     # Our own address, as the registry should advertise it. Matches how
     # mesh/local_mesh.py builds the self peer, so the two never disagree.
     self_url = f"http://127.0.0.1:{os.environ.get('OPENVAULT_PORT', '5000')}"
@@ -1034,20 +1112,27 @@ def create_app(
                 await task
 
     app = FastAPI(title="OpenVault", version="0.1.0", lifespan=lifespan)
+    # Signing-key routes must decrypt the trust root with this same Seal.
+    # A fresh Seal() in TrustStore stays sealed after passphrase unseal and
+    # /keys/intermediate 500s while /api/vault/status says sealed=false.
+    app.state.seal = state_seal
 
     # Stage-3 integrator mount: routers own their paths; app.py only wires them.
+    from openmw.openvault.routers.freeroute import build_freeroute_router
     from openmw.openvault.routers.health import build_health_router
     from openmw.openvault.routers.key_ui import build_key_ui_router
     from openmw.openvault.routers.keys import router as keys_router
     from openmw.openvault.routers.route import router as route_router
     from openmw.openvault.routers.sentinel import router as sentinel_router
     from openmw.openvault.routers.ship import router as ship_router
+    from openmw.openvault.routers.system import build_system_router
 
     app.include_router(ship_router)
     app.include_router(sentinel_router)
     app.include_router(route_router)
     app.include_router(keys_router)
     app.include_router(build_health_router(state_vault))
+    app.include_router(build_freeroute_router(state_vault, fallback))
 
     def _key_ui_guard(request: Request, action: str) -> None:
         # A Cortex key mint is a custody write: same controls as POST /api/keys.
@@ -1068,12 +1153,29 @@ def create_app(
         build_key_ui_router(state_vault, state_accounts, guard=_key_ui_guard, audit=_key_ui_audit)
     )
 
+    def _system_guard(request: Request, action: str) -> None:
+        _require_loopback(request, action)
+
+    def _system_audit(request: Request, event: str) -> None:
+        _audit_custody(event, request)
+
+    app.include_router(
+        build_system_router(
+            state_accounts,
+            state_entitlements,
+            state_usage,
+            guard=_system_guard,
+            audit=_system_audit,
+        )
+    )
+
     @app.get("/api/healthz")
     def healthz() -> dict[str, Any]:
         return {
             "status": "ok",
             "service": "openvault",
             "mesh": ["openvault", "cortex", "openide", "rust_console"],
+            "jwks_uri": "/.well-known/jwks.json",
         }
 
     @app.get("/api/health/devices")
@@ -1307,6 +1409,7 @@ def create_app(
             raise HTTPException(status_code=404, detail="account not found")
         keys = [asdict(k) for k in state_vault.list_keys(account_id=account_id)]
         bundle["keys"] = keys
+        bundle["entitlement"] = state_entitlements.get(account_id).to_dict()
         return bundle
 
     @app.post("/api/accounts/{account_id}/relay")
@@ -3479,8 +3582,11 @@ def run_console(
 ) -> None:
     import uvicorn
 
+    from openmw.openvault.vault.system_plane import require_private_bind
+
     if cortex_url is None:
         cortex_url = cortex_base_url()
+    host = require_private_bind(host)
     app = create_app(
         cortex_url=cortex_url,
         mock_health=mock_health,

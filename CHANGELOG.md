@@ -2,6 +2,12 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-09-07 - Renumber packs/passkeys off main DR-0013/DR-0014
+
+- `main` already shipped DR-0013 (locked display SKUs) and DR-0014 (JWKS pin).
+- This branch remaps unpublished experience packs to DR-0016 and passkey unseal
+  to DR-0017. IDs are never reused. DR-0015 vault line is unchanged.
+
 ## 2026-09-07 - DR-0015 accepted; mesh stops advertising a down rust #auth
 
 - Vault line accepted: irreversible IDs and 2FA recovery codes live in OpenVault;
@@ -44,7 +50,7 @@ Append-only. Never edited, only added to. Newest first.
 - `OpenMW/rust/openvault-console`: cargo 1.97.1, `cargo test` 2 passed, release
   exe exists on this machine (gitignored). It is a second accounts+secrets
   store (`rust-auth.db`) with a demo passkey that mints `demo_private_key`.
-  Not identity SoT. Python WebAuthn unseal (DR-0014) stays the real path.
+  Not identity SoT. Python WebAuthn unseal (DR-0017) stays the real path.
 - Mesh still advertises `:5055/#auth` when the process is down. Founder call
   stays in DR-0015 Open; do not move Python `accounts` into the crate.
 
@@ -70,7 +76,7 @@ Append-only. Never edited, only added to. Newest first.
   byte-identical headers, brute-force burn, non-ASCII code). All six fail if the
   compare is removed.
 
-## 2026-09-05 - Passkeys unseal the vault (DR-0014, F22)
+## 2026-09-05 - Passkeys unseal the vault (DR-0017, F22)
 
 - **Windows Hello / Face ID / fingerprint**, plus optional **iPhone** (hybrid
   QR / nearby). Second wrap of the live master key under the authenticator PRF
@@ -109,7 +115,7 @@ Append-only. Never edited, only added to. Newest first.
 - **Not this:** passkeys, browser autofill, login-agent, LAN/SaaS embed (F13).
   Agents already retrieve keys/passwords with `openvault secret get` (never cards).
 
-## 2026-09-04 - Experience packs $10/$30/$100/$500 (DR-0013, F14/F19)
+## 2026-09-04 - Experience packs $10/$30/$100/$500 (DR-0016, F14/F19)
 
 - **Founder pick for STATUS pricing:** prepaid mixed-hop credit on pooled keys
   (DR-0009 a), not hosting SKUs (`ov_hosted` $24 / `ov_fast` $79 / `byo_*` $9)
@@ -123,6 +129,67 @@ Append-only. Never edited, only added to. Newest first.
   optional `pack_id` on `POST /api/apikeys`. `/keys` subscribe names prices
   without hop-vendor strings.
 - **Tests:** `OpenMW/tests/test_route_packs.py` plus subscribe copy lock.
+## 2026-09-07 - #52 VPC allowlist for POST /keys/services (not public :5000)
+
+- **Scoped helper, not a widened loopback gate.** `POST /keys/services` now
+  accepts loopback plus configured prove peers. Secret reveal, key create,
+  intermediate issue/revoke, and every other `_require_loopback` site stay
+  loopback-only. No public `:5000` bind.
+- **Defaults:** Cortex prove `10.128.0.3` and `34.30.222.22`. Ops extend with
+  `OPENVAULT_SERVICES_ALLOW` (comma/CIDR/IP list). Defaults stay on so an env
+  typo cannot drop prove. Unlisted remotes get 403 naming the env var, not the
+  peer list. `X-Forwarded-For` is not read by this gate (`_client_host` /
+  `_normalise_host` only).
+- **Tests:** loopback allow, default prove IPs allow, env CIDR allow, unlisted
+  deny, XFF spoof deny, allowlisted peer still cannot issue intermediates or
+  create provider keys. `mint_loopback_only` on `/api/system/bind` still means
+  not world-open; `services_allow_env` names the CIDR list.
+- **Cite only:** dms#116 remount context in the other repo. This PR does not
+  change dms.
+
+## 2026-09-07 - #50 JWKS pin kids + FreeRoute register (no public mint)
+
+- **JWKS bind (Platform/Decision addendum):** `GET /.well-known/jwks.json` and
+  `GET /keys/jwks` publish the trust-root public JWK (`netie_verify_only`,
+  `netie_role: trust-root`) so Cortex prove can obtain a kid without minting.
+  `GET /api/keys` remaining `keys=[]` is the empty *vault*, not a missing JWKS.
+  `POST /keys/services` and `POST /keys/intermediate` stay loopback-only.
+- **Env for Platform bind:** writers `http://35.253.229.206:8080`; JWKS
+  `http://35.253.229.206:8080/.well-known/jwks.json`; Cortex prove
+  `http://34.30.222.22:8010`; `LIVE_KEY_ID=119691f2c637` (id only) already in
+  Secret Manager `openvault-dms-writer-token`. `/api/system/bind` echoes the id
+  when set and refuses values that start with `ov_`. No public `:5000`.
+- **FreeRoute:** Together + SiliconFlow `chat_models` wired so `model=auto`
+  spends pooled keys; GitHub Models inference retired (empty pool, skip).
+  `GET /api/tool/register` + UI `/tool/register`, `/freeroute`, `/system`.
+- **Cite only:** dms#116 verify remount after kids exist. This repo writes no
+  DMS product code. Usage $/unit stays NEEDS-YOU. DR-0014 proposed.
+  Decision Agent does not merge.
+
+## 2026-09-07 - #48 addendum: control-plane rates labeled USD (prefix + sign)
+
+- Catalog, entitlements, metering, and usage summary now carry `currency=USD`
+  plus both founder labels: prefix `USD10` and sign `$10`. Seat is `USD30` /
+  `$30`. Usage $/unit stays unset: `USD NEEDS-YOU` / `$ NEEDS-YOU` -- no
+  invented number. Policy version 2. Still no public rate page and no public
+  `:5000`.
+
+## 2026-09-07 - SYSTEM control plane: entitlements / routing / unlock / metering / seats (#48)
+
+- **Locked display SKUs** (not a public rate page): Individual Basic USD10 /
+  Pro USD100 / Ultra USD500; Team USD10 / Team Ultra USD500 / Team Giga USD1000;
+  team seat USD30. Usage credits 20% cheaper on Ultra/Giga; normal on Pro and
+  the USD30 seat. Usage $/unit stays `None` / `NEEDS-YOU` -- no invented rate.
+- **Loopback `/api/system/*`**: catalog, bind, entitlements, unlock, lock, seats,
+  route (maps onto existing `free`/`pro` limiter tiers), metering overlay.
+  Extends `GET /api/accounts/{id}` with an entitlement snapshot. Same
+  `accounts.db`, one vault. Hardware `/api/control/*` is unchanged.
+- **No public :5000 bind.** Default host stays `127.0.0.1`. Internal writers
+  URL is `http://35.253.229.206:8080`. `0.0.0.0` refuses unless
+  `OPENVAULT_ALLOW_PUBLIC_BIND=1`.
+- **Tests:** `OpenMW/tests/test_control_plane.py`. Existing usage summary still
+  asserts `priced is False` and now also `usage_unit_status == NEEDS-YOU`.
+- **DR-0013** proposed. Decision Agent does not merge.
 
 ## 2026-09-04 - HT3 passphrase + vault Lock/Set-passphrase UI; founder closed #18 #33
 

@@ -26,6 +26,12 @@ import { Tabs, type TabDef } from "@/components/ui/Tabs";
 import { apiPost, isApiError } from "@/lib/api/client";
 import { createKey, listFreeProviders, listRoutePacks, type ProviderSpec, type RoutePack } from "@/lib/api/keys";
 import { guessByokProvider, honestByokLabel } from "@/keys/byok";
+import {
+  clearRegisterIntent,
+  formatRegisterAgo,
+  readRegisterIntent,
+  rememberRegisterIntent,
+} from "@/lib/vault/registerIntent";
 
 type KeyPath = "subscribe" | "byok" | "free" | "operator";
 
@@ -62,6 +68,10 @@ const PROVIDER_ID_BY_NAME: Record<string, string> = {
   "github models": "github_models",
   openai: "openai",
   ollama: "ollama",
+  mistral: "mistral",
+  nvidia: "nvidia",
+  deepseek: "deepseek",
+  siliconflow: "siliconflow",
 };
 
 const FALLBACK_PROVIDER = "custom";
@@ -78,7 +88,7 @@ const STEP_N =
 
 export default function KeysPage() {
   const [path, setPath] = useState<KeyPath>("subscribe");
-  const [busy, setBusy] = useState<"issue" | "byok" | null>(null);
+  const [busy, setBusy] = useState<"issue" | "byok" | "free" | null>(null);
 
   const [issued, setIssued] = useState("");
   const [subscribeMsg, setSubscribeMsg] = useState("");
@@ -89,9 +99,16 @@ export default function KeysPage() {
 
   const [catalog, setCatalog] = useState<ProviderSpec[]>([]);
   const [packs, setPacks] = useState<RoutePack[]>([]);
+  const [focusProvider, setFocusProvider] = useState("");
+  const [freeSecret, setFreeSecret] = useState("");
+  const [freeMsg, setFreeMsg] = useState("");
+  const [pendingRegister, setPendingRegister] = useState<ReturnType<typeof readRegisterIntent>>(null);
 
   useEffect(() => {
     setPath(pathFromHash(window.location.hash));
+    const q = new URLSearchParams(window.location.search).get("provider");
+    if (q) setFocusProvider(q);
+    setPendingRegister(readRegisterIntent());
   }, []);
 
   useEffect(() => {
@@ -161,6 +178,41 @@ export default function KeysPage() {
       setByokSecret("");
     } catch (err) {
       setByokMsg(isApiError(err) ? err.message : "Could not store that key");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function installFree() {
+    const secret = freeSecret.trim();
+    if (!secret) {
+      setFreeMsg("Paste the key you copied after register");
+      return;
+    }
+    const intent = readRegisterIntent();
+    const guess = guessByokProvider(secret);
+    const provider =
+      (intent && (!guess.providerId || guess.confidence === "none")
+        ? intent.providerId
+        : guess.providerId) ??
+      (focusProvider || FALLBACK_PROVIDER);
+    const spec = catalog.find((p) => p.id === provider);
+    const label = spec?.name ?? intent?.providerName ?? provider;
+    setBusy("free");
+    try {
+      await createKey({
+        label,
+        provider,
+        secret,
+        role: spec?.default_role ?? "free",
+        base_url: spec?.base_url,
+      });
+      clearRegisterIntent();
+      setPendingRegister(null);
+      setFreeSecret("");
+      setFreeMsg(`Installed ${label} into the vault.`);
+    } catch (err) {
+      setFreeMsg(isApiError(err) ? err.message : "Could not install that key");
     } finally {
       setBusy(null);
     }
@@ -305,7 +357,28 @@ export default function KeysPage() {
                 </div>
               </li>
             </ol>
-            <p className="text-sm text-muted-foreground">
+            {pendingRegister && (
+              <p className="mb-3 text-sm text-foreground">
+                You registered {pendingRegister.providerName}{" "}
+                {formatRegisterAgo(pendingRegister.clickedAt)}. Paste the key below.
+              </p>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="freeInstallSecret">Install key</Label>
+              <Input
+                id="freeInstallSecret"
+                type="password"
+                autoComplete="off"
+                placeholder="paste the key from signup"
+                value={freeSecret}
+                onChange={(e) => setFreeSecret(e.target.value)}
+              />
+              <Button onClick={() => void installFree()} disabled={busy === "free"}>
+                Install into vault
+              </Button>
+              {freeMsg && <p className="text-xs text-muted-foreground">{freeMsg}</p>}
+            </div>
+            <p className="mt-4 text-sm text-muted-foreground">
               Want the easy path? Issue a Cortex API key on Subscribe -- no extra signup.
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
@@ -324,21 +397,38 @@ export default function KeysPage() {
                 {catalog.map((p) => (
                   <li
                     key={p.id}
-                    className="flex items-center justify-between gap-3 rounded-xl border border-border px-3 py-2"
+                    className={
+                      "flex items-center justify-between gap-3 rounded-xl border px-3 py-2 " +
+                      (focusProvider === p.id
+                        ? "border-primary bg-primary/5"
+                        : "border-border")
+                    }
                   >
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium text-foreground">{p.name}</p>
                       {p.free_notes && (
                         <p className="truncate text-xs text-muted-foreground">{p.free_notes}</p>
                       )}
+                      {p.spendable ? (
+                        <p className="text-[11px] text-muted-foreground">pooled spend path</p>
+                      ) : (
+                        <p className="text-[11px] text-muted-foreground">register only -- not a /v1 hop</p>
+                      )}
                     </div>
-                    {p.register_url && (
-                      <Button asChild variant="outline" size="sm">
-                        <a href={p.register_url} target="_blank" rel="noreferrer noopener">
-                          Register
-                        </a>
-                      </Button>
-                    )}
+                    <Button asChild variant="outline" size="sm">
+                      <Link
+                        href={`/tool/register?provider=${encodeURIComponent(p.id)}`}
+                        onClick={() =>
+                          rememberRegisterIntent({
+                            providerId: p.id,
+                            providerName: p.name,
+                            registerUrl: p.register_url,
+                          })
+                        }
+                      >
+                        Register
+                      </Link>
+                    </Button>
                   </li>
                 ))}
               </ul>

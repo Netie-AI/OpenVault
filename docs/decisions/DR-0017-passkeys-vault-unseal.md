@@ -4,7 +4,10 @@ date: 2026-09-05
 decision-makers: founder
 ---
 
-# DR-0014 - Passkeys unseal the local vault (not autofill)
+# DR-0017 - Passkeys unseal the local vault (not autofill)
+
+Renumbered from a draft DR-0014 on 2026-09-07: `main` already shipped
+`DR-0014-jwks-verify-pin.md`. IDs are never reused.
 
 ## Context and Problem Statement
 

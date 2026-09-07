@@ -462,7 +462,7 @@ def openide_invoke(
             "action": action,
             "username": username,
             "instructions": [
-                "Open the OpenVault vault page and sign in with a passkey (DR-0014)",
+                "Open the OpenVault vault page and sign in with a passkey (DR-0017)",
                 "The optional Rust #auth sandbox is not identity SoT (DR-0015)",
                 "Vault secrets remain in OpenVault; Cortex uses /v1 via connect pack",
             ],
@@ -484,7 +484,7 @@ def openide_invoke(
             "message": (
                 "Register laptop passkey under username; password stays argon2 backup"
                 if rust_ui
-                else "Rust #auth is not running. Register a passkey on the OpenVault vault page (DR-0014)."
+                else "Rust #auth is not running. Register a passkey on the OpenVault vault page (DR-0017)."
             ),
         }
     if action == "push_selection_to_cortex":

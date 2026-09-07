@@ -108,7 +108,7 @@ uv run pytest tests/unit tests/integration -q
 ```
 FreeIDE :8765  ──handshake──►  OpenVault :5000  ◄──engines──  Cortex :8000
                                   │
-                                  └── passkeys ──► Python /vault (DR-0014)
+                                  └── passkeys ──► Python /vault (DR-0017)
                                   └── optional ──► Rust :5055 (sandbox only)
 ```
 

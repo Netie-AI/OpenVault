@@ -20,9 +20,11 @@ Three properties this module exists to hold:
   material and published with it, so a consumer that cannot reach OpenVault
   still stops trusting the key on time. Availability of the vault must never
   extend a key's life.
-* **The root signs intermediates and nothing else.** It is not published in the
-  JWKS, so a manifest signed directly by the root is not accepted by anything.
-  Least privilege for the one key that cannot be rotated cheaply.
+* **The root signs intermediates and nothing else.** Its *public* half is
+  published in JWKS as ``netie_verify_only`` pin material (DR-0014) so Cortex
+  can obtain a kid without a public mint. A manifest signed directly by the
+  root is still accepted by nobody. Least privilege for the one key that
+  cannot be rotated cheaply.
 """
 
 from __future__ import annotations
@@ -46,7 +48,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import (
 )
 
 from openmw.openvault.paths import keys_db_path
-from openmw.openvault.vault.crypto import Seal
+from openmw.openvault.vault.crypto import Seal, VaultSealedError
 
 KeyKind = Literal["root", "intermediate"]
 KeyLifecycle = Literal["active", "revoked", "rotated", "expired"]
@@ -406,13 +408,17 @@ class TrustStore:
     # -- publication ---------------------------------------------------------
 
     def jwks(self, *, now: float | None = None) -> dict[str, Any]:
-        """The public document consumers verify against.
+        """Public JWKS Cortex/DMS fetch to pin and verify service keys.
 
-        Only intermediates appear. The root is published separately, at
-        ``/keys/root``, so pinning it stays a deliberate act and a manifest
-        signed by the root itself is accepted by nobody.
+        The trust-root public half is published as ``netie_verify_only`` pin
+        material so a remote verifier can obtain a kid without a public mint
+        (DR-0014). Manifest signatures are still only accepted from
+        ``int-*`` intermediates; the root never signs a session manifest.
         """
-        keys = []
+        keys: list[dict[str, Any]] = []
+        pin = self._pin_root()
+        if pin is not None:
+            keys.append(self._root_jwk(pin, verify_only=True))
         for record in self.active_intermediates(now=now):
             keys.append(
                 {
@@ -433,9 +439,23 @@ class TrustStore:
             )
         return {"keys": keys}
 
-    def root_document(self) -> dict[str, Any]:
-        root = self.ensure_root()
-        return {
+    def _pin_root(self) -> SigningKeyRecord | None:
+        """Public root for JWKS pin. Does not mint intermediates."""
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT * FROM signing_keys WHERE kind='root' AND lifecycle='active' "
+                "ORDER BY created_at DESC LIMIT 1"
+            ).fetchone()
+        if row is not None:
+            return self._row(row)
+        try:
+            return self.ensure_root()
+        except (TrustError, VaultSealedError):
+            return None
+
+    @staticmethod
+    def _root_jwk(root: SigningKeyRecord, *, verify_only: bool) -> dict[str, Any]:
+        body: dict[str, Any] = {
             "kty": "OKP",
             "crv": "Ed25519",
             "alg": "EdDSA",
@@ -445,6 +465,15 @@ class TrustStore:
             "netie_role": "trust-root",
             "created_at": int(root.created_at),
         }
+        if verify_only:
+            # Pin / chain-verify only. A consumer that accepts this kid as a
+            # manifest signer would undo least-privilege for the root.
+            body["netie_verify_only"] = True
+        return body
+
+    def root_document(self) -> dict[str, Any]:
+        root = self.ensure_root()
+        return self._root_jwk(root, verify_only=True)
 
 
 def verify_chain(root_public_b64: str, jwk: dict[str, Any]) -> bool:

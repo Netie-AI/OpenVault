@@ -16,6 +16,7 @@ from openmw.openvault.vault.providers import (
     get_provider,
     models_for,
     resolve_model,
+    spendable_for_freeroute,
 )
 
 
@@ -70,7 +71,15 @@ def test_uncatalogued_provider_passes_a_concrete_id_through() -> None:
 
 def test_core_byok_auto_resolves_concrete_model() -> None:
     """FreeRoute buyer path uses model=auto; empty chat_models used to skip the hop."""
-    for provider in ("openai", "ollama", "deepseek", "litellm", "cortex"):
+    for provider in (
+        "openai",
+        "ollama",
+        "deepseek",
+        "litellm",
+        "cortex",
+        "together",
+        "siliconflow",
+    ):
         resolved = resolve_model(provider, "auto")
         assert resolved is not None, f"{provider} auto must not skip"
         assert resolved == models_for(provider)[0]
@@ -81,7 +90,8 @@ def test_core_byok_auto_resolves_concrete_model() -> None:
 def test_alias_without_catalogued_pool_is_skipped_not_guessed() -> None:
     """ "auto" with nothing catalogued is exactly the case that 404'd upstream."""
     assert resolve_model("anthropic", "auto") is None
-    assert resolve_model("together", "") is None
+    assert resolve_model("github_models", "") is None
+    assert resolve_model("together", "auto") == "Prism-ML/Ternary-Bonsai-27B"
     assert resolve_model("mistral", "auto") == "mistral-small-latest"
 
 
@@ -162,3 +172,16 @@ def test_reasoning_models_are_a_subset_of_chat_models() -> None:
     for spec in PROVIDER_CATALOG:
         extra = set(spec.reasoning_models) - set(spec.chat_models)
         assert not extra, f"{spec.id} flags unreachable reasoning ids: {sorted(extra)}"
+
+
+def test_spendable_freeroute_pool_includes_wired_free_providers() -> None:
+    ids = {row["id"] for row in spendable_for_freeroute()}
+    for provider in ("groq", "google", "together", "siliconflow", "cerebras", "openrouter"):
+        assert provider in ids, f"{provider} must be on the pooled spend path"
+        spec = get_provider(provider)
+        assert spec is not None
+        assert spec.to_dict()["spendable"] is True
+    assert "anthropic" not in ids
+    assert "github_models" not in ids
+    assert "huggingface" not in ids
+    assert "deepgram" not in ids
