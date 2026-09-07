@@ -174,7 +174,7 @@ export default function VaultPage() {
   function startRegister(providerId: string, providerName: string, registerUrl: string) {
     rememberRegisterIntent({ providerId, providerName, registerUrl });
     setPendingRegister(readRegisterIntent());
-    window.open(registerUrl, "_blank", "noopener");
+    router.push(`/tool/register?provider=${encodeURIComponent(providerId)}`);
   }
 
   const knownProviderIds = useMemo(

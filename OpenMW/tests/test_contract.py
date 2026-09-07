@@ -47,6 +47,9 @@ CONTRACT_ROUTES = [
     ("GET", "/api/cortex/skills"),
     ("GET", "/api/cortex/crew"),
     ("POST", "/v1/chat/completions"),
+    ("GET", "/.well-known/jwks.json"),
+    ("GET", "/keys/jwks"),
+    ("GET", "/api/tool/register"),
 ]
 
 
@@ -61,13 +64,21 @@ def app(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> FastAPI:
 
 
 def _routes(app: FastAPI) -> set[tuple[str, str]]:
+    """Collect method+path pairs, including FastAPI 0.139 `_IncludedRouter` mounts."""
     found: set[tuple[str, str]] = set()
-    for route in app.routes:
-        path = getattr(route, "path", None)
-        methods = getattr(route, "methods", None)
-        if isinstance(path, str) and methods:
-            for method in methods:
-                found.add((str(method), path))
+
+    def walk(routes: object) -> None:
+        for route in routes:  # type: ignore[union-attr]
+            path = getattr(route, "path", None)
+            methods = getattr(route, "methods", None)
+            if isinstance(path, str) and methods:
+                for method in methods:
+                    found.add((str(method), path))
+            nested = getattr(route, "original_router", None)
+            if nested is not None:
+                walk(getattr(nested, "routes", []))
+
+    walk(app.routes)
     return found
 
 

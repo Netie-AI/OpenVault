@@ -2,6 +2,25 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-09-07 - #50 JWKS pin kids + FreeRoute register (no public mint)
+
+- **JWKS bind (Platform/Decision addendum):** `GET /.well-known/jwks.json` and
+  `GET /keys/jwks` publish the trust-root public JWK (`netie_verify_only`,
+  `netie_role: trust-root`) so Cortex prove can obtain a kid without minting.
+  `GET /api/keys` remaining `keys=[]` is the empty *vault*, not a missing JWKS.
+  `POST /keys/services` and `POST /keys/intermediate` stay loopback-only.
+- **Env for Platform bind:** writers `http://35.253.229.206:8080`; JWKS
+  `http://35.253.229.206:8080/.well-known/jwks.json`; Cortex prove
+  `http://34.30.222.22:8010`; `LIVE_KEY_ID=119691f2c637` (id only) already in
+  Secret Manager `openvault-dms-writer-token`. `/api/system/bind` echoes the id
+  when set and refuses values that start with `ov_`. No public `:5000`.
+- **FreeRoute:** Together + SiliconFlow `chat_models` wired so `model=auto`
+  spends pooled keys; GitHub Models inference retired (empty pool, skip).
+  `GET /api/tool/register` + UI `/tool/register`, `/freeroute`, `/system`.
+- **Cite only:** dms#116 verify remount after kids exist. This repo writes no
+  DMS product code. Usage $/unit stays NEEDS-YOU. DR-0014 proposed.
+  Decision Agent does not merge.
+
 ## 2026-09-07 - #48 addendum: control-plane rates labeled USD (prefix + sign)
 
 - Catalog, entitlements, metering, and usage summary now carry `currency=USD`

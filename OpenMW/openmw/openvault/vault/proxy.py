@@ -15,7 +15,7 @@ from openmw.openvault.route.breaker import get_circuit_breaker
 from openmw.openvault.vault.budget import estimate_tokens_for_body, prepare_hop_body
 from openmw.openvault.vault.fallback import FallbackManager
 from openmw.openvault.vault.precheck import _default_base_url
-from openmw.openvault.vault.providers import resolve_model
+from openmw.openvault.vault.providers import get_provider, resolve_model
 from openmw.openvault.vault.store import KeyVault
 from openmw.openvault.vault.usage_store import HopTrace
 
@@ -32,6 +32,16 @@ def _sealed_refusal() -> tuple[int, dict[str, Any]]:
             "type": "openvault_vault_sealed",
         }
     }
+
+
+def _compat_skip(label: str, provider: str) -> str | None:
+    """Why this hop cannot go through the OpenAI-compat /v1 spend path."""
+    if provider == "anthropic":
+        return f"{label}: anthropic chat not via /v1 proxy yet"
+    spec = get_provider(provider)
+    if spec is not None and not spec.openai_compatible:
+        return f"{label}: {spec.name} is not on the OpenAI-compat /v1 spend path"
+    return None
 
 
 def _is_multimodal(body: dict[str, Any]) -> bool:
@@ -249,8 +259,9 @@ async def chat_completions(
 
             url = f"{base}/chat/completions"
             headers = {"Authorization": f"Bearer {secret}", "Content-Type": "application/json"}
-            if record.provider == "anthropic":
-                errors.append(f"{record.label}: anthropic chat not via /v1 proxy yet")
+            skip = _compat_skip(record.label, record.provider)
+            if skip is not None:
+                errors.append(skip)
                 continue
 
             # Translate the model per hop. Forwarding the caller's value verbatim sent
@@ -439,8 +450,9 @@ async def prepare_chat_stream(
                 errors.append(f"{record.label}: missing base_url")
                 continue
 
-            if record.provider == "anthropic":
-                errors.append(f"{record.label}: anthropic chat not via /v1 proxy yet")
+            skip = _compat_skip(record.label, record.provider)
+            if skip is not None:
+                errors.append(skip)
                 continue
 
             url = f"{base}/chat/completions"

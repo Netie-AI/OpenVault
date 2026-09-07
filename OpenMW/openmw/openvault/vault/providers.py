@@ -57,6 +57,7 @@ class ProviderSpec:
         d["chat_models"] = list(self.chat_models)
         d["vision_models"] = list(self.vision_models)
         d["reasoning_models"] = list(self.reasoning_models)
+        d["spendable"] = self.openai_compatible and bool(self.chat_models)
         return d
 
 
@@ -271,6 +272,17 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
         health_path="/models",
         free_notes="Signup credits; OpenAI-compatible",
         needed_by=("cortex",),
+        # Pinned from https://docs.together.ai/docs/inference-models (2026-09).
+        # Prism-ML/Ternary-Bonsai-27B is listed Free; the rest are cheap hops
+        # so model=auto actually spends a pooled Together key instead of skipping.
+        chat_models=(
+            "Prism-ML/Ternary-Bonsai-27B",
+            "Qwen/Qwen3.5-9B",
+            "openai/gpt-oss-120b",
+            "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+        ),
+        vision_models=("Qwen/Qwen3.5-9B",),
+        reasoning_models=("openai/gpt-oss-120b",),
     ),
     ProviderSpec(
         id="fireworks",
@@ -391,8 +403,11 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
         register_url="https://github.com/marketplace/models",
         docs_url="https://docs.github.com/en/github-models",
         health_path="/models",
-        free_notes="Free tier via GitHub token for many models",
+        free_notes="Free tier via GitHub token -- inference API retired 2026-07-30",
         needed_by=("airgpt",),
+        # GitHub Models inference retired 30 Jul 2026
+        # (https://docs.github.com/en/rest/models/inference). Empty chat_models
+        # so model=auto skips rather than 404ing a dead hop.
     ),
     ProviderSpec(
         id="deepgram",
@@ -419,6 +434,15 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
         health_path="/models",
         free_notes="OmniRoute lists as permanently-free pool (region dependent)",
         needed_by=("cortex",),
+        # Pinned from SiliconFlow chat docs:
+        # https://docs.siliconflow.cn/en/userguide/guides/fine-tune
+        # https://docs.siliconflow.cn/en/userguide/capabilities/text-generation
+        chat_models=(
+            "Qwen/Qwen2.5-7B-Instruct",
+            "Qwen/Qwen3.6-27B",
+            "Qwen/Qwen3.5-9B",
+        ),
+        vision_models=("Qwen/Qwen3.5-9B",),
     ),
 )
 
@@ -443,6 +467,18 @@ def list_catalog(
             continue
         rows.append(spec.to_dict())
     return rows
+
+
+def spendable_for_freeroute() -> list[dict[str, Any]]:
+    """Providers the pooled /v1 spend path can actually hop with model=auto.
+
+    OmniRoute/9router list hundreds of names. We only list ids that are
+    OpenAI-compatible *and* have a cited chat_models pool, so a vaulted key
+    is not skipped as 'no catalogued model'.
+    """
+    return [
+        spec.to_dict() for spec in PROVIDER_CATALOG if spec.openai_compatible and spec.chat_models
+    ]
 
 
 def essentials_for(*consumers: str) -> list[dict[str, Any]]:
@@ -546,6 +582,10 @@ def catalog_coverage_report(vault_provider_ids: set[str] | frozenset[str]) -> di
             {
                 "id": "omniroute",
                 "why": "inspiration for FreeRoute auto-fallback + free-tier aggregation",
+            },
+            {
+                "id": "9router",
+                "why": "inspiration for free-provider register deep-links + auto-fallback bar",
             },
             {"id": "openfree", "why": "our gateway brand — enable in AirGPT, route via OpenVault"},
         ],
