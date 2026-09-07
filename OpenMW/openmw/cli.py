@@ -206,12 +206,18 @@ def console_cmd(
     from openmw.openvault.app import create_app
     from openmw.openvault.mesh.local_mesh import cortex_base_url
     from openmw.openvault.ports import resolve_port
+    from openmw.openvault.vault.system_plane import SystemPlaneError, require_private_bind
 
     # An explicit --port still wins; otherwise honour the port the operator
     # saved with `openmw ports --set`. Without this the saved choice would be
     # written to disk and then ignored at every start, which is the kind of
     # setting that is worse than not having one (R-0011).
     port = resolve_port("api", override=port)
+    try:
+        host = require_private_bind(host)
+    except SystemPlaneError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=2) from exc
     resolved_cortex = cortex_url if cortex_url is not None else cortex_base_url()
     app = create_app(
         cortex_url=resolved_cortex,
