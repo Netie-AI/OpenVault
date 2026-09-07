@@ -68,6 +68,17 @@ No per-agent truth: both agents work from this file, `STATUS.md`, `CHANGELOG.md`
 lanes shown "active" a week and a half after anyone released them. See
 [`docs/decisions/DR-0008-agent-split.md`](docs/decisions/DR-0008-agent-split.md).)
 
+### Human-test gates (clerk duty)
+
+HT1-HT5 on epic #18 are **CLEARED** (founder 2026-09-04; boxes ticked 2026-09-07).
+Do not rebuild them.
+
+HUMAN_TEST_GATES are human-only to *perform*. Recording them is the agent's job.
+When the founder walks a gate with you, or says it is already done, tick the GitHub
+epic boxes, comment the evidence, and update `STATUS.md` in that same turn. Do not
+tick from pytest or simulate. Empty boxes after a founder walk are a clerk failure.
+Estate law: `D:\Netie\Internal\Agents\AGENT_SYSTEM.md` (Human-inspectable gates).
+
 ### Environment (whole repo)
 
 - Three separate `uv sync` roots: repo root (`nvme_sentinel`), `OpenMW/`, `Profiler/`.

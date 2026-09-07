@@ -2,7 +2,9 @@
 
 Buyer path: **vault → FreeRoute refuse → gated ship allow → gate deny**, with CLI/file evidence, under 15 minutes. No codebase reading required.
 
-This path is **mocks / simulate only**. It does **not** complete the human live gates (HT1–HT5).
+This path is **mocks / simulate only**. Human live gates HT1-HT5 were **CLEARED**
+2026-09-04 (epic [#18](https://github.com/Netie-AI/OpenVault/issues/18) CLOSED;
+boxes ticked 2026-09-07). This script still does not re-prove those live gates.
 
 ## Run (about 1 minute)
 
@@ -41,17 +43,21 @@ python apps/cli/openvault_cli.py demo
 
 That starts `:5000` + `:3010`. It does **not** replace the scripted path above.
 
-## Stop here — human-only gates (HT1–HT5)
+## Human live gates (HT1-HT5) - CLEARED
 
-Agents **must not** claim these done. Founder clears them on epic [#18](https://github.com/Netie-AI/OpenVault/issues/18):
+Founder walked these 2026-09-04. Agent ticked the #18 boxes 2026-09-07. Do not
+rebuild. Simulate must still never invent a host URL.
 
-1. **HT1** — Live Cloudflare Pages / Coolify / Netlify deploy with a real openable URL under the leave-machine gate
-2. **HT2** — Live FreeRoute chat with real vaulted provider keys (spend / ToS / quota)
-3. **HT3** — Passphrase unseal / lock UX on `:3010`
-4. **HT4** — Phase 0 Cortex smoke through OpenVault (no second vault)
-5. **HT5** — Secrets-at-ship inject into a real FreeBuild execute; human leak eyeball
+| # | Gate | Cleared |
+|---|------|---------|
+| HT1 | Live deploy URL under the leave-machine gate | https://netie.ai/ht1-demo/ |
+| HT2 | Live FreeRoute with vaulted keys | POST /v1/chat/completions 200 |
+| HT3 | Passphrase unseal / lock (sealed refuse) | passphrase-scrypt; bak retired; restart sealed |
+| HT4 | Cortex smoke through OpenVault | GET /api/cortex/status healthy |
+| HT5 | Secrets-at-ship inject; no leak | inject to ov-env; public .env 403 |
 
-Simulate must never invent a host URL. This doc does not invent SaaS or billing.
+Clerk rule: when the founder walks a later HUMAN_TEST_GATE, tick the epic boxes
+in that same turn. Empty boxes after a founder walk are a clerk failure.
 
 ## Verify (engineers)
 

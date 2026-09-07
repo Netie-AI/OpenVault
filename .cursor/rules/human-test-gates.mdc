@@ -1,0 +1,27 @@
+---
+description: Tick HUMAN_TEST_GATES in the same turn the founder walks them
+alwaysApply: true
+---
+
+# Human-test gates (clerk duty)
+
+HUMAN_TEST_GATES (HT1, HT2, ...) are human-only to *perform*. They are agent duty to *record*.
+
+## Do
+
+When the founder walks a gate with you, or says it is already done, in that same turn:
+
+1. Tick the GitHub epic task-list boxes (`[x]`).
+2. Comment the evidence (URL, status code, what you saw).
+3. Update `STATUS.md`. Append `CHANGELOG.md` if the repo uses it.
+4. Close the parent epic only after every HT box on it is ticked and the founder already cleared it (or you close it in this turn with that evidence).
+
+## Do not
+
+- Tick from pytest, mocks, or simulate. Empty `public_url` is not HT1.
+- Leave boxes empty after a founder walk. That is a clerk failure, not honesty.
+- Reopen or rebuild a CLEARED gate as agent tickets.
+- Invent a host URL or a spend receipt.
+
+OpenVault HT1-HT5: CLEARED 2026-09-04, boxes ticked 2026-09-07, epic #18 CLOSED.
+Estate law: `D:\Netie\Internal\Agents\AGENT_SYSTEM.md` (Human-inspectable gates).

@@ -11,7 +11,7 @@ What exists in this repo and where. Update when structure changes, not when stat
 | `Profiler/` | PathTrace + capability probe (library, own `uv sync` root) |
 | `OpenMW/openmw/openvault/` | App tiers (own `uv sync` root) — see table below |
 | `OpenMW/` | Custody API on `:5000` (redirects `/` to the app) |
-| `OpenMW/rust/openvault-console/` | Optional Rust auth on `:5055`, skipped when `cargo` missing |
+| `OpenMW/rust/openvault-console/` | Optional Rust sandbox on `:5055`. Builds; 2 tests. Not identity SoT (DR-0015). Mesh still advertises `#auth` when down |
 | `apps/web/` | OpenVault UI on `:3010` (Next 16, wired exclusively to `:5000` — see `docs/decisions/DR-0003-openship-app-plan.md`) |
 | `apps/cli/` | `openvault_cli.py` — `up` / `demo` / `demo-path` / `app` / `doctor` |
 | `OpenMW/scripts/one_seat_demo.py` | Auto-safe one-seat evidence path (vault → FreeRoute refuse → ship allow → deny); see [`ONE_SEAT_DEMO.md`](ONE_SEAT_DEMO.md) |

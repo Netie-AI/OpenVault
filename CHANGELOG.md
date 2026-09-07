@@ -2,6 +2,32 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-09-07 - Board empty: #48 already on main
+
+- GitHub OPEN count is 0. Control-plane ticket #48 CLOSED after PR #49
+  squash-merge (`3ddcb014` on `origin/main`): entitlements / routing / unlock /
+  metering / seats, locked USD display tiers, usage $/unit stays NEEDS-YOU.
+  Not this branch. Do not rebuild.
+
+## 2026-09-07 - HT1-HT5 boxes ticked; human-gate clerk rule
+
+- Epic #18 was already CLOSED 2026-09-04 with founder evidence. Empty `[ ] HT`
+  boxes on the issue body made the board look unfinished. Boxes now `[x]`.
+- Standing rule: HUMAN_TEST_GATES are human-only to perform, agent duty to
+  record. When the founder walks a gate, tick GitHub + `STATUS.md` same turn.
+  Do not tick from pytest/simulate. Do not rebuild CLEARED gates.
+- Law: `.cursor/rules/human-test-gates.mdc`, `CLAUDE.md`, Netie
+  `AGENT_SYSTEM.md` + `DOCUMENT_SYSTEM.md`.
+
+## 2026-09-06 - Rust console assessed (DR-0015 still proposed)
+
+- `OpenMW/rust/openvault-console`: cargo 1.97.1, `cargo test` 2 passed, release
+  exe exists on this machine (gitignored). It is a second accounts+secrets
+  store (`rust-auth.db`) with a demo passkey that mints `demo_private_key`.
+  Not identity SoT. Python WebAuthn unseal (DR-0014) stays the real path.
+- Mesh still advertises `:5055/#auth` when the process is down. Founder call
+  stays in DR-0015 Open; do not move Python `accounts` into the crate.
+
 ## 2026-09-06 - The app-grant pairing code is real (KB A-0009)
 
 - **Was decorative:** `decide_grant()` rendered a code nothing compared, so the

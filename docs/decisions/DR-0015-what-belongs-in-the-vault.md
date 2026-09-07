@@ -96,34 +96,45 @@ walks a first-time user through registering an authenticator, and nothing tells
 them the vault is sealed when a fill fails. `DR-0014`'s fence still holds - this
 is unsealing the vault, not autofilling the web.
 
-## Open - the Rust console, and it is the first question
+## Open - the Rust console, assessed 2026-09-06
 
-`OpenMW/rust/openvault-console` is 1813 lines with `accounts(username,
-netie_email, gmail, phone, email_verified, phone_verified)`, a `verify_codes`
-table of hashed six-digit codes with a 15-minute expiry, passkeys and sessions,
-in its own `rust-auth.db`. It is **declared**: `mesh/local_mesh.py` advertises
-`rust_console: 5055`, sets `OPENVAULT_RUST_URL`, and points `auth_ui` at
-`http://127.0.0.1:5055/#auth`; `tests/test_contract.py` pins the port.
+`OpenMW/rust/openvault-console` is **2034** lines of source (11 `.rs` files) with
+`accounts(username, netie_email, gmail, phone, email_verified, phone_verified)`, a
+`verify_codes` table of hashed six-digit codes with a 15-minute expiry, passkeys
+and sessions, plus its own `vault_secrets` table, in `rust-auth.db`. Mesh
+advertises it: `mesh/local_mesh.py` sets `OPENVAULT_RUST_URL` and points `auth_ui`
+at `http://127.0.0.1:5055/#auth`; `tests/test_contract.py` pins the port.
 
-It has never been built - there is no binary. So the mesh advertises an auth UI
-that nothing serves, which is the `R-0011` shape: a capability that exists in
-the contract and not in fact.
+**The previous claim that it had never been built is false.** On this machine
+`cargo 1.97.1` is installed, `target/release/openvault-console.exe` exists
+(5.1 MB, gitignored), and `cargo test` in that crate reports **2 passed**
+(`full_register_verify_passkey_vault_openship`, `providers_and_health`),
+0 failed, about 47s including compile.
 
-The founder's steer is "I need rust for efficiency", which points at promoting
-it. Against that: it duplicates `accounts` (the Python app has `AccountStore` and
-`/api/accounts`), and duplicated identity is precisely the second store lock 5
-forbids. Efficiency is also not the constraint here - custody waits on a human
-approving a prompt, not on CPU. Where Rust does earn its place in this estate is
-hot loops, and Space's `netie-pdf-detect` already is Rust.
+So the crate is a working sandbox, not a missing binary. The R-0011 lie is
+different: the mesh still prints `auth_ui` at `:5055` when the process is not
+running. Probe status can be `unknown`; the URL is handed out anyway.
 
-**Recommendation:** build it and run it, then move `accounts` to it wholesale so
-there is one accounts table rather than two, and keep secret custody in the
-Python app. Do not add phone-verification anywhere until that merge is decided -
-building it against the Python app while the Rust console owns `verify_codes`
-creates a third store rather than resolving the second.
+What it duplicates, which lock 5 forbids:
 
-Not decided here. It needs the founder, and it is the prerequisite for the phone
-work in Pointer `DR-0004`.
+- Identity: Python `AccountStore` / `accounts.db` vs Rust `accounts` in `rust-auth.db`
+- Secrets: Python vault vs Rust `vault_secrets` plus a server-minted
+  `demo_private_key` on `POST /api/auth/passkey/register/begin` (`api.rs`). That is
+  not WebAuthn. DR-0014 already shipped real passkey unseal in the Python app.
+
+The founder's steer "I need rust for efficiency" does not point at promoting this
+crate. Custody waits on a human prompt, not on CPU. Space's `netie-pdf-detect`
+is the existing Rust hot-loop. Growing a second accounts table and a second
+secrets table to get a faster login page is the wrong half of the repo.
+
+**Revised recommendation (still founder-owed):** keep the crate optional. Do not
+move Python `accounts` into it. Do not add phone-verification against either
+store until this record is accepted. If the mesh keeps a rust_console URL, the
+connect-pack must name `status` and must not present `#auth` as a live UI when
+the probe is not online. Phone work in Pointer `DR-0004` stays blocked on this
+call, not on `cargo test`.
+
+Not decided here. It needs the founder.
 
 ## Consequences
 
@@ -144,3 +155,5 @@ work in Pointer `DR-0004`.
   document types, never a code or a number.
 - Re-run `pytest tests/test_recovery_codes_identity.py tests/test_secrets_custody.py
   tests/test_secret_reveal_gate.py` before accepting.
+- Rust console sandbox (does not decide this record): `cd OpenMW/rust/openvault-console
+  && cargo test` - 2 passed 2026-09-06. Do not read that as identity SoT.
