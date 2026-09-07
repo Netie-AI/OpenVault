@@ -214,3 +214,6 @@ def test_unseal_lets_dms_mint_an_intermediate(
     )
     assert issued.status_code == 200, issued.text
     assert issued.json()["crv"] == "Ed25519"
+    kids = [k["kid"] for k in client.get("/keys/jwks").json()["keys"]]
+    assert issued.json()["kid"] in kids
+    assert "BEGIN" not in client.get("/keys/jwks").text
