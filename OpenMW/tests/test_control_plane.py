@@ -7,6 +7,7 @@ surface is loopback-only and is not a public rate page. No public :5000 bind.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import pytest
 from cryptography.fernet import Fernet
@@ -59,13 +60,14 @@ def client(home: Path) -> TestClient:
     return TestClient(app, client=("127.0.0.1", 5555))
 
 
-def _account(client: TestClient, name: str = "Acme") -> dict:
+def _account(client: TestClient, name: str = "Acme") -> dict[str, Any]:
     res = client.post(
         "/api/accounts",
         json={"display_name": name, "auth_provider": "netie_email", "local_part": name.lower()},
     )
     assert res.status_code == 200, res.text
-    return res.json()
+    payload: dict[str, Any] = res.json()
+    return payload
 
 
 def test_locked_display_skus_are_the_founder_numbers() -> None:
@@ -222,6 +224,11 @@ def test_unknown_plan_and_missing_account(client: TestClient) -> None:
     missing = client.post("/api/system/unlock", json={"account_id": "nope", "plan_id": "pro"})
     assert missing.status_code == 404
     assert client.get("/api/system/entitlements/nope").status_code == 404
+    assert client.get("/api/system/route", params={"account_id": "nope"}).status_code == 404
+    assert client.get("/api/system/metering", params={"account_id": "nope"}).status_code == 404
+    assert client.post("/api/system/lock", json={"account_id": "nope"}).status_code == 404
+    seats_missing = client.post("/api/system/seats", json={"account_id": "nope", "seats": 2})
+    assert seats_missing.status_code == 404
 
 
 def test_entitlements_share_accounts_db_not_a_second_vault(home: Path) -> None:
@@ -229,13 +236,16 @@ def test_entitlements_share_accounts_db_not_a_second_vault(home: Path) -> None:
     store = EntitlementStore(db_path=accounts.db_path)
     created = accounts.create(display_name="One", auth_provider="netie_email", local_part="one")
     store.unlock(created.id, "team", seats=4, accounts=accounts)
+    kept = store.unlock(created.id, "team_ultra", accounts=accounts)
+    assert kept.seats == 4
+    assert kept.plan_id == "team_ultra"
     assert store.db_path == accounts.db_path
     assert store.db_path == home / "accounts.db"
     loaded = EntitlementStore(db_path=home / "accounts.db")
     row = loaded.get(created.id)
     assert row.seats == 4
-    assert row.plan_id == "team"
-    assert usage_credit_factor(row.plan_id) == 1.0
+    assert row.plan_id == "team_ultra"
+    assert usage_credit_factor(row.plan_id) == 0.8
 
 
 def test_require_private_bind_blocks_public_5000(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -259,6 +269,7 @@ def test_launchers_keep_loopback_bind() -> None:
 
 
 def test_usage_ledger_summary_stays_unpriced(home: Path) -> None:
+    home.mkdir(parents=True, exist_ok=True)
     store = UsageStore(db_path=home / "keys.db")
     summary = store.summary()
     assert summary["priced"] is False
