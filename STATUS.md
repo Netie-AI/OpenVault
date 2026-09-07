@@ -3,7 +3,8 @@
 > Canonical "what's true now." History: [`CHANGELOG.md`](CHANGELOG.md). Deferred:
 > [`PARKING_LOT.md`](PARKING_LOT.md). Map: [`docs/ACTIVE.md`](docs/ACTIVE.md).
 
-Last reconciled: 2026-09-07. GitHub OPEN = none. #12-#39 and #48 CLOSED.
+Last reconciled: 2026-09-07. GitHub OPEN = none. #12-#39, #48, #52 CLOSED
+(#53 squash-merged, VPC allowlist for POST /keys/services).
 Owned-laptop replica: `openvault home pack` / `unpack` (passphrase-scrypt only).
 #48 control plane shipped on `main` as PR #49 (`3ddcb014`). Do not rebuild.
 Packs DR-0013. Desktop+Grant F20. Passkeys unseal DR-0014 / F22.
