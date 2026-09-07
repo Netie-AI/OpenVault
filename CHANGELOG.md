@@ -15,7 +15,8 @@ Append-only. Never edited, only added to. Newest first.
   `_normalise_host` only).
 - **Tests:** loopback allow, default prove IPs allow, env CIDR allow, unlisted
   deny, XFF spoof deny, allowlisted peer still cannot issue intermediates or
-  create provider keys.
+  create provider keys. `mint_loopback_only` on `/api/system/bind` still means
+  not world-open; `services_allow_env` names the CIDR list.
 - **Cite only:** dms#116 remount context in the other repo. This PR does not
   change dms.
 

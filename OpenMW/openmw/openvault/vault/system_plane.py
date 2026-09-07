@@ -194,12 +194,14 @@ def bind_policy() -> dict[str, Any]:
         "internal_writers_only": True,
         "public_rate_page": False,
         "escape_hatch_env": _PUBLIC_BIND_ENV,
-        # Cortex prove fetches JWKS here. Public pin kids; mint stays loopback.
+        # Cortex prove fetches JWKS here. Public pin kids. Intermediate mint
+        # stays loopback; POST /keys/services also allows OPENVAULT_SERVICES_ALLOW.
         "jwks_uri": "/.well-known/jwks.json",
         "jwks_alt": "/keys/jwks",
         "root_uri": "/keys/root",
         "jwks_url": f"{writers}/.well-known/jwks.json",
         "mint_loopback_only": True,
+        "services_allow_env": "OPENVAULT_SERVICES_ALLOW",
         "live_key_id_env": "LIVE_KEY_ID",
         "live_key_secret_manager": "openvault-dms-writer-token",
         "live_key_id": live_key_id,

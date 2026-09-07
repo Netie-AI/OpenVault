@@ -8,7 +8,8 @@ verify agent remounts the live SQL/MySQL run.
 
 Cortex `POST /v1/contract/jwks/refresh` is a cold-path JWKS fetch after DMS
 mints an OpenVault intermediate. It cannot bind if JWKS has no kids, and it
-must not mint -- public `POST /keys/services` is loopback-only.
+must not mint from the public internet -- `POST /keys/services` is loopback
+plus `OPENVAULT_SERVICES_ALLOW` (#52), never world-open.
 
 | Probe (2026-09-07, before this change) | Result |
 |---|---|
@@ -16,7 +17,7 @@ must not mint -- public `POST /keys/services` is loopback-only.
 | `GET http://35.253.229.206:8080/keys/jwks` | `{"keys":[]}` |
 | `GET http://35.253.229.206:8080/keys/root` | 200, `kid=root-...` (public pin) |
 | `GET http://35.253.229.206:8080/api/keys` | 200, `{"keys":[]}` -- vault list, **not JWKS** |
-| `POST http://35.253.229.206:8080/keys/services` | 403 loopback-only (keep) |
+| `POST http://35.253.229.206:8080/keys/services` | 403 from unlisted remotes; prove peers `10.128.0.3` / `34.30.222.22` allowed (#52) |
 | `GET http://34.30.222.22:8010/health` | 200 `{"status":"ok","pack":"dms"}` |
 
 ## Env keys (Platform bind)
@@ -28,6 +29,7 @@ OPENVAULT_PROVE_BASE=http://35.253.229.206:8080
 OPENVAULT_JWKS_URI=http://35.253.229.206:8080/.well-known/jwks.json
 OPENVAULT_JWKS_ALT=http://35.253.229.206:8080/keys/jwks
 OPENVAULT_ROOT_URI=http://35.253.229.206:8080/keys/root
+OPENVAULT_SERVICES_ALLOW=10.128.0.3,34.30.222.22
 CORTEX_PROVE_URL=http://34.30.222.22:8010
 LIVE_KEY_ID=119691f2c637
 LIVE_KEY_SECRET_MANAGER=openvault-dms-writer-token
@@ -44,7 +46,8 @@ Public `:5000` bind stays off. Writers use the prove host above, not `0.0.0.0`.
 
 1. Serve `GET /.well-known/jwks.json` with at least the trust-root kid
    (`netie_verify_only: true`). No mint required.
-2. Keep `POST /keys/services` and `POST /keys/intermediate` loopback/VPC.
+2. Keep `POST /keys/services` loopback plus `OPENVAULT_SERVICES_ALLOW`. Keep
+   `POST /keys/intermediate` loopback-only. No public `:5000`.
 3. When DMS later mints on the VM, `int-*` kids appear next to the root pin.
 4. Cortex refreshes JWKS and verifies chain against the pinned root.
 

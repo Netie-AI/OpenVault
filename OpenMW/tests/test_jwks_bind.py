@@ -1,9 +1,9 @@
-"""#50: public JWKS kids + register deep-links. Mint stays loopback.
+"""#50: public JWKS kids + register deep-links. Mint is not world-open.
 
-Proved against the live host before this change:
-``/.well-known/jwks.json`` 404, ``/keys/jwks`` ``keys=[]``,
-``POST /keys/services`` 403 loopback-only (correct). Cortex prove cannot bind
-until well-known JWKS has kids without a public mint.
+Proved against the live host before #50:
+``/.well-known/jwks.json`` 404, ``/keys/jwks`` ``keys=[]``.
+#52 allowlists prove VPC peers for ``POST /keys/services`` only; unlisted
+remotes stay 403. Intermediate issue stays loopback-only. No public ``:5000``.
 """
 
 from __future__ import annotations
@@ -63,7 +63,7 @@ def test_remote_caller_can_read_jwks_but_cannot_mint(home: Path) -> None:
     assert jwks.json()["keys"]
     mint = remote.post("/keys/services", json={"service_id": "dms"}, headers=INTENT)
     assert mint.status_code == 403
-    assert "loopback-only" in mint.text
+    assert "OPENVAULT_SERVICES_ALLOW" in mint.json()["detail"]
     assert remote.post("/keys/intermediate", json={"service_id": "dms"}).status_code == 403
     assert remote.post("/api/apikeys", json={"label": "nope", "tier": "free"}).status_code == 403
 
@@ -88,6 +88,7 @@ def test_bind_policy_points_at_well_known_jwks() -> None:
     assert policy["jwks_uri"] == "/.well-known/jwks.json"
     assert policy["jwks_alt"] == "/keys/jwks"
     assert policy["mint_loopback_only"] is True
+    assert policy["services_allow_env"] == "OPENVAULT_SERVICES_ALLOW"
     assert policy["jwks_url"] == f"{INTERNAL_WRITERS_URL}/.well-known/jwks.json"
     assert "ov_" not in str(policy)
 
