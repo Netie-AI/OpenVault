@@ -297,6 +297,8 @@ class TestUsageLedger:
         assert summary["priced"] is False, "OpenVault must not invent a price"
         assert summary["usage_unit_usd"] is None
         assert summary["usage_unit_status"] == "NEEDS-YOU"
+        assert summary["currency"] == "USD"
+        assert summary["usage_unit_prefix"] == "USD NEEDS-YOU"
 
 
 # ─── Output budget ceiling and context refusal ───────────────────────────────

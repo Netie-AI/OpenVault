@@ -32,7 +32,17 @@ from openmw.openvault.vault.system_plane import (
     require_private_bind,
     usage_credit_factor,
 )
-from openmw.openvault.vault.usage_store import USAGE_UNIT_STATUS, USAGE_UNIT_USD, UsageStore
+from openmw.openvault.vault.usage_store import (
+    CURRENCY_CODE,
+    CURRENCY_SIGN,
+    USAGE_UNIT_PREFIX,
+    USAGE_UNIT_SIGN,
+    USAGE_UNIT_STATUS,
+    USAGE_UNIT_USD,
+    UsageStore,
+    usd_prefix,
+    usd_sign,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -79,11 +89,25 @@ def test_locked_display_skus_are_the_founder_numbers() -> None:
     assert PLANS["team_giga"].display_usd == 1000
     assert SEAT_USD == 30
     catalog = catalog_payload()
+    assert catalog["currency"] == "USD"
+    assert catalog["currency_sign"] == "$"
     assert catalog["seat_usd"] == 30
+    assert catalog["seat_usd_prefix"] == "USD30"
+    assert catalog["seat_usd_sign"] == "$30"
     assert catalog["plans"]["basic"]["display_usd"] == 10
+    assert catalog["plans"]["basic"]["display_usd_prefix"] == "USD10"
+    assert catalog["plans"]["basic"]["display_usd_sign"] == "$10"
+    assert catalog["plans"]["pro"]["display_usd_prefix"] == "USD100"
+    assert catalog["plans"]["ultra"]["display_usd_prefix"] == "USD500"
+    assert catalog["plans"]["team"]["display_usd_prefix"] == "USD10"
+    assert catalog["plans"]["team_ultra"]["display_usd_prefix"] == "USD500"
     assert catalog["plans"]["team_giga"]["display_usd"] == 1000
+    assert catalog["plans"]["team_giga"]["display_usd_prefix"] == "USD1000"
+    assert catalog["plans"]["team_giga"]["display_usd_sign"] == "$1000"
     assert catalog["public_rate_page"] is False
     assert catalog["marketing_owner"] == "netie.ai"
+    assert usd_prefix(10) == "USD10"
+    assert usd_sign(10) == "$10"
 
 
 def test_usage_unit_stays_needs_you() -> None:
@@ -91,11 +115,21 @@ def test_usage_unit_stays_needs_you() -> None:
     assert USAGE_UNIT_USD is None
     assert USAGE_UNIT_STATUS == "NEEDS-YOU"
     usage = catalog_payload()["usage"]
+    assert usage["currency"] == CURRENCY_CODE
+    assert usage["currency_sign"] == CURRENCY_SIGN
     assert usage["unit_usd"] is None
     assert usage["unit_status"] == "NEEDS-YOU"
+    assert usage["unit_prefix"] == "USD NEEDS-YOU"
+    assert usage["unit_sign"] == "$ NEEDS-YOU"
+    assert usage["unit_prefix"] == USAGE_UNIT_PREFIX
+    assert usage["unit_sign"] == USAGE_UNIT_SIGN
     assert usage["priced"] is False
     assert usage["credit_discount_pct_ultra_giga"] == 20
     assert usage["credit_normal_on"] == ["pro", "seat"]
+    # Unset unit labels carry USD, not an invented number.
+    assert "USD" in usage["unit_prefix"]
+    assert usage["unit_sign"].startswith("$")
+    assert not any(ch.isdigit() for ch in usage["unit_prefix"])
 
 
 def test_usage_credits_are_20_percent_on_ultra_giga_only() -> None:
@@ -155,10 +189,16 @@ def test_unlock_route_metering_and_seats(client: TestClient) -> None:
     ent = unlocked.json()["entitlement"]
     assert ent["plan_id"] == "ultra"
     assert ent["display_usd"] == 500
+    assert ent["display_usd_prefix"] == "USD500"
+    assert ent["display_usd_sign"] == "$500"
+    assert ent["currency"] == "USD"
+    assert ent["currency_sign"] == "$"
     assert ent["seats"] == 0
     assert ent["usage_credit_factor"] == 0.8
     assert ent["limiter_tier"] == "pro"
     assert ent["monthly_display_usd"] == 500
+    assert ent["monthly_display_usd_prefix"] == "USD500"
+    assert ent["monthly_display_usd_sign"] == "$500"
 
     routed = client.get("/api/system/route", params={"account_id": account_id}).json()
     assert routed["allowed"] is True
@@ -167,12 +207,19 @@ def test_unlock_route_metering_and_seats(client: TestClient) -> None:
 
     meter = client.get("/api/system/metering", params={"account_id": account_id}).json()
     assert meter["priced"] is False
+    assert meter["currency"] == "USD"
+    assert meter["currency_sign"] == "$"
     assert meter["usage_unit_usd"] is None
     assert meter["usage_unit_status"] == "NEEDS-YOU"
+    assert meter["usage_unit_prefix"] == "USD NEEDS-YOU"
+    assert meter["usage_unit_sign"] == "$ NEEDS-YOU"
     assert meter["usage_credit_factor"] == 0.8
+    assert meter["seat_usd_prefix"] == "USD30"
+    assert meter["seat_usd_sign"] == "$30"
     assert meter["ledger_scope"] == "process"
     assert meter["ledger"]["priced"] is False
     assert meter["ledger"]["usage_unit_usd"] is None
+    assert meter["ledger"]["currency"] == "USD"
 
     bundle = client.get(f"/api/accounts/{account_id}").json()
     assert bundle["entitlement"]["plan_id"] == "ultra"
@@ -195,6 +242,10 @@ def test_unlock_route_metering_and_seats(client: TestClient) -> None:
     tent = team.json()["entitlement"]
     assert tent["seats"] == 2
     assert tent["monthly_display_usd"] == 1000 + 60
+    assert tent["monthly_display_usd_prefix"] == "USD1060"
+    assert tent["monthly_display_usd_sign"] == "$1060"
+    assert tent["seat_usd_prefix"] == "USD30"
+    assert tent["seat_usd_sign"] == "$30"
     assert tent["usage_credit_factor"] == 0.8
     assert tent["limiter_tier"] == "pro"
 
@@ -273,5 +324,9 @@ def test_usage_ledger_summary_stays_unpriced(home: Path) -> None:
     store = UsageStore(db_path=home / "keys.db")
     summary = store.summary()
     assert summary["priced"] is False
+    assert summary["currency"] == "USD"
+    assert summary["currency_sign"] == "$"
     assert summary["usage_unit_usd"] is None
     assert summary["usage_unit_status"] == "NEEDS-YOU"
+    assert summary["usage_unit_prefix"] == "USD NEEDS-YOU"
+    assert summary["usage_unit_sign"] == "$ NEEDS-YOU"

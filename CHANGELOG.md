@@ -2,6 +2,14 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-09-07 - #48 addendum: control-plane rates labeled USD (prefix + sign)
+
+- Catalog, entitlements, metering, and usage summary now carry `currency=USD`
+  plus both founder labels: prefix `USD10` and sign `$10`. Seat is `USD30` /
+  `$30`. Usage $/unit stays unset: `USD NEEDS-YOU` / `$ NEEDS-YOU` -- no
+  invented number. Policy version 2. Still no public rate page and no public
+  `:5000`.
+
 ## 2026-09-07 - SYSTEM control plane: entitlements / routing / unlock / metering / seats (#48)
 
 - **Locked display SKUs** (not a public rate page): Individual Basic USD10 /

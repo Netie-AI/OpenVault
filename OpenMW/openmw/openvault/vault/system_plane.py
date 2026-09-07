@@ -19,12 +19,21 @@ from pathlib import Path
 from typing import Any, Literal
 
 from openmw.openvault.vault.accounts import AccountStore, accounts_db_path
-from openmw.openvault.vault.usage_store import USAGE_UNIT_STATUS, USAGE_UNIT_USD
+from openmw.openvault.vault.usage_store import (
+    CURRENCY_CODE,
+    CURRENCY_SIGN,
+    USAGE_UNIT_PREFIX,
+    USAGE_UNIT_SIGN,
+    USAGE_UNIT_STATUS,
+    USAGE_UNIT_USD,
+    usd_prefix,
+    usd_sign,
+)
 
 PlanFamily = Literal["individual", "team"]
 LimiterTier = Literal["free", "pro"]
 
-POLICY_VERSION = 1
+POLICY_VERSION = 2
 #: Internal writers host -- not a public :5000 bind.
 INTERNAL_WRITERS_URL = "http://35.253.229.206:8080"
 DEFAULT_BIND_HOST = "127.0.0.1"
@@ -64,7 +73,13 @@ class PlanSpec:
         payload["usage_credit_discount_pct"] = (
             USAGE_CREDIT_DISCOUNT_PCT if self.usage_credit_discount else 0
         )
+        payload["currency"] = CURRENCY_CODE
+        payload["currency_sign"] = CURRENCY_SIGN
+        payload["display_usd_prefix"] = usd_prefix(self.display_usd)
+        payload["display_usd_sign"] = usd_sign(self.display_usd)
         payload["seat_usd"] = SEAT_USD if self.family == "team" else 0
+        payload["seat_usd_prefix"] = usd_prefix(SEAT_USD) if self.family == "team" else ""
+        payload["seat_usd_sign"] = usd_sign(SEAT_USD) if self.family == "team" else ""
         return payload
 
 
@@ -100,6 +115,8 @@ class Entitlement:
 
     def to_dict(self) -> dict[str, Any]:
         plan = self.plan
+        monthly = monthly_display_usd(self.plan_id, self.seats)
+        seat_amount = SEAT_USD if plan is not None and plan.family == "team" else 0
         return {
             "account_id": self.account_id,
             "plan_id": self.plan_id or None,
@@ -108,9 +125,17 @@ class Entitlement:
             "unlocked_at": self.unlocked_at,
             "updated_at": self.updated_at,
             "family": plan.family if plan is not None else None,
+            "currency": CURRENCY_CODE,
+            "currency_sign": CURRENCY_SIGN,
             "display_usd": plan.display_usd if plan is not None else None,
-            "monthly_display_usd": monthly_display_usd(self.plan_id, self.seats),
-            "seat_usd": SEAT_USD if plan is not None and plan.family == "team" else 0,
+            "display_usd_prefix": usd_prefix(plan.display_usd) if plan is not None else None,
+            "display_usd_sign": usd_sign(plan.display_usd) if plan is not None else None,
+            "monthly_display_usd": monthly,
+            "monthly_display_usd_prefix": usd_prefix(monthly) if monthly is not None else None,
+            "monthly_display_usd_sign": usd_sign(monthly) if monthly is not None else None,
+            "seat_usd": seat_amount,
+            "seat_usd_prefix": usd_prefix(seat_amount) if seat_amount else "",
+            "seat_usd_sign": usd_sign(seat_amount) if seat_amount else "",
             "limiter_tier": plan.limiter_tier if plan is not None else None,
             "usage_credit_factor": usage_credit_factor(self.plan_id),
             "usage_credit_discount_pct": (
@@ -179,11 +204,19 @@ def catalog_payload() -> dict[str, Any]:
         "public_rate_page": False,
         "owner": "openvault",
         "marketing_owner": "netie.ai",
+        "currency": CURRENCY_CODE,
+        "currency_sign": CURRENCY_SIGN,
         "plans": {plan_id: spec.to_dict() for plan_id, spec in PLANS.items()},
         "seat_usd": SEAT_USD,
+        "seat_usd_prefix": usd_prefix(SEAT_USD),
+        "seat_usd_sign": usd_sign(SEAT_USD),
         "usage": {
+            "currency": CURRENCY_CODE,
+            "currency_sign": CURRENCY_SIGN,
             "unit_usd": USAGE_UNIT_USD,
             "unit_status": USAGE_UNIT_STATUS,
+            "unit_prefix": USAGE_UNIT_PREFIX,
+            "unit_sign": USAGE_UNIT_SIGN,
             "credit_discount_pct_ultra_giga": USAGE_CREDIT_DISCOUNT_PCT,
             "credit_normal_on": ["pro", "seat"],
             "priced": False,
@@ -230,17 +263,23 @@ def metering_overlay(entitlement: Entitlement, ledger: dict[str, Any]) -> dict[s
         "plan_id": entitlement.plan_id or None,
         "unlocked": entitlement.unlocked,
         "priced": False,
+        "currency": CURRENCY_CODE,
+        "currency_sign": CURRENCY_SIGN,
         "usage_unit_usd": USAGE_UNIT_USD,
         "usage_unit_status": USAGE_UNIT_STATUS,
+        "usage_unit_prefix": USAGE_UNIT_PREFIX,
+        "usage_unit_sign": USAGE_UNIT_SIGN,
         "usage_credit_factor": factor,
         "usage_credit_discount_pct": discount_pct,
         "seat_usd": SEAT_USD,
+        "seat_usd_prefix": usd_prefix(SEAT_USD),
+        "seat_usd_sign": usd_sign(SEAT_USD),
         "seats": entitlement.seats,
         "ledger_scope": "process",
         "ledger": ledger,
         "note": (
             "issued keys are not bound to accounts; token rows stay on api_key_id. "
-            "usage $/unit is NEEDS-YOU -- this overlay never invents a bill."
+            "usage $/unit is USD NEEDS-YOU -- this overlay never invents a bill."
         ),
     }
 

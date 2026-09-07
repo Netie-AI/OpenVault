@@ -33,8 +33,23 @@ from typing import Any
 from openmw.openvault.paths import keys_db_path
 
 #: Usage $/unit is a founder decision. A number here would read as a real rate.
+#: Display SKUs and this ledger still label the currency as USD (prefix + sign).
+CURRENCY_CODE = "USD"
+CURRENCY_SIGN = "$"
 USAGE_UNIT_USD: float | None = None
 USAGE_UNIT_STATUS = "NEEDS-YOU"
+USAGE_UNIT_PREFIX = f"{CURRENCY_CODE} {USAGE_UNIT_STATUS}"
+USAGE_UNIT_SIGN = f"{CURRENCY_SIGN} {USAGE_UNIT_STATUS}"
+
+
+def usd_prefix(amount: int) -> str:
+    """Founder display copy: USD10, USD100, USD500. Never a usage unit price."""
+    return f"{CURRENCY_CODE}{amount}"
+
+
+def usd_sign(amount: int) -> str:
+    """Founder USD sign copy: $10, $100, $500. Never a usage unit price."""
+    return f"{CURRENCY_SIGN}{amount}"
 
 
 @dataclass
@@ -283,10 +298,27 @@ class UsageStore:
             "failed_requests": int(row["failed"]),
             # No price. Display SKUs live on the system control plane; usage
             # $/unit stays NEEDS-YOU so a number here cannot look measured.
+            # Currency is still USD (prefix + sign) even while the unit is unset.
             "priced": False,
+            "currency": CURRENCY_CODE,
+            "currency_sign": CURRENCY_SIGN,
             "usage_unit_usd": USAGE_UNIT_USD,
             "usage_unit_status": USAGE_UNIT_STATUS,
+            "usage_unit_prefix": USAGE_UNIT_PREFIX,
+            "usage_unit_sign": USAGE_UNIT_SIGN,
         }
 
 
-__all__ = ["USAGE_UNIT_STATUS", "USAGE_UNIT_USD", "HopTrace", "UsageEvent", "UsageStore"]
+__all__ = [
+    "CURRENCY_CODE",
+    "CURRENCY_SIGN",
+    "USAGE_UNIT_PREFIX",
+    "USAGE_UNIT_SIGN",
+    "USAGE_UNIT_STATUS",
+    "USAGE_UNIT_USD",
+    "HopTrace",
+    "UsageEvent",
+    "UsageStore",
+    "usd_prefix",
+    "usd_sign",
+]

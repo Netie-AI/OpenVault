@@ -27,7 +27,10 @@ Chosen option: encode the locked display SKUs as versioned policy constants on a
 loopback-only `/api/system/*` surface. Usage `$/unit` stays `None` / `NEEDS-YOU`.
 Ultra/Giga reuse the existing FreeRoute `pro` limiter because rpm/tpm for those
 SKUs was not locked; the 20% usage-credit discount is the locked differentiator.
-Team seats add `USD 30` each to the *display* monthly total only.
+Team seats add `USD30` / `$30` each to the *display* monthly total only.
+Every money-bearing control-plane field labels currency as USD (prefix `USD10`
+and sign `$10`). Usage `$/unit` stays `None` / `USD NEEDS-YOU` -- labeled USD,
+no invented number.
 
 Public `:5000` bind stays off. Internal writers stay on
 `http://35.253.229.206:8080`. One vault: entitlements live in `accounts.db`, not a

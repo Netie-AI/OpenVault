@@ -3,9 +3,10 @@
 > Canonical "what's true now." History: [`CHANGELOG.md`](CHANGELOG.md). Deferred:
 > [`PARKING_LOT.md`](PARKING_LOT.md). Map: [`docs/ACTIVE.md`](docs/ACTIVE.md).
 
-Last reconciled: 2026-09-07. #48 SYSTEM control plane (this branch): display
-SKUs locked; usage $/unit still NEEDS-YOU. #13 #18 #33 CLOSED. Spaceship FTP
-on main via [#47](https://github.com/Netie-AI/OpenVault/pull/47) `2feaf1eb`.
+Last reconciled: 2026-09-07. #48 SYSTEM control plane: display SKUs locked
+and labeled USD (`USD10` / `$10`); usage $/unit still `USD NEEDS-YOU`.
+#13 #18 #33 CLOSED. Spaceship FTP on main via
+[#47](https://github.com/Netie-AI/OpenVault/pull/47) `2feaf1eb`.
 
 **UI:** `:3010` Compiling-proxy hang / `:5000` stays loopback (no public bind).
 Writers: `http://35.253.229.206:8080`. Demo:
