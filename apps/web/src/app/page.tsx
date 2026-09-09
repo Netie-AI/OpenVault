@@ -58,8 +58,14 @@ const LINKS = [
   {
     href: "/peers",
     title: "Peers",
-    body: "OpenVault ↔ Cortex ↔ OpenIDE mesh handshake.",
+    body: "OpenVault <-> Cortex <-> OpenIDE mesh handshake.",
     icon: Network,
+  },
+  {
+    href: "/grant",
+    title: "Grant",
+    body: "A local app asked for a key. Open this, match the code, Grant.",
+    icon: KeyRound,
   },
   {
     href: "/gate",

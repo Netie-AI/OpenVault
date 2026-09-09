@@ -218,7 +218,7 @@ def build_registry(
         "cortex": "Cortex (brains / orchestration)",
         "openide": "FreeIDE (coding surface)",
         "airgpt": "AirGPT (shell / control plane)",
-        "rust_console": "OpenVault Rust auth console",
+        "rust_console": "OpenVault Rust auth console (optional sandbox)",
     }
     for peer_kind, peer in sorted(state.peers.items()):
         entries.append(

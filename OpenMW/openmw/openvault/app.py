@@ -107,9 +107,18 @@ from openmw.openvault.ship.openship import (
 )
 from openmw.openvault.ship.openship_client import OpenShipClient, adapter_status
 from openmw.openvault.ship.playwright_smoke import load_smoke, run_playwright_smoke
+from openmw.openvault.vault import webauthn_unlock
 from openmw.openvault.vault.accounts import AccountStore, AuthProvider
 from openmw.openvault.vault.airgpt_keyvault import keyvault_snapshot, upsert_env_secret
 from openmw.openvault.vault.api_keys import ApiKeyError, ApiKeyStore
+from openmw.openvault.vault.app_grants import (
+    GrantRefusedError,
+    decide_grant,
+    list_pending,
+    poll_grant,
+    public_grant,
+    start_grant,
+)
 from openmw.openvault.vault.auth import AuthRefusedError, resolve_caller
 from openmw.openvault.vault.budget import configured_ceiling
 from openmw.openvault.vault.cortex_key import tenant_key_payload
@@ -134,7 +143,18 @@ from openmw.openvault.vault.ratelimit import (
     usage_total_tokens,
 )
 from openmw.openvault.vault.redis_store import try_make_redis_store
-from openmw.openvault.vault.secrets import SecretKind, SecretStore, SecretValidationError
+from openmw.openvault.vault.route_packs import (
+    apply_pack,
+    evaluate_pack,
+    list_packs,
+    parse_pack_id,
+)
+from openmw.openvault.vault.secrets import (
+    IdentityDocType,
+    SecretKind,
+    SecretStore,
+    SecretValidationError,
+)
 from openmw.openvault.vault.seed import seed_essentials
 from openmw.openvault.vault.store import (
     KeyCustody,
@@ -553,6 +573,36 @@ class CardCreate(BaseModel):
     cvv: str | None = None
 
 
+class RecoveryCodesCreate(BaseModel):
+    """A set of single-use backup codes, e.g. Google's 2FA recovery codes.
+
+    ``codes`` takes a list, or the raw block exactly as pasted. The string form
+    is split ONE PER LINE and never on spaces - see
+    ``vault/secrets.normalize_recovery_codes`` for why a space-split silently
+    destroys codes that are printed as "1234 5678".
+    """
+
+    label: str
+    codes: list[str] | str
+    username: str = ""
+    url: str = ""
+    account_id: str | None = None
+
+
+class IdentityCreate(BaseModel):
+    """A government or institutional identifier: IC, passport, licence, tax id.
+
+    Name, address and date of birth are deliberately NOT accepted here. They are
+    ordinary profile fields a form-fill legitimately reads, and sealing them
+    would mean unsealing the vault to type an address.
+    """
+
+    label: str
+    doc_type: IdentityDocType
+    number: str
+    account_id: str | None = None
+
+
 class SecretUpdate(BaseModel):
     label: str | None = None
     username: str | None = None
@@ -737,6 +787,13 @@ class ApiKeyIssueBody(BaseModel):
     label: str
     #: `local` is refused by the store — it is the unmetered loopback tier.
     tier: str = "free"
+    #: Optional experience pack (DR-0016). Simulate attach only.
+    pack_id: str = ""
+
+
+class RoutePackBody(BaseModel):
+    api_key_id: str
+    pack_id: str
 
 
 class ShipRecommendBody(BaseModel):
@@ -847,6 +904,19 @@ class HandshakeDecision(BaseModel):
     note: str = ""
 
 
+class GrantStartBody(BaseModel):
+    client_name: str
+    label: str = ""
+
+
+class GrantDecision(BaseModel):
+    approve: bool = True
+    #: The code the asking app printed. Defaults to empty so an old client gets
+    #: a 403 that names the problem rather than a 422 about a missing field --
+    #: but empty never matches, so the default is a refusal, not a bypass.
+    user_code: str = ""
+
+
 class OpenIdeInvoke(BaseModel):
     action: str
     username: str = ""
@@ -943,6 +1013,27 @@ class VaultPassphraseBody(BaseModel):
     passphrase: str
 
 
+class WebAuthnRegisterBeginBody(BaseModel):
+    hybrid: bool = False
+
+
+class WebAuthnRegisterFinishBody(BaseModel):
+    session_id: str
+    credential_id: str
+    public_key_spki: str
+    client_data_b64: str
+    extensions: dict[str, Any] = Field(default_factory=dict)
+
+
+class WebAuthnUnsealFinishBody(BaseModel):
+    session_id: str
+    credential_id: str
+    client_data_b64: str
+    authenticator_data_b64: str
+    signature_b64: str
+    extensions: dict[str, Any] = Field(default_factory=dict)
+
+
 def create_app(
     *,
     vault: KeyVault | None = None,
@@ -1021,6 +1112,10 @@ def create_app(
                 await task
 
     app = FastAPI(title="OpenVault", version="0.1.0", lifespan=lifespan)
+    # Signing-key routes must decrypt the trust root with this same Seal.
+    # A fresh Seal() in TrustStore stays sealed after passphrase unseal and
+    # /keys/intermediate 500s while /api/vault/status says sealed=false.
+    app.state.seal = state_seal
 
     # Stage-3 integrator mount: routers own their paths; app.py only wires them.
     from openmw.openvault.routers.freeroute import build_freeroute_router
@@ -1159,6 +1254,84 @@ def create_app(
             return decide_handshake(request_id, approve=body.approve, note=body.note)
         except KeyError as exc:
             raise HTTPException(status_code=404, detail="handshake not found") from exc
+
+    @app.post("/api/local/grants")
+    def local_grants_start(body: GrantStartBody, request: Request) -> dict[str, Any]:
+        """Another loopback app asks for an ov_ key. Human still has to Grant."""
+        _require_loopback(request, "start app grant")
+        try:
+            return {"ok": True, **start_grant(client_name=body.client_name, label=body.label)}
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.get("/api/local/grants")
+    def local_grants_list(request: Request) -> dict[str, Any]:
+        _require_loopback(request, "list app grants")
+        return {"ok": True, "grants": list_pending()}
+
+    @app.get("/api/local/grants/{grant_id}")
+    def local_grants_get(grant_id: str, request: Request) -> dict[str, Any]:
+        _require_loopback(request, "read app grant")
+        row = public_grant(grant_id)
+        if row is None:
+            raise HTTPException(status_code=404, detail="grant not found")
+        return {"ok": True, **row}
+
+    @app.post("/api/local/grants/{grant_id}/decide")
+    def local_grants_decide(grant_id: str, body: GrantDecision, request: Request) -> dict[str, Any]:
+        # Loopback says "this machine", not "this process" -- so the pairing
+        # code, not the gate above, is what binds this decision to the app that
+        # asked (A-0009). A wrong or missing code is refused, never warned about.
+        _require_loopback(request, "decide app grant")
+
+        def _issue(label: str) -> tuple[str, str]:
+            record, token = state_api_keys.issue(label=label, tier="free")
+            return record.key_id, token
+
+        try:
+            row = decide_grant(
+                grant_id,
+                approve=body.approve,
+                user_code=body.user_code,
+                issue=_issue,
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail="grant not found") from exc
+        except GrantRefusedError as exc:
+            _audit_custody(
+                "app_grant_code_refused",
+                request,
+                grant_id=grant_id,
+                approve=body.approve,
+                code_supplied=bool(body.user_code.strip()),
+            )
+            raise HTTPException(status_code=403, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        _audit_custody(
+            "app_grant_decided",
+            request,
+            grant_id=grant_id,
+            approve=body.approve,
+            client_name=row.get("client_name"),
+        )
+        return {"ok": True, **row}
+
+    @app.post("/api/local/grants/{grant_id}/poll")
+    def local_grants_poll(grant_id: str, request: Request) -> JSONResponse:
+        _require_loopback(request, "poll app grant")
+        row = poll_grant(grant_id)
+        status = str(row.get("status") or "missing")
+        if status == "missing":
+            raise HTTPException(status_code=404, detail="grant not found")
+        code = 200
+        if status == "pending":
+            code = 202
+        elif status == "denied":
+            code = 403
+        elif status == "expired":
+            code = 410
+        return JSONResponse(status_code=code, content={"ok": status == "ready", **row})
 
     @app.get("/api/local/connect-pack")
     def local_connect_pack() -> dict[str, Any]:
@@ -1650,7 +1823,12 @@ def create_app(
         _require_reveal_intent(request)
         _require_unsealed(state_seal, "secret reveal")
 
-        secret = state_vault.get_secret(key_id)
+        try:
+            secret = state_vault.get_secret(key_id)
+        except VaultSealedError as exc:
+            raise HTTPException(status_code=403, detail=_VAULT_SEALED_DETAIL) from exc
+        except VaultCryptoError as exc:
+            raise HTTPException(status_code=409, detail="unable to decrypt vault secret") from exc
         if secret is None:
             raise HTTPException(status_code=404, detail="key not found")
 
@@ -1712,6 +1890,122 @@ def create_app(
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         _audit_custody(
             "card_create", request, secret_id=record.id, brand=record.brand, last4=record.last4
+        )
+        return asdict(record)
+
+    @app.post("/api/secrets/recovery-codes")
+    def create_recovery_codes(body: RecoveryCodesCreate, request: Request) -> dict[str, Any]:
+        """Store a set of single-use backup codes.
+
+        This is the place for the codes a provider hands you when you turn on
+        2FA - the ones that are currently kept in a downloads folder or a photo
+        because there was nowhere else to put them. The response carries counts
+        and a mask, never a code.
+        """
+        _require_loopback(request, "recovery codes create")
+        _require_unsealed(state_seal, "recovery codes create")
+        if body.account_id and state_accounts.get(body.account_id) is None:
+            raise HTTPException(status_code=404, detail="account not found")
+        try:
+            record = state_secrets.create_recovery_codes(
+                label=body.label,
+                codes=body.codes,
+                username=body.username,
+                url=body.url,
+                account_id=body.account_id,
+            )
+        except SecretValidationError as exc:
+            # The codes are in the request body; the rejection carries only the
+            # reason, never the input that failed.
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        _audit_custody(
+            "recovery_codes_create",
+            request,
+            secret_id=record.id,
+            label=record.label,
+            total=record.codes_total,
+        )
+        return asdict(record)
+
+    @app.post("/api/secrets/{secret_id}/consume-code")
+    def consume_recovery_code(secret_id: str, request: Request) -> dict[str, Any]:
+        """Spend the next unused backup code and return it.
+
+        Same gate as reveal, because the response is plaintext. Unlike reveal
+        this is a WRITE: the code is marked used inside the same transaction
+        that hands it over, so the same code can never be issued twice and the
+        remaining count in the record is always what is actually left.
+
+        A caller that asks for a code it does not end up using has burned one.
+        That is the correct trade - the alternative is a code that is handed out
+        twice and rejected the second time, with no way to tell which.
+        """
+        client_host = _require_loopback(request, "recovery code consume")
+        _require_reveal_intent(request)
+        _require_unsealed(state_seal, "recovery code consume")
+
+        record = state_secrets.get(secret_id)
+        if record is None:
+            raise HTTPException(status_code=404, detail="secret not found")
+        if record.kind != "recovery_codes":
+            raise HTTPException(
+                status_code=409, detail=f"secret {secret_id} is a {record.kind}, not recovery codes"
+            )
+
+        try:
+            code = state_secrets.consume_recovery_code(secret_id)
+        except VaultSealedError as exc:
+            raise HTTPException(status_code=403, detail=_VAULT_SEALED_DETAIL) from exc
+        except VaultCryptoError as exc:
+            raise HTTPException(status_code=409, detail="unable to decrypt vault secret") from exc
+        if code is None:
+            # Exhausted is not "not found": the user needs to be told to
+            # generate a new set, not that their record has vanished.
+            raise HTTPException(
+                status_code=409,
+                detail="every recovery code in this set has been used - generate a new set",
+            )
+
+        after = state_secrets.get(secret_id)
+        remaining = after.codes_unused if after else None
+        _write_secret_audit(
+            {
+                "event": "recovery_code_consume",
+                "secret_id": secret_id,
+                "label": record.label,
+                "remaining": remaining,
+                "client": client_host,
+                "user_agent": request.headers.get("user-agent", "")[:200],
+            }
+        )
+        return {"id": secret_id, "kind": record.kind, "code": code, "remaining": remaining}
+
+    @app.post("/api/secrets/identity")
+    def create_identity(body: IdentityCreate, request: Request) -> dict[str, Any]:
+        """Store a government or institutional identifier.
+
+        The number is sealed; the document type and a last-four mask stay in the
+        clear so a chooser can tell two documents apart without unsealing.
+        """
+        _require_loopback(request, "identity create")
+        _require_unsealed(state_seal, "identity create")
+        if body.account_id and state_accounts.get(body.account_id) is None:
+            raise HTTPException(status_code=404, detail="account not found")
+        try:
+            record = state_secrets.create_identity(
+                label=body.label,
+                doc_type=body.doc_type,
+                number=body.number,
+                account_id=body.account_id,
+            )
+        except SecretValidationError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        _audit_custody(
+            "identity_create",
+            request,
+            secret_id=record.id,
+            label=record.label,
+            doc_type=record.doc_type,
         )
         return asdict(record)
 
@@ -1794,7 +2088,17 @@ def create_app(
         if record is None:
             raise HTTPException(status_code=404, detail="secret not found")
 
-        plaintext = state_secrets.reveal(secret_id)
+        try:
+            plaintext = state_secrets.reveal(secret_id)
+        except SecretValidationError as exc:
+            # A code set cannot be revealed wholesale - one payload here is
+            # EVERY code, and reading them without spending one desynchronises
+            # the remaining count. Point at the route that does it properly.
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        except VaultSealedError as exc:
+            raise HTTPException(status_code=403, detail=_VAULT_SEALED_DETAIL) from exc
+        except VaultCryptoError as exc:
+            raise HTTPException(status_code=409, detail="unable to decrypt vault secret") from exc
         if plaintext is None:
             raise HTTPException(status_code=404, detail="secret not found")
 
@@ -2767,10 +3071,13 @@ def create_app(
             )
         return result
 
+    def _vault_status_payload() -> dict[str, Any]:
+        return {"ok": True, **state_seal.status(), **webauthn_unlock.status()}
+
     @app.get("/api/vault/status")
     def vault_status() -> dict[str, Any]:
         """Whether the master key is in memory, and whether a passphrase is set."""
-        return {"ok": True, **state_seal.status()}
+        return _vault_status_payload()
 
     @app.post("/api/vault/unseal")
     def vault_unseal(body: VaultUnsealBody, request: Request) -> dict[str, Any]:
@@ -2781,7 +3088,78 @@ def create_app(
         except VaultCryptoError as exc:
             raise HTTPException(status_code=401, detail=str(exc)) from exc
         _audit_custody("vault_unseal", request, ok=True)
-        return {"ok": True, **state_seal.status()}
+        return _vault_status_payload()
+
+    @app.post("/api/vault/webauthn/register/begin")
+    def vault_webauthn_register_begin(
+        body: WebAuthnRegisterBeginBody, request: Request
+    ) -> dict[str, Any]:
+        """Start Windows Hello / Touch ID / optional iPhone registration."""
+        _require_loopback(request, "webauthn register")
+        _require_unsealed(state_seal, "webauthn register")
+        return webauthn_unlock.begin_register(hybrid=body.hybrid)
+
+    @app.post("/api/vault/webauthn/register/finish")
+    def vault_webauthn_register_finish(
+        body: WebAuthnRegisterFinishBody, request: Request
+    ) -> dict[str, Any]:
+        """Store a PRF wrap of the live master key. Passphrase wrap on disk stays."""
+        _require_loopback(request, "webauthn register")
+        _require_unsealed(state_seal, "webauthn register")
+        try:
+            webauthn_unlock.finish_register(
+                session_id=body.session_id,
+                credential_id=body.credential_id,
+                public_key_spki=body.public_key_spki,
+                client_data_b64=body.client_data_b64,
+                extensions=body.extensions,
+                master_key=state_seal.copy_master_key(),
+            )
+        except webauthn_unlock.WebAuthnUnlockError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        _audit_custody("webauthn_register", request, ok=True)
+        return _vault_status_payload()
+
+    @app.post("/api/vault/webauthn/unseal/begin")
+    def vault_webauthn_unseal_begin(request: Request) -> dict[str, Any]:
+        """Start a passkey assertion. Vault may be sealed."""
+        _require_loopback(request, "webauthn unseal")
+        try:
+            return webauthn_unlock.begin_unseal()
+        except webauthn_unlock.WebAuthnUnlockError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post("/api/vault/webauthn/unseal/finish")
+    def vault_webauthn_unseal_finish(
+        body: WebAuthnUnsealFinishBody, request: Request
+    ) -> dict[str, Any]:
+        """Unwrap the master key from the authenticator PRF secret."""
+        _require_loopback(request, "webauthn unseal")
+        try:
+            master = webauthn_unlock.finish_unseal(
+                session_id=body.session_id,
+                credential_id=body.credential_id,
+                client_data_b64=body.client_data_b64,
+                authenticator_data_b64=body.authenticator_data_b64,
+                signature_b64=body.signature_b64,
+                extensions=body.extensions,
+            )
+            state_seal.activate_from_master_key(master)
+        except webauthn_unlock.WebAuthnUnlockError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except VaultCryptoError as exc:
+            raise HTTPException(status_code=401, detail=str(exc)) from exc
+        _audit_custody("webauthn_unseal", request, ok=True)
+        return _vault_status_payload()
+
+    @app.post("/api/vault/webauthn/clear")
+    def vault_webauthn_clear(request: Request) -> dict[str, Any]:
+        """Drop the passkey wrap file. Passphrase wrap is unchanged."""
+        _require_loopback(request, "webauthn clear")
+        _require_unsealed(state_seal, "webauthn clear")
+        webauthn_unlock.clear_registration()
+        _audit_custody("webauthn_clear", request, ok=True)
+        return _vault_status_payload()
 
     @app.post("/api/vault/lock")
     def vault_lock(request: Request) -> dict[str, Any]:
@@ -2789,7 +3167,7 @@ def create_app(
         _require_loopback(request, "vault lock")
         state_seal.lock()
         _audit_custody("vault_lock", request, ok=True)
-        return {"ok": True, **state_seal.status()}
+        return _vault_status_payload()
 
     @app.post("/api/vault/passphrase")
     def vault_set_passphrase(body: VaultPassphraseBody, request: Request) -> dict[str, Any]:
@@ -2801,7 +3179,7 @@ def create_app(
         except (VaultCryptoError, VaultSealedError) as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         _audit_custody("vault_passphrase_set", request, ok=True)
-        return {"ok": True, **state_seal.status()}
+        return _vault_status_payload()
 
     @app.post("/api/vault/backup/retire")
     def vault_retire_backup(body: BackupRetireBody, request: Request) -> dict[str, Any]:
@@ -2815,7 +3193,7 @@ def create_app(
         except VaultCryptoError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         _audit_custody("vault_backup_retired", request, ok=True)
-        return {"ok": True, **state_seal.status()}
+        return _vault_status_payload()
 
     @app.post("/api/apikeys")
     def apikeys_issue(body: ApiKeyIssueBody, request: Request) -> dict[str, Any]:
@@ -2826,15 +3204,23 @@ def create_app(
         credential this whole surface exists to require.
         """
         _require_loopback(request, "issue api key")
+        raw_pack = (body.pack_id or "").strip()
+        pack_name = parse_pack_id(body.pack_id)
+        if raw_pack and pack_name is None:
+            raise HTTPException(status_code=400, detail="unknown pack_id")
         try:
             record, token = state_api_keys.issue(label=body.label, tier=body.tier)
         except ApiKeyError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
+        pack = None
+        if pack_name is not None:
+            pack = apply_pack(record.key_id, pack_name, mode="simulate").to_dict()
         _audit_custody("api_key_issued", request, key_id=record.key_id, tier=record.tier)
         return {
             "ok": True,
             "key": record.to_dict(),
             "token": token,
+            "pack": pack,
             "warning": (
                 "This is the only time the token is shown. OpenVault stores only its "
                 "SHA-256, so it cannot be recovered — issue a new key if it is lost."
@@ -2847,6 +3233,22 @@ def create_app(
         _require_loopback(request, "list api keys")
         keys = state_api_keys.list_keys(include_revoked=include_revoked)
         return {"ok": True, "keys": [k.to_dict() for k in keys], "count": len(keys)}
+
+    @app.get("/api/keys/packs")
+    def keys_packs_get() -> dict[str, Any]:
+        """Experience pack catalog. Not hosting SKUs. Simulate checkout."""
+        return {"ok": True, **list_packs()}
+
+    @app.post("/api/keys/packs/simulate")
+    def keys_packs_simulate(body: RoutePackBody, request: Request) -> dict[str, Any]:
+        _require_loopback(request, "apply experience pack")
+        pack_name = parse_pack_id(body.pack_id)
+        if pack_name is None:
+            raise HTTPException(status_code=400, detail="unknown pack_id")
+        if state_api_keys.get(body.api_key_id.strip()) is None:
+            raise HTTPException(status_code=404, detail="api key not found")
+        balance = apply_pack(body.api_key_id.strip(), pack_name, mode="simulate")
+        return {"ok": True, "pack": balance.to_dict()}
 
     @app.delete("/api/apikeys/{key_id}")
     def apikeys_revoke(key_id: str, request: Request, reason: str = "") -> dict[str, Any]:
@@ -2927,6 +3329,21 @@ def create_app(
         identity, tier = caller.identity, caller.tier
         started_at = time.time()
         trace = HopTrace()
+        if caller.api_key_id:
+            usage_now = state_usage.summary(api_key_id=caller.api_key_id)
+            pack_gate = evaluate_pack(caller.api_key_id, int(usage_now.get("billable_tokens") or 0))
+            if not pack_gate.get("allowed"):
+                return JSONResponse(
+                    status_code=402,
+                    content={
+                        "error": {
+                            "message": pack_gate.get("message"),
+                            "type": pack_gate.get("error_type"),
+                            "next_steps": pack_gate.get("stuck_next_steps"),
+                            "remaining_usd_estimated": pack_gate.get("remaining_usd_estimated"),
+                        }
+                    },
+                )
 
         def _record_usage(
             *,
@@ -3068,9 +3485,51 @@ def create_app(
                 },
             )
 
-        status, result = await chat_completions(
-            state_vault, fallback, payload, trace=trace, tenant=identity
-        )
+        try:
+            status, result = await chat_completions(
+                state_vault, fallback, payload, trace=trace, tenant=identity
+            )
+        except VaultSealedError:
+            limiter.settle(
+                identity,
+                tier=tier,
+                reserved_tokens=decision.reserved_tokens,
+                actual_tokens=0,
+                reservation_id=decision.reservation_id,
+            )
+            trace.error_type = "openvault_vault_sealed"
+            _record_usage(status=403, total_tokens=0, estimated=False, stream=False)
+            return JSONResponse(
+                status_code=403,
+                content={
+                    "error": {
+                        "message": _VAULT_SEALED_DETAIL,
+                        "type": "openvault_vault_sealed",
+                    }
+                },
+                headers=rate_headers,
+            )
+        except Exception as exc:
+            log.exception("openvault_chat_unhandled")
+            limiter.settle(
+                identity,
+                tier=tier,
+                reserved_tokens=decision.reserved_tokens,
+                actual_tokens=0,
+                reservation_id=decision.reservation_id,
+            )
+            trace.error_type = type(exc).__name__
+            _record_usage(status=500, total_tokens=0, estimated=False, stream=False)
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "error": {
+                        "message": "OpenVault gateway error",
+                        "type": type(exc).__name__,
+                    }
+                },
+                headers=rate_headers,
+            )
         # Refund the reservation down to actual usage (0 on upstream failure).
         measured = usage_total_tokens(result) if 200 <= status < 300 else 0
         actual = decision.reserved_tokens if measured is None else measured

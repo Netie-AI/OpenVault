@@ -298,7 +298,8 @@ class UsageStore:
             "failed_requests": int(row["failed"]),
             # No price. Display SKUs live on the system control plane; usage
             # $/unit stays NEEDS-YOU so a number here cannot look measured.
-            # Currency is still USD (prefix + sign) even while the unit is unset.
+            # Experience packs (DR-0016) price estimated spend in route_packs,
+            # not in this ledger.
             "priced": False,
             "currency": CURRENCY_CODE,
             "currency_sign": CURRENCY_SIGN,

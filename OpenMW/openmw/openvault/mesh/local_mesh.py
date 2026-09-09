@@ -283,9 +283,10 @@ def announce_peer(
         hs.status = "approved"
         hs.note = "auto-approved loopback" if _is_loopback(base_url) else "auto-approved"
         peer.approved = True
-        peer.status = "approved"
-        if peer.last_seen is None:
+        if peer.status != "online":
             peer.detail = f"{peer.detail}; approved (offline until process starts)"
+        else:
+            peer.status = "approved"
     else:
         hs.status = "pending"
         peer.status = "pending_approve"
@@ -313,12 +314,20 @@ def decide_handshake(request_id: str, *, approve: bool, note: str = "") -> dict[
         peer.name = hs.name
         if approve:
             probe_peer(peer)
-            peer.status = "approved"
+            if peer.status == "online":
+                peer.status = "approved"
         else:
             peer.status = "rejected"
     state.handshakes[request_id] = hs
     save_mesh(state)
     return {"handshake": hs.to_dict(), "peer": peer.to_dict() if peer else None}
+
+
+def _rust_auth_ui(rust: Peer | None) -> str | None:
+    """Live #auth URL, or None. Never advertise a down sandbox as a UI."""
+    if rust is None or rust.status not in ("online", "approved"):
+        return None
+    return f"{rust.base_url.rstrip('/')}/#auth"
 
 
 def build_connect_pack(state: LocalMeshState | None = None) -> dict[str, Any]:
@@ -380,8 +389,10 @@ def build_connect_pack(state: LocalMeshState | None = None) -> dict[str, Any]:
         },
         "rust_console": {
             "base_url": rust.base_url if rust else "http://127.0.0.1:5055",
-            "auth_ui": rust.base_url if rust else "http://127.0.0.1:5055",
+            "auth_ui": _rust_auth_ui(rust),
             "status": rust.status if rust else "unknown",
+            "optional": True,
+            "role": "sandbox, not identity SoT (DR-0015)",
         },
         "env": {
             "CORTEX_URL": cortex.base_url if cortex else DEFAULT_CORTEX_URL,
@@ -441,6 +452,8 @@ def openide_invoke(
         }
     action = action.strip().lower()
     rust = state.peers.get("rust_console")
+    rust_ui = _rust_auth_ui(rust)
+    rust_status = rust.status if rust else "unknown"
     cortex_peer = state.peers.get("cortex")
     ov = state.peers["openvault"]
     if action == "complete_signin":
@@ -449,15 +462,16 @@ def openide_invoke(
             "action": action,
             "username": username,
             "instructions": [
-                "Open Rust auth UI or Python Accounts tab",
-                "Sign in with passkey on this laptop (default)",
+                "Open the OpenVault vault page and sign in with a passkey (DR-0017)",
+                "The optional Rust #auth sandbox is not identity SoT (DR-0015)",
                 "Vault secrets remain in OpenVault; Cortex uses /v1 via connect pack",
             ],
             "urls": {
-                "rust_auth": rust.base_url if rust else "http://127.0.0.1:5055",
+                "rust_auth": rust_ui,
                 "openvault": ov.base_url,
                 "cortex": cortex_peer.base_url if cortex_peer else DEFAULT_CORTEX_URL,
             },
+            "rust_console": {"status": rust_status, "optional": True},
             "payload": payload or {},
         }
     if action == "register_passkey":
@@ -465,8 +479,16 @@ def openide_invoke(
             "ok": True,
             "action": action,
             "username": username,
-            "open_url": f"{(rust.base_url if rust else 'http://127.0.0.1:5055')}/#auth",
-            "message": "Register laptop passkey under username; password stays argon2 backup",
+            "open_url": rust_ui,
+            "rust_console": {"status": rust_status, "optional": True},
+            "message": (
+                "Register laptop passkey under username; password stays argon2 backup"
+                if rust_ui
+                else (
+                    "Rust #auth is not running. "
+                    "Register a passkey on the OpenVault vault page (DR-0017)."
+                )
+            ),
         }
     if action == "push_selection_to_cortex":
         return {

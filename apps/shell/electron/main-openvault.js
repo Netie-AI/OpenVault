@@ -98,6 +98,49 @@ function setClipboardWatchEnabled(enabled) {
 //: failure is dropped on the floor, and nothing in apps/web subscribes to
 //: "server-status" anyway.
 const lastProcessExit = {};
+let pendingGrantPath = "";
+
+function grantPathFromArgv(argv) {
+  if (!Array.isArray(argv)) return "";
+  const raw = argv.find((a) => typeof a === "string" && /^openvault:/i.test(a.trim()));
+  if (!raw) return "";
+  try {
+    const u = new URL(raw.trim());
+    const host = (u.hostname || "").toLowerCase();
+    const parts = u.pathname.split("/").filter(Boolean);
+    if (host === "grant") {
+      const id = (u.pathname.replace(/^\//, "") || parts[0] || "").trim();
+      return id ? `/grant/${id}` : "";
+    }
+    if (parts[0] === "grant" && parts[1]) return `/grant/${parts[1]}`;
+  } catch {
+    return "";
+  }
+  return "";
+}
+
+function registerOpenVaultProtocol() {
+  if (process.defaultApp) {
+    if (process.argv.length >= 2) {
+      app.setAsDefaultProtocolClient("openvault", process.execPath, [
+        path.resolve(process.argv[1]),
+      ]);
+    }
+  } else {
+    app.setAsDefaultProtocolClient("openvault");
+  }
+}
+
+function showGrant(grantPath) {
+  if (!grantPath) return;
+  pendingGrantPath = grantPath;
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.show();
+    mainWindow.focus();
+    mainWindow.loadURL(WEB_URL + grantPath);
+  }
+}
 
 function sendToRenderer(channel, data) {
   if (mainWindow && !mainWindow.isDestroyed()) {
@@ -262,8 +305,33 @@ function setupContentSecurityPolicy() {
       responseHeaders: {
         ...details.responseHeaders,
         "Content-Security-Policy": [csp],
+        "Permissions-Policy": [
+          "publickey-credentials-get=(self), publickey-credentials-create=(self)",
+        ],
       },
     });
+  });
+}
+
+function setupWebAuthnPermissions() {
+  session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback) => {
+    if (
+      permission === "publickey-credentials-get" ||
+      permission === "publickey-credentials-create"
+    ) {
+      callback(true);
+      return;
+    }
+    callback(true);
+  });
+  session.defaultSession.setPermissionCheckHandler((_webContents, permission) => {
+    if (
+      permission === "publickey-credentials-get" ||
+      permission === "publickey-credentials-create"
+    ) {
+      return true;
+    }
+    return true;
   });
 }
 
@@ -293,9 +361,11 @@ function createWindow() {
     ...platformWindowOptions,
   });
 
-  mainWindow.loadURL(WEB_URL);
+  const startPath = pendingGrantPath || "";
+  pendingGrantPath = "";
+  mainWindow.loadURL(WEB_URL + startPath);
 
-  if (isDev) {
+  if (process.env.OPENVAULT_DEVTOOLS === "1") {
     mainWindow.webContents.openDevTools({ mode: "detach" });
   }
 
@@ -427,7 +497,8 @@ function setupIpcHandlers() {
   }));
 }
 
-app.on("second-instance", () => {
+app.on("second-instance", (_event, commandLine) => {
+  showGrant(grantPathFromArgv(commandLine));
   if (mainWindow) {
     if (mainWindow.isMinimized()) mainWindow.restore();
     mainWindow.show();
@@ -435,8 +506,16 @@ app.on("second-instance", () => {
   }
 });
 
+app.on("open-url", (event, url) => {
+  event.preventDefault();
+  showGrant(grantPathFromArgv([url]));
+});
+
 app.whenReady().then(async () => {
+  registerOpenVaultProtocol();
+  pendingGrantPath = grantPathFromArgv(process.argv) || pendingGrantPath;
   setupContentSecurityPolicy();
+  setupWebAuthnPermissions();
   setupIpcHandlers();
 
   startApiServer();

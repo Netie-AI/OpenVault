@@ -109,6 +109,11 @@ def test_connect_pack_pins_openide_to_airgpt(app: FastAPI) -> None:
     assert pack["cortex"]["crew"].endswith("/api/crew")
     assert pack["netie_kb"]["base_url"] == "http://127.0.0.1:8030"
     assert pack["constructor"]["repo"].endswith("/constructor")
+    rust = pack["rust_console"]
+    assert rust["optional"] is True
+    assert "status" in rust
+    if rust["status"] not in ("online", "approved"):
+        assert rust["auth_ui"] is None
 
 
 @pytest.mark.parametrize("flag", ["bypass", "bypass_gate", "force", "skip_rules", "ignore_gate"])
@@ -184,3 +189,5 @@ def test_product_roles_openvault_does_not_run_the_loop() -> None:
     assert "Running the agent loop itself" in text
     assert "Brains / architecture / MoE / agent loop" in text
     assert "Keys / where-is-it / connect / deploy / host / gate" in text
+    assert "irreversible identity" in text
+    assert "not a second identity SoT" in text

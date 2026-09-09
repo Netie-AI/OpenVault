@@ -39,6 +39,7 @@ assert.equal(isLocalOnlyPath("/ov-api/api/keys"), true);
 assert.equal(isLocalOnlyPath("/ov-api/api/keys/abc123/secret"), true);
 assert.equal(isLocalOnlyPath("/ov-api/api/secrets"), true);
 assert.equal(isLocalOnlyPath("/ov-api/api/vault/unseal"), true);
+assert.equal(isLocalOnlyPath("/ov-api/api/vault/webauthn/unseal/begin"), true);
 assert.equal(isLocalOnlyPath("/ov-api/api/apikeys"), true);
 assert.equal(isLocalOnlyPath("/ov-api/api/usage"), true);
 assert.equal(isLocalOnlyPath("/api/keys"), true);

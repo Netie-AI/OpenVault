@@ -85,7 +85,7 @@ Cortex thinks; OpenVault knows location + keys + “may this leave / deploy?”
 ## Ownership locks
 
 1. **Keys SoT** = OpenVault encrypted vault (`openmw console` / `/api/keys*`). AirGPT `env.local` and Netie `user.env` are at most offline caches synced from OpenVault — never a second vault.
-   **Passwords and payment cards** live in the same vault under `/api/secrets*` (`vault/secrets.py`) — same `keys.db`, same master key, same reveal gate. Cards never leave OpenVault: no shell caches a PAN to disk, and CVV is never stored at all. See [`docs/SECRETS_CUSTODY.md`](docs/SECRETS_CUSTODY.md).
+   **Passwords, payment cards, irreversible identity (NRIC/passport/licence/tax id), and 2FA recovery codes** live in the same vault under `/api/secrets*` (`vault/secrets.py`) — same `keys.db`, same master key, same reveal gate. Cards never leave OpenVault: no shell caches a PAN to disk, and CVV is never stored at all. Name, address, phone, email, and DOB stay in Cortex memory / profile so unattended fill does not unseal the vault. See [`docs/SECRETS_CUSTODY.md`](docs/SECRETS_CUSTODY.md) and [`docs/decisions/DR-0015-what-belongs-in-the-vault.md`](docs/decisions/DR-0015-what-belongs-in-the-vault.md). The optional Rust console on `:5055` is a sandbox, not a second identity SoT.
 2. **Architecture preset SoT** = Cortex (`architecture_preset` on engine config). OpenVault may persist *model slot* preferences (`/api/orchestration/selection`) but does not pick DAG vs LangGraph.
 3. **Deploy / leave-machine gate** = OpenVault. Cortex/AirGPT/FreeIDE request; OpenVault allows or denies.
 4. **Coding expert activation** = FreeIDE asks Cortex; FreeIDE does not host deploy console UX.

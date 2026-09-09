@@ -224,3 +224,18 @@ export function fetchOpenFreeBudget(signal?: AbortSignal): Promise<OpenFreeBudge
     query: { identity: "local", tier: "free" },
   });
 }
+
+/** Prepaid mixed-hop credit. Not hosting SKUs. Simulate checkout only. */
+export interface RoutePack {
+  id: string;
+  price_usd: number;
+  api_credit_usd: number;
+  title: string;
+  detail: string;
+}
+
+export function listRoutePacks(signal?: AbortSignal): Promise<RoutePack[]> {
+  return apiGet<{ packs?: RoutePack[] }>("/api/keys/packs", { signal }).then(
+    (data) => data.packs ?? [],
+  );
+}

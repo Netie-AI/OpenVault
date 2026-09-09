@@ -2,6 +2,133 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-09-07 - Renumber packs/passkeys off main DR-0013/DR-0014
+
+- `main` already shipped DR-0013 (locked display SKUs) and DR-0014 (JWKS pin).
+- This branch remaps unpublished experience packs to DR-0016 and passkey unseal
+  to DR-0017. IDs are never reused. DR-0015 vault line is unchanged.
+
+## 2026-09-07 - DR-0015 accepted; mesh stops advertising a down rust #auth
+
+- Vault line accepted: irreversible IDs and 2FA recovery codes live in OpenVault;
+  name/address/phone/email/DOB stay in Cortex memory. Rust console stays an
+  optional sandbox. Python `accounts` are not moved into it. Phone-verify stays
+  off. Pointer `DR-0004` Ask 3 stays blocked.
+- Connect-pack `rust_console.auth_ui` is null unless the last probe is
+  `online`/`approved`. `register_passkey` no longer hands out `:5055/#auth`
+  when the process is down. Handshake no longer stamps `approved` over `offline`.
+- Tests: `OpenMW/tests/test_local_mesh.py` rust auth_ui cases;
+  `tests/test_recovery_codes_identity.py` still the identity gate.
+
+## 2026-09-07 - Sealed home pack for another laptop you own (F31)
+
+- `openvault home pack` / `home unpack`: zip of `OPENVAULT_HOME` as it sits on
+  disk. No decrypt. No CSV. Refuses DPAPI, plain wrap, and `master.key.v0.bak`.
+  Skips `import/` staging. Passkey unseal stays on the source box.
+- Tests: `OpenMW/tests/test_vault_home_pack.py`. Not cloud containers, not
+  Control-hosted Cortex, not SSH.
+
+## 2026-09-07 - Board empty: #48 already on main
+
+- GitHub OPEN count is 0. Control-plane ticket #48 CLOSED after PR #49
+  squash-merge (`3ddcb014` on `origin/main`): entitlements / routing / unlock /
+  metering / seats, locked USD display tiers, usage $/unit stays NEEDS-YOU.
+  Not this branch. Do not rebuild.
+
+## 2026-09-07 - HT1-HT5 boxes ticked; human-gate clerk rule
+
+- Epic #18 was already CLOSED 2026-09-04 with founder evidence. Empty `[ ] HT`
+  boxes on the issue body made the board look unfinished. Boxes now `[x]`.
+- Standing rule: HUMAN_TEST_GATES are human-only to perform, agent duty to
+  record. When the founder walks a gate, tick GitHub + `STATUS.md` same turn.
+  Do not tick from pytest/simulate. Do not rebuild CLEARED gates.
+- Law: `.cursor/rules/human-test-gates.mdc`, `CLAUDE.md`, Netie
+  `AGENT_SYSTEM.md` + `DOCUMENT_SYSTEM.md`.
+
+## 2026-09-06 - Rust console assessed (DR-0015 still proposed)
+
+- `OpenMW/rust/openvault-console`: cargo 1.97.1, `cargo test` 2 passed, release
+  exe exists on this machine (gitignored). It is a second accounts+secrets
+  store (`rust-auth.db`) with a demo passkey that mints `demo_private_key`.
+  Not identity SoT. Python WebAuthn unseal (DR-0017) stays the real path.
+- Mesh still advertises `:5055/#auth` when the process is down. Founder call
+  stays in DR-0015 Open; do not move Python `accounts` into the crate.
+
+## 2026-09-06 - The app-grant pairing code is real (KB A-0009)
+
+- **Was decorative:** `decide_grant()` rendered a code nothing compared, so the
+  only gates on approving a grant were loopback and a client-supplied header.
+  `docs/SECRETS_CUSTODY.md` already said loopback does not separate processes,
+  which means any process running as the user could approve any other app's
+  grant and collect the `ov_` token.
+- **Now:** `decide_grant(..., user_code=...)` compares with
+  `hmac.compare_digest`. `POST /api/local/grants/{id}/decide` takes `user_code`;
+  wrong or missing is **403 refused**, not a warning, and audits as
+  `app_grant_code_refused`. Five wrong codes burn the grant.
+- **The code leaves once:** only `POST /api/local/grants` returns it, to the app
+  that asked. `GET /api/local/grants` and `GET /api/local/grants/{id}` no longer
+  carry it, so a second local process cannot read it back and replay it. The
+  `/grant/<id>` screen now asks the human to type it instead of displaying it.
+- **Not this:** peer-process identity. A hostile process as the user still reads
+  `master.key` off disk. Named pipe / Unix socket is still the real fix.
+- **Tests:** `OpenMW/tests/test_app_grants.py` - 11 passing, six of them
+  negative (no code, wrong code, wrong-code deny, second loopback client with
+  byte-identical headers, brute-force burn, non-ASCII code). All six fail if the
+  compare is removed.
+
+## 2026-09-05 - Passkeys unseal the vault (DR-0017, F22)
+
+- **Windows Hello / Face ID / fingerprint**, plus optional **iPhone** (hybrid
+  QR / nearby). Second wrap of the live master key under the authenticator PRF
+  (`OPENVAULT_HOME/webauthn_unlock.json`). Passphrase wrap on disk stays backup.
+- **Loopback APIs:** `POST /api/vault/webauthn/register/{begin,finish}`,
+  `POST /api/vault/webauthn/unseal/{begin,finish}`, `POST /api/vault/webauthn/clear`.
+  Register requires an open vault. Unseal-with-passkey works while sealed.
+- **UI:** `/vault` SecretsPanel. Hidden when `PublicKeyCredential` is missing.
+  Electron + Next send `Permissions-Policy` for WebAuthn.
+- **Not this:** browser autofill, login-agent, iCloud dump (F18 + PRD §3).
+  Agents still use `openvault secret get` after the vault is open.
+- **Tests:** `OpenMW/tests/test_webauthn_unlock.py` (PRF wrap + crafted ES256;
+  no live Hello in CI). GitHub has no open tickets.
+
+## 2026-09-05 - FreeRoute 500 was decrypt, not "no keys"
+
+- **Symptom:** loopback `POST /v1/chat/completions` returned plain
+  `Internal Server Error`. `GET /api/keys/{id}/secret` 500d the same way.
+  Usage ledger wrote nothing. Live listener was a worktree console with
+  `--mock-health` and `cortex_url` on Constructor `:8010`.
+- **Fix:** hop walk catches `VaultCryptoError` and skips that key.
+  Reveal returns 409. Chat maps remaining exceptions to JSON 500 with a
+  type. `Start-NetieStack.ps1` pins OpenVault to engine `:8011` when `:8010`
+  is Constructor. Canonical console is `D:\OpenVault` on `:5000`.
+- **Not this:** auto-unseal. Passphrase wrap still starts sealed.
+
+## 2026-09-04 - Desktop app + loopback Grant (F20)
+
+- **Open like an app:** `scripts/windows/Start-OpenVaultApp.bat` +
+  `Install-OpenVaultDesktopShortcut.ps1` (Desktop + Start Menu). Electron still
+  runs `next dev` so this repo's UI changes reload. DevTools only if
+  `OPENVAULT_DEVTOOLS=1`. Protocol `openvault://grant/<id>` focuses the window.
+- **Other local app gets a key:** `POST /api/local/grants` then human Grant on
+  `/grant/<id>`. The app polls once for the `ov_` token (never written to
+  disk). CLI: `openvault grant request --client MyApp`. Loopback only.
+- **Not this:** passkeys, browser autofill, login-agent, LAN/SaaS embed (F13).
+  Agents already retrieve keys/passwords with `openvault secret get` (never cards).
+
+## 2026-09-04 - Experience packs $10/$30/$100/$500 (DR-0016, F14/F19)
+
+- **Founder pick for STATUS pricing:** prepaid mixed-hop credit on pooled keys
+  (DR-0009 a), not hosting SKUs (`ov_hosted` $24 / `ov_fast` $79 / `byo_*` $9)
+  and not a 1% skim invoice. Starter $10 (~$8 credit), then $30/$100/$500.
+- **`vault/route_packs.py`:** estimated spend = billable tokens *
+  `OPENVAULT_BLEND_USD_PER_1M` (default 0.20), labeled estimated. Exhausted
+  pack -> HTTP 402 `openvault_pack_exhausted` with Register / Install / BYOK
+  next-steps. No pack on an `ov_` key keeps existing rate limits. Loopback
+  stays free. Checkout is simulate; no live pack price ids.
+- **Surfaces:** `GET /api/keys/packs`, `POST /api/keys/packs/simulate`,
+  optional `pack_id` on `POST /api/apikeys`. `/keys` subscribe names prices
+  without hop-vendor strings.
+- **Tests:** `OpenMW/tests/test_route_packs.py` plus subscribe copy lock.
 ## 2026-09-07 - #52 VPC allowlist for POST /keys/services (not public :5000)
 
 - **Scoped helper, not a widened loopback gate.** `POST /keys/services` now

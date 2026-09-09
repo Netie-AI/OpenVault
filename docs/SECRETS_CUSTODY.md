@@ -237,6 +237,26 @@ security-code columns are stripped with an explicit reason and never stored.
 Empty passwords are skipped. Synthetic fixtures only in git — never commit a
 real dump. No scraping Google/iCloud. No autofill.
 
+### Another laptop you own (`openvault home pack`)
+
+Not CSV. Not a cloud export. Not decrypt. Copies the **already sealed**
+`OPENVAULT_HOME` into a zip (`openvault-home.ovpack.zip`).
+
+- Allowed only when `master.key` is `passphrase-scrypt` and `master.key.v0.bak`
+  is gone.
+- DPAPI / plain wrap is refused (that pair is this Windows user only).
+- `import/` staging is left out (those files are plaintext).
+- Windows Hello / iPhone passkey does **not** travel. Unseal on laptop 2 with
+  the same passphrase, then register a passkey on that box.
+
+```
+python apps/cli/openvault_cli.py home pack --out D:\openvault-home.ovpack.zip
+python apps/cli/openvault_cli.py home unpack D:\openvault-home.ovpack.zip --to C:\Users\You\.openvault
+```
+
+Then on laptop 2: clone this repo, `cd OpenMW && uv sync`, npm in `apps/web`,
+`OPENVAULT_HOME` = the unpacked folder, `openvault up`, unseal.
+
 ---
 
 ## 4. Netie Space retrieve contract
@@ -298,6 +318,23 @@ Loopback HTTP, no TLS, no auth. What it does and does not buy:
 Next step if this needs to be real: a Windows named pipe or a Unix socket
 instead of a TCP port, which gets peer-process identity for free. TLS on
 loopback would encrypt a channel that is not the weak part.
+
+### 4.1a App grants: the pairing code is the process boundary
+
+`POST /api/local/grants/{id}/decide` used to need only loopback plus
+`{"approve": true}`, so any process on the box could approve any other app's
+grant and take the `ov_` token. The grant now mints a pairing code that is
+returned **once**, to the app that asked, and the decision must carry it back
+(`hmac.compare_digest`, so a rejected guess does not report how much of the
+code was right). `GET /api/local/grants` and `GET /api/local/grants/{id}` no
+longer include the code -- if they did, a second process would just read it and
+replay it. Five wrong codes burn the grant, because 4 hex characters is 65536
+guesses and loopback rate-limits nothing.
+
+What this does **not** fix: a hostile process running as the user still reads
+`master.key` and `keys.db` off disk, and can still start grants of its own that
+the human might approve. The code binds *which asking process an approval
+belongs to*. It is not a sandbox. See KB `A-0009`.
 
 ### 4.2 Netie's offline cache is plaintext, not DPAPI
 

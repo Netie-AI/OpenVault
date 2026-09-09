@@ -51,6 +51,7 @@ import {
 } from "@/lib/vault/registerIntent";
 import { KeyHealthSpark } from "@/components/vault/KeyHealthSpark";
 import { SecretsPanel } from "@/components/vault/SecretsPanel";
+import { VaultSealBar } from "@/components/vault/VaultSealBar";
 import { AddKeyDialog } from "./AddKeyDialog";
 
 const ROLE_BLURB: Record<KeyRole, string> = {
@@ -87,6 +88,7 @@ export default function VaultPage() {
   const [coverage, setCoverage] = useState<CoverageReport | null>(null);
   const [budget, setBudget] = useState<OpenFreeBudget | null>(null);
   const [healthById, setHealthById] = useState<Record<string, KeyHealth>>({});
+  const [vaultSealed, setVaultSealed] = useState(true);
 
   const refresh = useCallback(async () => {
     setKeys(await listKeys());
@@ -270,6 +272,8 @@ export default function VaultPage() {
         description="Every key, encrypted at rest and tested against its provider."
       />
 
+      <VaultSealBar onStatus={(st) => setVaultSealed(st.sealed)} />
+
       {budget ? (
         <div
           data-glass
@@ -380,7 +384,7 @@ export default function VaultPage() {
             providerNames={providerNames}
           />
           <div className="flex flex-wrap items-center justify-center gap-2">
-            <Button variant="outline" onClick={() => openAdd()}>
+            <Button variant="outline" onClick={() => openAdd()} disabled={vaultSealed}>
               Type a key instead
             </Button>
           </div>
@@ -399,7 +403,7 @@ export default function VaultPage() {
             providerNames={providerNames}
           />
           <div className="flex flex-wrap items-center gap-2">
-            <Button onClick={() => openAdd()}>Add key</Button>
+            <Button onClick={() => openAdd()} disabled={vaultSealed}>Add key</Button>
             <Button
               variant="outline"
               onClick={() => void run("all", precheckAll, "All keys tested")}
@@ -621,7 +625,7 @@ export default function VaultPage() {
           })}
       </div>
 
-      <SecretsPanel />
+      <SecretsPanel sealed={vaultSealed} />
 
       <AddKeyDialog
         isOpen={addOpen}

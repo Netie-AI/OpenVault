@@ -10,6 +10,7 @@ from typing import cast
 import httpx
 import structlog
 
+from openmw.openvault.vault.crypto import VaultCryptoError, VaultSealedError
 from openmw.openvault.vault.health_store import HealthStore, HistoryStatus
 from openmw.openvault.vault.store import KeyRecord, KeyVault, PrecheckStatus
 
@@ -153,7 +154,13 @@ async def precheck_one(vault: KeyVault, key_id: str) -> PrecheckResult:
             error="key not found",
         )
         return PrecheckResult(key_id, "error", None, "key not found")
-    secret = vault.get_secret(key_id)
+    try:
+        secret = vault.get_secret(key_id)
+    except VaultSealedError:
+        return PrecheckResult(key_id, "error", None, "vault sealed")
+    except VaultCryptoError:
+        log.warning("openvault_precheck_decrypt_failed", key_ref=_key_ref(key_id))
+        return PrecheckResult(key_id, "error", None, "decrypt failed")
     if secret is None:
         log.info(
             "openvault_precheck",

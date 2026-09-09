@@ -236,3 +236,59 @@ def test_proxy_auto_does_not_skip_openai_for_empty_catalog(vault: KeyVault) -> N
     assert posted is not None
     assert posted.kwargs["json"]["model"] == "gpt-5.6-sol"
     assert "no catalogued model" not in str(payload)
+
+
+def test_corrupt_secret_skips_to_next_hop(vault: KeyVault) -> None:
+    """A blob the live Fernet cannot open used to 500 the whole gateway."""
+    import asyncio
+
+    bad = vault.create(
+        label="broken-groq",
+        provider="groq",
+        secret="gsk-test-broken",
+        role="primary",
+        priority=1,
+    )
+    good = vault.create(
+        label="backup-groq",
+        provider="groq",
+        secret="gsk-test-good",
+        role="backup",
+        priority=1,
+        base_url="https://api.groq.com/openai/v1",
+    )
+    with vault._connect() as conn:
+        conn.execute(
+            "UPDATE keys SET secret_blob = ? WHERE id = ?",
+            (b"not-a-fernet-token", bad.id),
+        )
+        conn.commit()
+    vault.set_precheck(bad.id, status="ok", latency_ms=10.0, error=None)
+    vault.set_precheck(good.id, status="ok", latency_ms=10.0, error=None)
+    mgr = FallbackManager(vault)
+
+    resp_ok = MagicMock()
+    resp_ok.status_code = 200
+    resp_ok.text = '{"id":"chatcmpl-skip"}'
+    resp_ok.headers = {}
+    resp_ok.json = MagicMock(return_value={"id": "chatcmpl-skip", "choices": []})
+
+    mock_client = MagicMock()
+    mock_client.post = AsyncMock(return_value=resp_ok)
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=None)
+
+    with patch("openmw.openvault.vault.proxy.httpx.AsyncClient", return_value=mock_client):
+        status, payload = asyncio.run(
+            chat_completions(
+                vault,
+                mgr,
+                {"model": "auto", "messages": [{"role": "user", "content": "hi"}]},
+            )
+        )
+
+    assert status == 200
+    assert payload.get("id") == "chatcmpl-skip"
+    mock_client.post.assert_awaited_once()
+    posted = mock_client.post.await_args
+    assert posted.kwargs["headers"]["Authorization"] == "Bearer gsk-test-good"

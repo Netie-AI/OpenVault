@@ -93,6 +93,19 @@ if (-not (Test-HttpOk "$CortexUrl/health")) {
   Write-Host "==> Cortex already healthy" -ForegroundColor Green
 }
 [void](Wait-HttpOk "$CortexUrl/health" 90 "Cortex")
+# Constructor also serves /health on :8010. FreeRoute and Pointer /dms/secure need the engine.
+try {
+  $health = Invoke-RestMethod -Uri "$CortexUrl/health" -TimeoutSec 2
+  if ($health.surface -eq "constructor") {
+    $engineUrl = "http://127.0.0.1:8011"
+    if (Test-HttpOk "$engineUrl/health") {
+      Write-Host "==> :$CortexPort is Constructor; pinning cortex_url to engine :8011" -ForegroundColor Yellow
+      $CortexUrl = $engineUrl
+      $env:CORTEX_URL = $CortexUrl
+      $env:CORTEX_API_URL = $CortexUrl
+    }
+  }
+} catch { }
 
 # --- 2) OpenVault :5000 (always on OPENVAULT_HOME above) ---
 function Stop-OpenVaultConsole {

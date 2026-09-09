@@ -9,6 +9,7 @@ from cryptography.fernet import Fernet
 from fastapi.testclient import TestClient
 
 from openmw.openvault.app import create_app
+from openmw.openvault.mesh import local_mesh as mesh
 from openmw.openvault.vault.crypto import Seal
 from openmw.openvault.vault.store import KeyVault
 
@@ -108,6 +109,47 @@ def test_handshake_decide_reject(client: TestClient) -> None:
     )
     assert decided.status_code == 200
     assert decided.json()["handshake"]["status"] == "rejected"
+
+
+def test_connect_pack_hides_rust_auth_ui_when_offline(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("OPENVAULT_HOME", str(tmp_path / "ovhome"))
+    state = mesh.default_mesh()
+    rust = state.peers["rust_console"]
+    rust.status = "offline"
+    rust.detail = "unreachable"
+    pack = mesh.build_connect_pack(state)
+    assert pack["rust_console"]["status"] == "offline"
+    assert pack["rust_console"]["auth_ui"] is None
+    assert pack["rust_console"]["optional"] is True
+
+
+def test_connect_pack_names_rust_auth_ui_when_online(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("OPENVAULT_HOME", str(tmp_path / "ovhome"))
+    state = mesh.default_mesh()
+    rust = state.peers["rust_console"]
+    rust.status = "online"
+    pack = mesh.build_connect_pack(state)
+    assert pack["rust_console"]["auth_ui"] == f"{rust.base_url.rstrip('/')}/#auth"
+    assert pack["rust_console"]["optional"] is True
+
+
+def test_register_passkey_omits_hash_auth_when_rust_offline(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("OPENVAULT_HOME", str(tmp_path / "ovhome"))
+    state = mesh.default_mesh()
+    state.peers["openide"].approved = True
+    state.peers["openide"].status = "online"
+    state.peers["rust_console"].status = "offline"
+    monkeypatch.setattr(mesh, "refresh_mesh", lambda: state)
+    out = mesh.openide_invoke(action="register_passkey", username="acmeops")
+    assert out["ok"] is True
+    assert out["open_url"] is None
+    assert out["rust_console"]["status"] == "offline"
 
 
 def test_mesh_config_update(client: TestClient) -> None:

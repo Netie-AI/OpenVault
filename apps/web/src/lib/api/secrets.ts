@@ -73,6 +73,9 @@ export interface VaultStatus {
   passphrase_configured: boolean;
   wrap_method: string | null;
   plaintext_backup_present?: boolean;
+  webauthn_registered?: boolean;
+  webauthn_hybrid?: boolean;
+  rp_id?: string;
 }
 
 export async function listSecrets(

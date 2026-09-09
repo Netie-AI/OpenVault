@@ -93,6 +93,8 @@ def test_ts_and_webui_subscribe_copy_match_the_lock() -> None:
     assert POWERED_BY in webui_sub
     assert "Safety:" in webui_sub
     assert CORTEX_KEY_LABEL in ts
+    assert "$10" in webui_sub
+    assert "$8" in webui_sub
 
 
 def test_ui_copy_api(client: TestClient) -> None:
