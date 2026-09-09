@@ -497,12 +497,12 @@ def cmd_grant_request(args: argparse.Namespace) -> int:
     print(f"Open OpenVault and Grant. Code {started['user_code']}")
     print(started.get("approve_url") or "")
     if not args.no_open:
-        webbrowser.open(started.get("approve_url") or f"http://127.0.0.1:{WEB_PORT}/grant/{grant_id}")
+        webbrowser.open(
+            started.get("approve_url") or f"http://127.0.0.1:{WEB_PORT}/grant/{grant_id}"
+        )
     deadline = time.time() + max(15, int(args.timeout))
     while time.time() < deadline:
-        poll_code, body = _http_json(
-            "POST", f"{base.rstrip('/')}/api/local/grants/{grant_id}/poll"
-        )
+        poll_code, body = _http_json("POST", f"{base.rstrip('/')}/api/local/grants/{grant_id}/poll")
         status = str(body.get("status") or "")
         if poll_code == 200 and body.get("token"):
             print(json.dumps(body, indent=2))

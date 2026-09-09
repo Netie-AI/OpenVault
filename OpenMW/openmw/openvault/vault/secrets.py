@@ -28,6 +28,7 @@ PCI posture, stated plainly because it constrains the whole module:
 
 from __future__ import annotations
 
+import contextlib
 import json
 import re
 import sqlite3
@@ -153,17 +154,14 @@ def normalize_recovery_codes(raw: str | list[str]) -> list[str]:
     accident, and silently keeping it would overstate how many logins you have
     left - which is the one number this record exists to tell you.
     """
-    if isinstance(raw, str):
-        # ONE PER LINE, and nothing smarter. Splitting on whitespace looks more
-        # forgiving and is actively dangerous: providers print codes as
-        # "1234 5678", so a space-split turns every code into two codes that
-        # will never work AND doubles the count of logins you think you have.
-        # That failure is silent until you are locked out, which is the exact
-        # moment this record is for. A single-line paste instead stores one
-        # obviously-wrong code, which is visible immediately and recoverable.
-        tokens = raw.splitlines()
-    else:
-        tokens = [str(t) for t in (raw or [])]
+    # ONE PER LINE, and nothing smarter. Splitting on whitespace looks more
+    # forgiving and is actively dangerous: providers print codes as
+    # "1234 5678", so a space-split turns every code into two codes that
+    # will never work AND doubles the count of logins you think you have.
+    # That failure is silent until you are locked out, which is the exact
+    # moment this record is for. A single-line paste instead stores one
+    # obviously-wrong code, which is visible immediately and recoverable.
+    tokens = raw.splitlines() if isinstance(raw, str) else [str(t) for t in (raw or [])]
 
     codes: list[str] = []
     seen: set[str] = set()
@@ -553,10 +551,8 @@ class SecretStore:
             conn.execute("COMMIT")
             return cast(str, nxt["code"])
         except BaseException:
-            try:
+            with contextlib.suppress(sqlite3.Error):
                 conn.execute("ROLLBACK")
-            except sqlite3.Error:
-                pass
             raise
         finally:
             conn.close()

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import re
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -34,7 +36,7 @@ def _passphrase_home(tmp: Path) -> Path:
 def test_refuses_plaintext_bak(tmp_path: Path) -> None:
     mod = _load()
     home = _passphrase_home(tmp_path)
-    with pytest.raises(mod.PackError, match="master.key.v0.bak"):
+    with pytest.raises(mod.PackError, match=re.escape("master.key.v0.bak")):
         mod.pack_home(home, tmp_path / "out.zip")
 
 
@@ -76,16 +78,13 @@ def test_unpack_refuses_occupied_home(tmp_path: Path) -> None:
     dest = tmp_path / "taken"
     dest.mkdir()
     (dest / "keys.db").write_bytes(b"old")
-    with pytest.raises(mod.PackError, match="already has keys.db"):
+    with pytest.raises(mod.PackError, match=re.escape("already has keys.db")):
         mod.unpack_home(zpath, dest)
     mod.unpack_home(zpath, dest, force=True)
     assert (dest / "keys.db").read_bytes() == b"not-a-real-db"
 
 
 def test_unpack_refuses_zip_slip(tmp_path: Path) -> None:
-    import json
-    import zipfile
-
     mod = _load()
     zpath = tmp_path / "evil.zip"
     with zipfile.ZipFile(zpath, "w") as zf:

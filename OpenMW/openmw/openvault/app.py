@@ -1278,9 +1278,7 @@ def create_app(
         return {"ok": True, **row}
 
     @app.post("/api/local/grants/{grant_id}/decide")
-    def local_grants_decide(
-        grant_id: str, body: GrantDecision, request: Request
-    ) -> dict[str, Any]:
+    def local_grants_decide(grant_id: str, body: GrantDecision, request: Request) -> dict[str, Any]:
         # Loopback says "this machine", not "this process" -- so the pairing
         # code, not the gate above, is what binds this decision to the app that
         # asked (A-0009). A wrong or missing code is refused, never warned about.
@@ -1830,9 +1828,7 @@ def create_app(
         except VaultSealedError as exc:
             raise HTTPException(status_code=403, detail=_VAULT_SEALED_DETAIL) from exc
         except VaultCryptoError as exc:
-            raise HTTPException(
-                status_code=409, detail="unable to decrypt vault secret"
-            ) from exc
+            raise HTTPException(status_code=409, detail="unable to decrypt vault secret") from exc
         if secret is None:
             raise HTTPException(status_code=404, detail="key not found")
 
@@ -1923,7 +1919,10 @@ def create_app(
             # reason, never the input that failed.
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         _audit_custody(
-            "recovery_codes_create", request, secret_id=record.id, label=record.label,
+            "recovery_codes_create",
+            request,
+            secret_id=record.id,
+            label=record.label,
             total=record.codes_total,
         )
         return asdict(record)
@@ -2002,7 +2001,10 @@ def create_app(
         except SecretValidationError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         _audit_custody(
-            "identity_create", request, secret_id=record.id, label=record.label,
+            "identity_create",
+            request,
+            secret_id=record.id,
+            label=record.label,
             doc_type=record.doc_type,
         )
         return asdict(record)
@@ -2096,9 +2098,7 @@ def create_app(
         except VaultSealedError as exc:
             raise HTTPException(status_code=403, detail=_VAULT_SEALED_DETAIL) from exc
         except VaultCryptoError as exc:
-            raise HTTPException(
-                status_code=409, detail="unable to decrypt vault secret"
-            ) from exc
+            raise HTTPException(status_code=409, detail="unable to decrypt vault secret") from exc
         if plaintext is None:
             raise HTTPException(status_code=404, detail="secret not found")
 
@@ -3331,9 +3331,7 @@ def create_app(
         trace = HopTrace()
         if caller.api_key_id:
             usage_now = state_usage.summary(api_key_id=caller.api_key_id)
-            pack_gate = evaluate_pack(
-                caller.api_key_id, int(usage_now.get("billable_tokens") or 0)
-            )
+            pack_gate = evaluate_pack(caller.api_key_id, int(usage_now.get("billable_tokens") or 0))
             if not pack_gate.get("allowed"):
                 return JSONResponse(
                     status_code=402,
@@ -3342,9 +3340,7 @@ def create_app(
                             "message": pack_gate.get("message"),
                             "type": pack_gate.get("error_type"),
                             "next_steps": pack_gate.get("stuck_next_steps"),
-                            "remaining_usd_estimated": pack_gate.get(
-                                "remaining_usd_estimated"
-                            ),
+                            "remaining_usd_estimated": pack_gate.get("remaining_usd_estimated"),
                         }
                     },
                 )
@@ -3505,7 +3501,12 @@ def create_app(
             _record_usage(status=403, total_tokens=0, estimated=False, stream=False)
             return JSONResponse(
                 status_code=403,
-                content={"error": {"message": _VAULT_SEALED_DETAIL, "type": "openvault_vault_sealed"}},
+                content={
+                    "error": {
+                        "message": _VAULT_SEALED_DETAIL,
+                        "type": "openvault_vault_sealed",
+                    }
+                },
                 headers=rate_headers,
             )
         except Exception as exc:

@@ -52,6 +52,7 @@ def isolated_vault(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setenv("OPENVAULT_HOME", str(tmp_path))
     return tmp_path
 
+
 CODES = ["abcd-efgh", "ijkl-mnop", "qrst-uvwx"]
 IC_NUMBER = "900101-01-1234"
 PASSPORT = "A12345678"
@@ -64,8 +65,12 @@ def _client(host: str = "127.0.0.1") -> TestClient:
 def _make_codes(client: TestClient, codes=None, label: str = "Gmail backup codes") -> dict:
     res = client.post(
         "/api/secrets/recovery-codes",
-        json={"label": label, "codes": codes if codes is not None else CODES,
-              "username": "me@gmail.com", "url": "https://accounts.google.com"},
+        json={
+            "label": label,
+            "codes": codes if codes is not None else CODES,
+            "username": "me@gmail.com",
+            "url": "https://accounts.google.com",
+        },
     )
     assert res.status_code == 200, res.text
     return res.json()
@@ -145,7 +150,7 @@ def test_the_same_code_is_never_handed_out_twice() -> None:
 
 
 def test_an_exhausted_set_says_so_rather_than_404ing() -> None:
-    """"Not found" would read as "your codes are gone"; they are used up."""
+    """ "Not found" would read as "your codes are gone"; they are used up."""
     client = _client()
     record = _make_codes(client, codes=["only-one"])
     client.post(f"/api/secrets/{record['id']}/consume-code", headers=REVEAL_HEADER)
@@ -169,9 +174,7 @@ def test_reveal_refuses_a_code_set_and_names_the_right_route() -> None:
 
 def test_consuming_something_that_is_not_a_code_set_is_refused() -> None:
     client = _client()
-    pw = client.post(
-        "/api/secrets/passwords", json={"label": "Mail", "password": "hunter2"}
-    ).json()
+    pw = client.post("/api/secrets/passwords", json={"label": "Mail", "password": "hunter2"}).json()
     res = client.post(f"/api/secrets/{pw['id']}/consume-code", headers=REVEAL_HEADER)
     assert res.status_code == 409
     assert "not recovery codes" in res.json()["detail"]
@@ -191,7 +194,10 @@ def test_a_code_containing_a_space_survives_pasting() -> None:
     assert record["codes_total"] == 3, "a space inside a code is not a separator"
 
     got = {
-        client.post(f"/api/secrets/{record['id']}/consume-code", headers=REVEAL_HEADER).json()["code"]
+        client.post(
+            f"/api/secrets/{record['id']}/consume-code",
+            headers=REVEAL_HEADER,
+        ).json()["code"]
         for _ in range(3)
     }
     assert got == {"1234 5678", "8765 4321", "1111 2222"}
@@ -201,9 +207,9 @@ def test_a_numbered_list_loses_its_numbering_but_not_its_codes() -> None:
     client = _client()
     record = _make_codes(client, codes="1. abcd-efgh\n2) ijkl-mnop\n- qrst-uvwx")
     assert record["codes_total"] == 3
-    code = client.post(
-        f"/api/secrets/{record['id']}/consume-code", headers=REVEAL_HEADER
-    ).json()["code"]
+    code = client.post(f"/api/secrets/{record['id']}/consume-code", headers=REVEAL_HEADER).json()[
+        "code"
+    ]
     assert code == "abcd-efgh", "the list marker must not become part of the code"
 
 
@@ -232,7 +238,9 @@ def test_an_identity_number_is_masked_to_the_last_four() -> None:
     assert IC_NUMBER not in json.dumps(record)
 
 
-def test_an_identity_number_is_sealed_on_disk_and_absent_from_listing(tmp_path, monkeypatch) -> None:
+def test_an_identity_number_is_sealed_on_disk_and_absent_from_listing(
+    tmp_path, monkeypatch
+) -> None:
     monkeypatch.setenv("OPENVAULT_HOME", str(tmp_path))
     client = _client()
     _make_identity(client, PASSPORT, "passport")
@@ -273,12 +281,16 @@ def test_an_unknown_document_type_is_refused_by_the_schema() -> None:
 
 def test_the_new_write_routes_are_loopback_only() -> None:
     remote = _client(host="10.0.0.7")
-    assert remote.post(
-        "/api/secrets/recovery-codes", json={"label": "X", "codes": CODES}
-    ).status_code == 403
-    assert remote.post(
-        "/api/secrets/identity", json={"label": "X", "doc_type": "nric", "number": IC_NUMBER}
-    ).status_code == 403
+    assert (
+        remote.post("/api/secrets/recovery-codes", json={"label": "X", "codes": CODES}).status_code
+        == 403
+    )
+    assert (
+        remote.post(
+            "/api/secrets/identity", json={"label": "X", "doc_type": "nric", "number": IC_NUMBER}
+        ).status_code
+        == 403
+    )
 
 
 def test_consuming_a_code_needs_explicit_intent() -> None:
@@ -296,9 +308,9 @@ def test_consume_is_audited_by_count_and_never_by_code(tmp_path, monkeypatch) ->
     client = _client()
     record = _make_codes(client)
 
-    used = client.post(
-        f"/api/secrets/{record['id']}/consume-code", headers=REVEAL_HEADER
-    ).json()["code"]
+    used = client.post(f"/api/secrets/{record['id']}/consume-code", headers=REVEAL_HEADER).json()[
+        "code"
+    ]
 
     text = (tmp_path / "secret_audit.jsonl").read_text(encoding="utf-8")
     entry = json.loads(text.strip().splitlines()[-1])

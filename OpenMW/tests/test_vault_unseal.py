@@ -202,9 +202,7 @@ def test_unseal_lets_dms_mint_an_intermediate(
     assert opened.status_code == 200, opened.text
     assert opened.json()["sealed"] is False
 
-    registered = client.post(
-        "/keys/services", json={"service_id": "dms"}, headers=REVEAL_HEADER
-    )
+    registered = client.post("/keys/services", json={"service_id": "dms"}, headers=REVEAL_HEADER)
     assert registered.status_code == 200, registered.text
     token = registered.json()["token"]
     issued = client.post(

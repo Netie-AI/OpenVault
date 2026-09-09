@@ -13,10 +13,10 @@ import structlog
 from openmw.openvault.route.attempt import AttemptOutcome, classify_attempt
 from openmw.openvault.route.breaker import get_circuit_breaker
 from openmw.openvault.vault.budget import estimate_tokens_for_body, prepare_hop_body
+from openmw.openvault.vault.crypto import VaultCryptoError, VaultSealedError
 from openmw.openvault.vault.fallback import FallbackManager
 from openmw.openvault.vault.precheck import _default_base_url
 from openmw.openvault.vault.providers import get_provider, resolve_model
-from openmw.openvault.vault.crypto import VaultCryptoError, VaultSealedError
 from openmw.openvault.vault.store import KeyRecord, KeyVault
 from openmw.openvault.vault.usage_store import HopTrace
 

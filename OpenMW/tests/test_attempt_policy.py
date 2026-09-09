@@ -258,7 +258,10 @@ def test_corrupt_secret_skips_to_next_hop(vault: KeyVault) -> None:
         base_url="https://api.groq.com/openai/v1",
     )
     with vault._connect() as conn:
-        conn.execute("UPDATE keys SET secret_blob = ? WHERE id = ?", (b"not-a-fernet-token", bad.id))
+        conn.execute(
+            "UPDATE keys SET secret_blob = ? WHERE id = ?",
+            (b"not-a-fernet-token", bad.id),
+        )
         conn.commit()
     vault.set_precheck(bad.id, status="ok", latency_ms=10.0, error=None)
     vault.set_precheck(good.id, status="ok", latency_ms=10.0, error=None)

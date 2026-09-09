@@ -51,9 +51,7 @@ def _skip(rel: Path) -> bool:
         return True
     if rel.name in SKIP_FILE_NAMES or rel.name.endswith(".bak"):
         return True
-    if rel.suffix in {".pyc", ".log"}:
-        return True
-    return False
+    return rel.suffix in {".pyc", ".log"}
 
 
 def assert_packable(home: Path) -> str:
@@ -62,9 +60,7 @@ def assert_packable(home: Path) -> str:
         raise PackError(f"OPENVAULT_HOME is missing: {home}")
     bak = home / BAK_NAME
     if bak.is_file():
-        raise PackError(
-            f"refuse: {BAK_NAME} is a plaintext master key. Retire it on /vault first."
-        )
+        raise PackError(f"refuse: {BAK_NAME} is a plaintext master key. Retire it on /vault first.")
     key_path = home / "master.key"
     if not key_path.is_file():
         raise PackError(f"refuse: no master.key under {home}")

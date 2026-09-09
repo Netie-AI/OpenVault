@@ -484,7 +484,10 @@ def openide_invoke(
             "message": (
                 "Register laptop passkey under username; password stays argon2 backup"
                 if rust_ui
-                else "Rust #auth is not running. Register a passkey on the OpenVault vault page (DR-0017)."
+                else (
+                    "Rust #auth is not running. "
+                    "Register a passkey on the OpenVault vault page (DR-0017)."
+                )
             ),
         }
     if action == "push_selection_to_cortex":
