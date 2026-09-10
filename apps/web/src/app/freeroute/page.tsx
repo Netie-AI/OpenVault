@@ -107,10 +107,10 @@ export default function FreeRoutePage() {
         )}
         <div className="mt-4 flex flex-wrap gap-2">
           <Button asChild size="sm">
-            <Link href="/tool/register">Register a free provider</Link>
+            <Link href="/keys#free">Get free keys</Link>
           </Button>
           <Button asChild size="sm" variant="outline">
-            <Link href="/keys#free">Install a key</Link>
+            <Link href="/tool/register?provider=groq">Register Groq</Link>
           </Button>
           <Button asChild size="sm" variant="outline">
             <Link href="/system">Control plane</Link>

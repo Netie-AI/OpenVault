@@ -66,6 +66,7 @@ export interface EnvCandidate {
   provider: string;
   known: boolean;
   masked: string;
+  store?: "keys" | "secrets";
 }
 
 export async function listKeys(signal?: AbortSignal): Promise<KeyRow[]> {
@@ -132,7 +133,11 @@ export function rotateKey(id: string, newSecret: string): Promise<KeyRow> {
 }
 
 /** Probes the provider for real, so it is slow and must never block a render. */
-export function precheckKey(id: string): Promise<{ status: PrecheckStatus; detail?: string }> {
+export function precheckKey(id: string): Promise<{
+  status: PrecheckStatus;
+  detail?: string;
+  error?: string | null;
+}> {
   return apiPost(`/api/keys/${id}/precheck`, undefined, { timeoutMs: LONG_TIMEOUT_MS });
 }
 
@@ -185,12 +190,40 @@ export async function scanEnv(signal?: AbortSignal): Promise<EnvCandidate[]> {
   return data.candidates ?? [];
 }
 
+export interface IngestEnvResult {
+  ok?: boolean;
+  dry_run?: boolean;
+  scanned?: number;
+  imported?: number;
+  passwords_imported?: number;
+  results?: Array<{
+    env_key?: string;
+    provider?: string;
+    action?: string;
+    ok?: boolean;
+    masked?: string;
+    store?: string;
+    error?: string;
+  }>;
+}
+
 /**
  * Import environment secrets. Defaults to a dry run server-side, so the
  * caller must opt in to writing — pass `false` only from a click.
  */
-export function ingestEnv(dryRun = true): Promise<{ imported?: number; count?: number }> {
-  return apiPost("/api/vault/ingest-env", { dry_run: dryRun }, { timeoutMs: LONG_TIMEOUT_MS });
+export function ingestEnv(
+  dryRun = true,
+  opts?: { envText?: string; includeUnknown?: boolean },
+): Promise<IngestEnvResult> {
+  return apiPost(
+    "/api/vault/ingest-env",
+    {
+      dry_run: dryRun,
+      include_unknown: opts?.includeUnknown ?? false,
+      env_text: opts?.envText ?? "",
+    },
+    { timeoutMs: LONG_TIMEOUT_MS },
+  );
 }
 
 export function seedEssentials(): Promise<unknown> {

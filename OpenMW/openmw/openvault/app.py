@@ -125,6 +125,7 @@ from openmw.openvault.vault.cortex_key import tenant_key_payload
 from openmw.openvault.vault.crypto import Seal, VaultCryptoError, VaultSealedError
 from openmw.openvault.vault.env_ingest import ingest_environment, scan_environment
 from openmw.openvault.vault.fallback import FallbackConfig, FallbackManager
+from openmw.openvault.vault.free_keys_onboard import catalog_base_url, looks_like_site_password_key
 from openmw.openvault.vault.pm_import import ingest_import_dir, ingest_pm_csv
 from openmw.openvault.vault.precheck import PrecheckLoop, precheck_all, precheck_one
 from openmw.openvault.vault.providers import (
@@ -822,6 +823,9 @@ class EnvIngestBody(BaseModel):
     # dry_run default mirrors the control tier: never write until asked.
     dry_run: bool = True
     include_unknown: bool = False
+    # Pasted .env / multi-key block. When set, this is the scan source (not
+    # mixed with process env) so a wizard import is an explicit batch.
+    env_text: str = ""
 
 
 class PmIngestBody(BaseModel):
@@ -1727,12 +1731,20 @@ def create_app(
         _require_unsealed(state_seal, "key create")
         if body.account_id and state_accounts.get(body.account_id) is None:
             raise HTTPException(status_code=404, detail="account not found")
+        base_url = (body.base_url or "").strip() or catalog_base_url(body.provider)
+        if looks_like_site_password_key(
+            label=body.label, provider=body.provider, base_url=base_url
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="site passwords go to POST /api/secrets/passwords, not /api/keys",
+            )
         record = state_vault.create(
             label=body.label,
             provider=body.provider,
             secret=body.secret,
             role=body.role,
-            base_url=body.base_url,
+            base_url=base_url,
             priority=body.priority,
             enabled=body.enabled,
             account_id=body.account_id,
@@ -3035,8 +3047,10 @@ def create_app(
             _require_unsealed(state_seal, "env ingest")
         result = ingest_environment(
             state_vault,
+            secrets=state_secrets,
             dry_run=body.dry_run,
             include_unknown=body.include_unknown,
+            env_text=body.env_text,
         )
         if not body.dry_run:
             _audit_custody("env_ingest", request, imported=result.get("imported", 0))

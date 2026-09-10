@@ -9,8 +9,9 @@ from __future__ import annotations
 from dataclasses import asdict
 from typing import Any
 
-from openmw.openvault.vault.providers import list_catalog
-from openmw.openvault.vault.store import KeyRecord, KeyVault, ProviderKind
+from openmw.openvault.vault.free_keys_onboard import is_cloudflare_workers_ai_base
+from openmw.openvault.vault.providers import get_provider, list_catalog
+from openmw.openvault.vault.store import KeyRecord, KeyRole, KeyVault, ProviderKind
 
 # AirGPT env_key → OpenVault ProviderKind (custom for CLI/deploy extras)
 ENV_KEY_TO_PROVIDER: dict[str, ProviderKind] = {
@@ -20,6 +21,11 @@ ENV_KEY_TO_PROVIDER: dict[str, ProviderKind] = {
     "GROQ_API_KEY": "groq",
     "OPENROUTER_API_KEY": "openrouter",
     "GOOGLE_API_KEY": "google",
+    "HF_TOKEN": "huggingface",
+    "HUGGINGFACE_API_KEY": "huggingface",
+    "HUGGING_FACE_HUB_TOKEN": "huggingface",
+    "CLOUDFLARE_API_TOKEN": "custom",
+    "CF_API_TOKEN": "custom",
     "GOOGLE_AISTUDIO_FREE": "google",
     "GEMINI_API_KEY": "google",
     "DEEPSEEK_API_KEY": "deepseek",
@@ -221,6 +227,13 @@ def upsert_env_secret(
     ):
         provider = provider_hint  # type: ignore[assignment]
 
+    spec = get_provider(provider)
+    resolved_base = (base_url or "").strip() or (spec.base_url if spec is not None else "")
+    role_raw = spec.default_role if spec is not None else "backup"
+    if is_cloudflare_workers_ai_base(resolved_base):
+        role_raw = "free"
+    role: KeyRole = role_raw if role_raw in ("primary", "backup", "cheap", "free") else "backup"
+
     label = (label or env_key or provider).strip()[:80]
     existing = [
         k
@@ -233,7 +246,12 @@ def upsert_env_secret(
     if existing and provider != "custom":
         # Prefer exact label, else lowest priority active
         existing.sort(key=lambda k: (0 if k.label == label else 1, k.priority))
-        rec = vault.update(existing[0].id, secret=secret, base_url=base_url or None, label=label)
+        rec = vault.update(
+            existing[0].id,
+            secret=secret,
+            base_url=resolved_base or None,
+            label=label,
+        )
         if rec is None:
             return {"ok": False, "error": "update failed"}
         return {"ok": True, "action": "updated", "key": asdict(rec)}
@@ -241,7 +259,7 @@ def upsert_env_secret(
     if existing and provider == "custom":
         for k in existing:
             if k.label == label or env_key.lower() in k.label.lower():
-                rec = vault.update(k.id, secret=secret, base_url=base_url or None, label=label)
+                rec = vault.update(k.id, secret=secret, base_url=resolved_base or None, label=label)
                 if rec is None:
                     return {"ok": False, "error": "update failed"}
                 return {"ok": True, "action": "updated", "key": asdict(rec)}
@@ -250,8 +268,8 @@ def upsert_env_secret(
         label=label,
         provider=provider,
         secret=secret,
-        role="backup",
-        base_url=base_url,
+        role=role,
+        base_url=resolved_base,
         priority=100,
         enabled=True,
     )

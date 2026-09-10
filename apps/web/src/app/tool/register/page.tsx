@@ -85,7 +85,7 @@ function RegisterInner() {
     <PageContainer>
       <PageHeader
         title="Register a free provider"
-        description="Deep-link into the provider signup, then install the key in OpenVault. Not the public /rates page."
+        description="Groq first. Deep-link into the provider signup, then install the key in OpenVault. Not the public /rates page."
       />
 
       {err ? <p className="mb-4 text-sm text-destructive">{err}</p> : null}
