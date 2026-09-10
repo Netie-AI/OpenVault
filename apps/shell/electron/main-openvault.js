@@ -20,6 +20,7 @@ const {
 const path = require("path");
 const { spawn } = require("child_process");
 const { killProcessTree } = require("./processTree");
+const { waitForServer } = require("./lib/waitForServer");
 
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
@@ -148,19 +149,61 @@ function sendToRenderer(channel, data) {
   }
 }
 
-async function waitForServer(url, timeoutMs = 180000) {
-  const start = Date.now();
-  while (Date.now() - start < timeoutMs) {
-    try {
-      const res = await fetch(url);
-      if (res.ok || res.status < 500) return true;
-    } catch {
-      /* server not ready yet */
-    }
-    await new Promise((r) => setTimeout(r, 500));
+/**
+ * Wait for a local service, printing a visible waiting state as it goes.
+ *
+ * The probe itself lives in ./lib/waitForServer.js - see that file for why the
+ * previous inline version could never time out. This wrapper only adds the
+ * progress reporting, so a slow cold compile looks like progress rather than a
+ * frozen app (R-0011: a degradation nobody can see is a lie).
+ */
+async function awaitService(url, label, timeoutMs) {
+  console.log(`[OpenVault] Waiting for ${label} at ${url} ...`);
+  let lastState = "";
+  const result = await waitForServer(url, timeoutMs, {
+    onProgress: ({ state, elapsedMs, detail }) => {
+      if (state === lastState) return;
+      lastState = state;
+      const seconds = Math.round(elapsedMs / 1000);
+      if (state === "stalled") {
+        console.warn(
+          `[OpenVault] ${label} accepted the connection but has not answered (${seconds}s). ` +
+            "A stale dev server on this port would look exactly like this."
+        );
+      } else if (state === "unreachable") {
+        console.log(`[OpenVault] ${label} not up yet (${seconds}s): ${detail}`);
+      }
+      sendToRenderer("server-status", {
+        status: "starting",
+        service: label,
+        state,
+        elapsedMs,
+      });
+    },
+  });
+
+  console.log(
+    `[OpenVault] ${label} -> ${result.reason} after ${Math.round(result.elapsedMs / 1000)}s ` +
+      `(${result.attempts} attempts)`
+  );
+  return result;
+}
+
+/**
+ * The two failures need opposite remedies, so say which one happened rather
+ * than the old catch-all "never became ready".
+ */
+function readinessAdvice(result, url) {
+  if (result.reason === "stalled") {
+    return [
+      `Something is listening on ${url} but never answered ` +
+        `(${result.attempts} attempts over ${Math.round(result.elapsedMs / 1000)}s).`,
+      "That is a wedged or stale server holding the port, not a missing one -",
+      "starting another copy will only fail to bind. Stop the process on that",
+      "port and start it again.",
+    ];
   }
-  console.warn("[OpenVault] Server readiness timeout — showing window anyway:", url);
-  return false;
+  return [`Nothing is answering ${url}.`, `Last error: ${result.lastError || "no response"}.`];
 }
 
 async function waitForServerExit(proc, timeoutMs = 5000) {
@@ -531,8 +574,8 @@ app.whenReady().then(async () => {
   startApiServer();
   startWebServer();
 
-  const apiReady = await waitForServer(API_HEALTH_URL);
-  if (apiReady) {
+  const apiReady = await awaitService(API_HEALTH_URL, "api");
+  if (apiReady.ok) {
     sendToRenderer("server-status", { status: "running", service: "api", port: API_PORT });
   } else {
     // Do not open a window that silently cannot work. Every panel proxies
@@ -543,8 +586,8 @@ app.whenReady().then(async () => {
     dialog.showErrorBox(
       "OpenVault custody API did not start",
       [
-        `Nothing is answering ${API_HEALTH_URL}.`,
-        code ? `The API process exited with code ${code}.` : "The API process never became ready.",
+        ...readinessAdvice(apiReady, API_HEALTH_URL),
+        ...(code ? [`The API process exited with code ${code}.`] : []),
         "",
         "Every panel in this app talks to that API, so it would open unable to do anything.",
         "Start it by hand to see the real error:",
@@ -554,8 +597,8 @@ app.whenReady().then(async () => {
     );
   }
 
-  const webReady = await waitForServer(WEB_URL, 120000);
-  if (!webReady) {
+  const webReady = await awaitService(WEB_URL, "web", 120000);
+  if (!webReady.ok) {
     // Same reasoning as the api branch above: the return value was previously
     // discarded and the window opened on a dead port, so a hard start-up
     // failure looked like a blank app rather than a failure (R-0011).
@@ -563,8 +606,8 @@ app.whenReady().then(async () => {
     dialog.showErrorBox(
       "OpenVault console did not start",
       [
-        `Nothing is answering ${WEB_URL}.`,
-        code ? `The web process exited with code ${code}.` : "The web process never became ready.",
+        ...readinessAdvice(webReady, WEB_URL),
+        ...(code ? [`The web process exited with code ${code}.`] : []),
         "",
         "Start it by hand to see the real error:",
         `  npm --prefix ${WEB_DIR} run ${npmScriptUsed()}`,

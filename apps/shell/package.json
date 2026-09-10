@@ -5,7 +5,8 @@
   "main": "electron/main-openvault.js",
   "scripts": {
     "dev": "electron electron/main-openvault.js",
-    "start": "electron electron/main-openvault.js"
+    "start": "electron electron/main-openvault.js",
+    "test": "node --test \"electron/lib/**/*.test.js\""
   },
   "devDependencies": {
     "electron": "^35.0.0"

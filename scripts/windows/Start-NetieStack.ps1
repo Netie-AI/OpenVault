@@ -53,15 +53,23 @@ function Test-HttpOk([string]$Url, [string]$ExpectSubstring = "") {
 }
 
 function Wait-HttpOk([string]$Url, [int]$Seconds = 60, [string]$Label = "service") {
+  # Wall-clock deadline, not an iteration count. Test-HttpOk can itself burn its
+  # full 2s timeout, so the old "for ($i -lt $Seconds)" loop cost up to 3s per
+  # turn and a "90 second" wait could stall ~270s against a server that accepts
+  # connections and never answers. A bound the caller cannot rely on is the same
+  # defect as no bound at all.
   Write-Host "==> Waiting for $Label ($Url)..." -ForegroundColor Cyan
-  for ($i = 0; $i -lt $Seconds; $i++) {
+  $deadline = (Get-Date).AddSeconds($Seconds)
+  while ($true) {
     if (Test-HttpOk $Url) {
       Write-Host "    $Label ready" -ForegroundColor Green
       return $true
     }
+    if ((Get-Date) -ge $deadline) { break }
     Start-Sleep -Seconds 1
   }
   Write-Host "    WARN: $Label not ready after ${Seconds}s" -ForegroundColor Yellow
+  Write-Host "    If something is already listening on that port it is wedged, not missing - stop that process first." -ForegroundColor Yellow
   return $false
 }
 
