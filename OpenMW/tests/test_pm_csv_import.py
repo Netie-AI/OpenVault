@@ -164,12 +164,12 @@ def test_cvv_column_is_stripped_and_never_stored(
     _assert_cvv_not_stored(payload)
     conn = sqlite3.connect(tmp_path / "keys.db")
     try:
+        col_names = [r[1] for r in conn.execute("PRAGMA table_info(secrets)")]
+        assert not _CVV_FIELD_NAMES.intersection(c.lower() for c in col_names)
         conn.row_factory = sqlite3.Row
         row = conn.execute("SELECT * FROM secrets").fetchone()
         assert row is not None
-        columns = {k.lower() for k in row.keys()}
-        assert not _CVV_FIELD_NAMES.intersection(columns)
-        stored = {k: row[k] for k in row.keys() if k != "secret_blob"}
+        stored = {name: row[name] for name in col_names if name != "secret_blob"}
         _assert_cvv_not_stored(stored)
     finally:
         conn.close()
