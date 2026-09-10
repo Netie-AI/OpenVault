@@ -22,6 +22,7 @@ from openmw.openvault.vault.free_keys_onboard import (
     compose_cloudflare_workers_ai_base,
     is_cloudflare_workers_ai_base,
     looks_like_site_password_key,
+    onboard_install_defaults,
     onboard_payload,
 )
 from openmw.openvault.vault.precheck import probe_key
@@ -94,8 +95,51 @@ def test_huggingface_base_url_matches_catalog() -> None:
     spec = get_provider("huggingface")
     assert spec is not None
     hf = next(item for item in FREE_KEYS_ONBOARD if item.id == "huggingface")
-    assert hf.default_base_url == spec.base_url
+    assert hf.default_base_url == spec.base_url == "https://huggingface.co"
     assert hf.add_key_provider == "huggingface"
+    assert spec.openai_compatible is False
+    assert onboard_install_defaults("huggingface") == ("free", "pooled")
+
+
+def test_locked_checklist_register_and_base_urls() -> None:
+    expected = [
+        ("groq", "https://console.groq.com/keys", "https://api.groq.com/openai/v1", "groq"),
+        (
+            "google",
+            "https://aistudio.google.com/apikey",
+            "https://generativelanguage.googleapis.com/v1beta/openai",
+            "google",
+        ),
+        ("openrouter", "https://openrouter.ai/keys", "https://openrouter.ai/api/v1", "openrouter"),
+        ("cerebras", "https://cloud.cerebras.ai", "https://api.cerebras.ai/v1", "cerebras"),
+        ("mistral", "https://console.mistral.ai/api-keys", "https://api.mistral.ai/v1", "mistral"),
+        (
+            "huggingface",
+            "https://huggingface.co/settings/tokens",
+            "https://huggingface.co",
+            "huggingface",
+        ),
+        (
+            "cloudflare",
+            "https://developers.cloudflare.com/workers-ai/get-started/rest-api/",
+            CF_WORKERS_AI_BASE_TEMPLATE,
+            "custom",
+        ),
+    ]
+    assert len(FREE_KEYS_ONBOARD) == len(expected)
+    for item, (pid, register_url, base_url, provider) in zip(FREE_KEYS_ONBOARD, expected, strict=True):
+        assert item.id == pid
+        assert item.register_url == register_url
+        assert item.default_base_url == base_url
+        assert item.add_key_provider == provider
+        row = item.to_dict()
+        assert row["role"] == "free"
+        assert row["custody"] == "pooled"
+        assert row["github_models"] is False
+    payload = onboard_payload([])
+    assert payload["custody"] == "pooled"
+    assert payload["keyless"] == "parked"
+    assert payload["github_models"] == "retired"
 
 
 def test_cloudflare_compose_account_id_path() -> None:
@@ -148,13 +192,21 @@ def test_create_key_fills_catalog_base_url_and_refuses_site_password(vault: KeyV
     client = _client(vault)
     groq = client.post(
         "/api/keys",
-        json={"label": "Groq", "provider": "groq", "secret": FAKE_GROQ, "role": "free"},
+        json={
+            "label": "Groq",
+            "provider": "groq",
+            "secret": FAKE_GROQ,
+            "role": "free",
+            "custody": "pooled",
+        },
     )
     assert groq.status_code == 200, groq.text
     spec = get_provider("groq")
     assert spec is not None
     assert groq.json()["base_url"] == spec.base_url
     assert groq.json()["precheck_status"] == "unknown"
+    assert groq.json()["role"] == "free"
+    assert groq.json()["custody"] == "pooled"
     refuse = client.post(
         "/api/keys",
         json={
@@ -215,8 +267,14 @@ def test_parse_and_ingest_env_text_routes_passwords_to_secrets(vault: KeyVault) 
     assert "groq" in providers
     assert providers["groq"].base_url == get_provider("groq").base_url  # type: ignore[union-attr]
     assert providers["huggingface"].provider == "huggingface"
+    assert providers["huggingface"].role == "free"
+    assert providers["huggingface"].custody == "pooled"
+    assert providers["groq"].role == "free"
+    assert providers["groq"].custody == "pooled"
     cf = next(k for k in vault.list_keys() if is_cloudflare_workers_ai_base(k.base_url))
     assert cf.provider == "custom"
+    assert cf.role == "free"
+    assert cf.custody == "pooled"
     assert cf.base_url.endswith("/ai/v1")
     assert any(s.kind == "password" for s in secrets.list_secrets())
     assert not any(k.provider == "custom" and not k.base_url for k in vault.list_keys())
@@ -247,6 +305,8 @@ def test_ingest_env_endpoint_accepts_env_text(vault: KeyVault) -> None:
     assert written.status_code == 200, written.text
     assert written.json()["imported"] == 1
     assert vault.list_keys()[0].provider == "groq"
+    assert vault.list_keys()[0].role == "free"
+    assert vault.list_keys()[0].custody == "pooled"
 
 
 def test_cf_models_405_is_warn_not_dead_and_does_not_fail_save(vault: KeyVault) -> None:
@@ -260,10 +320,12 @@ def test_cf_models_405_is_warn_not_dead_and_does_not_fail_save(vault: KeyVault) 
             "secret": FAKE_CF_TOKEN,
             "role": "free",
             "base_url": base,
+            "custody": "pooled",
         },
     )
     assert saved.status_code == 200, saved.text
     assert saved.json()["precheck_status"] == "unknown"
+    assert saved.json()["custody"] == "pooled"
     record = vault.get(saved.json()["id"])
     assert record is not None
     warn = asyncio.run(probe_key(record, FAKE_CF_TOKEN, client=_Client(405)))
@@ -280,3 +342,19 @@ def test_cf_models_405_is_warn_not_dead_and_does_not_fail_save(vault: KeyVault) 
     )
     groq_405 = asyncio.run(probe_key(groq, FAKE_GROQ, client=_Client(405)))
     assert groq_405.status == "error"
+
+
+def test_wizard_source_is_keys_only_and_opens_register_url() -> None:
+    root = Path(__file__).resolve().parents[2]
+    wizard = (root / "apps/web/src/app/keys/FreeKeysWizard.tsx").read_text(encoding="utf-8")
+    table = (root / "apps/web/src/lib/vault/freeKeysOnboard.ts").read_text(encoding="utf-8")
+    assert "createPassword" not in wizard
+    assert "site-pw" not in wizard
+    assert 'custody: "pooled"' in wizard
+    assert 'role: "free"' in wizard
+    assert "GitHub Models is retired" in wizard
+    assert "openvault app" in wizard
+    assert "keyless" in wizard.lower()
+    assert "https://console.groq.com/keys" in table
+    assert "https://huggingface.co/settings/tokens" in table
+

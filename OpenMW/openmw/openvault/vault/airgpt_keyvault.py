@@ -9,9 +9,9 @@ from __future__ import annotations
 from dataclasses import asdict
 from typing import Any
 
-from openmw.openvault.vault.free_keys_onboard import is_cloudflare_workers_ai_base
+from openmw.openvault.vault.free_keys_onboard import onboard_install_defaults
 from openmw.openvault.vault.providers import get_provider, list_catalog
-from openmw.openvault.vault.store import KeyRecord, KeyRole, KeyVault, ProviderKind
+from openmw.openvault.vault.store import KeyCustody, KeyRecord, KeyRole, KeyVault, ProviderKind
 
 # AirGPT env_key → OpenVault ProviderKind (custom for CLI/deploy extras)
 ENV_KEY_TO_PROVIDER: dict[str, ProviderKind] = {
@@ -230,9 +230,11 @@ def upsert_env_secret(
     spec = get_provider(provider)
     resolved_base = (base_url or "").strip() or (spec.base_url if spec is not None else "")
     role_raw = spec.default_role if spec is not None else "backup"
-    if is_cloudflare_workers_ai_base(resolved_base):
-        role_raw = "free"
+    onboard_role, custody_raw = onboard_install_defaults(provider, resolved_base)
+    if onboard_role:
+        role_raw = onboard_role
     role: KeyRole = role_raw if role_raw in ("primary", "backup", "cheap", "free") else "backup"
+    custody: KeyCustody = "tenant" if custody_raw == "tenant" else "pooled"
 
     label = (label or env_key or provider).strip()[:80]
     existing = [
@@ -272,5 +274,6 @@ def upsert_env_secret(
         base_url=resolved_base,
         priority=100,
         enabled=True,
+        custody=custody,
     )
     return {"ok": True, "action": "created", "key": asdict(rec)}

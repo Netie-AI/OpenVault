@@ -20,6 +20,7 @@ import {
 
 export type KeyRole = "primary" | "backup" | "cheap" | "free";
 export const KEY_ROLES: readonly KeyRole[] = ["primary", "backup", "cheap", "free"];
+export type KeyCustody = "pooled" | "tenant";
 
 /** Set by the vault's precheck loop, which really does call the provider. */
 export type PrecheckStatus = "ok" | "auth_fail" | "rate_limit" | "error" | "unknown";
@@ -40,6 +41,7 @@ export interface KeyRow {
   last_precheck_at?: number | null;
   last_checked_at?: string | null;
   account_id?: string | null;
+  custody?: KeyCustody;
 }
 
 export interface ProviderSpec {
@@ -110,6 +112,7 @@ export interface CreateKeyInput {
   role: KeyRole;
   base_url?: string;
   priority?: number;
+  custody?: KeyCustody;
 }
 
 export function createKey(input: CreateKeyInput): Promise<KeyRow> {

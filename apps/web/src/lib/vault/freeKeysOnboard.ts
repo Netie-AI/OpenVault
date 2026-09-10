@@ -15,6 +15,7 @@ export interface FreeKeyOnboardRow {
   default_base_url: string;
   add_key_provider: string;
   role?: string;
+  custody?: string;
   notes: string;
   required_first?: boolean;
   needs_account_id?: boolean;
@@ -31,6 +32,8 @@ export const FREE_KEYS_ONBOARD: readonly FreeKeyOnboardRow[] = [
     register_url: "https://console.groq.com/keys",
     default_base_url: "https://api.groq.com/openai/v1",
     add_key_provider: "groq",
+    role: "free",
+    custody: "pooled",
     notes: "Required first. Fast free-tier hop.",
     required_first: true,
   },
@@ -40,6 +43,8 @@ export const FREE_KEYS_ONBOARD: readonly FreeKeyOnboardRow[] = [
     register_url: "https://aistudio.google.com/apikey",
     default_base_url: "https://generativelanguage.googleapis.com/v1beta/openai",
     add_key_provider: "google",
+    role: "free",
+    custody: "pooled",
     notes: "Prefer AQ. auth keys (AI Studio). AIza… still works.",
   },
   {
@@ -48,6 +53,8 @@ export const FREE_KEYS_ONBOARD: readonly FreeKeyOnboardRow[] = [
     register_url: "https://openrouter.ai/keys",
     default_base_url: "https://openrouter.ai/api/v1",
     add_key_provider: "openrouter",
+    role: "free",
+    custody: "pooled",
     notes: "Free models at $0 via :free suffix.",
   },
   {
@@ -56,6 +63,8 @@ export const FREE_KEYS_ONBOARD: readonly FreeKeyOnboardRow[] = [
     register_url: "https://cloud.cerebras.ai",
     default_base_url: "https://api.cerebras.ai/v1",
     add_key_provider: "cerebras",
+    role: "free",
+    custody: "pooled",
     notes: "Official trial may need a card.",
   },
   {
@@ -64,6 +73,8 @@ export const FREE_KEYS_ONBOARD: readonly FreeKeyOnboardRow[] = [
     register_url: "https://console.mistral.ai/api-keys",
     default_base_url: "https://api.mistral.ai/v1",
     add_key_provider: "mistral",
+    role: "free",
+    custody: "pooled",
     notes: "Phone/billing common on signup.",
   },
   {
@@ -72,7 +83,10 @@ export const FREE_KEYS_ONBOARD: readonly FreeKeyOnboardRow[] = [
     register_url: "https://huggingface.co/settings/tokens",
     default_base_url: "https://huggingface.co",
     add_key_provider: "huggingface",
-    notes: "Founder-hold enroll optional.",
+    role: "free",
+    custody: "pooled",
+    notes:
+      "Catalog base_url is the Hub URL (whoami-v2). Not listed as OpenAI-compat; keyless hops are parked.",
   },
   {
     id: "cloudflare",
@@ -80,6 +94,8 @@ export const FREE_KEYS_ONBOARD: readonly FreeKeyOnboardRow[] = [
     register_url: "https://developers.cloudflare.com/workers-ai/get-started/rest-api/",
     default_base_url: CF_WORKERS_AI_BASE_TEMPLATE,
     add_key_provider: "custom",
+    role: "free",
+    custody: "pooled",
     notes:
       "Account ID is not a secret. GET /models 405 is a probe mismatch, not a dead key.",
     needs_account_id: true,

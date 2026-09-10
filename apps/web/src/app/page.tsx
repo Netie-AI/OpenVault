@@ -25,9 +25,10 @@ const LINKS = [
     body: "Encrypted API keys — one-stop custody against OpenMW FastAPI.",
     icon: KeyRound,
   },
+  {
     href: "/keys#free",
     title: "Get free keys",
-    body: "Groq-first checklist. Register, paste-to-save, env ingest. One vault.",
+    body: "Groq-first checklist in openvault app. Register, paste-to-save, env ingest. One vault.",
     icon: KeyRound,
   },
   {

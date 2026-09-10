@@ -3,8 +3,9 @@
 /**
  * FreeRoute Get free keys onboard wizard (#60).
  *
- * Reuses POST /api/keys, /api/vault/ingest-env, /api/vault/seed-essentials,
- * and /api/freeroute/onboard. Site passwords stay on /api/secrets*.
+ * Prefer Electron `openvault app` (STATUS: :3010 hang). Reuses POST /api/keys,
+ * /api/keys/{id}/precheck, /api/vault/env-scan, ingest-env, seed-essentials.
+ * Site passwords are not this wizard — they live on /api/secrets*.
  * Retired inference APIs are not listed. Save never waits on CF /models 405.
  */
 
@@ -24,7 +25,6 @@ import {
   type IngestEnvResult,
   type KeyRow,
 } from "@/lib/api/keys";
-import { createPassword } from "@/lib/api/secrets";
 import { VaultSealBar } from "@/components/vault/VaultSealBar";
 import { rememberRegisterIntent } from "@/lib/vault/registerIntent";
 import {
@@ -39,6 +39,7 @@ const H2 = "text-lg font-semibold tracking-tight text-foreground";
 const LEAD = "mt-1 text-sm text-muted-foreground";
 const STEP_N =
   "flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary";
+const META = "font-mono text-[11px] break-all text-muted-foreground";
 
 type OnboardResponse = {
   providers?: FreeKeyOnboardRow[];
@@ -61,9 +62,6 @@ export function FreeKeysWizard({ focusProvider = "" }: { focusProvider?: string 
   const [envPreview, setEnvPreview] = useState<IngestEnvResult | null>(null);
   const [envMsg, setEnvMsg] = useState("");
   const [seedMsg, setSeedMsg] = useState("");
-  const [pwLabel, setPwLabel] = useState("");
-  const [pwValue, setPwValue] = useState("");
-  const [pwMsg, setPwMsg] = useState("");
 
   const refreshKeys = useCallback(async () => {
     try {
@@ -130,6 +128,7 @@ export function FreeKeysWizard({ focusProvider = "" }: { focusProvider?: string 
         secret,
         role: "free",
         base_url: baseUrl,
+        custody: "pooled",
       });
       patchDraft(row.id, { secret: "", msg: `Installed ${row.label} into the vault.` });
       await refreshKeys();
@@ -163,7 +162,7 @@ export function FreeKeysWizard({ focusProvider = "" }: { focusProvider?: string 
       setEnvMsg(
         preview.scanned
           ? `Dry run: ${preview.scanned} candidate(s). Nothing written.`
-          : "Dry run: no importable keys in that paste.",
+          : "Dry-run: no importable keys in that paste.",
       );
     } catch (err) {
       setEnvMsg(isApiError(err) ? err.message : "Dry-run ingest failed");
@@ -182,7 +181,9 @@ export function FreeKeysWizard({ focusProvider = "" }: { focusProvider?: string 
       await refreshKeys();
       setEnvMsg(
         `Imported ${result.imported ?? 0} key(s)` +
-          (result.passwords_imported ? `, ${result.passwords_imported} password(s) to /api/secrets` : "") +
+          (result.passwords_imported
+            ? `, ${result.passwords_imported} password(s) routed to /api/secrets (not this wizard)`
+            : "") +
           ". Testing is separate and cannot un-save a Cloudflare 405.",
       );
     } catch (err) {
@@ -204,24 +205,6 @@ export function FreeKeysWizard({ focusProvider = "" }: { focusProvider?: string 
     }
   }
 
-  async function saveSitePassword() {
-    if (!pwLabel.trim() || !pwValue.trim()) {
-      setPwMsg("Label and password required — this uses /api/secrets, not /api/keys.");
-      return;
-    }
-    setBusy("password");
-    try {
-      await createPassword({ label: pwLabel.trim(), password: pwValue });
-      setPwLabel("");
-      setPwValue("");
-      setPwMsg("Stored as a site password in /api/secrets. Not an API key.");
-    } catch (err) {
-      setPwMsg(isApiError(err) ? err.message : "Could not store that password");
-    } finally {
-      setBusy(null);
-    }
-  }
-
   return (
     <section id="keypath-free" data-testid="free-screen" className="grid gap-5 lg:grid-cols-2">
       <div className="space-y-5 lg:col-span-2">
@@ -230,14 +213,18 @@ export function FreeKeysWizard({ focusProvider = "" }: { focusProvider?: string 
 
       <div className={CARD}>
         <h2 className={H2}>Get free keys</h2>
-        <p className={LEAD}>Two steps. Register, then install. Groq first. One OpenVault.</p>
+        <p className={LEAD}>
+          Prefer <code className="text-foreground">openvault app</code>. Two steps. Groq first.
+          One OpenVault.
+        </p>
         <ol className="my-4 space-y-3">
           <li data-testid="free-step-1" className="flex gap-3">
             <span className={STEP_N}>1</span>
             <div>
               <p className="font-medium text-foreground">Register</p>
               <p className="text-sm text-muted-foreground">
-                Create a free account and copy the key it shows you.
+                Open the provider <code className="text-foreground">register_url</code> and copy the
+                key it shows you.
               </p>
             </div>
           </li>
@@ -246,15 +233,20 @@ export function FreeKeysWizard({ focusProvider = "" }: { focusProvider?: string 
             <div>
               <p className="font-medium text-foreground">Install</p>
               <p className="text-sm text-muted-foreground">
-                Paste that key here. OpenVault encrypts it in the vault.
+                Paste that key. OpenVault posts <code className="text-foreground">/api/keys</code>{" "}
+                with role=free, catalog base_url, custody=pooled, then prechecks (CF 405 does not
+                fail the save).
               </p>
             </div>
           </li>
         </ol>
         <p className="text-xs text-muted-foreground">
-          Deep-link signup is Groq-first. GitHub Models is retired and not listed. Site
-          passwords never go to <code className="text-foreground">/api/keys</code> with an
-          empty base_url — use <code className="text-foreground">/api/secrets*</code>.
+          GitHub Models is retired and not listed. Keyless hops are parked. Site logins are not
+          this wizard — they live on{" "}
+          <Link href="/vault" className="text-foreground underline-offset-2 hover:underline">
+            /vault
+          </Link>{" "}
+          via <code className="text-foreground">/api/secrets*</code>.
         </p>
         {sealed ? (
           <p className="mt-3 text-sm text-warning">Unseal the vault to install keys.</p>
@@ -263,7 +255,9 @@ export function FreeKeysWizard({ focusProvider = "" }: { focusProvider?: string 
 
       <div className={CARD}>
         <h2 className={H2}>Checklist</h2>
-        <p className={LEAD}>Paste-to-save. Auto base_url from the catalog. Role free.</p>
+        <p className={LEAD}>
+          Locked order. Paste-to-save. Auto base_url. Role free. Custody pooled for FreeRoute.
+        </p>
         <ol className="mt-4 space-y-4" data-testid="free-keys-checklist">
           {rows.map((row, index) => {
             const draft = drafts[row.id] ?? emptyDraft();
@@ -289,13 +283,22 @@ export function FreeKeysWizard({ focusProvider = "" }: { focusProvider?: string 
                       ) : null}
                     </p>
                     <p className="text-xs text-muted-foreground">{row.notes}</p>
+                    <p className={META} data-testid={`free-meta-${row.id}`}>
+                      provider={row.add_key_provider} · role=free · custody=pooled
+                    </p>
+                    <p className={META} data-testid={`free-base-${row.id}`}>
+                      base {row.default_base_url}
+                    </p>
                     {done ? (
                       <p className="mt-1 text-xs text-success">Installed in this vault</p>
                     ) : null}
                   </div>
                   <Button asChild variant="outline" size="sm">
-                    <Link
-                      href={`/tool/register?provider=${encodeURIComponent(row.id)}`}
+                    <a
+                      href={row.register_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      data-testid={`free-register-${row.id}`}
                       onClick={() =>
                         rememberRegisterIntent({
                           providerId: row.add_key_provider,
@@ -305,7 +308,7 @@ export function FreeKeysWizard({ focusProvider = "" }: { focusProvider?: string 
                       }
                     >
                       Register
-                    </Link>
+                    </a>
                   </Button>
                 </div>
                 {row.needs_account_id ? (
@@ -318,9 +321,7 @@ export function FreeKeysWizard({ focusProvider = "" }: { focusProvider?: string 
                       value={draft.accountId}
                       onChange={(e) => patchDraft(row.id, { accountId: e.target.value })}
                     />
-                    <p className="font-mono text-[11px] text-muted-foreground">
-                      {row.default_base_url}
-                    </p>
+                    <p className={META}>{row.default_base_url}</p>
                   </div>
                 ) : null}
                 <div className="mt-3 space-y-2">
@@ -348,11 +349,12 @@ export function FreeKeysWizard({ focusProvider = "" }: { focusProvider?: string 
         </ol>
       </div>
 
-      <div className={CARD}>
+      <div className={`${CARD} lg:col-span-2`}>
         <h2 className={H2}>Batch .env ingest</h2>
         <p className={LEAD}>
-          Dry-run default. Uses existing <code className="text-foreground">/api/vault/ingest-env</code>.
-          Known API keys go to the vault; SITE_* / passwords go to secrets.
+          Dry-run default. Uses existing <code className="text-foreground">/api/vault/env-scan</code>{" "}
+          and <code className="text-foreground">/api/vault/ingest-env</code>. Known API keys go to the
+          vault (custody pooled). SITE_* / passwords are routed to secrets, not this form.
         </p>
         <div className="mt-3 space-y-2">
           <Label htmlFor="env-ingest-text">Paste a .env or several KEY=value lines</Label>
@@ -387,7 +389,7 @@ export function FreeKeysWizard({ focusProvider = "" }: { focusProvider?: string 
           <p className="text-sm font-medium text-foreground">Local slots</p>
           <p className="mt-1 text-xs text-muted-foreground">
             seed-essentials only creates Ollama/Cortex placeholders. It does not invent
-            cloud keys or ov_ tokens.
+            cloud keys or ov_ tokens. Keyless hops stay parked.
           </p>
           <Button
             className="mt-2"
@@ -399,38 +401,6 @@ export function FreeKeysWizard({ focusProvider = "" }: { focusProvider?: string 
             Seed local placeholders
           </Button>
           {seedMsg ? <p className="mt-2 text-xs text-muted-foreground">{seedMsg}</p> : null}
-        </div>
-      </div>
-
-      <div className={CARD}>
-        <h2 className={H2}>Site password</h2>
-        <p className={LEAD}>
-          Not an API key. Stored via <code className="text-foreground">POST /api/secrets/passwords</code>.
-          Never as a custom key with an empty base_url.
-        </p>
-        <div className="mt-3 space-y-2">
-          <Label htmlFor="site-pw-label">Label</Label>
-          <Input
-            id="site-pw-label"
-            value={pwLabel}
-            onChange={(e) => setPwLabel(e.target.value)}
-            placeholder="console.groq.com login"
-          />
-          <Label htmlFor="site-pw-value">Password</Label>
-          <Input
-            id="site-pw-value"
-            type="password"
-            autoComplete="off"
-            value={pwValue}
-            onChange={(e) => setPwValue(e.target.value)}
-          />
-          <Button variant="outline" onClick={() => void saveSitePassword()} disabled={sealed}>
-            Save password
-          </Button>
-          {pwMsg ? <p className="text-xs text-muted-foreground">{pwMsg}</p> : null}
-          <Button asChild variant="ghost" size="sm">
-            <Link href="/vault">Open operator vault / secrets</Link>
-          </Button>
         </div>
       </div>
     </section>

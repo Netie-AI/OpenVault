@@ -39,6 +39,40 @@ test("Hugging Face base_url matches the catalog confirmation", () => {
   const hf = FREE_KEYS_ONBOARD.find((row) => row.id === "huggingface");
   assert.equal(hf?.default_base_url, "https://huggingface.co");
   assert.equal(hf?.add_key_provider, "huggingface");
+  assert.equal(hf?.role, "free");
+  assert.equal(hf?.custody, "pooled");
+});
+
+test("locked checklist register_url, base_url, and provider", () => {
+  const expected: Array<[string, string, string, string]> = [
+    ["groq", "https://console.groq.com/keys", "https://api.groq.com/openai/v1", "groq"],
+    [
+      "google",
+      "https://aistudio.google.com/apikey",
+      "https://generativelanguage.googleapis.com/v1beta/openai",
+      "google",
+    ],
+    ["openrouter", "https://openrouter.ai/keys", "https://openrouter.ai/api/v1", "openrouter"],
+    ["cerebras", "https://cloud.cerebras.ai", "https://api.cerebras.ai/v1", "cerebras"],
+    ["mistral", "https://console.mistral.ai/api-keys", "https://api.mistral.ai/v1", "mistral"],
+    ["huggingface", "https://huggingface.co/settings/tokens", "https://huggingface.co", "huggingface"],
+    [
+      "cloudflare",
+      "https://developers.cloudflare.com/workers-ai/get-started/rest-api/",
+      CF_WORKERS_AI_BASE_TEMPLATE,
+      "custom",
+    ],
+  ];
+  assert.equal(FREE_KEYS_ONBOARD.length, expected.length);
+  for (const [i, [id, registerUrl, baseUrl, provider]] of expected.entries()) {
+    const row = FREE_KEYS_ONBOARD[i];
+    assert.equal(row?.id, id);
+    assert.equal(row?.register_url, registerUrl);
+    assert.equal(row?.default_base_url, baseUrl);
+    assert.equal(row?.add_key_provider, provider);
+    assert.equal(row?.role, "free");
+    assert.equal(row?.custody, "pooled");
+  }
 });
 
 test("CF /models 405 copy is a warn, not key-dead", () => {

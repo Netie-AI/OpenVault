@@ -317,6 +317,9 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
     ProviderSpec(
         id="huggingface",
         name="Hugging Face",
+        # Confirmed for #60: Hub URL + /api/whoami-v2. Not an OpenAI-compat hop
+        # (openai_compatible=False). Keyless hops are parked — do not invent
+        # router.huggingface.co here.
         base_url="https://huggingface.co",
         default_role="backup",
         tier="freemium",

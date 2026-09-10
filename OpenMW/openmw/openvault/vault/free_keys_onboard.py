@@ -60,6 +60,7 @@ class FreeKeyOnboard:
             "default_base_url": self.default_base_url,
             "add_key_provider": self.add_key_provider,
             "role": "free",
+            "custody": "pooled",
             "notes": self.notes,
             "required_first": self.required_first,
             "needs_account_id": self.needs_account_id,
@@ -124,7 +125,10 @@ FREE_KEYS_ONBOARD: tuple[FreeKeyOnboard, ...] = (
         register_url="https://huggingface.co/settings/tokens",
         default_base_url=_catalog_base("huggingface", "https://huggingface.co"),
         add_key_provider="huggingface",
-        notes="Founder-hold enroll optional. Confirm catalog base_url.",
+        notes=(
+            "Catalog base_url is the Hub URL (whoami-v2). Not listed as "
+            "OpenAI-compat; keyless hops are parked."
+        ),
     ),
     FreeKeyOnboard(
         id="cloudflare",
@@ -147,6 +151,16 @@ def onboard_item(provider_id: str) -> FreeKeyOnboard | None:
         if item.id == want:
             return item
     return None
+
+
+def onboard_install_defaults(provider: str, base_url: str = "") -> tuple[str, str]:
+    """role + custody for Free Keys paste/ingest. Keyless hops stay parked."""
+    if is_cloudflare_workers_ai_base(base_url):
+        return ("free", "pooled")
+    item = onboard_item(provider)
+    if item is not None:
+        return ("free", "pooled")
+    return ("", "pooled")
 
 
 def compose_cloudflare_workers_ai_base(account_id: str) -> str:
@@ -236,7 +250,10 @@ def onboard_payload(keys: list[KeyRecord] | None = None) -> dict[str, Any]:
         "help": (
             "Get free keys: Groq first, then Google AI Studio, OpenRouter, "
             "Cerebras, Mistral, Hugging Face, Cloudflare Workers AI. "
-            "Paste-to-save via POST /api/keys (role=free). Site passwords stay "
-            "on POST /api/secrets/passwords. Not the public /rates page."
+            "Paste-to-save via POST /api/keys (role=free, custody=pooled). "
+            "Site passwords are not this wizard — they stay on /api/secrets*. "
+            "Prefer openvault app. Not the public /rates page."
         ),
+        "custody": "pooled",
+        "keyless": "parked",
     }

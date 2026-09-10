@@ -2,6 +2,15 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-09-10 - Free Keys wizard locks #60 checklist (no site-password form)
+
+- Wizard UI shows Groq-first register_url / base_url / provider= rows; Register
+  opens the locked register_url. POST /api/keys uses role=free and custody=pooled.
+- Site passwords are not this wizard (`/api/secrets*` stays on /vault).
+- Hugging Face base_url confirmed from PROVIDER_CATALOG (`https://huggingface.co`,
+  not OpenAI-compat). CF /models 405 remains warn-not-fail.
+- Home card syntax fix. Prefer `openvault app` (STATUS: :3010 hang).
+
 ## 2026-09-10 - FreeRoute Get free keys onboard wizard (#60)
 
 - Groq-first checklist on `/keys#free` (Electron tray: Get free keys). Paste-to-save
