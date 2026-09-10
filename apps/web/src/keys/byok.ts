@@ -21,6 +21,7 @@ const RULES: ReadonlyArray<{
   { id: "groq", name: "Groq", test: /^gsk_/ },
   { id: "huggingface", name: "Hugging Face", test: /^hf_/ },
   { id: "google", name: "Google AI Studio", test: /^AIza[0-9A-Za-z_-]{10,}/ },
+  { id: "google", name: "Google AI Studio", test: /^AQ\.[0-9A-Za-z_-]{16,}$/ },
   { id: "cerebras", name: "Cerebras", test: /^csk-/i },
   { id: "fireworks", name: "Fireworks", test: /^fw_/ },
   { id: "together", name: "Together AI", test: /^tgp_v1_/ },

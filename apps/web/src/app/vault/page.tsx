@@ -70,6 +70,12 @@ const STATUS_STYLE: Record<PrecheckStatus, { label: string; className: string }>
 };
 
 function statusOf(key: KeyRow) {
+  if (
+    key.precheck_status === "ok" &&
+    (key.last_error || "").toLowerCase().includes("probe mismatch")
+  ) {
+    return { label: "Probe warn", className: "border-warning-border bg-warning-bg text-warning" };
+  }
   return STATUS_STYLE[key.precheck_status] ?? STATUS_STYLE.unknown;
 }
 
@@ -529,14 +535,18 @@ export default function VaultPage() {
                                 {revealed[key.id] ?? key.masked_secret ?? "••••"}
                               </span>
                             </p>
-                            {key.last_error &&
-                            (key.precheck_status === "auth_fail" ||
-                              key.precheck_status === "error" ||
-                              key.precheck_status === "rate_limit") ? (
-                              <p className="mt-1 break-words text-xs text-destructive">
-                                {key.last_error}
-                              </p>
-                            ) : null}
+            {key.last_error &&
+            (key.precheck_status === "auth_fail" ||
+              key.precheck_status === "error" ||
+              key.precheck_status === "rate_limit") ? (
+              <p className="mt-1 break-words text-xs text-destructive">
+                {key.last_error}
+              </p>
+            ) : key.last_error &&
+              key.precheck_status === "ok" &&
+              key.last_error.toLowerCase().includes("probe mismatch") ? (
+              <p className="mt-1 break-words text-xs text-warning">{key.last_error}</p>
+            ) : null}
                             {healthById[key.id] ? (
                               <KeyHealthSpark
                                 samples={healthById[key.id].samples}

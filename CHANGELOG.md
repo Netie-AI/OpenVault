@@ -2,6 +2,27 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-09-10 - Free Keys wizard locks #60 checklist (no site-password form)
+
+- Wizard UI shows Groq-first register_url / base_url / provider= rows; Register
+  opens the locked register_url. POST /api/keys uses role=free and custody=pooled.
+- Site passwords are not this wizard (`/api/secrets*` stays on /vault).
+- Hugging Face base_url confirmed from PROVIDER_CATALOG (`https://huggingface.co`,
+  not OpenAI-compat). CF /models 405 remains warn-not-fail.
+- Home card syntax fix. Prefer `openvault app` (STATUS: :3010 hang).
+
+## 2026-09-10 - FreeRoute Get free keys onboard wizard (#60)
+
+- Groq-first checklist on `/keys#free` (Electron tray: Get free keys). Paste-to-save
+  via `POST /api/keys` role=free with catalog `base_url`. Cloudflare Workers AI is
+  `provider=custom` plus Account ID → `/client/v4/accounts/{ACCOUNT_ID}/ai/v1`.
+- `GET /api/freeroute/onboard` + Groq-first `/api/tool/register` (GitHub Models not listed).
+- `POST /api/vault/ingest-env` accepts pasted `.env` (`env_text`); dry-run default.
+  SITE_* / passwords go to `/api/secrets*`, never empty-base_url keys.
+- Precheck: Cloudflare GET `/models` 405 is a probe-mismatch warn, not a dead key.
+  Save does not wait on that probe.
+- Tests: `OpenMW/tests/test_free_keys_onboard.py`; `apps/web` `freeKeysOnboard.test.ts`.
+
 ## 2026-09-07 - Renumber packs/passkeys off main DR-0013/DR-0014
 
 - `main` already shipped DR-0013 (locked display SKUs) and DR-0014 (JWKS pin).

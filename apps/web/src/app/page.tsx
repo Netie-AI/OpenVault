@@ -26,6 +26,12 @@ const LINKS = [
     icon: KeyRound,
   },
   {
+    href: "/keys#free",
+    title: "Get free keys",
+    body: "Groq-first checklist in openvault app. Register, paste-to-save, env ingest. One vault.",
+    icon: KeyRound,
+  },
+  {
     href: "/keys",
     title: "Keys",
     body: "Cortex API key, BYOK, free register + install. One vault.",

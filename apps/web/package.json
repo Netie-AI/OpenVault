@@ -8,7 +8,7 @@
     "start": "next start -H 127.0.0.1 --port 3010",
     "lint": "next lint",
     "clean": "cmd /c rmdir /s /q .next",
-    "test": "tsx --test src/keys/copy.test.ts src/keys/render.test.ts src/keys/byok.test.ts src/lib/vault/registerIntent.test.ts src/lib/vault/inferProvider.test.ts src/server/authz/routeGuard.test.ts",
+    "test": "tsx --test src/keys/copy.test.ts src/keys/render.test.ts src/keys/byok.test.ts src/lib/vault/registerIntent.test.ts src/lib/vault/inferProvider.test.ts src/lib/vault/freeKeysOnboard.test.ts src/server/authz/routeGuard.test.ts",
     "serve": "tsx src/serve.ts"
   },
   "dependencies": {

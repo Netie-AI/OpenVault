@@ -11,6 +11,10 @@ import httpx
 import structlog
 
 from openmw.openvault.vault.crypto import VaultCryptoError, VaultSealedError
+from openmw.openvault.vault.free_keys_onboard import (
+    CF_MODELS_405_WARN,
+    is_cloudflare_workers_ai_base,
+)
 from openmw.openvault.vault.health_store import HealthStore, HistoryStatus
 from openmw.openvault.vault.store import KeyRecord, KeyVault, PrecheckStatus
 
@@ -123,6 +127,10 @@ async def probe_key(
                 headers={"Authorization": f"Bearer {secret}"},
             )
         latency = (time.perf_counter() - started) * 1000.0
+        # Workers AI GET /models is 405 on a healthy token; /ai/run can still
+        # work. That is a probe mismatch, not auth_fail, and must not fail save.
+        if is_cloudflare_workers_ai_base(base) and resp.status_code == 405:
+            return PrecheckResult(record.id, "ok", latency, CF_MODELS_405_WARN)
         status = classify_http_error(resp.status_code, resp.text[:200])
         err = None if status == "ok" else f"HTTP {resp.status_code}"
         return PrecheckResult(record.id, status, latency, err)

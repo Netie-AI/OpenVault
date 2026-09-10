@@ -24,4 +24,8 @@ test("strong prefixes get honest catalog names", () => {
   assert.equal(guessByokProvider("sk-ant-xxxx").displayName, "Anthropic");
   assert.equal(guessByokProvider("sk-or-v1-xxxx").displayName, "OpenRouter");
   assert.equal(guessByokProvider("sk-proj-abcdefghijklmnopqrstuv").displayName, "OpenAI");
+  assert.equal(
+    guessByokProvider("AQ.Ab1Cd2Ef3Gh4Ij5Kl6Mn7Op8Qr9St0Uv").displayName,
+    "Google AI Studio",
+  );
 });

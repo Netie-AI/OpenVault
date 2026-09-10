@@ -24,14 +24,9 @@ import { PageContainer } from "@/components/ui/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Tabs, type TabDef } from "@/components/ui/Tabs";
 import { apiPost, isApiError } from "@/lib/api/client";
-import { createKey, listFreeProviders, listRoutePacks, type ProviderSpec, type RoutePack } from "@/lib/api/keys";
+import { createKey, listRoutePacks, type RoutePack } from "@/lib/api/keys";
 import { guessByokProvider, honestByokLabel } from "@/keys/byok";
-import {
-  clearRegisterIntent,
-  formatRegisterAgo,
-  readRegisterIntent,
-  rememberRegisterIntent,
-} from "@/lib/vault/registerIntent";
+import { FreeKeysWizard } from "./FreeKeysWizard";
 
 type KeyPath = "subscribe" | "byok" | "free" | "operator";
 
@@ -83,12 +78,10 @@ function providerIdFromName(name: string): string {
 const CARD = "rounded-2xl border border-border bg-card p-6";
 const H2 = "text-lg font-semibold tracking-tight text-foreground";
 const LEAD = "mt-1 text-sm text-muted-foreground";
-const STEP_N =
-  "flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary";
 
 export default function KeysPage() {
   const [path, setPath] = useState<KeyPath>("subscribe");
-  const [busy, setBusy] = useState<"issue" | "byok" | "free" | null>(null);
+  const [busy, setBusy] = useState<"issue" | "byok" | null>(null);
 
   const [issued, setIssued] = useState("");
   const [subscribeMsg, setSubscribeMsg] = useState("");
@@ -97,25 +90,17 @@ export default function KeysPage() {
   const [byokName, setByokName] = useState("");
   const [byokMsg, setByokMsg] = useState("");
 
-  const [catalog, setCatalog] = useState<ProviderSpec[]>([]);
   const [packs, setPacks] = useState<RoutePack[]>([]);
   const [focusProvider, setFocusProvider] = useState("");
-  const [freeSecret, setFreeSecret] = useState("");
-  const [freeMsg, setFreeMsg] = useState("");
-  const [pendingRegister, setPendingRegister] = useState<ReturnType<typeof readRegisterIntent>>(null);
 
   useEffect(() => {
     setPath(pathFromHash(window.location.hash));
     const q = new URLSearchParams(window.location.search).get("provider");
     if (q) setFocusProvider(q);
-    setPendingRegister(readRegisterIntent());
   }, []);
 
   useEffect(() => {
     const ac = new AbortController();
-    listFreeProviders(ac.signal)
-      .then(setCatalog)
-      .catch(() => undefined);
     listRoutePacks(ac.signal)
       .then(setPacks)
       .catch(() => undefined);
@@ -183,46 +168,11 @@ export default function KeysPage() {
     }
   }
 
-  async function installFree() {
-    const secret = freeSecret.trim();
-    if (!secret) {
-      setFreeMsg("Paste the key you copied after register");
-      return;
-    }
-    const intent = readRegisterIntent();
-    const guess = guessByokProvider(secret);
-    const provider =
-      (intent && (!guess.providerId || guess.confidence === "none")
-        ? intent.providerId
-        : guess.providerId) ??
-      (focusProvider || FALLBACK_PROVIDER);
-    const spec = catalog.find((p) => p.id === provider);
-    const label = spec?.name ?? intent?.providerName ?? provider;
-    setBusy("free");
-    try {
-      await createKey({
-        label,
-        provider,
-        secret,
-        role: spec?.default_role ?? "free",
-        base_url: spec?.base_url,
-      });
-      clearRegisterIntent();
-      setPendingRegister(null);
-      setFreeSecret("");
-      setFreeMsg(`Installed ${label} into the vault.`);
-    } catch (err) {
-      setFreeMsg(isApiError(err) ? err.message : "Could not install that key");
-    } finally {
-      setBusy(null);
-    }
-  }
-
   return (
     <PageContainer>
       <PageHeader
         title="Keys"
-        description="Cortex API key · bring your own · free register + install · one vault"
+        description="Cortex API key · bring your own · Get free keys wizard · one vault"
       />
 
       <Tabs tabs={TABS} value={path} onChange={activate} className="mb-6" />
@@ -332,110 +282,7 @@ export default function KeysPage() {
         </section>
       )}
 
-      {path === "free" && (
-        <section id="keypath-free" data-testid="free-screen" className="grid gap-5 lg:grid-cols-2">
-          <div className={CARD}>
-            <h2 className={H2}>Free keys</h2>
-            <p className={LEAD}>Two steps. Register, then install.</p>
-            <ol className="my-4 space-y-3">
-              <li data-testid="free-step-1" className="flex gap-3">
-                <span className={STEP_N}>1</span>
-                <div>
-                  <p className="font-medium text-foreground">Register</p>
-                  <p className="text-sm text-muted-foreground">
-                    Create a free account and copy the key it shows you.
-                  </p>
-                </div>
-              </li>
-              <li data-testid="free-step-2" className="flex gap-3">
-                <span className={STEP_N}>2</span>
-                <div>
-                  <p className="font-medium text-foreground">Install</p>
-                  <p className="text-sm text-muted-foreground">
-                    Paste that key here. OpenVault encrypts it in the vault.
-                  </p>
-                </div>
-              </li>
-            </ol>
-            {pendingRegister && (
-              <p className="mb-3 text-sm text-foreground">
-                You registered {pendingRegister.providerName}{" "}
-                {formatRegisterAgo(pendingRegister.clickedAt)}. Paste the key below.
-              </p>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="freeInstallSecret">Install key</Label>
-              <Input
-                id="freeInstallSecret"
-                type="password"
-                autoComplete="off"
-                placeholder="paste the key from signup"
-                value={freeSecret}
-                onChange={(e) => setFreeSecret(e.target.value)}
-              />
-              <Button onClick={() => void installFree()} disabled={busy === "free"}>
-                Install into vault
-              </Button>
-              {freeMsg && <p className="text-xs text-muted-foreground">{freeMsg}</p>}
-            </div>
-            <p className="mt-4 text-sm text-muted-foreground">
-              Want the easy path? Issue a Cortex API key on Subscribe -- no extra signup.
-            </p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <Button onClick={() => activate("subscribe")}>Get Cortex API key</Button>
-              <Button variant="outline" onClick={() => activate("byok")}>
-                I have a key to paste
-              </Button>
-            </div>
-          </div>
-          <div className={CARD}>
-            <h2 className={H2}>Register catalog</h2>
-            {catalog.length === 0 ? (
-              <p className={LEAD}>No free providers listed by the vault yet.</p>
-            ) : (
-              <ul className="mt-3 space-y-2">
-                {catalog.map((p) => (
-                  <li
-                    key={p.id}
-                    className={
-                      "flex items-center justify-between gap-3 rounded-xl border px-3 py-2 " +
-                      (focusProvider === p.id
-                        ? "border-primary bg-primary/5"
-                        : "border-border")
-                    }
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-foreground">{p.name}</p>
-                      {p.free_notes && (
-                        <p className="truncate text-xs text-muted-foreground">{p.free_notes}</p>
-                      )}
-                      {p.spendable ? (
-                        <p className="text-[11px] text-muted-foreground">pooled spend path</p>
-                      ) : (
-                        <p className="text-[11px] text-muted-foreground">register only -- not a /v1 hop</p>
-                      )}
-                    </div>
-                    <Button asChild variant="outline" size="sm">
-                      <Link
-                        href={`/tool/register?provider=${encodeURIComponent(p.id)}`}
-                        onClick={() =>
-                          rememberRegisterIntent({
-                            providerId: p.id,
-                            providerName: p.name,
-                            registerUrl: p.register_url,
-                          })
-                        }
-                      >
-                        Register
-                      </Link>
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </section>
-      )}
+      {path === "free" && <FreeKeysWizard focusProvider={focusProvider} />}
 
       {path === "operator" && (
         <section id="keypath-operator" data-testid="operator-screen" className="max-w-2xl">

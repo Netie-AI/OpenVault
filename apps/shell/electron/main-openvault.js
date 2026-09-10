@@ -56,7 +56,7 @@ function looksLikeApiSecretRough(text) {
   const value = text.trim();
   if (value.length < 16 || value.length > 512) return false;
   if (/\s/.test(value)) return false;
-  return /^(sk-|sk-ant-|sk-or-v1-|gsk_|hf_|AIza|xai-|pplx-|r8_|csk-|nvapi-|fw_|tgp_v1_|ms-|ghp_|gho_|ghu_|ghs_|github_pat_)/i.test(
+  return /^(sk-|sk-ant-|sk-or-v1-|gsk_|hf_|AIza|AQ\.|xai-|pplx-|r8_|csk-|nvapi-|fw_|tgp_v1_|ms-|ghp_|gho_|ghu_|ghs_|github_pat_)/i.test(
     value
   );
 }
@@ -428,6 +428,16 @@ function createTray() {
         if (mainWindow) {
           mainWindow.show();
           mainWindow.focus();
+        }
+      },
+    },
+    {
+      label: "Get free keys",
+      click: () => {
+        if (mainWindow) {
+          mainWindow.show();
+          mainWindow.focus();
+          mainWindow.loadURL(WEB_URL + "/keys#free");
         }
       },
     },
