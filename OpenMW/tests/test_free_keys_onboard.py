@@ -127,7 +127,9 @@ def test_locked_checklist_register_and_base_urls() -> None:
         ),
     ]
     assert len(FREE_KEYS_ONBOARD) == len(expected)
-    for item, (pid, register_url, base_url, provider) in zip(FREE_KEYS_ONBOARD, expected, strict=True):
+    for item, (pid, register_url, base_url, provider) in zip(
+        FREE_KEYS_ONBOARD, expected, strict=True
+    ):
         assert item.id == pid
         assert item.register_url == register_url
         assert item.default_base_url == base_url
@@ -357,4 +359,3 @@ def test_wizard_source_is_keys_only_and_opens_register_url() -> None:
     assert "keyless" in wizard.lower()
     assert "https://console.groq.com/keys" in table
     assert "https://huggingface.co/settings/tokens" in table
-
