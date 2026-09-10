@@ -51,3 +51,6 @@ node_modules/
 # no vendor-sync script exists yet). Code we actually keep lives in apps/, copied out of
 # here deliberately.
 vendor/
+
+# Claude Code agent worktrees (session-local, never committed)
+.claude/worktrees/
