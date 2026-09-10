@@ -3,21 +3,19 @@
 > Canonical "what's true now." History: [`CHANGELOG.md`](CHANGELOG.md). Deferred:
 > [`PARKING_LOT.md`](PARKING_LOT.md). Map: [`docs/ACTIVE.md`](docs/ACTIVE.md).
 
-Last reconciled: 2026-09-07. GitHub OPEN = none. #12-#39, #48, #52 CLOSED
-(#53 squash-merged). VPC allowlist for `POST /keys/services` (loopback +
-`OPENVAULT_SERVICES_ALLOW`). JWKS pin kids (#50). No public `:5000`.
-Home pack: passphrase-scrypt only. Packs are DR-0016 (main already took
-DR-0013 for display SKUs). Passkeys are DR-0017 (main took DR-0014 for JWKS).
-DR-0015 accepted: irreversible IDs in the vault; rust console optional.
-Mesh omits `#auth` when `:5055` is down. HT1-HT5 CLEARED. Do not rebuild.
+Last reconciled: 2026-09-08. F32 shipped: #17 #16 #15 CLOSED. GUI live on
+`:3010` (Electron `OpenVault` + `next start`). FreeRoute GUI posts
+`/v1/chat/completions` (sealed = explicit refuse). Ship targets are in-repo
+hosts only. #18 stays CLOSED. Usage $/unit NEEDS-YOU.
 
-**UI:** `:3010` Compiling-proxy hang. Desktop: `openvault app`.
+**UI:** `http://127.0.0.1:3010/` and `openvault app`. Webpack-dev if no
+BUILD_ID. Turbopack is not used (`dev --webpack`).
 
 ## Distance
 
-Checked: homepage, `/keys`, Electron `apps/shell`, mesh handshake,
-`openvault secret get`. JWKS kids without public mint. SealBar not
-browser-clicked this session (`:3010` hang). Usage $/unit still NEEDS-YOU.
+Checked: homepage, `/vault`, `/ship`, `/freeroute` (Send -> sealed refuse),
+`/gate`, Electron window, `GET /api/ship/targets` (no openship_cloud /
+openship.io / OPENSHIP_URL). Usage $/unit still NEEDS-YOU.
 
 ## Next
 
@@ -35,5 +33,5 @@ retired. HT4 Cortex healthy. HT5 inject; public `.env` 403.
 ## Clone-and-verify
 
 ```bash
-cd OpenMW && uv run pytest tests/ -q
+cd OpenMW && uv run pytest tests/test_ship_cloud.py tests/test_ship_engine.py tests/test_launcher_contract.py -q
 ```

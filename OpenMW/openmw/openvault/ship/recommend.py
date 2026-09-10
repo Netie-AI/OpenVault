@@ -76,10 +76,10 @@ def recommend_target(
             )
             real_publish = True
         else:
-            target = "openship_cloud"
+            target = "coolify"
             reason = (
                 f"Detected {primary or category or 'server'} stack — needs a running "
-                "process. FreeBuild Cloud (or your own VPS) hosts containers; "
+                "process. Coolify (self-hosted) or your own VPS hosts it; "
                 "Cloudflare Pages is for static folders only."
             )
             real_publish = False

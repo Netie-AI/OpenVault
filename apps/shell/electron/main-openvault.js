@@ -18,6 +18,7 @@ const {
   clipboard,
 } = require("electron");
 const path = require("path");
+const fs = require("fs");
 const { spawn } = require("child_process");
 const { killProcessTree } = require("./processTree");
 
@@ -148,6 +149,23 @@ function sendToRenderer(channel, data) {
   }
 }
 
+async function probeOk(url, html) {
+  try {
+    const res = await fetch(url, {
+      headers: html ? { Accept: "text/html" } : {},
+    });
+    if (!res.ok) return false;
+    if (!html) return true;
+    const ctype = (res.headers.get("content-type") || "").toLowerCase();
+    const body = await res.text();
+    const compiling =
+      /compiling/i.test(body) && (/proxy/i.test(body) || /please wait/i.test(body));
+    return ctype.includes("text/html") && body.toLowerCase().includes("<html") && !compiling;
+  } catch {
+    return false;
+  }
+}
+
 async function waitForServer(url, timeoutMs = 180000) {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
@@ -160,6 +178,32 @@ async function waitForServer(url, timeoutMs = 180000) {
     await new Promise((r) => setTimeout(r, 500));
   }
   console.warn("[OpenVault] Server readiness timeout — showing window anyway:", url);
+  return false;
+}
+
+async function waitForHtml(url, timeoutMs = 180000) {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    try {
+      const res = await fetch(url, { headers: { Accept: "text/html" } });
+      const ctype = (res.headers.get("content-type") || "").toLowerCase();
+      const body = await res.text();
+      const compiling =
+        /compiling/i.test(body) && (/proxy/i.test(body) || /please wait/i.test(body));
+      if (
+        res.ok &&
+        ctype.includes("text/html") &&
+        body.toLowerCase().includes("<html") &&
+        !compiling
+      ) {
+        return true;
+      }
+    } catch {
+      /* not serving HTML yet */
+    }
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  console.warn("[OpenVault] HTML readiness timeout:", url);
   return false;
 }
 
@@ -242,15 +286,15 @@ function startApiServer() {
 }
 
 function npmScriptUsed() {
-  return process.env.OPENVAULT_PROD === "1" ? "start" : "dev";
+  if (process.env.OPENVAULT_DEV === "1") return "dev";
+  if (process.env.OPENVAULT_PROD === "1") return "start";
+  const buildId = path.join(WEB_DIR, ".next", "BUILD_ID");
+  return fs.existsSync(buildId) ? "start" : "dev";
 }
 
 function startWebServer() {
-  // `dev` by default. This used to be `start`, i.e. `next start`, which needs
-  // a prior `next build` - and no code path in this repo ever runs one. On any
-  // machine without leftover .next/ the web child died instantly, and the
-  // window opened on a dead port anyway. Opt into the production server with
-  // OPENVAULT_PROD=1 once something actually builds it.
+  // `dev` is webpack (package.json). Turbopack panics on this exFAT volume.
+  // Prefer `next start` when .next/BUILD_ID exists. OPENVAULT_DEV=1 forces webpack-dev.
   const npmScript = npmScriptUsed();
   console.log("[OpenVault] Starting Next.js on", WEB_URL, `(${npmScript})`);
   sendToRenderer("server-status", { status: "starting", service: "web", port: WEB_PORT });
@@ -518,8 +562,16 @@ app.whenReady().then(async () => {
   setupWebAuthnPermissions();
   setupIpcHandlers();
 
-  startApiServer();
-  startWebServer();
+  if (await probeOk(API_HEALTH_URL, false)) {
+    console.log("[OpenVault] Custody API already answering - reusing it.");
+  } else {
+    startApiServer();
+  }
+  if (await probeOk(WEB_URL, true)) {
+    console.log("[OpenVault] Web already serving HTML - reusing it.");
+  } else {
+    startWebServer();
+  }
 
   const apiReady = await waitForServer(API_HEALTH_URL);
   if (apiReady) {
@@ -544,7 +596,7 @@ app.whenReady().then(async () => {
     );
   }
 
-  const webReady = await waitForServer(WEB_URL, 120000);
+  const webReady = await waitForHtml(WEB_URL, 180000);
   if (!webReady) {
     // Same reasoning as the api branch above: the return value was previously
     // discarded and the window opened on a dead port, so a hard start-up

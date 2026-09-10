@@ -1,7 +1,8 @@
-"""HTTP client for real FreeBuild control plane (oblien/openship).
+"""HTTP client leftover for the retired vendor OpenShip path (DR-0003).
 
-Wraps ``{OPENSHIP_URL}/api`` — do not invent CLI subcommands that do not exist.
-When URL/token missing, callers should fall back to simulate + teach guides.
+Do not call this from the product. Buyer ship targets are the in-repo hosts
+in ``ship/hosts/``. ``adapter_status`` is local-only and never advertises
+openship.io / OPENSHIP_URL.
 """
 
 from __future__ import annotations
@@ -173,37 +174,22 @@ class OpenShipClient:
 
 
 def adapter_status() -> dict[str, Any]:
-    """Honest presence: API / CLI / simulate — what can actually ship."""
-    import shutil
-
-    cfg = OpenShipConfig.from_env()
-    cli = os.environ.get("OPENSHIP_CLI", "openship")
-    which = shutil.which(cli)
-    mode = os.environ.get("OPENSHIP_MODE", "auto")
-    api_ready = cfg is not None and cfg.configured()
-    if mode == "simulate":
-        effective = "simulate"
-    elif api_ready:
-        effective = "api"
-    elif which:
-        effective = "cli"
-    elif mode == "auto":
-        effective = "simulate"
-    else:
-        effective = mode
+    """Local FreeBuild presence only. Vendor OpenShip is not a product path."""
+    mode = os.environ.get("OPENSHIP_MODE", "simulate")
     return {
         "mode": mode,
-        "effective": effective,
-        "api_ready": api_ready,
-        "api_url": cfg.base_url if cfg else None,
-        "cli_found": which is not None,
-        "cli_path": which,
-        "vendor_tree": "D:\\OpenVault\\vendor\\openship",
-        "docs": "https://openship.io/docs",
-        "install_hint": "npm i -g openship  OR  set OPENSHIP_URL + OPENSHIP_TOKEN",
+        "effective": "simulate",
+        "api_ready": False,
+        "api_url": None,
+        "cli_found": False,
+        "cli_path": None,
+        "vendor_tree": None,
+        "docs": None,
+        "install_hint": (
+            "Use Cloudflare Pages, Coolify, Netlify, Spaceship FTP, or VPS SSH"
+        ),
         "honest": (
-            "FreeBuild ships via Oblien Cloud, SSH VPS (Hetzner/DO/any), or local Docker — "
-            "not native AWS ELB/Lambda/S3 app provisioning. AWS path is teach+budget until "
-            "OpenVault AWS adapter lands."
+            "OpenVault ships through in-repo hosts only (DR-0003). "
+            "Vendor OpenShip is not a product path. Simulate never invents a host URL."
         ),
     }

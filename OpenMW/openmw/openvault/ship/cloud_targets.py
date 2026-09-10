@@ -30,7 +30,6 @@ ShipTarget = Literal[
     "cloudflare_pages",
     "coolify",
     "netlify",
-    "openship_cloud",
     "vps_ssh",
     "aws_guide",
     "local_demo",
@@ -167,15 +166,6 @@ TARGET_CARDS: tuple[TargetCard, ...] = (
         estimated_min_usd=0.0,
     ),
     TargetCard(
-        id="openship_cloud",
-        title="FreeBuild Cloud",
-        blurb="One-stop like Render — free *.opsh.io, managed TLS, credit quota, sleep mode.",
-        instant_host=True,
-        needs=["OPENSHIP_URL", "OPENSHIP_TOKEN", "Cloud connect in FreeBuild"],
-        register_url="https://openship.io",
-        estimated_min_usd=0.0,
-    ),
-    TargetCard(
         id="vps_ssh",
         title="Your VPS — we manage it (Hetzner / DO / EC2 / …)",
         blurb=(
@@ -294,15 +284,6 @@ def build_ship_blueprint(
                 "(or paste CNAME if registrar is elsewhere)"
             ),
         ]
-    elif target == "openship_cloud":
-        steps = [
-            "Connect FreeBuild Cloud (openship.io) — set OPENSHIP_URL + OPENSHIP_TOKEN",
-            "Pick repo (GitHub OAuth in FreeBuild) or paste Git URL / local folder",
-            "Pick Power tier (micro→high) — sleep mode saves credits",
-            f"Free host *.opsh.io or custom {hostname or 'your.domain'}",
-            "POST /deployments/build/access — FreeBuild builds containers (front + back)",
-            "Watch SSE build stream → Visit Site",
-        ]
     elif target == "vps_ssh":
         steps = [
             f"Rent VPS (Hetzner CX22 etc.) → note IP {vps_host or '<VPS_IP>'}",
@@ -344,7 +325,6 @@ def build_ship_blueprint(
             target == "cloudflare_pages"
             or target == "coolify"
             or target == "netlify"
-            or (target == "openship_cloud" and adapter_status()["api_ready"])
             or target == "local_demo"
             or (target == "vps_ssh" and bool(vps_host))
             or target == "aws_guide"

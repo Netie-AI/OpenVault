@@ -17,7 +17,6 @@ from openmw.openvault.ship.stacks import get_stack
 ShipTarget = Literal[
     "openvault_hosted",
     "cursor_origin",
-    "openship_cloud",
     "vps_ssh",
     "hetzner",
     "aws",
@@ -39,7 +38,6 @@ _REMOTE_TARGETS: frozenset[str] = frozenset(
         "hetzner",
         "aws",
         "aws_guide",
-        "openship_cloud",
         "cursor_origin",
     }
 )

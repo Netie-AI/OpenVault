@@ -353,7 +353,7 @@ def build_deploy_plan(
                 "openship",
                 "FreeBuild full plan (apps + services + TLS + mail)",
                 "pending",
-                "Set OPENSHIP_MODE=simulate or OPENSHIP_CLI / OPENSHIP_URL",
+                "Local FreeBuild checklist (in-repo hosts publish; simulate never invents a URL)",
                 True,
             )
         )

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -71,10 +72,16 @@ def test_ship_api_routes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Non
     targets = client.get("/api/ship/targets")
     assert targets.status_code == 200
     ids = {t["id"] for t in targets.json()["targets"]}
+    blob = json.dumps(targets.json())
     assert "spaceship_ftp" in ids
-    assert "openship_cloud" in ids
+    assert "coolify" in ids
+    assert "netlify" in ids
     assert "vps_ssh" in ids
     assert "aws_guide" in ids
+    assert "openship_cloud" not in ids
+    assert "openship_cloud" not in blob
+    assert "openship.io" not in blob
+    assert "OPENSHIP_URL" not in blob
 
     bud = client.put(
         "/api/ship/budget",

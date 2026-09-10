@@ -49,29 +49,25 @@ def test_engine_local_folder(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) ->
     assert "non-production" in host["detail"]
 
 
-def test_engine_openship_cloud_simulate_no_fake_url(
+def test_engine_prefer_remote_openship_is_ignored(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Simulate must stay valid — but must never invent https://…opsh.io / hostname."""
+    """Old clients may still send prefer_remote_openship; vendor is not a path."""
     monkeypatch.setenv("OPENVAULT_HOME", str(tmp_path / "ov"))
     monkeypatch.setenv("OPENSHIP_MODE", "simulate")
     app_dir = tmp_path / "demo"
     app_dir.mkdir()
     (app_dir / "package.json").write_text('{"name":"demo"}', encoding="utf-8")
     out = run_ship_engine(
-        target="openship_cloud",
+        target="local_demo",
         project_path=str(app_dir),
         hostname="app.example.com",
+        prefer_remote_openship=True,
     )
     assert out["ok"] is True
-    dep = out["deployment"]
-    assert dep["public_url"] == ""
-    assert dep["mode"] == "simulated"
-    assert "opsh.io" not in dep["public_url"]
-    assert not dep["public_url"].startswith("https://app.example.com")
-    host = next(s for s in dep["steps"] if s["id"] == "host")
-    assert host["status"] == "simulated"
-    assert "non-production" in host["detail"].lower() or "simulate" in host["detail"].lower()
+    assert "remote" not in out
+    assert out["deployment"]["public_url"] == ""
+    assert out["deployment"]["mode"] == "simulated"
 
 
 def test_engine_aws_guide_no_fake_live_url(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -87,85 +83,6 @@ def test_engine_aws_guide_no_fake_live_url(tmp_path: Path, monkeypatch: pytest.M
     assert out["ok"] is True
     assert out["deployment"]["public_url"] == ""
     assert out["deployment"]["mode"] == "guide"
-
-
-def test_engine_openship_cloud_remote_pass_without_url_fails(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Remote 'success' without an observed URL must not invent *.opsh.io."""
-    monkeypatch.setenv("OPENVAULT_HOME", str(tmp_path / "ov"))
-    monkeypatch.setenv("OPENSHIP_URL", "https://openship.example")
-    monkeypatch.setenv("OPENSHIP_TOKEN", "tok")
-    app_dir = tmp_path / "demo"
-    app_dir.mkdir()
-    (app_dir / "package.json").write_text('{"name":"demo"}', encoding="utf-8")
-
-    class _FakeClient:
-        available = True
-
-        def build_access(self, _payload: dict) -> dict:
-            return {"ok": True, "deployment_id": "dep123", "http_status": 200}
-
-        def close(self) -> None:
-            return None
-
-    monkeypatch.setattr(
-        "openmw.openvault.ship.openship_client.OpenShipClient",
-        lambda: _FakeClient(),
-    )
-    out = run_ship_engine(
-        target="openship_cloud",
-        project_path=str(app_dir),
-        hostname="app.example.com",
-        prefer_remote_openship=True,
-    )
-    assert out["ok"] is False
-    dep = out["deployment"]
-    assert dep["public_url"] == ""
-    host = next(s for s in dep["steps"] if s["id"] == "host")
-    assert host["status"] == "fail"
-    assert "opsh.io" not in dep["public_url"]
-
-
-def test_engine_openship_cloud_remote_observed_url_is_live(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.setenv("OPENVAULT_HOME", str(tmp_path / "ov"))
-    monkeypatch.setenv("OPENSHIP_URL", "https://openship.example")
-    monkeypatch.setenv("OPENSHIP_TOKEN", "tok")
-    app_dir = tmp_path / "demo"
-    app_dir.mkdir()
-    (app_dir / "package.json").write_text('{"name":"demo"}', encoding="utf-8")
-
-    class _FakeClient:
-        available = True
-
-        def build_access(self, _payload: dict) -> dict:
-            return {
-                "ok": True,
-                "deployment_id": "dep456",
-                "http_status": 200,
-                "url": "https://demo.opsh.io",
-            }
-
-        def close(self) -> None:
-            return None
-
-    monkeypatch.setattr(
-        "openmw.openvault.ship.openship_client.OpenShipClient",
-        lambda: _FakeClient(),
-    )
-    out = run_ship_engine(
-        target="openship_cloud",
-        project_path=str(app_dir),
-        prefer_remote_openship=True,
-    )
-    assert out["ok"] is True
-    dep = out["deployment"]
-    assert dep["public_url"] == "https://demo.opsh.io"
-    assert dep["mode"] == "live"
-    host = next(s for s in dep["steps"] if s["id"] == "host")
-    assert host["status"] == "pass"
 
 
 def test_ship_github_and_library_routes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

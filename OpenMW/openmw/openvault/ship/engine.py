@@ -1,10 +1,8 @@
 """In-process ship engine — steal FreeBuild operating concept into OpenVault.
 
-Primary path (no remote FreeBuild client required):
-  library source → detect → cicd → domain teach → target (cloud/vps/aws/local)
-  → optional clone → build commands (local) → record deployment artifact
-
-Remote ``openship_client`` remains optional when OPENSHIP_URL+TOKEN set.
+Primary path (no vendor OpenShip client; DR-0003):
+  library source -> detect -> cicd -> domain teach -> internal host
+  -> optional clone -> build commands (local) -> record deployment artifact
 """
 
 from __future__ import annotations
@@ -267,89 +265,6 @@ def _run_build(commands: list[str], cwd: Path) -> tuple[bool, str]:
         return False, str(exc)
     detail = ((proc.stdout or "") + (proc.stderr or "")).strip()
     return proc.returncode == 0, detail[:4000] or f"exit={proc.returncode}"
-
-
-def _observed_remote_url(remote_result: dict[str, Any] | None) -> str:
-    """Pull a URL only if the remote payload already carried one. Never invent."""
-    if not remote_result:
-        return ""
-    for key in ("public_url", "url", "publicUrl", "hostname"):
-        raw = remote_result.get(key)
-        if not isinstance(raw, str):
-            continue
-        value = raw.strip()
-        if (
-            not value
-            or "<" in value
-            or value.startswith("http://<")
-            or value.startswith("https://<")
-        ):
-            continue
-        if value.startswith("http://") or value.startswith("https://"):
-            return value
-        if key == "hostname" and "." in value:
-            return f"https://{value}"
-    return ""
-
-
-def _openship_cloud_host(
-    *,
-    prefer_remote: bool,
-    remote_result: dict[str, Any] | None,
-    steps: list[EngineStep],
-) -> tuple[EngineStep, str, str]:
-    """FreeBuild Cloud host step — simulate labeled, no fake ``*.opsh.io`` URL.
-
-    Returns ``(step, public_url, mode)``. ``mode`` is ``live`` only when an
-    observed remote URL is present; otherwise ``simulated`` (or fail).
-    """
-    remote_step = next((s for s in steps if s.id == "remote"), None)
-    if prefer_remote and remote_step is not None and remote_step.status == "pass":
-        observed = _observed_remote_url(remote_result)
-        if observed:
-            return (
-                EngineStep(
-                    "host",
-                    "Host on FreeBuild Cloud",
-                    "pass",
-                    f"Live at {observed}",
-                ),
-                observed,
-                "live",
-            )
-        return (
-            EngineStep(
-                "host",
-                "Host on FreeBuild Cloud",
-                "fail",
-                "remote FreeBuild reported success but no observed host URL — "
-                "refusing to invent *.opsh.io",
-            ),
-            "",
-            "local_engine",
-        )
-    if prefer_remote and remote_step is not None and remote_step.status == "fail":
-        return (
-            EngineStep(
-                "host",
-                "Host on FreeBuild Cloud",
-                "fail",
-                "remote FreeBuild failed — no live host URL",
-            ),
-            "",
-            "local_engine",
-        )
-    return (
-        EngineStep(
-            "host",
-            "Host on FreeBuild Cloud",
-            "simulated",
-            "non-production simulate — no live host URL "
-            "(set OPENSHIP_URL+TOKEN + prefer_remote for a real *.opsh.io deploy)",
-        ),
-        "",
-        "simulated",
-    )
 
 
 def _host_cloudflare_pages(
@@ -631,7 +546,8 @@ def run_ship_engine(
 ) -> dict[str, Any]:
     """One-stop ship — FreeBuild concept in-process.
 
-    ``prefer_remote_openship`` only if OPENSHIP_URL+TOKEN set; default is local engine.
+    ``prefer_remote_openship`` is accepted so old clients do not 422, then
+    ignored. Vendor OpenShip is not a product path (DR-0003).
 
     Raises :class:`DeployInProgressError` when the same project is already being
     deployed. ``/api/ship/engine`` is a sync endpoint, so FastAPI runs it in a
@@ -773,44 +689,8 @@ def _run_ship_engine_locked(
         )
     )
 
-    # Optional remote FreeBuild — secondary
-    remote_result: dict[str, Any] | None = None
     if prefer_remote_openship:
-        from openmw.openvault.ship.openship_client import OpenShipClient
-
-        client = OpenShipClient()
-        if client.available:
-            steps.append(EngineStep("remote", "FreeBuild remote build/access", "running"))
-            remote_result = client.build_access(
-                {
-                    "deployTarget": (
-                        "cloud"
-                        if target == "openship_cloud"
-                        else "server"
-                        if target == "vps_ssh"
-                        else "local"
-                    ),
-                    "branch": "main",
-                    "cloudResourceTier": cloud_tier,
-                }
-            )
-            client.close()
-            ok_remote = bool(
-                remote_result.get("deployment_id")
-                or remote_result.get("deploymentId")
-                or (remote_result.get("http_status", 500) < 400 and remote_result.get("ok"))
-            )
-            steps[-1].status = "pass" if ok_remote else "fail"
-            steps[-1].detail = json.dumps(remote_result)[:1500]
-        else:
-            steps.append(
-                EngineStep(
-                    "remote",
-                    "FreeBuild remote",
-                    "skipped",
-                    "OPENSHIP_URL+TOKEN not set — using local engine",
-                )
-            )
+        log.info("prefer_remote_openship_ignored")
 
     # Whether a build has to happen HERE is a property of the target, not of
     # whichever caller happened to build the request. one-press hardcoded
@@ -929,13 +809,6 @@ def _run_ship_engine_locked(
                 "deploy reported success but no observed Netlify URL — refusing to invent one",
             )
             public = ""
-    elif target == "openship_cloud":
-        host_step, public, dep_mode = _openship_cloud_host(
-            prefer_remote=prefer_remote_openship,
-            remote_result=remote_result,
-            steps=steps,
-        )
-        steps.append(host_step)
     elif target == "vps_ssh":
         step, public = _host_vps_ssh(
             work_path=Path(work_path),
@@ -1004,8 +877,6 @@ def _run_ship_engine_locked(
         status=status_name,
     )
     out: dict[str, Any] = {"ok": ready, "deployment": dep.to_dict()}
-    if remote_result is not None:
-        out["remote"] = remote_result
     # AWS skill pointer
     out["aws_skill"] = {
         "vendor": "vendor/awslabs-agent-plugins/plugins/deploy-on-aws/skills",

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -H 127.0.0.1 --port 3010",
+    "dev": "next dev --webpack -H 127.0.0.1 --port 3010",
     "build": "next build",
     "start": "next start -H 127.0.0.1 --port 3010",
     "lint": "next lint",

@@ -2,6 +2,36 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-09-08 - Close #16 and #15 from live evidence
+
+- #16 CLOSED: `GET /api/ship/targets` has no `openship_cloud` / openship.io /
+  OPENSHIP_URL. Playwright `/ship` paints. No Cloudflare Containers. No Stripe.
+- #15 CLOSED: `/freeroute` Try a hop Send posts `/ov-api/v1/chat/completions`;
+  sealed vault showed explicit refuse (403). Did not pull F15 RTK/skills.
+- #17 stays OPEN: remaining live `openvault app` (#56 OPEN). #18 stays CLOSED.
+
+## 2026-09-08 - Restore :3010 HTML; retire vendor OpenShip; FreeRoute GUI chat
+
+- `:3010` hung because Next 16 Turbopack panics on this exFAT volume and keeps
+  the port bound. `openvault up` / Electron now wait for real HTML; `dev` is
+  webpack; prod `next start` is used when `.next/BUILD_ID` exists. Electron
+  reuses an already-up :5000 / HTML :3010 instead of a second bind.
+- Browser this session: `/` `/vault` `/ship` `/freeroute` `/gate` paint AppBar.
+  FreeRoute "Try a hop" posts `/v1/chat/completions`; sealed vault showed an
+  explicit refuse (not empty success). Desktop window title OpenVault.
+- `GET /api/ship/targets` no longer lists `openship_cloud` / openship.io /
+  OPENSHIP_URL. Internal hosts remain. DR-0003.
+- Tickets #55-#59 closed. Epics #15 #16 #17 CLOSED. #18 stays CLOSED.
+
+## 2026-09-08 - F32 reopen #17 #16; queue #15
+
+- Decomposition: #17 closed from pytest+tsx while `:3010` still hangs
+  (homepage timeout 8s this session). #16 still embeds vendor OpenShip
+  (`openship_client.py`, `openship_cloud` / openship.io). #15 API EARS hold;
+  playground UI queued.
+- Tickets: #55 (FIRST, GUI HTML), #56 (desktop after #55), #57 (retire
+  OpenShip), #58 (`/ship` UI), #59 (FreeRoute playground). #18 stays CLOSED.
+
 ## 2026-09-07 - Renumber packs/passkeys off main DR-0013/DR-0014
 
 - `main` already shipped DR-0013 (locked display SKUs) and DR-0014 (JWKS pin).
