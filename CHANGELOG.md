@@ -2,6 +2,17 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-09-10 - CVV import test no longer searches whole secrets JSON
+
+- `test_cvv_column_is_stripped_and_never_stored` asserted fixture digits
+  `737` against `json.dumps(listed)`. Post-merge CI on `e6f3c5ce` (#61 / #60)
+  https://github.com/Netie-AI/OpenVault/actions/runs/34463864873 failed because
+  uuid4 hex id `42b1422acf7f47379992ed75fba39532` contained those digits, not a
+  stored CVV field.
+- Still guaranteed: CSV CVV columns are stripped (`cvv_stripped`); payment_card
+  records have no cvv/cvc field; reveal payload is the PAN only. Unblocks R-0003
+  for FreeRoute #61 / #60 merge SHA `e6f3c5ce`. No public `:5000`.
+
 ## 2026-09-10 - Free Keys wizard locks #60 checklist (no site-password form)
 
 - Wizard UI shows Groq-first register_url / base_url / provider= rows; Register

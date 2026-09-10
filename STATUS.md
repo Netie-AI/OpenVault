@@ -3,9 +3,12 @@
 > Canonical "what's true now." History: [`CHANGELOG.md`](CHANGELOG.md). Deferred:
 > [`PARKING_LOT.md`](PARKING_LOT.md). Map: [`docs/ACTIVE.md`](docs/ACTIVE.md).
 
-Last reconciled: 2026-09-10. GitHub OPEN = #61 (cites #60 Get free keys).
-#12-#39, #48, #52 CLOSED (#53 squash-merged). VPC allowlist for `POST /keys/services`
-(loopback + `OPENVAULT_SERVICES_ALLOW`). JWKS pin kids (#50). No public `:5000`.
+Last reconciled: 2026-09-10. GitHub OPEN = #60 (Get free keys). #61 merged as
+`e6f3c5ce`; post-merge CI run 34463864873 failed on a false-positive CVV
+substring in a secret id. Hotfix: structured CVV assertions. Unblocks R-0003
+for that merge. #12-#39, #48, #52 CLOSED. No public `:5000`.
+VPC allowlist for `POST /keys/services` (loopback + `OPENVAULT_SERVICES_ALLOW`).
+JWKS pin kids (#50).
 Home pack: passphrase-scrypt only. Packs are DR-0016 (main already took
 DR-0013 for display SKUs). Passkeys are DR-0017 (main took DR-0014 for JWKS).
 DR-0015 accepted: irreversible IDs in the vault; rust console optional.
