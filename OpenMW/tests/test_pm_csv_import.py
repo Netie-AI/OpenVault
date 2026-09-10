@@ -7,6 +7,8 @@ stripped with an explicit reason. Sealed vault fails closed on non-dry-run.
 from __future__ import annotations
 
 import json
+import sqlite3
+from collections.abc import Mapping
 from pathlib import Path
 
 import pytest
@@ -18,6 +20,15 @@ from openmw.openvault.vault.pm_import import parse_csv_text
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
 VISA_PAN = "4242424242424242"
+_CVV_FIXTURE = "737"
+_CVV_FIELD_NAMES = frozenset(
+    {"cvv", "cvc", "cid", "csc", "cvv2", "cvc2", "security_code", "securitycode"}
+)
+# uuid4 hex / timestamps / foreign ids can coincidentally contain fixture digits
+# (CI run 34463864873: id 42b1422acf7f47379992ed75fba39532).
+_NON_PAYLOAD_KEYS = frozenset(
+    {"id", "account_id", "replaced_by", "created_at", "updated_at", "last_revealed_at"}
+)
 
 
 def _client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
@@ -26,6 +37,21 @@ def _client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
         create_app(mock_health=True, enable_precheck_loop=False),
         client=("127.0.0.1", 5555),
     )
+
+
+def _assert_cvv_not_stored(payload: Mapping[str, object], *, cvv: str = _CVV_FIXTURE) -> None:
+    """PCI: no CVV field and no payload value that could hold the CVV.
+
+    Do not search the whole serialized JSON: secret ids are uuid4 hex.
+    """
+    assert not _CVV_FIELD_NAMES.intersection(k.lower() for k in payload)
+    for key, value in payload.items():
+        if key in _NON_PAYLOAD_KEYS:
+            continue
+        if isinstance(value, str):
+            assert cvv not in value
+        elif isinstance(value, int) and not isinstance(value, bool):
+            assert str(value) != cvv
 
 
 def test_detects_three_official_dialects() -> None:
@@ -90,6 +116,26 @@ def test_apple_csv_round_trips_password(tmp_path: Path, monkeypatch: pytest.Monk
     assert revealed.json()["secret"] == "apple-secret-9"
 
 
+def test_cvv_digits_inside_secret_id_hex_are_not_a_stored_cvv() -> None:
+    """Post-merge CI on e6f3c5ce treated uuid hex ``...f473799...`` as a CVV."""
+    _assert_cvv_not_stored(
+        {
+            "id": "42b1422acf7f47379992ed75fba39532",
+            "kind": "payment_card",
+            "label": "Personal Visa",
+            "last4": "4242",
+            "cardholder": "J HONG",
+        }
+    )
+
+
+def test_cvv_field_or_payload_value_still_fails_the_store_check() -> None:
+    with pytest.raises(AssertionError):
+        _assert_cvv_not_stored({"kind": "payment_card", "cvv": _CVV_FIXTURE})
+    with pytest.raises(AssertionError):
+        _assert_cvv_not_stored({"kind": "payment_card", "cardholder": _CVV_FIXTURE})
+
+
 def test_cvv_column_is_stripped_and_never_stored(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -101,18 +147,32 @@ def test_cvv_column_is_stripped_and_never_stored(
     assert body["cvv_stripped"] == 1
     assert body["imported"] == 1
     assert any("CVV" in (r.get("reason") or "") for r in body["results"])
-    assert "737" not in res.text
+    for row in body["results"]:
+        _assert_cvv_not_stored(row)
     listed = client.get("/api/secrets").json()["secrets"]
-    assert listed[0]["kind"] == "payment_card"
-    assert listed[0]["last4"] == "4242"
-    assert "737" not in json.dumps(listed)
+    card = listed[0]
+    assert card["kind"] == "payment_card"
+    assert card["last4"] == "4242"
+    _assert_cvv_not_stored(card)
     revealed = client.get(
-        f"/api/secrets/{listed[0]['id']}/reveal",
+        f"/api/secrets/{card['id']}/reveal",
         headers={"X-OpenVault-Reveal": "intentional"},
     )
     assert revealed.status_code == 200
-    assert revealed.json()["secret"] == VISA_PAN
-    assert "737" not in revealed.text
+    payload = revealed.json()
+    assert payload["secret"] == VISA_PAN
+    _assert_cvv_not_stored(payload)
+    conn = sqlite3.connect(tmp_path / "keys.db")
+    try:
+        conn.row_factory = sqlite3.Row
+        row = conn.execute("SELECT * FROM secrets").fetchone()
+        assert row is not None
+        columns = {k.lower() for k in row.keys()}
+        assert not _CVV_FIELD_NAMES.intersection(columns)
+        stored = {k: row[k] for k in row.keys() if k != "secret_blob"}
+        _assert_cvv_not_stored(stored)
+    finally:
+        conn.close()
     raw = (tmp_path / "keys.db").read_bytes()
     # UUID hex / Fernet tokens in keys.db can coincidentally contain ASCII
     # "737". Recoverable store is the reveal path above; the PAN must still
