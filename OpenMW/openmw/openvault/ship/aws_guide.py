@@ -157,7 +157,7 @@ def build_aws_render_plan(*, hostname: str = "") -> AwsRenderPlan:
     ]
     openship_ec2 = [
         "Launch Ubuntu EC2 (t3.small+), open 22/80/443, attach Elastic IP",
-        "Set OPENSHIP_URL to your control plane OR run openship on the box",
+        "Set Coolify URL+token or VPS SSH from OpenVault ship targets",
         "Add server SSH → install → deploy — same as Hetzner path",
         "Optional: put CloudFront in front of the EC2/OpenResty for static near",
     ]

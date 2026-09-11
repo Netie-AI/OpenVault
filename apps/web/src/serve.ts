@@ -6,7 +6,7 @@ import type { KeyPath } from "./keys/render.ts";
 import { renderPage } from "./keys/render.ts";
 
 const HOST = "127.0.0.1";
-const PORT = Number(process.env.KEY_UI_PORT || 3010);
+const PORT = Number(process.env.KEY_UI_PORT || 3019);
 
 function pathOf(url: string): KeyPath {
   if (url.startsWith("/byok")) return "byok";

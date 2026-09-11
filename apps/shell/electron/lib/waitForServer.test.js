@@ -23,6 +23,30 @@ const http = require("node:http");
 
 const { waitForServer } = require("./waitForServer");
 
+/**
+ * A server that answers 200 with Next's build-in-progress shell on every
+ * path except /ok, which gets the real app document. This is the state a
+ * cold `next dev` holds for as long as the build takes.
+ */
+function startCompilingServer() {
+  const server = http.createServer((req, res) => {
+    const body =
+      req.url === "/ok"
+        ? "<html><body><div id=\"__next\">OpenVault</div></body></html>"
+        : "<html><body>Compiling... please wait</body></html>";
+    res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    res.end(body);
+  });
+  return new Promise((resolve) => {
+    server.listen(0, "127.0.0.1", () => {
+      resolve({
+        port: server.address().port,
+        close: () => new Promise((done) => server.close(done)),
+      });
+    });
+  });
+}
+
 /** A listener that accepts the socket and never answers. The :3010 wedge. */
 function startBlackHoleServer() {
   const sockets = [];
@@ -160,6 +184,52 @@ test("progress is reported so a caller can show a visible waiting state", async 
     });
     assert.ok(seen.length > 0, "onProgress must fire while waiting");
     assert.ok(seen.includes("stalled"), "a stall must be observable while it happens");
+  } finally {
+    await srv.close();
+  }
+});
+
+test("expectHtml refuses a build-in-progress shell, and names it (not 'unreachable')", async () => {
+  const srv = await startCompilingServer();
+  try {
+    const result = await waitForServer(`http://127.0.0.1:${srv.port}/compile`, 1500, {
+      expectHtml: true,
+      intervalMs: 100,
+    });
+    assert.equal(result.ok, false, "a Compiling shell at HTTP 200 must not count as ready");
+    // Naming it matters as much as refusing it: 'unreachable' would send the
+    // user to start a server that is already running.
+    assert.equal(result.reason, "compiling");
+    assert.match(result.lastError, /still compiling/);
+  } finally {
+    await srv.close();
+  }
+});
+
+test("expectHtml accepts the real app document", async () => {
+  const srv = await startCompilingServer();
+  try {
+    const result = await waitForServer(`http://127.0.0.1:${srv.port}/ok`, 3000, {
+      expectHtml: true,
+      intervalMs: 100,
+    });
+    assert.equal(result.ok, true, `expected ready, got ${result.reason}: ${result.lastError}`);
+    assert.equal(result.reason, "ready");
+  } finally {
+    await srv.close();
+  }
+});
+
+test("without expectHtml the same shell counts as ready - the flag is what does the work", async () => {
+  const srv = await startCompilingServer();
+  try {
+    const result = await waitForServer(`http://127.0.0.1:${srv.port}/compile`, 1500, {
+      intervalMs: 100,
+    });
+    // This is the OLD behaviour, kept deliberately for the custody API on :5000
+    // which serves JSON and must not be held to an HTML contract. It is also
+    // the bug when applied to :3010 - which is why the web path passes the flag.
+    assert.equal(result.ok, true);
   } finally {
     await srv.close();
   }

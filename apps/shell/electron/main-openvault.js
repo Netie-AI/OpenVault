@@ -18,9 +18,10 @@ const {
   clipboard,
 } = require("electron");
 const path = require("path");
+const fs = require("fs");
 const { spawn } = require("child_process");
 const { killProcessTree } = require("./processTree");
-const { waitForServer } = require("./lib/waitForServer");
+const { waitForServer, htmlVerdict } = require("./lib/waitForServer");
 
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
@@ -156,11 +157,15 @@ function sendToRenderer(channel, data) {
  * previous inline version could never time out. This wrapper only adds the
  * progress reporting, so a slow cold compile looks like progress rather than a
  * frozen app (R-0011: a degradation nobody can see is a lie).
+ *
+ * `options` is forwarded to the probe, which is how the web service asks for
+ * `expectHtml` without this wrapper knowing what HTML is.
  */
-async function awaitService(url, label, timeoutMs) {
+async function awaitService(url, label, timeoutMs, options = {}) {
   console.log(`[OpenVault] Waiting for ${label} at ${url} ...`);
   let lastState = "";
   const result = await waitForServer(url, timeoutMs, {
+    ...options,
     onProgress: ({ state, elapsedMs, detail }) => {
       if (state === lastState) return;
       lastState = state;
@@ -169,6 +174,10 @@ async function awaitService(url, label, timeoutMs) {
         console.warn(
           `[OpenVault] ${label} accepted the connection but has not answered (${seconds}s). ` +
             "A stale dev server on this port would look exactly like this."
+        );
+      } else if (state === "compiling") {
+        console.log(
+          `[OpenVault] ${label} is answering but has not finished building (${seconds}s): ${detail}`
         );
       } else if (state === "unreachable") {
         console.log(`[OpenVault] ${label} not up yet (${seconds}s): ${detail}`);
@@ -190,10 +199,48 @@ async function awaitService(url, label, timeoutMs) {
 }
 
 /**
- * The two failures need opposite remedies, so say which one happened rather
- * than the old catch-all "never became ready".
+ * One-shot "is it already up?" check, used before we start anything.
+ *
+ * Starting a second copy of a server that is already serving just fails to
+ * bind, so the shell reuses what is there. The HTML variant shares its verdict
+ * with the polling probe rather than reimplementing it - two copies of "does
+ * this look like the app" is how they drift apart.
+ */
+async function probeOk(url, html) {
+  try {
+    const res = await fetch(url, { headers: html ? { Accept: "text/html" } : {} });
+    if (!html) return res.ok;
+    return (await htmlVerdict(res)) === null;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Wait until `url` serves the app, not merely until something answers there.
+ *
+ * A bound port is not a served page: Next answers 200 with a "Compiling..."
+ * shell for as long as the build takes, and on this exFAT volume that is long.
+ * The window used to open onto that shell.
+ */
+async function waitForHtml(url, timeoutMs = 180000) {
+  return awaitService(url, "web", timeoutMs, { expectHtml: true });
+}
+
+/**
+ * The failures need opposite remedies, so say which one happened rather than
+ * the old catch-all "never became ready".
  */
 function readinessAdvice(result, url) {
+  if (result.reason === "compiling") {
+    return [
+      `${url} is answering, but it is still building after ` +
+        `${Math.round(result.elapsedMs / 1000)}s (${result.lastError || "no detail"}).`,
+      "The server is alive - do not kill it and do not start a second copy.",
+      "Either the build is genuinely slow on this volume, or it has failed;",
+      "the build log in the console window has the real reason.",
+    ];
+  }
   if (result.reason === "stalled") {
     return [
       `Something is listening on ${url} but never answered ` +
@@ -285,15 +332,15 @@ function startApiServer() {
 }
 
 function npmScriptUsed() {
-  return process.env.OPENVAULT_PROD === "1" ? "start" : "dev";
+  if (process.env.OPENVAULT_DEV === "1") return "dev";
+  if (process.env.OPENVAULT_PROD === "1") return "start";
+  const buildId = path.join(WEB_DIR, ".next", "BUILD_ID");
+  return fs.existsSync(buildId) ? "start" : "dev";
 }
 
 function startWebServer() {
-  // `dev` by default. This used to be `start`, i.e. `next start`, which needs
-  // a prior `next build` - and no code path in this repo ever runs one. On any
-  // machine without leftover .next/ the web child died instantly, and the
-  // window opened on a dead port anyway. Opt into the production server with
-  // OPENVAULT_PROD=1 once something actually builds it.
+  // `dev` is webpack (package.json). Turbopack panics on this exFAT volume.
+  // Prefer `next start` when .next/BUILD_ID exists. OPENVAULT_DEV=1 forces webpack-dev.
   const npmScript = npmScriptUsed();
   console.log("[OpenVault] Starting Next.js on", WEB_URL, `(${npmScript})`);
   sendToRenderer("server-status", { status: "starting", service: "web", port: WEB_PORT });
@@ -571,8 +618,16 @@ app.whenReady().then(async () => {
   setupWebAuthnPermissions();
   setupIpcHandlers();
 
-  startApiServer();
-  startWebServer();
+  if (await probeOk(API_HEALTH_URL, false)) {
+    console.log("[OpenVault] Custody API already answering - reusing it.");
+  } else {
+    startApiServer();
+  }
+  if (await probeOk(WEB_URL, true)) {
+    console.log("[OpenVault] Web already serving HTML - reusing it.");
+  } else {
+    startWebServer();
+  }
 
   const apiReady = await awaitService(API_HEALTH_URL, "api");
   if (apiReady.ok) {
@@ -597,7 +652,7 @@ app.whenReady().then(async () => {
     );
   }
 
-  const webReady = await awaitService(WEB_URL, "web", 120000);
+  const webReady = await waitForHtml(WEB_URL, 180000);
   if (!webReady.ok) {
     // Same reasoning as the api branch above: the return value was previously
     // discarded and the window opened on a dead port, so a hard start-up

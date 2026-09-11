@@ -27,11 +27,21 @@
  * own deadline, so the overall deadline is always reachable. A caller cannot
  * reintroduce the hang by passing a different URL.
  *
- * The probe also reports WHICH failure happened, because the two need opposite
+ * The probe also reports WHICH failure happened, because they need opposite
  * remedies and "not ready" cannot tell them apart:
  *   - "unreachable": nothing is listening. Start the server.
  *   - "stalled":     something is listening and not answering. Stop the stale
  *                    process; starting another one will just fail to bind.
+ *   - "compiling":   the server answers, but with a build-in-progress shell
+ *                    rather than the app. Wait, or look at the build log.
+ *
+ * That third state is why `expectHtml` exists. A bound port is not a served
+ * page: `next dev` answers 200 with a "Compiling..." document long before the
+ * app is reachable, and a probe that accepts any 2xx reports ready while the
+ * user is looking at a build in progress. The content check lives here, at the
+ * primitive, rather than in one call site's own loop - otherwise the next
+ * caller reintroduces the bug by writing its own probe (R-0004: fix the root
+ * cause class, not the one function that exposed it).
  *
  * Pure and Electron-free so it can be unit-tested against a real socket
  * without the Electron binary (same reasoning as resolveServerEntry.js).
@@ -73,6 +83,27 @@ function describe(err) {
 }
 
 /**
+ * Is this response the app, or a build-in-progress shell?
+ *
+ * Returns null when the response is real app HTML, otherwise a short reason
+ * naming what was wrong - which becomes `lastError` and reaches the user.
+ */
+async function htmlVerdict(res) {
+  if (!res.ok) return "HTTP " + res.status;
+  const ctype = (res.headers.get("content-type") || "").toLowerCase();
+  if (!ctype.includes("text/html")) return `content-type ${ctype || "missing"}, not text/html`;
+  const body = await res.text();
+  if (!body.toLowerCase().includes("<html")) return "answered without an HTML document";
+  // Next serves this shell at 200 while it builds. Matching "compiling" alone
+  // would also match an app page that happens to use the word, so require the
+  // rest of the shell's own wording with it.
+  if (/compiling/i.test(body) && (/proxy/i.test(body) || /please wait/i.test(body))) {
+    return "still compiling";
+  }
+  return null;
+}
+
+/**
  * Poll `url` until it answers or the deadline passes.
  *
  * @param {string} url
@@ -80,6 +111,8 @@ function describe(err) {
  * @param {object} [options]
  * @param {number} [options.attemptTimeoutMs] per-attempt budget
  * @param {number} [options.intervalMs] gap between attempts
+ * @param {boolean} [options.expectHtml] require real app HTML, not merely an
+ *        answer - rejects a build-in-progress shell
  * @param {Function} [options.fetchFn] injectable fetch
  * @param {Function} [options.onProgress] called with each state change, so the
  *        caller can surface a visible waiting state instead of dead silence
@@ -91,6 +124,7 @@ async function waitForServer(url, timeoutMs = DEFAULT_TIMEOUT_MS, options = {}) 
   const {
     attemptTimeoutMs = DEFAULT_ATTEMPT_TIMEOUT_MS,
     intervalMs = DEFAULT_INTERVAL_MS,
+    expectHtml = false,
     fetchFn = globalThis.fetch,
     onProgress = () => {},
   } = options;
@@ -99,6 +133,7 @@ async function waitForServer(url, timeoutMs = DEFAULT_TIMEOUT_MS, options = {}) 
   const deadline = start + timeoutMs;
   let attempts = 0;
   let stalledAttempts = 0;
+  let compilingAttempts = 0;
   let lastError = null;
 
   const result = (ok, reason) => ({
@@ -106,6 +141,7 @@ async function waitForServer(url, timeoutMs = DEFAULT_TIMEOUT_MS, options = {}) 
     reason,
     attempts,
     stalledAttempts,
+    compilingAttempts,
     elapsedMs: Date.now() - start,
     lastError,
   });
@@ -124,20 +160,40 @@ async function waitForServer(url, timeoutMs = DEFAULT_TIMEOUT_MS, options = {}) 
     const budgetWasTruncated = budget < attemptTimeoutMs;
 
     try {
-      const res = await fetchFn(url, { signal: AbortSignal.timeout(budget) });
-      // Any answer at all proves the listener is alive and serving. A 5xx from
-      // a dev server is still "up" - it compiled and chose to fail.
-      if (res.ok || res.status < 500) {
-        onProgress({ state: "ready", attempts, elapsedMs: Date.now() - start });
-        return result(true, "ready");
-      }
-      lastError = "HTTP " + res.status;
-      onProgress({
-        state: "unreachable",
-        attempts,
-        elapsedMs: Date.now() - start,
-        detail: lastError,
+      const res = await fetchFn(url, {
+        signal: AbortSignal.timeout(budget),
+        ...(expectHtml ? { headers: { Accept: "text/html" } } : {}),
       });
+
+      if (expectHtml) {
+        const verdict = await htmlVerdict(res);
+        if (verdict === null) {
+          onProgress({ state: "ready", attempts, elapsedMs: Date.now() - start });
+          return result(true, "ready");
+        }
+        compilingAttempts += 1;
+        lastError = verdict;
+        onProgress({
+          state: "compiling",
+          attempts,
+          elapsedMs: Date.now() - start,
+          detail: lastError,
+        });
+      } else {
+        // Any answer at all proves the listener is alive and serving. A 5xx
+        // from a dev server is still "up" - it compiled and chose to fail.
+        if (res.ok || res.status < 500) {
+          onProgress({ state: "ready", attempts, elapsedMs: Date.now() - start });
+          return result(true, "ready");
+        }
+        lastError = "HTTP " + res.status;
+        onProgress({
+          state: "unreachable",
+          attempts,
+          elapsedMs: Date.now() - start,
+          detail: lastError,
+        });
+      }
     } catch (err) {
       const truncatedAbort = isTimeoutError(err) && budgetWasTruncated;
       const stalled = isTimeoutError(err) && !budgetWasTruncated;
@@ -158,13 +214,17 @@ async function waitForServer(url, timeoutMs = DEFAULT_TIMEOUT_MS, options = {}) 
     await sleep(Math.min(intervalMs, Math.max(0, deadline - Date.now())));
   }
 
-  // A server that stalled at least once is a different fault from one that was
-  // never listening, and the caller must be able to say so out loud.
+  // Each of these is a different fault with a different remedy, and the caller
+  // must be able to say which one out loud. A server that answered but never
+  // finished building is NOT unreachable, and telling the user to start it
+  // would send them to kill a process that was working.
+  if (compilingAttempts > 0) return result(false, "compiling");
   return result(false, stalledAttempts > 0 ? "stalled" : "unreachable");
 }
 
 module.exports = {
   waitForServer,
+  htmlVerdict,
   DEFAULT_TIMEOUT_MS,
   DEFAULT_ATTEMPT_TIMEOUT_MS,
   DEFAULT_INTERVAL_MS,

@@ -113,6 +113,38 @@ def _wait(url: str, timeout: float = 60.0) -> bool:
     return False
 
 
+def _html_ready(url: str, timeout: float = 3.0) -> bool:
+    """True only when the URL returns real HTML, not a TCP bind or Compiling page.
+
+    Next 16 Turbopack on this volume panics, then keeps :3010 listening while
+    document requests hang or stick on 'Compiling...'. urlopen success is not
+    enough: a 200 JSON healthz or a compiling overlay must not count as up.
+    """
+    try:
+        req = urllib.request.Request(url, headers={"Accept": "text/html"})
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            status = int(getattr(resp, "status", 200) or 200)
+            ctype = (resp.headers.get("Content-Type") or "").lower()
+            body = resp.read(8192).decode("utf-8", errors="replace")
+    except Exception:
+        return False
+    if status != 200 or "text/html" not in ctype:
+        return False
+    lowered = body.lower()
+    if "compiling" in lowered and ("proxy" in lowered or "please wait" in lowered):
+        return False
+    return "<html" in lowered
+
+
+def _wait_html(url: str, timeout: float = 120.0) -> bool:
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if _html_ready(url):
+            return True
+        time.sleep(0.5)
+    return False
+
+
 def _port_busy(port: int) -> bool:
     with socket.socket() as s:
         s.settimeout(0.4)
@@ -221,14 +253,26 @@ def _start_api(env: dict[str, str], *, mock_health: bool = False) -> subprocess.
     return _popen(args, OPENMW, env, log_path=log_path)
 
 
-def _start_web(env: dict[str, str], *, prod: bool = False) -> subprocess.Popen:
+def _start_web(
+    env: dict[str, str], *, prod: bool = False, force_dev: bool = False
+) -> subprocess.Popen:
     _ensure_web_deps()
-    script = "start" if prod else "dev"
+    build_id = WEB / ".next" / "BUILD_ID"
+    # Turbopack (`next dev` default) panics on this exFAT volume and leaves
+    # :3010 bound with no HTML. Prefer `next start` when a build exists.
+    # `dev` in package.json is webpack-only. `--dev` forces that path.
+    if force_dev:
+        script = "dev"
+    elif prod or build_id.is_file():
+        script = "start"
+    else:
+        script = "dev"
     # Log to a file like the API child does. Without this the web server's
     # stdout and stderr went to DEVNULL, so `next start` failing with "Could
     # not find a production build" left no trace anywhere, and the user was
     # told to run `openvault doctor` - which did not check for a build either.
     log_path = Path(env["OPENVAULT_HOME"]) / "logs" / "web.up.log"
+    print(f"Web app log -> {log_path} ({script})")
     return _popen([_npm(), "run", script], WEB, {**env, "PORT": str(WEB_PORT)}, log_path=log_path)
 
 
@@ -303,7 +347,16 @@ def cmd_doctor(_: argparse.Namespace) -> int:
 
     print(" ports")
     line(f"custody API :{API_PORT}", "listening" if _port_busy(API_PORT) else "free")
-    line(f"web app :{WEB_PORT}", "listening" if _port_busy(WEB_PORT) else "free")
+    web_busy = _port_busy(WEB_PORT)
+    web_html = _html_ready(f"http://127.0.0.1:{WEB_PORT}/") if web_busy else False
+    if web_busy and not web_html:
+        line(
+            f"web app :{WEB_PORT}",
+            "LISTENING but not HTML (wedged Next) - stop the occupant",
+            False,
+        )
+    else:
+        line(f"web app :{WEB_PORT}", "HTML" if web_html else "free")
 
     print("\n" + ("All good." if ok else "Some checks failed - see FAIL lines above."))
     return 0 if ok else 1
@@ -333,15 +386,31 @@ def _run_stack(args: argparse.Namespace, *, mock_health: bool, open_browser: boo
             p.terminate()
         return 1
 
+    web_url = f"http://127.0.0.1:{WEB_PORT}/"
     if _port_busy(WEB_PORT):
-        print(f"Web app already listening on :{WEB_PORT} - reusing it.")
+        if _html_ready(web_url):
+            print(f"Web app already serving HTML on :{WEB_PORT} - reusing it.")
+        else:
+            print(
+                f"Port :{WEB_PORT} is bound but not serving HTML "
+                "(wedged Next / Compiling proxy). Stop that process, then retry."
+            )
+            for p in procs:
+                p.terminate()
+            return 1
     else:
-        procs.append(_start_web(env, prod=getattr(args, "prod", False)))
+        procs.append(
+            _start_web(
+                env,
+                prod=getattr(args, "prod", False),
+                force_dev=getattr(args, "dev", False),
+            )
+        )
 
     print(f"OpenVault API  http://127.0.0.1:{API_PORT}/")
     print(f"OpenVault App  http://127.0.0.1:{WEB_PORT}/   <- use this")
-    if not _wait(f"http://127.0.0.1:{WEB_PORT}/", 120):
-        print("Web app did not come up within 120s.")
+    if not _wait_html(web_url, 180):
+        print("Web app did not serve HTML within 180s.")
         web_log = Path(env["OPENVAULT_HOME"]) / "logs" / "web.up.log"
         if web_log.is_file():
             print(f"--- last 40 lines of {web_log} ---")
@@ -523,6 +592,11 @@ def main() -> int:
     up = sub.add_parser("up", help="Start custody API + OpenVault app + open browser")
     up.add_argument("--prod", action="store_true", help="serve the production build")
     up.add_argument(
+        "--dev",
+        action="store_true",
+        help="force webpack next-dev even when a production build exists",
+    )
+    up.add_argument(
         "--no-open-browser",
         action="store_true",
         help="do not open http://127.0.0.1:3010/ after ready",
@@ -531,6 +605,11 @@ def main() -> int:
 
     demo = sub.add_parser("demo", help="Full demo: mock health + API + app + browser")
     demo.add_argument("--prod", action="store_true", help="serve the production build")
+    demo.add_argument(
+        "--dev",
+        action="store_true",
+        help="force webpack next-dev even when a production build exists",
+    )
     demo.add_argument(
         "--no-open-browser",
         action="store_true",

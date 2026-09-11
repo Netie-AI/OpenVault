@@ -68,7 +68,7 @@ def test_recommend_static_next() -> None:
 
 def test_recommend_server_fastapi() -> None:
     out = recommend_target({"primary": "fastapi", "category": "backend"})
-    assert out["target"] == "openship_cloud"
+    assert out["target"] == "coolify"
     assert out["real_publish"] is False
 
 

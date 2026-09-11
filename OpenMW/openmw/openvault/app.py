@@ -105,7 +105,7 @@ from openmw.openvault.ship.openship import (
     list_ship_plans,
     load_ship_plan,
 )
-from openmw.openvault.ship.openship_client import OpenShipClient, adapter_status
+from openmw.openvault.ship.openship_client import adapter_status
 from openmw.openvault.ship.playwright_smoke import load_smoke, run_playwright_smoke
 from openmw.openvault.vault import webauthn_unlock
 from openmw.openvault.vault.accounts import AccountStore, AuthProvider
@@ -339,7 +339,6 @@ _REMOTE_SHIP_TARGETS = frozenset(
         "cloudflare_pages",
         "coolify",
         "netlify",
-        "openship_cloud",
         "vps_ssh",
     }
 )
@@ -693,7 +692,6 @@ class OnePressDeployBody(BaseModel):
         "cloudflare_pages",
         "coolify",
         "netlify",
-        "openship_cloud",
         "vps_ssh",
         "aws_guide",
         "local_demo",
@@ -717,7 +715,6 @@ class ShipBlueprintBody(BaseModel):
         "cloudflare_pages",
         "coolify",
         "netlify",
-        "openship_cloud",
         "vps_ssh",
         "aws_guide",
         "local_demo",
@@ -748,7 +745,6 @@ class ShipEngineBody(BaseModel):
         "cloudflare_pages",
         "coolify",
         "netlify",
-        "openship_cloud",
         "vps_ssh",
         "aws_guide",
         "local_demo",
@@ -773,7 +769,6 @@ class ShipPreflightBody(BaseModel):
         "cloudflare_pages",
         "coolify",
         "netlify",
-        "openship_cloud",
         "vps_ssh",
         "aws_guide",
         "local_demo",
@@ -2317,8 +2312,6 @@ def create_app(
 
         # Also keep custody gates artifact for vault/keys checklist
         simulate = body.simulate or body.target in ("local_demo", "aws_guide")
-        if body.target == "openship_cloud" and not adapter_status().get("api_ready"):
-            simulate = True
         work = (engine.get("deployment") or {}).get("project_path") or body.project_path
         payload = one_press_deploy(
             project_path=work or body.project_path or ".",
@@ -2784,14 +2777,7 @@ def create_app(
     @app.get("/api/ship/freebuild/status")
     @app.get("/api/ship/openship/status", include_in_schema=False)
     def ship_freebuild_status() -> dict[str, Any]:
-        status = adapter_status()
-        client = OpenShipClient()
-        live: dict[str, Any] = {}
-        if client.available:
-            live["cloud"] = client.cloud_status()
-            live["billing"] = client.billing_state()
-            client.close()
-        return {**status, "live": live}
+        return {**adapter_status(), "live": {}}
 
     @app.post("/api/ship/aws-plan")
     def ship_aws_plan(body: DomainGuideBody) -> dict[str, Any]:

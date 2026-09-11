@@ -10,7 +10,8 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { PageContainer } from "@/components/ui/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { apiGet, isApiError } from "@/lib/api/client";
+import { Textarea } from "@/components/ui/textarea";
+import { LONG_TIMEOUT_MS, apiGet, apiPost, isApiError } from "@/lib/api/client";
 
 type Hop = {
   key_id?: string;
@@ -42,10 +43,19 @@ type Status = {
 
 type VaultStatus = { sealed?: boolean };
 
+type ChatChoice = { message?: { content?: string } };
+type ChatResponse = {
+  choices?: ChatChoice[];
+  error?: { message?: string };
+};
+
 export default function FreeRoutePage() {
   const [status, setStatus] = useState<Status | null>(null);
   const [vault, setVault] = useState<VaultStatus | null>(null);
   const [err, setErr] = useState("");
+  const [prompt, setPrompt] = useState("");
+  const [reply, setReply] = useState("");
+  const [chatBusy, setChatBusy] = useState(false);
 
   const load = useCallback(async () => {
     setErr("");
@@ -64,6 +74,39 @@ export default function FreeRoutePage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const sendChat = useCallback(async () => {
+    const text = prompt.trim();
+    if (!text || chatBusy) return;
+    setChatBusy(true);
+    setReply("");
+    setErr("");
+    try {
+      const out = await apiPost<ChatResponse>(
+        "/v1/chat/completions",
+        {
+          model: "auto",
+          messages: [{ role: "user", content: text }],
+          stream: false,
+        },
+        { timeoutMs: LONG_TIMEOUT_MS },
+      );
+      const content = out.choices?.[0]?.message?.content?.trim();
+      if (content) {
+        setReply(content);
+        return;
+      }
+      if (out.error?.message) {
+        setReply(out.error.message);
+        return;
+      }
+      setReply("FreeRoute returned no completion text.");
+    } catch (e) {
+      setReply(isApiError(e) ? e.message : String(e));
+    } finally {
+      setChatBusy(false);
+    }
+  }, [prompt, chatBusy]);
 
   const kids = status?.kids ?? [];
   const hops = status?.hops ?? [];
@@ -89,6 +132,31 @@ export default function FreeRoutePage() {
         <Stat label="Pooled keys" value={String(status?.pooled_key_count ?? 0)} />
         <Stat label="Usage $/unit" value={status?.usage_unit_status ?? "NEEDS-YOU"} />
       </div>
+
+      <section className="mb-6 rounded-2xl border border-border bg-card p-5">
+        <h2 className="text-sm font-semibold text-foreground">Try a hop</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Sends to this machine&apos;s <code className="text-xs">POST /v1/chat/completions</code>.
+          Loopback only. A refusal is shown as text, never as an empty success.
+        </p>
+        <Textarea
+          className="mt-3 min-h-[96px]"
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          placeholder="Ask through FreeRoute..."
+          disabled={chatBusy}
+        />
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Button size="sm" disabled={chatBusy || !prompt.trim()} onClick={() => void sendChat()}>
+            {chatBusy ? "Routing..." : "Send"}
+          </Button>
+        </div>
+        {reply ? (
+          <pre className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap rounded-xl border border-border bg-background p-3 text-sm text-foreground">
+            {reply}
+          </pre>
+        ) : null}
+      </section>
 
       <section className="mb-6 rounded-2xl border border-border bg-card p-5">
         <h2 className="text-sm font-semibold text-foreground">Cortex bind (JWKS)</h2>

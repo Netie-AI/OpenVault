@@ -177,3 +177,56 @@ def test_the_cli_reconfigures_stdio_before_it_prints_anything() -> None:
         _sys.stdout.flush()
     finally:
         _sys.stdout, _sys.stderr = real_stdout, real_stderr
+
+
+def test_next_dev_pins_webpack_not_turbopack() -> None:
+    """Turbopack on this exFAT volume panics and leaves :3010 bound without HTML."""
+    pkg = (REPO_ROOT / "apps" / "web" / "package.json").read_text(encoding="utf-8")
+    assert "next dev --webpack" in pkg
+
+
+def test_electron_waits_for_html_not_tcp() -> None:
+    src = (REPO_ROOT / "apps" / "shell" / "electron" / "main-openvault.js").read_text(
+        encoding="utf-8"
+    )
+    assert "function waitForHtml" in src
+    assert "waitForHtml(WEB_URL" in src
+    assert "Custody API already answering" in src
+    assert "Web already serving HTML" in src
+
+
+def test_html_ready_rejects_compiling_overlay() -> None:
+    import importlib.util
+    import threading
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+
+    cli_path = _existing("apps/cli/openvault_cli.py")
+    spec = importlib.util.spec_from_file_location("openvault_cli_html_ready", cli_path)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    class _Handler(BaseHTTPRequestHandler):
+        def do_GET(self) -> None:  # noqa: N802
+            if self.path == "/ok":
+                body = b"<html><body>OpenVault</body></html>"
+            else:
+                body = b"<html><body>Compiling... please wait</body></html>"
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, format: str, *args: object) -> None:  # noqa: A003
+            return
+
+    server = HTTPServer(("127.0.0.1", 0), _Handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        port = int(server.server_address[1])
+        assert module._html_ready(f"http://127.0.0.1:{port}/ok") is True
+        assert module._html_ready(f"http://127.0.0.1:{port}/compile") is False
+    finally:
+        server.shutdown()
