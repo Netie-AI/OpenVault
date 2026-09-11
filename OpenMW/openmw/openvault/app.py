@@ -792,6 +792,37 @@ class ApiKeyIssueBody(BaseModel):
     pack_id: str = ""
 
 
+class ApiKeyVerifyBody(BaseModel):
+    """Cortex asks whether an issued ov_ token is still active.
+
+    The token is a credential the caller already holds. It is never written to
+    a log line and never echoed back in the response.
+    """
+
+    token: str
+
+
+class ApiKeyVerifyResult(BaseModel):
+    """A verdict plus non-secret metadata. Deliberately not ``ApiKeyRecord``.
+
+    ``ApiKeyRecord.to_dict()`` carries ``display``, which is the leading
+    characters of the token itself. Listing the returned fields explicitly is
+    the structural guarantee that no part of the credential reaches the body,
+    including after somebody later widens the record. FastAPI infers this as
+    the response model from the handler's return annotation, so an extra
+    attribute cannot be serialised even by accident.
+    """
+
+    ok: bool = True
+    valid: bool
+    #: Present only when ``valid``; ``response_model_exclude_none`` drops them
+    #: otherwise, so a false verdict is exactly ``{"ok": true, "valid": false}``
+    #: and carries no shape a caller could read as a hint.
+    key_id: str | None = None
+    tier: str | None = None
+    label: str | None = None
+
+
 class RoutePackBody(BaseModel):
     api_key_id: str
     pack_id: str
@@ -3247,6 +3278,51 @@ def create_app(
         _require_loopback(request, "list api keys")
         keys = state_api_keys.list_keys(include_revoked=include_revoked)
         return {"ok": True, "keys": [k.to_dict() for k in keys], "count": len(keys)}
+
+    @app.post("/api/apikeys/verify", response_model_exclude_none=True)
+    def apikeys_verify(body: ApiKeyVerifyBody, request: Request) -> ApiKeyVerifyResult:
+        """Loopback bind: Cortex on this machine checks an ov_ token.
+
+        Cortex has no keystore of its own. Every live API key it is handed is a
+        token this vault minted, so this call is what lets Cortex accept one
+        without holding a copy of the credential material.
+
+        Always HTTP 200 for a decided verdict, so Cortex can tell "OpenVault is
+        not running" (a connection error) from "that key does not work"
+        (``valid`` false). Unknown and revoked are the same false, and that
+        sameness is ``ApiKeyStore.verify`` already rather than a second rule
+        written here - a caller learns only that the credential does not work,
+        never that it once did.
+
+        Loopback-only on the real socket peer, through the same
+        ``_require_loopback`` every sibling custody route uses. Per A-0009, an
+        endpoint gated on a client-supplied header - X-Forwarded-For, an
+        asserted device or service identity - carries its authority on the very
+        request that is asking, so nothing here reads one. What makes loopback
+        a sufficient gate for this route in particular is that it grants
+        strictly less than the caller already has: to ask the question you must
+        already hold the token, and presenting that same token to the gateway
+        would reveal the same verdict. It is not the custody/inject shape from
+        A-0009, where the answer hands over a secret the asker did not have.
+        """
+        _require_loopback(request, "verify api key")
+        record = state_api_keys.verify((body.token or "").strip())
+        if record is None:
+            # No token, no digest, no prefix: a rejected credential is still a
+            # credential, and a log file is read by more eyes than the vault.
+            log.info("apikey_verify_rejected", reason="unknown_or_revoked_key")
+            return ApiKeyVerifyResult(valid=False)
+        try:
+            state_api_keys.touch(record.key_id)
+        except Exception as exc:  # pragma: no cover - last-used is not load-bearing
+            # Same event name as vault/auth.py so one query covers both sites.
+            log.warning("api_key_touch_failed", error=str(exc))
+        return ApiKeyVerifyResult(
+            valid=True,
+            key_id=record.key_id,
+            tier=record.tier,
+            label=record.label,
+        )
 
     @app.get("/api/keys/packs")
     def keys_packs_get() -> dict[str, Any]:
