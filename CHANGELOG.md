@@ -12,6 +12,8 @@ Append-only. Never edited, only added to. Newest first.
 - `/docs`, `/redoc`, and `/openapi.json` return 404 unless `OPENVAULT_DEV_DOCS=1`.
 - `GET /api/local/mesh` and `GET /api/local/connect-pack` no longer write state;
   the previous behavior is `POST` on those paths.
+- The route-walk contract iterates every declared `(path, method)` pair under
+  `/api/*` and `/keys/*` (GET, POST, PUT, PATCH, DELETE), not GET alone.
 
 ## 2026-09-25 - LOCAL-1 FreeRoute local_qwen hop (OpenVault #70)
 

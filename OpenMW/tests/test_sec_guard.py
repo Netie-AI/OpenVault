@@ -1,4 +1,8 @@
-"""SEC-GUARD (#72): fail-closed auth on /api and /keys, docs off, GET is read-only."""
+"""SEC-GUARD (#72): fail-closed auth on /api and /keys, docs off, GET is read-only.
+
+The route walk hits every declared (path, method) pair, including POST/PUT/
+PATCH/DELETE. Handlers without their own loopback check are still covered.
+"""
 
 from __future__ import annotations
 
@@ -22,7 +26,22 @@ _SPOOF = {
     "X-Real-IP": "127.0.0.1",
     "Host": "localhost",
 }
-_SKIP_METHODS = frozenset({"HEAD", "OPTIONS"})
+# Floor, not the walk list: a GET-only walk must fail. Paths stay off the allowlist.
+_MUTATING_PAIRS: frozenset[tuple[str, str]] = frozenset(
+    {
+        ("PUT", "/api/local/mesh/config"),
+        ("POST", "/api/ship/github/pat"),
+        ("PUT", "/api/fallback"),
+        ("PUT", "/api/orchestration/selection"),
+        ("PUT", "/api/route/strategy"),
+        ("PUT", "/api/route/targets"),
+        ("POST", "/api/accounts"),
+        ("POST", "/api/cloud/shares"),
+        ("POST", "/api/cloud/sessions"),
+        ("PATCH", "/api/keys/{key_id}"),
+        ("DELETE", "/api/keys/{key_id}"),
+    }
+)
 
 
 @pytest.fixture()
@@ -49,10 +68,16 @@ def _client(app: FastAPI, host: str) -> TestClient:
 
 
 def _walk_guarded_routes(app: FastAPI) -> list[tuple[str, str]]:
+    """Every declared (path, method) under /api and /keys. No hand-kept list."""
     found: list[tuple[str, str]] = []
+    seen: set[int] = set()
 
     def walk(routes: object) -> None:
         for route in routes:  # type: ignore[union-attr]
+            marker = id(route)
+            if marker in seen:
+                continue
+            seen.add(marker)
             path = getattr(route, "path", None)
             methods = getattr(route, "methods", None)
             if (
@@ -61,9 +86,7 @@ def _walk_guarded_routes(app: FastAPI) -> list[tuple[str, str]]:
                 and (path.startswith("/api/") or path.startswith("/keys/"))
             ):
                 for method in methods:
-                    if method in _SKIP_METHODS:
-                        continue
-                    found.append((str(method), path))
+                    found.append((str(method).upper(), path))
             nested = getattr(route, "original_router", None)
             if nested is not None:
                 walk(getattr(nested, "routes", []))
@@ -85,11 +108,16 @@ def test_route_walk_unauthenticated_remote_is_refused(home: Path) -> None:
     remote = _client(app, _REMOTE)
     guarded = _walk_guarded_routes(app)
     assert guarded, "expected /api and /keys routes on the app"
+    methods_seen = {method for method, _path in guarded}
+    assert methods_seen >= {"GET", "POST", "PUT", "PATCH", "DELETE"}
+    assert set(guarded) >= _MUTATING_PAIRS
     for method, path in guarded:
         if path in AUTH_ALLOWLIST:
             continue
         response = remote.request(method, path)
         assert response.status_code in (401, 403), f"{method} {path} -> {response.status_code}"
+        if method == "HEAD":
+            continue
         body = response.json()
         assert "error" in body
         assert body["error"]["message"] == "unauthorized"

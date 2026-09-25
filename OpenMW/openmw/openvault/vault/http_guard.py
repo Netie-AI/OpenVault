@@ -1,9 +1,11 @@
 """Fail-closed HTTP guard for every ``/api/*`` and ``/keys/*`` route.
 
-A request is admitted only when it presents a valid issued OpenVault API key
-(the same ``Authorization: Bearer`` / ``X-API-Key`` verification FreeRoute
-uses) or the socket peer is loopback. ``OPENVAULT_REQUIRE_API_KEY`` cannot
-open a remote path: unset, false, or true, the guard still runs.
+Applies to every HTTP method (GET, POST, PUT, PATCH, DELETE, and any other
+method the route declares). A request is admitted only when it presents a
+valid issued OpenVault API key (the same ``Authorization: Bearer`` /
+``X-API-Key`` verification FreeRoute uses) or the socket peer is loopback.
+``OPENVAULT_REQUIRE_API_KEY`` cannot open a remote path: unset, false, or
+true, the guard still runs.
 
 The peer is ``request.client.host`` after the socket accept. Forwarded and
 Host headers are never read.
@@ -67,7 +69,11 @@ def peer_is_loopback(host: str) -> bool:
 
 
 def refuse_if_unauthorised(request: Request, *, api_keys: _KeyStore) -> JSONResponse | None:
-    """Return a 401/403 response to send, or None to let the request through."""
+    """Return a 401/403 response to send, or None to let the request through.
+
+    Method is ignored on purpose: PUT/POST/PATCH/DELETE are guarded the same
+    way as GET. Handlers do not need their own remote check.
+    """
     path = request.url.path
     if not path_is_guarded(path):
         return None
