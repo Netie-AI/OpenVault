@@ -2,18 +2,6 @@
 
 Append-only. Never edited, only added to. Newest first.
 
-## 2026-09-25 - LOCAL-1 adopt Cortex#274 served_local names (OpenVault #70)
-
-- Wire names match Cortex#274 head `a9f3fa03` (`freeroute_ov_local.py`):
-  spendable/hops use `served_local` (JSON boolean), not `local`.
-  `local_reason` is always a string (`""` when the hop is usable).
-  `GET /api/freeroute/status` also has top-level `local_reason`.
-- Refusal when `local_only` cannot be honoured stays HTTP 503
-  `openvault_local_only_unavailable` with `error.reason` one of
-  `local_unreachable` / `local_model_not_loaded` / `local_base_url_not_loopback`.
-- Streaming: same `served_*` keys on each complete SSE `data:` JSON object.
-- Ceiling still: merged, local not proven. Public `:5000` stays HUMAN_STOP.
-
 ## 2026-09-25 - LOCAL-1 FreeRoute local_qwen hop (OpenVault #70)
 
 - Register `local_qwen` as a spendable FreeRoute provider that needs no cloud key.
@@ -23,18 +11,19 @@ Append-only. Never edited, only added to. Newest first.
   contacted. No new listener, no auto-start, no model download.
 - Chat responses stamp `served_provider`, `served_model`, `served_local` from the
   hop that actually served (JSON body + `X-OpenVault-Served-*` headers; SSE JSON
-  too). Only `local_qwen` is `served_local=true`.
+  too). Only `local_qwen` is `served_local=true`. Spendable/hops use
+  `served_local` (JSON boolean), not `local`. `local_reason` is always a string.
 - `local_only: true` is fail-closed inside OpenVault: cloud hops are never
   attempted. Refusal is HTTP 503 `openvault_local_only_unavailable`. The field is
   stripped before any upstream POST.
-- `/api/freeroute/status` marks the hop `local: true` with `local_reason`
-  `local_unreachable` / `local_model_not_loaded` / `local_base_url_not_loopback`.
-  Existing cloud arming / precheck / circuit rules are unchanged.
+- `/api/freeroute/status` hop `provider=local_qwen` with `served_local: true` and
+  `local_reason` `""` / `local_unreachable` / `local_model_not_loaded` /
+  `local_base_url_not_loopback`. Existing cloud arming / precheck / circuit
+  rules are unchanged.
 - Tests: `OpenMW/tests/test_local_freeroute.py` (stub transport only). Ceiling is
   merged, local not proven. Public `:5000` stays HUMAN_STOP.
 
 ## 2026-09-10 - CVV import test no longer searches whole secrets JSON
-
 
 - `test_cvv_column_is_stripped_and_never_stored` asserted fixture digits
   `737` against `json.dumps(listed)`. Post-merge CI on `e6f3c5ce` (#61 / #60)

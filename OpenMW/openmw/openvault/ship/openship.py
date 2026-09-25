@@ -21,6 +21,7 @@ import structlog
 from openmw.openvault.paths import ensure_home
 from openmw.openvault.ship.detect import DetectedStack, detect_project
 from openmw.openvault.ship.email_gates import check_email_auth
+from openmw.openvault.ship.inject import scrub_mapping
 from openmw.openvault.ship.openship_client import adapter_status
 
 log = structlog.get_logger()

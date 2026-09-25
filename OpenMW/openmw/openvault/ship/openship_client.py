@@ -185,7 +185,9 @@ def adapter_status() -> dict[str, Any]:
         "cli_path": None,
         "vendor_tree": None,
         "docs": None,
-        "install_hint": ("Use Cloudflare Pages, Coolify, Netlify, Spaceship FTP, or VPS SSH"),
+        "install_hint": (
+            "Use Cloudflare Pages, Coolify, Netlify, Spaceship FTP, or VPS SSH"
+        ),
         "honest": (
             "OpenVault ships through in-repo hosts only (DR-0003). "
             "Vendor OpenShip is not a product path. Simulate never invents a host URL."
