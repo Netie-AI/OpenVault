@@ -55,8 +55,8 @@ def test_every_spelling_of_this_machine_is_accepted(raw: str) -> None:
         # An IPv4-mapped *remote* address must not ride in on the same fix.
         "::ffff:1.2.3.4",
         "::ffff:192.168.1.50",
-        "[::ffff:203.0.113.10]",
-        "2001:db8::8888",
+        "[::ffff:8.8.8.8]",
+        "2001:4860:4860::8888",
         "evil.example.com",
         # Near-misses that must not be waved through by a sloppy prefix strip.
         "127.0.0.1.evil.com",
@@ -123,11 +123,10 @@ def test_the_lan_still_cannot_create_a_key(host: str, tmp_path, monkeypatch) -> 
 def test_prove_peer_still_cannot_create_a_provider_key(tmp_path, monkeypatch) -> None:
     """#52 must not widen _require_loopback. Prove IPs may mint services only."""
     monkeypatch.setenv("OPENVAULT_HOME", str(tmp_path / "home"))
-    monkeypatch.setenv("OPENVAULT_SERVICES_ALLOW", "203.0.113.10")
     app = _app_from(tmp_path / "prove")
     loop = TestClient(app, client=("127.0.0.1", 5555))
     _key_id, headers = issue_key(loop)
-    client = TestClient(app, client=("203.0.113.10", 5555))
+    client = TestClient(app, client=("10.128.0.3", 5555))
     res = client.post(
         "/api/keys",
         json={"label": "probe", "provider": "google", "secret": "x" * 24, "role": "free"},

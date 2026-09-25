@@ -318,11 +318,8 @@ def test_service_registration_allows_loopback(home: Path, host: str) -> None:
     assert registered.json()["token"]
 
 
-@pytest.mark.parametrize("host", ["203.0.113.10", "198.51.100.7", "::ffff:203.0.113.10"])
-def test_service_registration_allows_configured_prove_peers(
-    home: Path, host: str, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.setenv("OPENVAULT_SERVICES_ALLOW", "203.0.113.10,198.51.100.7")
+@pytest.mark.parametrize("host", ["10.128.0.3", "34.30.222.22", "::ffff:10.128.0.3"])
+def test_service_registration_allows_default_prove_peers(home: Path, host: str) -> None:
     headers = _issued()
     client = _client(host=host)
     registered = client.post(
@@ -346,48 +343,52 @@ def test_service_registration_allows_env_cidr(home: Path, monkeypatch: pytest.Mo
     assert "OPENVAULT_SERVICES_ALLOW" in blocked.json()["detail"]
 
 
-def test_forwarded_for_does_not_impersonate_a_prove_peer(
-    home: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_forwarded_for_does_not_impersonate_a_prove_peer(home: Path) -> None:
     """_client_host reads the socket peer, not an attacker-supplied XFF."""
-    monkeypatch.setenv("OPENVAULT_SERVICES_ALLOW", "198.51.100.7")
     headers = _issued()
-    remote = _client(host="203.0.113.10")
+    remote = _client(host="8.8.8.8")
     register = remote.post(
         "/keys/services",
         json={"service_id": "dms"},
-        headers={**INTENT, **headers, "X-Forwarded-For": "198.51.100.7"},
+        headers={**INTENT, **headers, "X-Forwarded-For": "10.128.0.3"},
     )
     assert register.status_code == 403
     assert "OPENVAULT_SERVICES_ALLOW" in register.json()["detail"]
 
 
-def test_allowlisted_peer_cannot_issue_intermediate(
-    home: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_allowlisted_peer_cannot_issue_intermediate(home: Path) -> None:
     """#52 widens registration only. Intermediate issue stays loopback-only."""
-    monkeypatch.setenv("OPENVAULT_SERVICES_ALLOW", "203.0.113.10")
     headers = _issued()
-    peer = _client(host="203.0.113.10")
+    peer = _client(host="10.128.0.3")
     registered = peer.post(
         "/keys/services", json={"service_id": "dms"}, headers={**INTENT, **headers}
     )
     assert registered.status_code == 200
     token = registered.json()["token"]
+    # Valid OpenVault key so the global guard admits the peer. The service
+    # token cannot go in Authorization: the guard would treat it as a bad ov_
+    # key and never reach the handler's loopback check.
     issued = peer.post(
         "/keys/intermediate",
         json={"service_id": "dms"},
-        headers={**headers, "Authorization": f"Bearer {token}"},
+        headers=headers,
     )
     assert issued.status_code == 403
+    assert "loopback-only" in issued.json()["detail"]
+    assert token not in issued.text
+
+
+def test_default_prove_peers_are_the_founder_go_addresses() -> None:
+    assert _DEFAULT_SERVICES_ALLOW == ("10.128.0.3", "34.30.222.22")
+    assert _host_in_services_allow("127.0.0.1") is True
+    assert _host_in_services_allow("10.128.0.3") is True
+    assert _host_in_services_allow("34.30.222.22") is True
+    assert _host_in_services_allow("10.0.0.9") is False
 
 
 def test_rfc5737_peers_are_not_default_prove_addresses() -> None:
-    assert _host_in_services_allow("127.0.0.1") is True
-    assert len(_DEFAULT_SERVICES_ALLOW) >= 1
     assert _host_in_services_allow("203.0.113.10") is False
     assert _host_in_services_allow("198.51.100.7") is False
-    assert _host_in_services_allow("10.0.0.9") is False
 
 
 def test_invalid_services_allow_entry_is_skipped(
