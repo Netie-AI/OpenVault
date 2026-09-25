@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 from collections.abc import AsyncIterator
+from dataclasses import dataclass
 from typing import Any
 
 import httpx
@@ -15,8 +16,21 @@ from openmw.openvault.route.breaker import get_circuit_breaker
 from openmw.openvault.vault.budget import estimate_tokens_for_body, prepare_hop_body
 from openmw.openvault.vault.crypto import VaultCryptoError, VaultSealedError
 from openmw.openvault.vault.fallback import FallbackManager
+from openmw.openvault.vault.local_hop import (
+    LOCAL_HOP_KEY_ID,
+    LOCAL_PLACEHOLDER_SECRET,
+    REASON_MODEL_NOT_LOADED,
+    REASON_UNREACHABLE,
+    attach_served_fields,
+    chat_error_is_model_missing,
+    inject_served_into_sse_chunk,
+    local_only_refusal,
+    pop_local_only,
+    probe_local,
+    walkable_local_base,
+)
 from openmw.openvault.vault.precheck import _default_base_url
-from openmw.openvault.vault.providers import get_provider, resolve_model
+from openmw.openvault.vault.providers import LOCAL_QWEN_ID, get_provider, resolve_model
 from openmw.openvault.vault.store import KeyRecord, KeyVault
 from openmw.openvault.vault.usage_store import HopTrace
 
@@ -61,6 +75,133 @@ def _is_multimodal(body: dict[str, Any]) -> bool:
             if isinstance(part, dict) and part.get("type") in ("image_url", "input_image", "image"):
                 return True
     return False
+
+
+@dataclass(frozen=True)
+class ProxyCandidate:
+    """One hop the proxy may contact. Local hops have no vault KeyRecord."""
+
+    label: str
+    provider: str
+    base_url: str
+    role: str
+    key_id: str
+    served_local: bool
+    record: KeyRecord | None
+    secret: str | None = None
+
+
+def _local_candidate(base: str) -> ProxyCandidate:
+    spec = get_provider(LOCAL_QWEN_ID)
+    return ProxyCandidate(
+        label=spec.name if spec is not None else "Local Qwen (loopback)",
+        provider=LOCAL_QWEN_ID,
+        base_url=base,
+        role="free",
+        key_id=LOCAL_HOP_KEY_ID,
+        served_local=True,
+        record=None,
+        secret=LOCAL_PLACEHOLDER_SECRET,
+    )
+
+
+def _vault_candidates(
+    fallback: FallbackManager, body: dict[str, Any], *, tenant: str
+) -> list[ProxyCandidate]:
+    hops: list[ProxyCandidate] = []
+    for record in fallback.ordered_candidates(affinity_key=affinity_key_for(body, tenant=tenant)):
+        hops.append(
+            ProxyCandidate(
+                label=record.label,
+                provider=record.provider,
+                base_url=record.base_url,
+                role=record.role,
+                key_id=record.id,
+                served_local=False,
+                record=record,
+            )
+        )
+    return hops
+
+
+def _collect_candidates(
+    vault: KeyVault,
+    fallback: FallbackManager,
+    body: dict[str, Any],
+    *,
+    tenant: str,
+    local_only: bool,
+) -> tuple[list[ProxyCandidate], tuple[int, dict[str, Any]] | None]:
+    """Build the hop list. local_only never returns a cloud hop."""
+    base, leftover = walkable_local_base()
+    if local_only:
+        if base is None:
+            return [], local_only_refusal(leftover)
+        return [_local_candidate(base)], None
+
+    hops: list[ProxyCandidate] = []
+    if base is not None and probe_local().ok:
+        hops.append(_local_candidate(base))
+    hops.extend(_vault_candidates(fallback, body, tenant=tenant))
+    if not hops:
+        return [], (503, _no_candidates_refusal(vault))
+    return hops, None
+
+
+def _secret_for_candidate(vault: KeyVault, cand: ProxyCandidate, errors: list[str]) -> str | None:
+    if cand.secret is not None:
+        return cand.secret
+    if cand.record is None:
+        return None
+    return _secret_for_hop(vault, cand.record, errors)
+
+
+def _apply_candidate_outcome(
+    vault: KeyVault,
+    fallback: FallbackManager,
+    cand: ProxyCandidate,
+    outcome: AttemptOutcome,
+    error: str,
+) -> None:
+    if cand.served_local:
+        breaker = get_circuit_breaker(cand.provider)
+        if outcome.attempt_class == "success":
+            breaker.record_success()
+            return
+        if outcome.counts_as_hard_fail and outcome.trip_provider_breaker:
+            status: int | None = None
+            if error.startswith("HTTP "):
+                try:
+                    status = int(error.split()[1])
+                except (IndexError, ValueError):
+                    status = None
+            breaker.record_failure(status=status)
+        return
+    _apply_outcome(
+        vault,
+        fallback,
+        key_id=cand.key_id,
+        provider=cand.provider,
+        outcome=outcome,
+        error=error,
+    )
+
+
+def _stamp_served(
+    payload: dict[str, Any] | str,
+    cand: ProxyCandidate,
+    model: str,
+) -> dict[str, Any]:
+    body = payload if isinstance(payload, dict) else {"raw": payload}
+    return attach_served_fields(
+        body, provider=cand.provider, model=model, served_local=cand.served_local
+    )
+
+
+def _local_fail_reason(status: int | None, body_text: str, model: str) -> str:
+    if status is not None and chat_error_is_model_missing(status, body_text, model):
+        return REASON_MODEL_NOT_LOADED
+    return REASON_UNREACHABLE
 
 
 def _no_candidates_refusal(vault: KeyVault) -> dict[str, Any]:
@@ -242,9 +383,16 @@ async def chat_completions(
     the return tuple is unpacked by four test modules that do not want it.
     """
     trace = trace if trace is not None else HopTrace()
-    candidates = fallback.ordered_candidates(affinity_key=affinity_key_for(body, tenant=tenant))
-    if not candidates:
-        return 503, _no_candidates_refusal(vault)
+    work = dict(body)
+    local_only = pop_local_only(work)
+    candidates, early = _collect_candidates(
+        vault, fallback, work, tenant=tenant, local_only=local_only
+    )
+    if early is not None:
+        err = early[1].get("error")
+        if isinstance(err, dict) and err.get("type"):
+            trace.error_type = str(err["type"])
+        return early[0], early[1]
 
     # Fail closed before hop walk: metadata may still be listed while sealed.
     # Walking then decrypting yields VaultSealedError -> dishonest 500 / exhausted.
@@ -254,33 +402,39 @@ async def chat_completions(
         return _sealed_refusal()
 
     errors: list[str] = []
-    prompt_estimate = estimate_tokens_for_body(body)
+    prompt_estimate = estimate_tokens_for_body(work)
     context_blocked = 0
     considered = 0
+    local_fail_reason = REASON_UNREACHABLE
     async with httpx.AsyncClient(timeout=timeout_s) as client:
-        for record in candidates:
+        for cand in candidates:
             considered += 1
-            breaker = get_circuit_breaker(record.provider)
+            breaker = get_circuit_breaker(cand.provider)
             if not breaker.acquire_probe_slot():
-                errors.append(f"{record.label}: provider circuit open")
+                errors.append(f"{cand.label}: provider circuit open")
                 continue
 
             try:
-                secret = _secret_for_hop(vault, record, errors)
+                secret = _secret_for_candidate(vault, cand, errors)
             except VaultSealedError:
                 trace.error_type = "openvault_vault_sealed"
                 return _sealed_refusal()
             if secret is None:
                 continue
-            base = _default_base_url(record.provider, record.base_url)
+            base = (
+                cand.base_url.rstrip("/")
+                if cand.served_local
+                else _default_base_url(cand.provider, cand.base_url)
+            )
             if not base:
-                fallback.record_failure(record.id, "missing base_url")
-                errors.append(f"{record.label}: missing base_url")
+                if not cand.served_local:
+                    fallback.record_failure(cand.key_id, "missing base_url")
+                errors.append(f"{cand.label}: missing base_url")
                 continue
 
             url = f"{base}/chat/completions"
             headers = {"Authorization": f"Bearer {secret}", "Content-Type": "application/json"}
-            skip = _compat_skip(record.label, record.provider)
+            skip = _compat_skip(cand.label, cand.provider)
             if skip is not None:
                 errors.append(skip)
                 continue
@@ -288,15 +442,15 @@ async def chat_completions(
             # Translate the model per hop. Forwarding the caller's value verbatim sent
             # `"auto"` upstream as a model name, and every provider answered 404 - a
             # healthy key that read as a dead provider.
-            wants_images = _is_multimodal(body)
-            model = resolve_model(record.provider, body.get("model"), multimodal=wants_images)
+            wants_images = _is_multimodal(work)
+            model = resolve_model(cand.provider, work.get("model"), multimodal=wants_images)
             if model is None:
                 why = "no vision model" if wants_images else "no catalogued model"
-                errors.append(f"{record.label}: {why} for provider {record.provider}")
+                errors.append(f"{cand.label}: {why} for provider {cand.provider}")
                 continue
             decision = prepare_hop_body(
-                body,
-                provider=record.provider,
+                work,
+                provider=cand.provider,
                 model=model,
                 prompt_tokens=prompt_estimate,
             )
@@ -305,7 +459,7 @@ async def chat_completions(
                 # so it must not count against the key's health.
                 if decision.context_exceeded:
                     context_blocked += 1
-                errors.append(f"{record.label}: {decision.refusal}")
+                errors.append(f"{cand.label}: {decision.refusal}")
                 continue
             hop_body = decision.body
             if decision.raised_to is not None:
@@ -313,17 +467,17 @@ async def chat_completions(
                 # deserves to see why in the log.
                 log.info(
                     "openvault_reasoning_budget_raised",
-                    provider=record.provider,
+                    provider=cand.provider,
                     model=model,
-                    requested=body.get("max_tokens"),
+                    requested=work.get("max_tokens"),
                     sent=decision.raised_to,
                 )
             if decision.clamped_to is not None:
                 log.info(
                     "openvault_output_budget_clamped",
-                    provider=record.provider,
+                    provider=cand.provider,
                     model=model,
-                    requested=body.get("max_tokens"),
+                    requested=work.get("max_tokens"),
                     sent=decision.clamped_to,
                 )
 
@@ -332,65 +486,52 @@ async def chat_completions(
                 resp = await client.post(url, headers=headers, json=hop_body)
             except httpx.TimeoutException:
                 outcome = classify_attempt(None, "timeout")
-                _apply_outcome(
-                    vault,
-                    fallback,
-                    key_id=record.id,
-                    provider=record.provider,
-                    outcome=outcome,
-                    error="timeout",
-                )
-                errors.append(f"{record.label}: timeout")
+                _apply_candidate_outcome(vault, fallback, cand, outcome, "timeout")
+                errors.append(f"{cand.label}: timeout")
+                if cand.served_local:
+                    local_fail_reason = REASON_UNREACHABLE
                 continue
             except (httpx.HTTPError, OSError) as exc:
                 outcome = classify_attempt(None, str(exc))
-                _apply_outcome(
-                    vault,
-                    fallback,
-                    key_id=record.id,
-                    provider=record.provider,
-                    outcome=outcome,
-                    error=str(exc),
-                )
-                errors.append(f"{record.label}: {exc}")
+                _apply_candidate_outcome(vault, fallback, cand, outcome, str(exc))
+                errors.append(f"{cand.label}: {exc}")
+                if cand.served_local:
+                    local_fail_reason = REASON_UNREACHABLE
                 continue
 
             body_text = resp.text
             outcome = classify_attempt(resp.status_code, body_text, headers=dict(resp.headers))
 
             if outcome.attempt_class == "success":
-                _apply_outcome(
-                    vault,
-                    fallback,
-                    key_id=record.id,
-                    provider=record.provider,
-                    outcome=outcome,
-                    error="",
-                )
+                _apply_candidate_outcome(vault, fallback, cand, outcome, "")
                 log.info(
                     "openvault_proxy_ok",
-                    key_ref=record.id[:8],
-                    provider=record.provider,
-                    role=record.role,
+                    key_ref=cand.key_id[:8],
+                    provider=cand.provider,
+                    role=cand.role,
                 )
-                trace.note_served(provider=record.provider, model=model, vault_key_id=record.id)
+                trace.note_served(
+                    provider=cand.provider,
+                    model=model,
+                    vault_key_id="" if cand.served_local else cand.key_id,
+                    served_local=cand.served_local,
+                )
                 try:
-                    return resp.status_code, resp.json()
+                    payload: dict[str, Any] | str = resp.json()
                 except Exception:
-                    return resp.status_code, {"raw": body_text}
+                    payload = {"raw": body_text}
+                return resp.status_code, _stamp_served(payload, cand, model)
 
             err = f"HTTP {resp.status_code}"
-            _apply_outcome(
-                vault,
-                fallback,
-                key_id=record.id,
-                provider=record.provider,
-                outcome=outcome,
-                error=err,
-            )
-            errors.append(f"{record.label}: {err} ({outcome.attempt_class})")
+            _apply_candidate_outcome(vault, fallback, cand, outcome, err)
+            errors.append(f"{cand.label}: {err} ({outcome.attempt_class})")
+            if cand.served_local:
+                local_fail_reason = _local_fail_reason(resp.status_code, body_text, model)
 
             if outcome.job == "dead":
+                if local_only:
+                    trace.error_type = "openvault_local_only_unavailable"
+                    return local_only_refusal(local_fail_reason)
                 trace.error_type = "openvault_non_retryable"
                 return 400, {
                     "error": {
@@ -401,6 +542,10 @@ async def chat_completions(
                     }
                 }
             continue
+
+    if local_only:
+        trace.error_type = "openvault_local_only_unavailable"
+        return local_only_refusal(local_fail_reason)
 
     if context_blocked and context_blocked == considered:
         # Every candidate was refused for size and nothing was spent. Saying
@@ -434,49 +579,62 @@ async def prepare_chat_stream(
     with the correct HTTP status (streaming cannot change status mid-flight).
     """
     trace = trace if trace is not None else HopTrace()
-    candidates = fallback.ordered_candidates(affinity_key=affinity_key_for(body, tenant=tenant))
-    if not candidates:
-        return 503, _no_candidates_refusal(vault)
+    work = dict(body)
+    local_only = pop_local_only(work)
+    candidates, early = _collect_candidates(
+        vault, fallback, work, tenant=tenant, local_only=local_only
+    )
+    if early is not None:
+        err = early[1].get("error")
+        if isinstance(err, dict) and err.get("type"):
+            trace.error_type = str(err["type"])
+        return early[0], early[1]
 
     if vault.seal.is_sealed:
         log.warning("freeroute_refused", reason="vault_sealed", path="prepare_chat_stream")
         trace.error_type = "openvault_vault_sealed"
         return _sealed_refusal()
 
-    payload = dict(body)
+    payload = dict(work)
     payload["stream"] = True
     errors: list[str] = []
-    prompt_estimate = estimate_tokens_for_body(body)
+    prompt_estimate = estimate_tokens_for_body(work)
     context_blocked = 0
     considered = 0
+    local_fail_reason = REASON_UNREACHABLE
     client = httpx.AsyncClient(timeout=timeout_s)
 
     async def _close_client() -> None:
         await client.aclose()
 
     try:
-        for record in candidates:
+        for cand in candidates:
             considered += 1
-            breaker = get_circuit_breaker(record.provider)
+            breaker = get_circuit_breaker(cand.provider)
             if not breaker.acquire_probe_slot():
-                errors.append(f"{record.label}: provider circuit open")
+                errors.append(f"{cand.label}: provider circuit open")
                 continue
 
             try:
-                secret = _secret_for_hop(vault, record, errors)
+                secret = _secret_for_candidate(vault, cand, errors)
             except VaultSealedError:
                 await _close_client()
                 trace.error_type = "openvault_vault_sealed"
                 return _sealed_refusal()
             if secret is None:
                 continue
-            base = _default_base_url(record.provider, record.base_url)
+            base = (
+                cand.base_url.rstrip("/")
+                if cand.served_local
+                else _default_base_url(cand.provider, cand.base_url)
+            )
             if not base:
-                fallback.record_failure(record.id, "missing base_url")
-                errors.append(f"{record.label}: missing base_url")
+                if not cand.served_local:
+                    fallback.record_failure(cand.key_id, "missing base_url")
+                errors.append(f"{cand.label}: missing base_url")
                 continue
 
-            skip = _compat_skip(record.label, record.provider)
+            skip = _compat_skip(cand.label, cand.provider)
             if skip is not None:
                 errors.append(skip)
                 continue
@@ -491,38 +649,38 @@ async def prepare_chat_stream(
             # Same per-hop translation as the non-streaming path. Fixing only one of
             # the two left streaming answering 404 while plain chat worked.
             wants_images = _is_multimodal(payload)
-            model = resolve_model(record.provider, payload.get("model"), multimodal=wants_images)
+            model = resolve_model(cand.provider, payload.get("model"), multimodal=wants_images)
             if model is None:
                 why = "no vision model" if wants_images else "no catalogued model"
-                errors.append(f"{record.label}: {why} for provider {record.provider}")
+                errors.append(f"{cand.label}: {why} for provider {cand.provider}")
                 continue
             decision = prepare_hop_body(
                 payload,
-                provider=record.provider,
+                provider=cand.provider,
                 model=model,
                 prompt_tokens=prompt_estimate,
             )
             if decision.body is None:
                 if decision.context_exceeded:
                     context_blocked += 1
-                errors.append(f"{record.label}: {decision.refusal}")
+                errors.append(f"{cand.label}: {decision.refusal}")
                 continue
             hop_payload = decision.body
             hop_payload["stream"] = True
             if decision.raised_to is not None:
                 log.info(
                     "openvault_reasoning_budget_raised",
-                    provider=record.provider,
+                    provider=cand.provider,
                     model=model,
-                    requested=body.get("max_tokens"),
+                    requested=work.get("max_tokens"),
                     sent=decision.raised_to,
                 )
             if decision.clamped_to is not None:
                 log.info(
                     "openvault_output_budget_clamped",
-                    provider=record.provider,
+                    provider=cand.provider,
                     model=model,
-                    requested=body.get("max_tokens"),
+                    requested=work.get("max_tokens"),
                     sent=decision.clamped_to,
                 )
 
@@ -532,27 +690,17 @@ async def prepare_chat_stream(
                 resp = await client.send(req, stream=True)
             except httpx.TimeoutException:
                 outcome = classify_attempt(None, "timeout")
-                _apply_outcome(
-                    vault,
-                    fallback,
-                    key_id=record.id,
-                    provider=record.provider,
-                    outcome=outcome,
-                    error="timeout",
-                )
-                errors.append(f"{record.label}: timeout")
+                _apply_candidate_outcome(vault, fallback, cand, outcome, "timeout")
+                errors.append(f"{cand.label}: timeout")
+                if cand.served_local:
+                    local_fail_reason = REASON_UNREACHABLE
                 continue
             except (httpx.HTTPError, OSError) as exc:
                 outcome = classify_attempt(None, str(exc))
-                _apply_outcome(
-                    vault,
-                    fallback,
-                    key_id=record.id,
-                    provider=record.provider,
-                    outcome=outcome,
-                    error=str(exc),
-                )
-                errors.append(f"{record.label}: {exc}")
+                _apply_candidate_outcome(vault, fallback, cand, outcome, str(exc))
+                errors.append(f"{cand.label}: {exc}")
+                if cand.served_local:
+                    local_fail_reason = REASON_UNREACHABLE
                 continue
 
             if resp.status_code >= 400:
@@ -561,17 +709,15 @@ async def prepare_chat_stream(
                 body_text = err_bytes.decode("utf-8", errors="replace")
                 outcome = classify_attempt(resp.status_code, body_text, headers=dict(resp.headers))
                 err = f"HTTP {resp.status_code}"
-                _apply_outcome(
-                    vault,
-                    fallback,
-                    key_id=record.id,
-                    provider=record.provider,
-                    outcome=outcome,
-                    error=err,
-                )
-                errors.append(f"{record.label}: {err} ({outcome.attempt_class})")
+                _apply_candidate_outcome(vault, fallback, cand, outcome, err)
+                errors.append(f"{cand.label}: {err} ({outcome.attempt_class})")
+                if cand.served_local:
+                    local_fail_reason = _local_fail_reason(resp.status_code, body_text, model)
                 if outcome.job == "dead":
                     await _close_client()
+                    if local_only:
+                        trace.error_type = "openvault_local_only_unavailable"
+                        return local_only_refusal(local_fail_reason)
                     trace.error_type = "openvault_non_retryable"
                     return 400, {
                         "error": {
@@ -583,29 +729,44 @@ async def prepare_chat_stream(
                     }
                 continue
 
-            _apply_outcome(
+            _apply_candidate_outcome(
                 vault,
                 fallback,
-                key_id=record.id,
-                provider=record.provider,
-                outcome=classify_attempt(resp.status_code, "", headers=dict(resp.headers)),
-                error="",
+                cand,
+                classify_attempt(resp.status_code, "", headers=dict(resp.headers)),
+                "",
             )
             log.info(
                 "openvault_proxy_stream_ok",
-                key_ref=record.id[:8],
-                provider=record.provider,
-                role=record.role,
+                key_ref=cand.key_id[:8],
+                provider=cand.provider,
+                role=cand.role,
             )
-            trace.note_served(provider=record.provider, model=model, vault_key_id=record.id)
+            trace.note_served(
+                provider=cand.provider,
+                model=model,
+                vault_key_id="" if cand.served_local else cand.key_id,
+                served_local=cand.served_local,
+            )
+            served_provider = cand.provider
+            served_model = model
+            served_local = cand.served_local
 
             async def _byte_iter(
                 response: httpx.Response = resp,
+                inj_provider: str = served_provider,
+                inj_model: str = served_model,
+                inj_local: bool = served_local,
             ) -> AsyncIterator[bytes]:
                 try:
                     async for chunk in response.aiter_bytes():
                         if chunk:
-                            yield chunk
+                            yield inject_served_into_sse_chunk(
+                                chunk,
+                                provider=inj_provider,
+                                model=inj_model,
+                                served_local=inj_local,
+                            )
                 finally:
                     await response.aclose()
                     await _close_client()
@@ -616,6 +777,9 @@ async def prepare_chat_stream(
         raise
 
     await _close_client()
+    if local_only:
+        trace.error_type = "openvault_local_only_unavailable"
+        return local_only_refusal(local_fail_reason)
     if context_blocked and context_blocked == considered:
         trace.error_type = "openvault_context_length_exceeded"
         return _context_refusal(errors)

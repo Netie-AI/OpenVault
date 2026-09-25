@@ -126,6 +126,7 @@ from openmw.openvault.vault.crypto import Seal, VaultCryptoError, VaultSealedErr
 from openmw.openvault.vault.env_ingest import ingest_environment, scan_environment
 from openmw.openvault.vault.fallback import FallbackConfig, FallbackManager
 from openmw.openvault.vault.free_keys_onboard import catalog_base_url, looks_like_site_password_key
+from openmw.openvault.vault.local_hop import served_response_headers
 from openmw.openvault.vault.pm_import import ingest_import_dir, ingest_pm_csv
 from openmw.openvault.vault.precheck import PrecheckLoop, precheck_all, precheck_one
 from openmw.openvault.vault.providers import (
@@ -662,6 +663,7 @@ class ChatBody(BaseModel):
     stream: bool | None = False
     tools: list[dict[str, Any]] | None = None
     tool_choice: str | dict[str, Any] | None = None
+    local_only: bool | None = None
 
 
 class DeployFromCortex(BaseModel):
@@ -3480,6 +3482,11 @@ def create_app(
                 media_type="text/event-stream",
                 headers={
                     **rate_headers,
+                    **served_response_headers(
+                        provider=trace.provider,
+                        model=trace.model_served,
+                        served_local=trace.served_local,
+                    ),
                     "Cache-Control": "no-cache",
                     "X-Accel-Buffering": "no",
                 },
@@ -3552,7 +3559,14 @@ def create_app(
         return JSONResponse(
             status_code=status,
             content=result,
-            headers=limiter.headers_for(identity, tier=tier),
+            headers={
+                **limiter.headers_for(identity, tier=tier),
+                **served_response_headers(
+                    provider=trace.provider,
+                    model=trace.model_served,
+                    served_local=trace.served_local,
+                ),
+            },
         )
 
     app_url = os.environ.get("OPENVAULT_APP_URL", "http://127.0.0.1:3010/")

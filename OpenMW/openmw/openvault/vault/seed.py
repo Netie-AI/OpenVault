@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-from openmw.openvault.vault.providers import PROVIDER_CATALOG, essentials_for
+from openmw.openvault.vault.providers import LOCAL_QWEN_ID, PROVIDER_CATALOG, essentials_for
 from openmw.openvault.vault.store import KeyRole, KeyVault, ProviderKind
 
 
@@ -29,6 +29,9 @@ def seed_essentials(
 
     for spec in PROVIDER_CATALOG:
         if spec.id not in needed_ids:
+            continue
+        if spec.id == LOCAL_QWEN_ID:
+            # Synthetic FreeRoute hop; never a vaulted placeholder key.
             continue
         if spec.id in existing:
             continue

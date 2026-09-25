@@ -46,6 +46,7 @@ def test_seed_essentials_local_and_pending(tmp_path: Path) -> None:
     result = seed_essentials(vault, consumers=("cortex", "airgpt", "openvault"))
     assert any(c["provider"] == "ollama" for c in result["created_local"])
     assert any(c["provider"] == "cortex" for c in result["created_local"])
+    assert all(c["provider"] != "local_qwen" for c in result["created_local"])
     assert any(p["provider"] == "openrouter" for p in result["pending_register"])
     assert all("register_url" in p for p in result["pending_register"])
 

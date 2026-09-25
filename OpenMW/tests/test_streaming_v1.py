@@ -108,7 +108,10 @@ def test_prepare_chat_stream_yields_upstream_bytes(vault: KeyVault) -> None:
         assert status == 200
         assert not isinstance(result, dict)
         got = b"".join([chunk async for chunk in result])
-        assert got == b"".join(chunks)
+        assert b'"id":"1"' in got.replace(b" ", b"")
+        assert b"served_provider" in got
+        assert b"served_local" in got
+        assert b"[DONE]" in got
 
     asyncio.run(_run())
 
