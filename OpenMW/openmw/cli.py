@@ -234,7 +234,7 @@ def console_cmd(
     typer.echo(f"Connect pack: {url}api/local/connect-pack")
     if open_browser and host in ("127.0.0.1", "localhost"):
         webbrowser.open(url)
-    uvicorn.run(app, host=host, port=port, log_level="info")
+    uvicorn.run(app, host=host, port=port, log_level="info", proxy_headers=False)
 
 
 @app.command("demo-ui")

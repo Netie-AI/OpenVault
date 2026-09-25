@@ -14,6 +14,8 @@ Append-only. Never edited, only added to. Newest first.
   the previous behavior is `POST` on those paths.
 - The route-walk contract iterates every declared `(path, method)` pair under
   `/api/*` and `/keys/*` (GET, POST, PUT, PATCH, DELETE), not GET alone.
+- Console `uvicorn.run` passes `proxy_headers=False` so forwarded headers
+  cannot rewrite `request.client`.
 
 ## 2026-09-25 - LOCAL-1 FreeRoute local_qwen hop (OpenVault #70)
 

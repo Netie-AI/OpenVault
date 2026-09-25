@@ -3651,4 +3651,4 @@ def run_console(
         precheck_interval_s=precheck_interval_s,
     )
     log.info("openvault_console_start", host=host, port=port, cortex_url=cortex_url)
-    uvicorn.run(app, host=host, port=port, log_level="info")
+    uvicorn.run(app, host=host, port=port, log_level="info", proxy_headers=False)

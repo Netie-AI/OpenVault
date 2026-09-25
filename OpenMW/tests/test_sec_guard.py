@@ -20,12 +20,19 @@ from openmw.openvault.vault.crypto import Seal
 from openmw.openvault.vault.http_guard import AUTH_ALLOWLIST
 from openmw.openvault.vault.store import KeyVault
 
-_REMOTE = "203.0.113.9"
-_SPOOF = {
-    "X-Forwarded-For": "127.0.0.1",
-    "X-Real-IP": "127.0.0.1",
-    "Host": "localhost",
-}
+_REMOTE = "203.0.113.10"
+_SPOOF_HEADERS: tuple[dict[str, str], ...] = (
+    {
+        "X-Forwarded-For": "127.0.0.1",
+        "X-Real-IP": "127.0.0.1",
+        "Host": "localhost",
+    },
+    {
+        "X-Forwarded-For": "198.51.100.7",
+        "X-Real-IP": "198.51.100.7",
+        "Host": "localhost",
+    },
+)
 # Floor, not the walk list: a GET-only walk must fail. Paths stay off the allowlist.
 _MUTATING_PAIRS: frozenset[tuple[str, str]] = frozenset(
     {
@@ -144,9 +151,10 @@ def test_require_api_key_does_not_open_remote(
     assert response.json()["error"]["message"] == "unauthorized"
 
 
-def test_spoofed_forwarded_headers_do_not_admit_remote(home: Path) -> None:
+@pytest.mark.parametrize("headers", _SPOOF_HEADERS)
+def test_spoofed_forwarded_headers_do_not_admit_remote(home: Path, headers: dict[str, str]) -> None:
     remote = _client(_app(home), _REMOTE)
-    response = remote.get("/api/providers/catalog", headers=_SPOOF)
+    response = remote.get("/api/providers/catalog", headers=headers)
     assert response.status_code in (401, 403)
     assert response.json()["error"]["message"] == "unauthorized"
 
@@ -223,3 +231,37 @@ def test_get_mesh_and_connect_pack_write_nothing(home: Path) -> None:
             assert not pack.is_file()
         else:
             assert pack.read_bytes() == pack_before
+
+
+def test_console_launch_disables_proxy_headers(home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[dict[str, object]] = []
+
+    def fake_run(*_args: object, **kwargs: object) -> None:
+        seen.append(kwargs)
+
+    import uvicorn
+    from typer.testing import CliRunner
+
+    from openmw.cli import app as cli_app
+    from openmw.openvault.app import run_console
+
+    monkeypatch.setattr(uvicorn, "run", fake_run)
+    result = CliRunner().invoke(
+        cli_app,
+        [
+            "console",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            "9",
+            "--no-open-browser",
+            "--mock-health",
+            "--cortex-url",
+            "http://127.0.0.1:9",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    run_console(host="127.0.0.1", port=9, cortex_url="http://127.0.0.1:9", mock_health=True)
+    assert len(seen) == 2
+    for kwargs in seen:
+        assert kwargs.get("proxy_headers") is False
