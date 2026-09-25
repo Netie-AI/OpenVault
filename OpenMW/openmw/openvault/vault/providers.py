@@ -62,7 +62,8 @@ class ProviderSpec:
         d["vision_models"] = list(self.vision_models)
         d["reasoning_models"] = list(self.reasoning_models)
         d["spendable"] = self.openai_compatible and bool(self.chat_models)
-        d["local"] = bool(self.local_hop)
+        # Cortex#274 hop_reported_local / count_local_spendable: JSON true only.
+        d["served_local"] = bool(self.local_hop)
         return d
 
 

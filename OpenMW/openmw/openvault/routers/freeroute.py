@@ -72,12 +72,14 @@ def build_freeroute_router(vault: KeyVault, fallback: FallbackManager) -> APIRou
     def freeroute_status() -> dict[str, Any]:
         """Operator snapshot: spendable hops, vault seal, public JWKS kids."""
         spendable = spendable_for_freeroute()
+        local_hop = local_status_hop()
         hops = list(fallback.status().hops)
-        hops.append(local_status_hop())
+        hops.append(local_hop)
         jwks = TrustStore().jwks()
         kids = [str(k.get("kid") or "") for k in jwks.get("keys", []) if k.get("kid")]
         sealed = bool(vault.seal.is_sealed)
         pooled = list(vault.pooled_ordered()) if not sealed else []
+        local_reason = str(local_hop.get("local_reason") or "")
         return {
             "ok": True,
             "surface": "freeroute",
@@ -91,6 +93,7 @@ def build_freeroute_router(vault: KeyVault, fallback: FallbackManager) -> APIRou
             "hops": hops,
             "spendable": spendable,
             "spendable_count": len(spendable),
+            "local_reason": local_reason,
             "usage_unit_status": "NEEDS-YOU",
             "onboard_path": "/keys#free",
         }
@@ -115,7 +118,7 @@ def _register_row(row: dict[str, Any]) -> dict[str, Any]:
         "spendable": openai_compatible and bool(chat_models),
         "chat_models": chat_models,
         "openai_compatible": openai_compatible,
-        "local": bool(row.get("local")),
+        "served_local": bool(row.get("served_local")),
     }
 
 

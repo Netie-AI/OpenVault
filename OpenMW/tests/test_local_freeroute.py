@@ -22,6 +22,8 @@ from openmw.openvault.vault.local_hop import (
     REASON_MODEL_NOT_LOADED,
     REASON_NOT_LOOPBACK,
     REASON_UNREACHABLE,
+    LocalProbe,
+    inject_served_into_sse_chunk,
     is_loopback_base_url,
     local_status_hop,
     pop_local_only,
@@ -77,10 +79,13 @@ def _ok_chat_payload(*, model: str, text: str = "ok") -> dict[str, Any]:
 
 def _mock_async_client(handler: Any) -> Any:
     transport = httpx.MockTransport(handler)
+    # patch() replaces httpx.AsyncClient on the shared httpx module; bind the
+    # real class here or the factory re-enters itself (RecursionError).
+    real_async_client = httpx.AsyncClient
 
     def factory(*args: Any, **kwargs: Any) -> httpx.AsyncClient:
         kwargs["transport"] = transport
-        return httpx.AsyncClient(*args, **kwargs)
+        return real_async_client(*args, **kwargs)
 
     return factory
 
@@ -90,13 +95,16 @@ def test_local_qwen_registered_without_cloud_key(vault: KeyVault) -> None:
     assert spec is not None
     row = spec.to_dict()
     assert row["spendable"] is True
-    assert row["local"] is True
+    assert row["served_local"] is True
+    assert "local" not in row
     assert row["openai_compatible"] is True
     assert DEFAULT_LOCAL_MODEL in row["chat_models"]
     assert vault.list_keys() == []
     ids = {r["id"] for r in spendable_for_freeroute()}
     assert LOCAL_QWEN_ID in ids
-    assert all(r["local"] is False for r in spendable_for_freeroute() if r["id"] != LOCAL_QWEN_ID)
+    assert all(
+        r["served_local"] is False for r in spendable_for_freeroute() if r["id"] != LOCAL_QWEN_ID
+    )
 
 
 def test_refuse_non_loopback_base_url() -> None:
@@ -257,8 +265,9 @@ def test_arming_reason_unreachable(monkeypatch: pytest.MonkeyPatch) -> None:
     result = probe_local(client=client)
     assert result.reason == REASON_UNREACHABLE
     hop = local_status_hop(probe=result)
-    assert hop["local"] is True
+    assert hop["served_local"] is True
     assert hop["local_reason"] == REASON_UNREACHABLE
+    assert isinstance(hop["local_reason"], str)
     assert hop["provider"] == LOCAL_QWEN_ID
     assert hop["key_id"] == "local:local_qwen"
 
@@ -275,6 +284,25 @@ def test_arming_reason_model_not_loaded(monkeypatch: pytest.MonkeyPatch) -> None
     assert result.reason == REASON_MODEL_NOT_LOADED
     hop = local_status_hop(probe=result)
     assert hop["local_reason"] == REASON_MODEL_NOT_LOADED
+
+
+def test_arming_reason_empty_string_when_ok() -> None:
+    hop = local_status_hop(probe=LocalProbe(None, DEFAULT_LOCAL_MODEL, "http://127.0.0.1:8080/v1"))
+    assert hop["served_local"] is True
+    assert hop["local_reason"] == ""
+    assert isinstance(hop["local_reason"], str)
+
+
+def test_sse_stamps_boolean_served_local_not_string() -> None:
+    raw = b'data: {"id":"1","choices":[]}\n\n'
+    out = inject_served_into_sse_chunk(
+        raw, provider=LOCAL_QWEN_ID, model=DEFAULT_LOCAL_MODEL, served_local=True
+    )
+    obj = json.loads(out.split(b"\n")[0][6:])
+    assert obj["served_provider"] == LOCAL_QWEN_ID
+    assert obj["served_model"] == DEFAULT_LOCAL_MODEL
+    assert obj["served_local"] is True
+    assert '"served_local":true' in out.decode("utf-8").replace(" ", "")
 
 
 def test_arming_reason_not_loopback_without_request(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -308,6 +336,8 @@ def test_fallback_manager_arming_unchanged(vault: KeyVault) -> None:
     shown = {hop["key_id"] for hop in mgr.status().hops}
     assert rec.id in shown
     assert "local:local_qwen" not in shown
+    vault_hops = [h for h in mgr.status().hops if h["key_id"] == rec.id]
+    assert vault_hops[0]["served_local"] is False
 
 
 def test_existing_cloud_429_park_still_holds(vault: KeyVault) -> None:
@@ -354,12 +384,15 @@ def test_status_marks_local_hop(
     client = TestClient(app, client=("127.0.0.1", 5555))
     body = client.get("/api/freeroute/status").json()
     spendable = {row["id"]: row for row in body["spendable"]}
-    assert spendable[LOCAL_QWEN_ID]["local"] is True
-    assert spendable["groq"]["local"] is False
-    hops = [h for h in body["hops"] if h.get("local")]
+    assert spendable[LOCAL_QWEN_ID]["served_local"] is True
+    assert spendable["groq"]["served_local"] is False
+    assert "local" not in spendable[LOCAL_QWEN_ID]
+    hops = [h for h in body["hops"] if h.get("served_local") is True]
     assert len(hops) == 1
     assert hops[0]["provider"] == LOCAL_QWEN_ID
     assert hops[0]["local_reason"] == REASON_UNREACHABLE
+    assert body["local_reason"] == REASON_UNREACHABLE
+    assert isinstance(body["local_reason"], str)
 
 
 def json_body(request: httpx.Request) -> dict[str, Any]:

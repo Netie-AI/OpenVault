@@ -2,6 +2,18 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-09-25 - LOCAL-1 adopt Cortex#274 served_local names (OpenVault #70)
+
+- Wire names match Cortex#274 head `a9f3fa03` (`freeroute_ov_local.py`):
+  spendable/hops use `served_local` (JSON boolean), not `local`.
+  `local_reason` is always a string (`""` when the hop is usable).
+  `GET /api/freeroute/status` also has top-level `local_reason`.
+- Refusal when `local_only` cannot be honoured stays HTTP 503
+  `openvault_local_only_unavailable` with `error.reason` one of
+  `local_unreachable` / `local_model_not_loaded` / `local_base_url_not_loopback`.
+- Streaming: same `served_*` keys on each complete SSE `data:` JSON object.
+- Ceiling still: merged, local not proven. Public `:5000` stays HUMAN_STOP.
+
 ## 2026-09-25 - LOCAL-1 FreeRoute local_qwen hop (OpenVault #70)
 
 - Register `local_qwen` as a spendable FreeRoute provider that needs no cloud key.

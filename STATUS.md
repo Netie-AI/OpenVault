@@ -10,10 +10,12 @@ JWKS pin kids (#50). Packs DR-0016, passkeys DR-0017. DR-0015 accepted.
 **UI:** `http://127.0.0.1:3010/` and `openvault app`. Free Keys wizard on
 `/keys#free`. Ship targets in-repo only (DR-0003).
 
-LOCAL-1 (#70): `local_qwen` is a FreeRoute hop with no cloud key. Contract:
-`served_provider` / `served_model` / `served_local` on chat JSON; request
-`local_only`; 503 `openvault_local_only_unavailable`. Not local-proven until a
-served Cortex run shows `served_local=true` with zero outside-model calls.
+LOCAL-1 (#70): `local_qwen` hop, no cloud key. Contract matches Cortex#274
+`a9f3fa03`: chat `served_provider` / `served_model` / `served_local` (literal
+true for local); request `local_only`; status `local_reason` (str); hops keyed
+by `provider`; spendable keyed by `id` with `served_local`. 503
+`openvault_local_only_unavailable`. Not local-proven until a served Cortex run
+shows `served_local=true` with zero outside-model calls.
 
 ## Known-red - do not report this suite as green
 
@@ -31,7 +33,7 @@ Usage $/unit NEEDS-YOU.
 
 | # | Status |
 |---|--------|
-| #70 LOCAL-1 | OpenVault hop + served_* + fail-closed local_only. Ceiling: merged, local not proven. |
+| #70 LOCAL-1 | Hop + served_* + fail-closed local_only. Ceiling: merged, local not proven. |
 | OpenMW collection errors | 5 files, one root-cause class. Blocks a green suite. |
 | Verify ghosts | R-0003: a different run must confirm before any deletion. |
 | apps/web build | No CI job exists for it; `npm run build` unverified. |

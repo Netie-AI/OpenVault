@@ -185,7 +185,7 @@ def test_spendable_freeroute_pool_includes_wired_free_providers() -> None:
     assert "local_qwen" in ids
     local = get_provider("local_qwen")
     assert local is not None
-    assert local.to_dict()["local"] is True
+    assert local.to_dict()["served_local"] is True
     assert local.to_dict()["spendable"] is True
     assert "anthropic" not in ids
     assert "github_models" not in ids

@@ -8,9 +8,10 @@ Needs no cloud key and is not stored in the vault. Operator config is env only:
 
 This module does not start a server, bind a port, or download a model.
 
-Wire contract (OV#70 / Cortex#272): ``served_provider``, ``served_model``,
-``served_local`` on the chat JSON; ``local_only`` on the request; 503
-``openvault_local_only_unavailable``; status hop ``local`` / ``local_reason``.
+Wire contract (OV#70 / Cortex#272, names from Cortex#274 ``a9f3fa03``):
+``served_provider``, ``served_model``, ``served_local`` on the chat JSON;
+``local_only`` on the request; 503 ``openvault_local_only_unavailable``;
+status hop ``served_local`` / ``local_reason`` (always a string).
 """
 
 from __future__ import annotations
@@ -334,8 +335,8 @@ def local_status_hop(*, probe: LocalProbe | None = None) -> dict[str, Any]:
         "last_latency_ms": result.latency_ms,
         "park_until": None,
         "park_reason": None,
-        "local": True,
-        "local_reason": result.reason,
+        "served_local": True,
+        "local_reason": result.reason or "",
         "base_url": result.base_url,
         "model": result.model,
     }

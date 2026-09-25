@@ -202,6 +202,7 @@ class FallbackManager:
                     "last_latency_ms": record.last_latency_ms,
                     "park_until": circ.park_until,
                     "park_reason": circ.park_reason,
+                    "served_local": False,
                 }
             )
         return FallbackStatus(
