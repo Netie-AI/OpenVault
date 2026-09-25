@@ -403,7 +403,12 @@ class Handler(BaseHTTPRequestHandler):
             self._proxy_get(f"{CORTEX}/health", wrap="cortex")
             return
         if path == "/api/mesh-proxy":
-            self._proxy_get(f"{OPENVAULT}/api/local/connect-pack")
+            try:
+                remote = _post_json(f"{OPENVAULT}/api/local/connect-pack", {})
+            except _UPSTREAM_ERRORS as exc:
+                self._json(*_upstream_failure(exc))
+                return
+            self._json(200, remote)
             return
         if path == "/api/keyvault-proxy":
             self._proxy_get(f"{OPENVAULT}/api/keyvault/snapshot")

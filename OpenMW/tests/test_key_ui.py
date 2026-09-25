@@ -13,6 +13,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from conftest import issue_key
 from cryptography.fernet import Fernet
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -179,9 +180,19 @@ def _app_client(vault: KeyVault, accounts: AccountStore, host: str) -> TestClien
 
 def test_mounted_cortex_mint_is_loopback_only(vault: KeyVault, accounts: AccountStore) -> None:
     """A vault reachable from the LAN is not a vault -- minting is a custody write."""
-    lan = _app_client(vault, accounts, "192.168.1.50")
-    assert lan.get("/api/keys/ui-copy").status_code == 200  # copy is public
-    res = lan.post("/api/keys/cortex")
+    app = create_app(
+        vault=vault,
+        accounts=accounts,
+        mock_health=True,
+        enable_precheck_loop=False,
+        cortex_url="http://127.0.0.1:9",
+    )
+    local = TestClient(app, client=("127.0.0.1", 5555))
+    _key_id, headers = issue_key(local)
+    lan = TestClient(app, client=("192.168.1.50", 5555))
+    assert lan.get("/api/keys/ui-copy").status_code == 401
+    assert lan.get("/api/keys/ui-copy", headers=headers).status_code == 200
+    res = lan.post("/api/keys/cortex", headers=headers)
     assert res.status_code == 403
     assert "loopback-only" in res.text
     assert vault.list_keys() == []

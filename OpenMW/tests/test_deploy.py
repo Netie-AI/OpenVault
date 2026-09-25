@@ -53,7 +53,7 @@ def test_deploy_from_cortex_gates(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
         enable_precheck_loop=False,
         cortex_url="http://127.0.0.1:9",
     )
-    client = TestClient(app)
+    client = TestClient(app, client=("127.0.0.1", 5555))
 
     detect = client.post("/api/detect", json={"project_path": str(project)})
     assert detect.status_code == 200
@@ -122,7 +122,7 @@ def test_domain_guide_and_cicd_and_one_press(
         enable_precheck_loop=False,
         cortex_url="http://127.0.0.1:9",
     )
-    client = TestClient(app)
+    client = TestClient(app, client=("127.0.0.1", 5555))
 
     guide = client.post(
         "/api/deploy/domain-guide",

@@ -67,7 +67,7 @@ def test_reveal_rejected_off_loopback(tmp_path, monkeypatch):
     key_id = _make_key(loopback)
 
     lan = _client(tmp_path, host="192.168.1.50")
-    assert lan.get(f"/api/keys/{key_id}/secret", headers=REVEAL_HEADER).status_code == 403
+    assert lan.get(f"/api/keys/{key_id}/secret", headers=REVEAL_HEADER).status_code == 401
 
 
 def test_reveal_is_audited(tmp_path, monkeypatch):

@@ -121,7 +121,7 @@ def test_retire_is_loopback_and_unsealed(tmp_path: Path, monkeypatch: pytest.Mon
         client=("192.168.1.50", 5555),
     )
     denied = remote.post("/api/vault/backup/retire", json={})
-    assert denied.status_code == 403
+    assert denied.status_code == 401
 
     first = _client(tmp_path, monkeypatch)
     first.post("/api/vault/passphrase", json={"passphrase": "a-long-enough-phrase"})

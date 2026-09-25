@@ -231,13 +231,13 @@ def test_lan_cannot_create_or_ingest(vault: KeyVault) -> None:
             "/api/keys",
             json={"label": "Groq", "provider": "groq", "secret": FAKE_GROQ, "role": "free"},
         ).status_code
-        == 403
+        == 401
     )
     ingest = lan.post(
         "/api/vault/ingest-env",
         json={"dry_run": False, "env_text": "GROQ_API_KEY=x"},
     )
-    assert ingest.status_code == 403
+    assert ingest.status_code == 401
 
 
 def test_parse_and_ingest_env_text_routes_passwords_to_secrets(vault: KeyVault) -> None:

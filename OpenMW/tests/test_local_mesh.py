@@ -29,11 +29,11 @@ def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
         cortex_url="http://127.0.0.1:8000",
         openide_url="http://127.0.0.1:5100",
     )
-    return TestClient(app)
+    return TestClient(app, client=("127.0.0.1", 5555))
 
 
 def test_mesh_status_and_connect_pack(client: TestClient) -> None:
-    res = client.get("/api/local/mesh")
+    res = client.post("/api/local/mesh")
     assert res.status_code == 200
     body = res.json()
     assert "openvault" in body["mesh"]["peers"]
@@ -83,7 +83,7 @@ def test_handshake_auto_approve_openide_and_invoke(client: TestClient) -> None:
     assert inv.json()["ok"] is True
     assert "urls" in inv.json()
 
-    pack = client.get("/api/local/connect-pack")
+    pack = client.post("/api/local/connect-pack")
     assert pack.status_code == 200
     assert pack.json()["openide"]["approved"] is True
     assert pack.json()["cortex"]["approved"] is True

@@ -217,6 +217,6 @@ def test_webauthn_is_loopback_only(tmp_path: Path, monkeypatch: pytest.MonkeyPat
     monkeypatch.setenv("OPENVAULT_HOME", str(tmp_path))
     remote = _client("192.168.1.50")
     res = remote.post("/api/vault/webauthn/register/begin", json={})
-    assert res.status_code == 403
+    assert res.status_code == 401
     unseal = remote.post("/api/vault/webauthn/unseal/begin")
-    assert unseal.status_code == 403
+    assert unseal.status_code == 401

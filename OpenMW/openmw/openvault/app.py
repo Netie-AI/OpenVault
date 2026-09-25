@@ -126,6 +126,10 @@ from openmw.openvault.vault.crypto import Seal, VaultCryptoError, VaultSealedErr
 from openmw.openvault.vault.env_ingest import ingest_environment, scan_environment
 from openmw.openvault.vault.fallback import FallbackConfig, FallbackManager
 from openmw.openvault.vault.free_keys_onboard import catalog_base_url, looks_like_site_password_key
+from openmw.openvault.vault.http_guard import (
+    HttpGuardMiddleware,
+    dev_docs_enabled,
+)
 from openmw.openvault.vault.local_hop import served_response_headers
 from openmw.openvault.vault.pm_import import ingest_import_dir, ingest_pm_csv
 from openmw.openvault.vault.precheck import PrecheckLoop, precheck_all, precheck_one
@@ -1112,11 +1116,21 @@ def create_app(
             with suppress(asyncio.CancelledError):
                 await task
 
-    app = FastAPI(title="OpenVault", version="0.1.0", lifespan=lifespan)
+    docs_on = dev_docs_enabled()
+    app = FastAPI(
+        title="OpenVault",
+        version="0.1.0",
+        lifespan=lifespan,
+        docs_url="/docs" if docs_on else None,
+        redoc_url="/redoc" if docs_on else None,
+        openapi_url="/openapi.json" if docs_on else None,
+    )
     # Signing-key routes must decrypt the trust root with this same Seal.
     # A fresh Seal() in TrustStore stays sealed after passphrase unseal and
     # /keys/intermediate 500s while /api/vault/status says sealed=false.
     app.state.seal = state_seal
+    app.state.api_keys = state_api_keys
+    app.add_middleware(HttpGuardMiddleware, api_keys=state_api_keys)
 
     # Stage-3 integrator mount: routers own their paths; app.py only wires them.
     from openmw.openvault.routers.freeroute import build_freeroute_router
@@ -1210,8 +1224,7 @@ def create_app(
 
     # --- Local mesh: OpenVault ↔ Cortex ↔ FreeIDE ---
 
-    @app.get("/api/local/mesh")
-    def local_mesh_status() -> dict[str, Any]:
+    def _mesh_snapshot() -> dict[str, Any]:
         state = refresh_mesh()
         pack = build_connect_pack(state)
         return {
@@ -1219,6 +1232,23 @@ def create_app(
             "connect_pack": pack,
             "perfect_local": pack["perfect_local"],
         }
+
+    @app.get("/api/local/mesh")
+    def local_mesh_get_not_allowed() -> JSONResponse:
+        return JSONResponse(
+            status_code=405,
+            content={
+                "error": {
+                    "message": "method not allowed",
+                    "type": "openvault_method_not_allowed",
+                }
+            },
+            headers={"Allow": "POST"},
+        )
+
+    @app.post("/api/local/mesh")
+    def local_mesh_status() -> dict[str, Any]:
+        return _mesh_snapshot()
 
     @app.post("/api/local/mesh/refresh")
     def local_mesh_refresh() -> dict[str, Any]:
@@ -1335,6 +1365,19 @@ def create_app(
         return JSONResponse(status_code=code, content={"ok": status == "ready", **row})
 
     @app.get("/api/local/connect-pack")
+    def local_connect_pack_get_not_allowed() -> JSONResponse:
+        return JSONResponse(
+            status_code=405,
+            content={
+                "error": {
+                    "message": "method not allowed",
+                    "type": "openvault_method_not_allowed",
+                }
+            },
+            headers={"Allow": "POST"},
+        )
+
+    @app.post("/api/local/connect-pack")
     def local_connect_pack() -> dict[str, Any]:
         return build_connect_pack(refresh_mesh())
 
@@ -3608,4 +3651,4 @@ def run_console(
         precheck_interval_s=precheck_interval_s,
     )
     log.info("openvault_console_start", host=host, port=port, cortex_url=cortex_url)
-    uvicorn.run(app, host=host, port=port, log_level="info")
+    uvicorn.run(app, host=host, port=port, log_level="info", proxy_headers=False)

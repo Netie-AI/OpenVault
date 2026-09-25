@@ -106,7 +106,7 @@ Invoke-RestMethod -Method POST -Uri "http://127.0.0.1:5000/api/local/handshake" 
   auto_approve = $true
 } | ConvertTo-Json) | Out-Null
 
-$pack = Invoke-RestMethod -Uri "http://127.0.0.1:5000/api/local/connect-pack"
+$pack = Invoke-RestMethod -Method POST -Uri "http://127.0.0.1:5000/api/local/connect-pack"
 $packPath = Join-Path $env:OPENVAULT_HOME "connect_pack.json"
 $pack | ConvertTo-Json -Depth 8 | Set-Content -Path $packPath -Encoding UTF8
 

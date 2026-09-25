@@ -220,4 +220,4 @@ def test_non_loopback_ingest_is_denied(tmp_path: Path, monkeypatch: pytest.Monke
         client=("10.0.0.8", 5555),
     )
     res = remote.post("/api/vault/ingest-pm", json={"csv_text": "name,url,username,password\n"})
-    assert res.status_code == 403
+    assert res.status_code == 401

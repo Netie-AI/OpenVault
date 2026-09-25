@@ -2,6 +2,21 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-09-25 - Fail-closed auth guard on /api and /keys (OpenVault #72)
+
+- Every `/api/*` and `/keys/*` route now requires a valid issued OpenVault API
+  key (Bearer / X-API-Key, same verification FreeRoute already uses) or a
+  loopback socket peer. The guard is fail-closed whether `REQUIRE_API_KEY` is
+  set, unset, or false. Allowlist is `/api/healthz` only. Forwarded headers are
+  not consulted.
+- `/docs`, `/redoc`, and `/openapi.json` return 404 unless `OPENVAULT_DEV_DOCS=1`.
+- `GET /api/local/mesh` and `GET /api/local/connect-pack` no longer write state;
+  the previous behavior is `POST` on those paths.
+- The route-walk contract iterates every declared `(path, method)` pair under
+  `/api/*` and `/keys/*` (GET, POST, PUT, PATCH, DELETE), not GET alone.
+- Console `uvicorn.run` passes `proxy_headers=False` so forwarded headers
+  cannot rewrite `request.client`.
+
 ## 2026-09-25 - LOCAL-1 FreeRoute local_qwen hop (OpenVault #70)
 
 - Register `local_qwen` as a spendable FreeRoute provider that needs no cloud key.

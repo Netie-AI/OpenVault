@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { RefreshCw } from "lucide-react";
-import { apiFetch, apiPost, isApiError, LONG_TIMEOUT_MS } from "@/lib/api/client";
+import { apiPost, isApiError, LONG_TIMEOUT_MS } from "@/lib/api/client";
 import { Button } from "@/components/ui/button";
 import { PageContainer } from "@/components/ui/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -93,7 +93,7 @@ export default function PeersPage() {
         await apiPost("/api/local/mesh/refresh", undefined, { timeoutMs: LONG_TIMEOUT_MS });
       }
       // Mesh probes Cortex/OpenIDE; offline peers make this ~20s+ on a cold mesh.
-      const payload = await apiFetch<MeshPayload>("/api/local/mesh", {
+      const payload = await apiPost<MeshPayload>("/api/local/mesh", undefined, {
         timeoutMs: LONG_TIMEOUT_MS,
       });
       setData(payload);
