@@ -137,7 +137,7 @@ def test_reveal_denied_off_loopback(tmp_path, monkeypatch):
 
     lan = _client(host="192.168.1.50")
     denied = lan.get(f"/api/secrets/{card['id']}/reveal", headers=REVEAL_HEADER)
-    assert denied.status_code == 403
+    assert denied.status_code == 401
     assert VISA_PAN not in denied.text
 
 
@@ -262,19 +262,19 @@ def test_card_mutations_are_loopback_only(tmp_path, monkeypatch):
     card = _make_card(_client())
     lan = _client(host="192.168.1.50")
 
-    assert lan.delete(f"/api/secrets/{card['id']}").status_code == 403
-    assert lan.post(f"/api/secrets/{card['id']}/revoke", json={}).status_code == 403
+    assert lan.delete(f"/api/secrets/{card['id']}").status_code == 401
+    assert lan.post(f"/api/secrets/{card['id']}/revoke", json={}).status_code == 401
     assert (
         lan.post(f"/api/secrets/{card['id']}/rotate", json={"new_pan": VISA_PAN_2}).status_code
-        == 403
+        == 401
     )
-    assert lan.patch(f"/api/secrets/{card['id']}", json={"label": "x"}).status_code == 403
+    assert lan.patch(f"/api/secrets/{card['id']}", json={"label": "x"}).status_code == 401
     assert (
         lan.post(
             "/api/secrets/cards",
             json={"label": "remote", "pan": VISA_PAN, "exp_month": 1, "exp_year": 2030},
         ).status_code
-        == 403
+        == 401
     )
     # And none of it happened.
     assert len(_client().get("/api/secrets").json()["secrets"]) == 1

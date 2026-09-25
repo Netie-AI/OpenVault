@@ -47,6 +47,7 @@ shell at HTTP 200 is refused and named "compiling", not "unreachable".
 
 | # | Status |
 |---|--------|
+| #72 SEC-GUARD | Fail-closed /api+/keys guard, docs off, GET mesh/connect-pack is read-only. |
 | #70 LOCAL-1 | Hop + served_* + fail-closed local_only. Ceiling: merged, local not proven. |
 | OpenMW collection errors | 5 files, one root-cause class. Blocks a green suite. |
 | Verify ghosts | R-0003: a different run must confirm before any deletion. |

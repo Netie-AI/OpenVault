@@ -283,13 +283,13 @@ def test_the_new_write_routes_are_loopback_only() -> None:
     remote = _client(host="10.0.0.7")
     assert (
         remote.post("/api/secrets/recovery-codes", json={"label": "X", "codes": CODES}).status_code
-        == 403
+        == 401
     )
     assert (
         remote.post(
             "/api/secrets/identity", json={"label": "X", "doc_type": "nric", "number": IC_NUMBER}
         ).status_code
-        == 403
+        == 401
     )
 
 

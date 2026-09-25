@@ -15,6 +15,7 @@ Run: uv run pytest tests/test_loopback_guard.py -q
 from __future__ import annotations
 
 import pytest
+from conftest import issue_key
 from cryptography.fernet import Fernet
 from fastapi.testclient import TestClient
 
@@ -70,16 +71,19 @@ def test_everything_else_is_still_remote(raw: str) -> None:
     assert _normalise_host(raw) not in _LOOPBACK_HOSTS, f"{raw!r} must stay remote"
 
 
-def _client_from(host: str, tmp_path) -> TestClient:
+def _app_from(tmp_path) -> object:
     seal = Seal(Fernet.generate_key())
     vault = KeyVault(db_path=tmp_path / "keys.db", seal=seal)
-    app = create_app(
+    return create_app(
         vault=vault,
         mock_health=True,
         enable_precheck_loop=False,
         cortex_url="http://127.0.0.1:9",
     )
-    return TestClient(app, client=(host, 5555))
+
+
+def _client_from(host: str, tmp_path) -> TestClient:
+    return TestClient(_app_from(tmp_path), client=(host, 5555))
 
 
 @pytest.mark.parametrize("host", ["127.0.0.1", "::1", "::ffff:127.0.0.1"])
@@ -100,23 +104,33 @@ def test_console_can_actually_create_a_key(host: str, tmp_path) -> None:
 
 
 @pytest.mark.parametrize("host", ["1.2.3.4", "::ffff:1.2.3.4", "192.168.1.50"])
-def test_the_lan_still_cannot_create_a_key(host: str, tmp_path) -> None:
+def test_the_lan_still_cannot_create_a_key(host: str, tmp_path, monkeypatch) -> None:
     """A vault reachable from the LAN is not a vault. The fix must not widen this."""
-    client = _client_from(host, tmp_path / host.replace(":", "_").replace(".", "-"))
-    res = client.post(
+    monkeypatch.setenv("OPENVAULT_HOME", str(tmp_path / "home"))
+    app = _app_from(tmp_path / host.replace(":", "_").replace(".", "-"))
+    loop = TestClient(app, client=("127.0.0.1", 5555))
+    _key_id, headers = issue_key(loop)
+    lan = TestClient(app, client=(host, 5555))
+    res = lan.post(
         "/api/keys",
         json={"label": "probe", "provider": "google", "secret": "x" * 24, "role": "free"},
+        headers=headers,
     )
     assert res.status_code == 403, f"{host} -> {res.status_code}"
     assert "loopback-only" in res.text
 
 
-def test_prove_peer_still_cannot_create_a_provider_key(tmp_path) -> None:
+def test_prove_peer_still_cannot_create_a_provider_key(tmp_path, monkeypatch) -> None:
     """#52 must not widen _require_loopback. Prove IPs may mint services only."""
-    client = _client_from("10.128.0.3", tmp_path / "prove")
+    monkeypatch.setenv("OPENVAULT_HOME", str(tmp_path / "home"))
+    app = _app_from(tmp_path / "prove")
+    loop = TestClient(app, client=("127.0.0.1", 5555))
+    _key_id, headers = issue_key(loop)
+    client = TestClient(app, client=("10.128.0.3", 5555))
     res = client.post(
         "/api/keys",
         json={"label": "probe", "provider": "google", "secret": "x" * 24, "role": "free"},
+        headers=headers,
     )
     assert res.status_code == 403
     assert "loopback-only" in res.text

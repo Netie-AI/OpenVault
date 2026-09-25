@@ -167,10 +167,10 @@ def test_catalog_and_bind_are_loopback_only(client: TestClient) -> None:
     assert bind["mint_loopback_only"] is True
 
     remote = TestClient(client.app, client=("8.8.8.8", 5555))
-    assert remote.get("/api/system/catalog").status_code == 403
-    assert remote.get("/api/system/bind").status_code == 403
+    assert remote.get("/api/system/catalog").status_code == 401
+    assert remote.get("/api/system/bind").status_code == 401
     denied = remote.post("/api/system/unlock", json={"account_id": "x", "plan_id": "pro"})
-    assert denied.status_code == 403
+    assert denied.status_code == 401
 
 
 def test_unlock_route_metering_and_seats(client: TestClient) -> None:

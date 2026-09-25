@@ -555,12 +555,12 @@ class TestControlPlaneIsGated:
     def test_remote_caller_cannot_mint_itself_a_key(self, vault: KeyVault) -> None:
         """An open mint endpoint hands out the credential the gateway requires."""
         resp = self._remote(vault).post("/api/apikeys", json={"label": "atk", "tier": "free"})
-        assert resp.status_code == 403
+        assert resp.status_code == 401
 
     def test_remote_caller_cannot_enumerate_or_revoke_keys(self, vault: KeyVault) -> None:
         remote = self._remote(vault)
-        assert remote.get("/api/apikeys").status_code == 403
-        assert remote.delete("/api/apikeys/anything").status_code == 403
+        assert remote.get("/api/apikeys").status_code == 401
+        assert remote.delete("/api/apikeys/anything").status_code == 401
 
     def test_one_key_cannot_read_another_keys_spend(
         self, client: TestClient, vault: KeyVault

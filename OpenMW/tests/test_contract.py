@@ -31,9 +31,9 @@ CONTRACT_PORTS = {
 # OpenVault-side routes the bridge and gate contracts depend on.
 CONTRACT_ROUTES = [
     ("GET", "/api/healthz"),
-    ("GET", "/api/local/mesh"),
+    ("POST", "/api/local/mesh"),
     ("PUT", "/api/local/mesh/config"),
-    ("GET", "/api/local/connect-pack"),
+    ("POST", "/api/local/connect-pack"),
     ("POST", "/api/local/handshake"),
     ("POST", "/api/freeide/invoke"),
     ("GET", "/api/freeide/ready"),
@@ -97,7 +97,7 @@ def test_contract_routes_are_served(app: FastAPI) -> None:
 def test_connect_pack_pins_openide_to_airgpt(app: FastAPI) -> None:
     """The connect pack is the shared wiring doc — it must not hand out the stub."""
     with TestClient(app, client=("127.0.0.1", 5555)) as client:
-        pack = client.get("/api/local/connect-pack").json()
+        pack = client.post("/api/local/connect-pack").json()
     assert pack["schema"] == "openvault.local.connect_pack/v1"
     assert pack["openide"]["base_url"] == "http://127.0.0.1:8765"
     assert pack["env"]["OPENIDE_URL"] == "http://127.0.0.1:8765"

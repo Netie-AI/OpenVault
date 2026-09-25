@@ -105,7 +105,7 @@ def test_health_endpoint_shape(vault: KeyVault) -> None:
     store.record(record.id, "ok", latency_ms=12.5, checked_at=t0, force=True)
 
     app = create_app(vault=vault, mock_health=True, enable_precheck_loop=False)
-    client = TestClient(app)
+    client = TestClient(app, client=("127.0.0.1", 5555))
     resp = client.get(f"/api/keys/{record.id}/health?window=24h")
     assert resp.status_code == 200
     body = resp.json()
@@ -126,6 +126,6 @@ def test_health_endpoint_shape(vault: KeyVault) -> None:
 
 def test_health_endpoint_404_unknown_key(vault: KeyVault) -> None:
     app = create_app(vault=vault, mock_health=True, enable_precheck_loop=False)
-    client = TestClient(app)
+    client = TestClient(app, client=("127.0.0.1", 5555))
     resp = client.get("/api/keys/does-not-exist/health")
     assert resp.status_code == 404

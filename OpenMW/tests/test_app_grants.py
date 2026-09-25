@@ -79,7 +79,7 @@ def test_grant_is_loopback_only(home: Path) -> None:
     app = create_app(vault=vault, mock_health=True, enable_precheck_loop=False)
     remote = TestClient(app, client=("192.168.1.50", 5555))
     res = remote.post("/api/local/grants", json={"client_name": "Lan"})
-    assert res.status_code == 403
+    assert res.status_code == 401
 
 
 # --- The pairing code is the boundary (A-0009) ---

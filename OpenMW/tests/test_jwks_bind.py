@@ -11,6 +11,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from conftest import issue_key
 from cryptography.fernet import Fernet
 from fastapi.testclient import TestClient
 
@@ -57,15 +58,24 @@ def test_well_known_jwks_has_kids_without_mint(home: Path) -> None:
 
 
 def test_remote_caller_can_read_jwks_but_cannot_mint(home: Path) -> None:
+    _key_id, headers = issue_key(_client())
     remote = _client(host="10.0.0.9")
     jwks = remote.get("/.well-known/jwks.json")
     assert jwks.status_code == 200
     assert jwks.json()["keys"]
-    mint = remote.post("/keys/services", json={"service_id": "dms"}, headers=INTENT)
+    mint = remote.post("/keys/services", json={"service_id": "dms"}, headers={**INTENT, **headers})
     assert mint.status_code == 403
     assert "OPENVAULT_SERVICES_ALLOW" in mint.json()["detail"]
-    assert remote.post("/keys/intermediate", json={"service_id": "dms"}).status_code == 403
-    assert remote.post("/api/apikeys", json={"label": "nope", "tier": "free"}).status_code == 403
+    assert (
+        remote.post("/keys/intermediate", json={"service_id": "dms"}, headers=headers).status_code
+        == 403
+    )
+    assert (
+        remote.post(
+            "/api/apikeys", json={"label": "nope", "tier": "free"}, headers=headers
+        ).status_code
+        == 403
+    )
 
 
 def test_healthz_advertises_jwks_uri(home: Path) -> None:

@@ -358,6 +358,7 @@ def test_no_route_path_is_registered_twice(tmp_path, monkeypatch):
 def test_only_the_free_paths_are_documented(tmp_path, monkeypatch):
     """Legacy aliases keep working but must not appear in the OpenAPI schema."""
     monkeypatch.setenv("OPENVAULT_HOME", str(tmp_path))
+    monkeypatch.setenv("OPENVAULT_DEV_DOCS", "1")
     paths = _client().get("/openapi.json").json()["paths"]
 
     assert "/api/freebuild" in paths

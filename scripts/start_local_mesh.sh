@@ -116,7 +116,7 @@ curl -sf -X POST "$OV_URL/api/local/handshake" \
   -H 'Content-Type: application/json' \
   -d "{\"peer_kind\":\"openide\",\"name\":\"AirGPT OpenIDE\",\"base_url\":\"$OPENIDE_URL\",\"capabilities\":[\"signin\",\"passkey\",\"editor\"],\"auto_approve\":true}" >/dev/null
 
-curl -sf "$OV_URL/api/local/connect-pack" >"$OPENVAULT_HOME/connect_pack.json"
+curl -sf -X POST "$OV_URL/api/local/connect-pack" >"$OPENVAULT_HOME/connect_pack.json"
 
 if [[ "$WITH_AIRGPT_STUB" == "1" ]]; then
   if curl -sf "$OPENIDE_URL/" >/dev/null 2>&1; then
