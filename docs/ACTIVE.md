@@ -28,7 +28,7 @@ What exists in this repo and where. Update when structure changes, not when stat
 |------|---------|------|
 | Health | `health/` | Laptop device inventory |
 | Observe | `observe/` | PathTrace hops + severity (`hot` = red) |
-| Vault | `vault/` | Encrypted keys, accounts, proxy, FreeRoute gateway. Metering trio: `api_keys.py` (issued `ov_` credentials) · `auth.py` (who is calling — never a header) · `usage_store.py` (one durable row per request) · `budget.py` (output ceiling + context refusal) · `system_plane.py` (SYSTEM control plane; usage $/unit stays NEEDS-YOU) · `trust.py` (JWKS pin kids; mint stays loopback) · `route_packs.py` (experience credit, DR-0016) · `app_grants.py` (loopback app Grant) · `webauthn_unlock.py` (passkey unseal, DR-0017) |
+| Vault | `vault/` | Encrypted keys, accounts, proxy, FreeRoute gateway. Metering trio: `api_keys.py` (issued `ov_` credentials) · `auth.py` (who is calling — never a header) · `usage_store.py` (one durable row per request) · `budget.py` (output ceiling + context refusal) · `system_plane.py` (SYSTEM control plane; usage $/unit stays NEEDS-YOU) · `trust.py` (JWKS pin kids; mint stays loopback) · `route_packs.py` (experience credit, DR-0016) · `app_grants.py` (loopback app Grant) · `webauthn_unlock.py` (passkey unseal, DR-0017) · `local_hop.py` (LOCAL-1 `local_qwen` loopback hop, no cloud key) |
 | Ship | `ship/` (+ `ship/hosts/`) | Deploy / FreeBuild / email gates |
 | Mesh | `mesh/` | Local mesh + Cortex client + `/api/slots` |
 | Control | `control/` | GPU/CPU/fan remediation (dry_run default) — not the billing control plane (`/api/system/*`) |

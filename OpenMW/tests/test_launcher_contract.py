@@ -207,7 +207,7 @@ def test_html_ready_rejects_compiling_overlay() -> None:
     spec.loader.exec_module(module)
 
     class _Handler(BaseHTTPRequestHandler):
-        def do_GET(self) -> None:  # noqa: N802
+        def do_GET(self) -> None:
             if self.path == "/ok":
                 body = b"<html><body>OpenVault</body></html>"
             else:
@@ -218,7 +218,7 @@ def test_html_ready_rejects_compiling_overlay() -> None:
             self.end_headers()
             self.wfile.write(body)
 
-        def log_message(self, format: str, *args: object) -> None:  # noqa: A003
+        def log_message(self, format: str, *args: object) -> None:
             return
 
     server = HTTPServer(("127.0.0.1", 0), _Handler)

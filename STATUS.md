@@ -16,6 +16,10 @@ is fixed: Turbopack is not used (`dev --webpack`), prod uses `next start` when
 port. Free Keys wizard on `/keys#free` (Groq first; GitHub Models retired).
 Ship targets are in-repo hosts only (DR-0003).
 
+LOCAL-1 (#70): `local_qwen` hop, no cloud key. Chat stamps `served_provider` /
+`served_model` / `served_local`; request `local_only`; status `local_reason`.
+503 `openvault_local_only_unavailable`. Ceiling: merged, local not proven.
+
 ## Branch estate (2026-09-11 merge wave)
 
 17 branches were unmerged against `origin/main`. Measured, not assumed: 14 are
@@ -43,6 +47,7 @@ shell at HTTP 200 is refused and named "compiling", not "unreachable".
 
 | # | Status |
 |---|--------|
+| #70 LOCAL-1 | Hop + served_* + fail-closed local_only. Ceiling: merged, local not proven. |
 | OpenMW collection errors | 5 files, one root-cause class. Blocks a green suite. |
 | Verify ghosts | R-0003: a different run must confirm before any deletion. |
 | apps/web build | No CI job exists for it; `npm run build` unverified. |

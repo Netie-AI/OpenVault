@@ -18,6 +18,7 @@ from openmw.openvault.vault.free_keys_onboard import (
     onboard_payload,
     sort_groq_first,
 )
+from openmw.openvault.vault.local_hop import local_status_hop
 from openmw.openvault.vault.providers import get_provider, list_catalog, spendable_for_freeroute
 from openmw.openvault.vault.store import KeyVault
 from openmw.openvault.vault.trust import TrustStore
@@ -71,11 +72,14 @@ def build_freeroute_router(vault: KeyVault, fallback: FallbackManager) -> APIRou
     def freeroute_status() -> dict[str, Any]:
         """Operator snapshot: spendable hops, vault seal, public JWKS kids."""
         spendable = spendable_for_freeroute()
-        hops = fallback.status().hops
+        local_hop = local_status_hop()
+        hops = list(fallback.status().hops)
+        hops.append(local_hop)
         jwks = TrustStore().jwks()
         kids = [str(k.get("kid") or "") for k in jwks.get("keys", []) if k.get("kid")]
         sealed = bool(vault.seal.is_sealed)
         pooled = list(vault.pooled_ordered()) if not sealed else []
+        local_reason = str(local_hop.get("local_reason") or "")
         return {
             "ok": True,
             "surface": "freeroute",
@@ -89,6 +93,7 @@ def build_freeroute_router(vault: KeyVault, fallback: FallbackManager) -> APIRou
             "hops": hops,
             "spendable": spendable,
             "spendable_count": len(spendable),
+            "local_reason": local_reason,
             "usage_unit_status": "NEEDS-YOU",
             "onboard_path": "/keys#free",
         }
@@ -113,6 +118,7 @@ def _register_row(row: dict[str, Any]) -> dict[str, Any]:
         "spendable": openai_compatible and bool(chat_models),
         "chat_models": chat_models,
         "openai_compatible": openai_compatible,
+        "served_local": bool(row.get("served_local")),
     }
 
 

@@ -108,14 +108,18 @@ class HopTrace:
     attempts: int = 0
     cache_hit: bool = False
     error_type: str = ""
+    served_local: bool = False
 
     def note_attempt(self) -> None:
         self.attempts += 1
 
-    def note_served(self, *, provider: str, model: str, vault_key_id: str) -> None:
+    def note_served(
+        self, *, provider: str, model: str, vault_key_id: str, served_local: bool = False
+    ) -> None:
         self.provider = provider
         self.model_served = model
         self.vault_key_id = vault_key_id
+        self.served_local = served_local
 
 
 class UsageStore:

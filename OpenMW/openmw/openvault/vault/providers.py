@@ -6,7 +6,8 @@ downtime probes, and Cortex/AirGPT essential coverage.
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+import os
+from dataclasses import asdict, dataclass, replace
 from typing import Any, Literal
 
 ProviderTier = Literal["free", "freemium", "paid", "local"]
@@ -50,15 +51,28 @@ class ProviderSpec:
     # (AirGPT does) would cascade away from a perfectly healthy key, so these need a
     # budget floor rather than a blanket "empty means broken".
     reasoning_models: tuple[str, ...] = ()
+    # LOCAL-1: no-cloud-key FreeRoute hop. Distinct from vaulted ollama/litellm.
+    local_hop: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         d = asdict(self)
+        d.pop("local_hop", None)
         d["needed_by"] = list(self.needed_by)
         d["chat_models"] = list(self.chat_models)
         d["vision_models"] = list(self.vision_models)
         d["reasoning_models"] = list(self.reasoning_models)
         d["spendable"] = self.openai_compatible and bool(self.chat_models)
+        # Cortex#274 hop_reported_local / count_local_spendable: JSON true only.
+        d["served_local"] = bool(self.local_hop)
         return d
+
+
+LOCAL_QWEN_ID = "local_qwen"
+LOCAL_HOP_KEY_ID = "local:local_qwen"
+LOCAL_BASE_URL_ENV = "OPENVAULT_LOCAL_BASE_URL"
+LOCAL_MODEL_ENV = "OPENVAULT_LOCAL_MODEL"
+DEFAULT_LOCAL_MODEL = "qwen2.5:0.5b"
+DEFAULT_LOCAL_BASE_URL = "http://127.0.0.1:8080/v1"
 
 
 # Curated catalog — OmniRoute-inspired free/paid + OpenRouter marketplace + Ollama local.
@@ -331,6 +345,25 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
         needed_by=("cortex", "openvault", "airgpt"),
     ),
     ProviderSpec(
+        id=LOCAL_QWEN_ID,
+        name="Local Qwen (loopback)",
+        base_url=DEFAULT_LOCAL_BASE_URL,
+        default_role="free",
+        tier="local",
+        register_url="https://github.com/ggml-org/llama.cpp",
+        docs_url="https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md",
+        health_path="/models",
+        free_notes=(
+            "No cloud key. OpenAI-compat llama.cpp or Ollama on loopback. "
+            "Set OPENVAULT_LOCAL_BASE_URL + OPENVAULT_LOCAL_MODEL. "
+            "OpenVault does not start the server or pull a model."
+        ),
+        needed_by=("cortex", "airgpt", "openvault"),
+        placeholder_secret="local",
+        chat_models=(DEFAULT_LOCAL_MODEL,),
+        local_hop=True,
+    ),
+    ProviderSpec(
         id="ollama",
         name="Ollama (local)",
         base_url="http://127.0.0.1:11434/v1",
@@ -450,10 +483,17 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
 )
 
 
+def _with_runtime_local(spec: ProviderSpec) -> ProviderSpec:
+    """Apply operator env to the LOCAL-1 spec without mutating the catalog tuple."""
+    model = (os.environ.get(LOCAL_MODEL_ENV) or "").strip() or spec.chat_models[0]
+    base = (os.environ.get(LOCAL_BASE_URL_ENV) or "").strip() or spec.base_url
+    return replace(spec, chat_models=(model,), base_url=base)
+
+
 def get_provider(provider_id: str) -> ProviderSpec | None:
     for spec in PROVIDER_CATALOG:
         if spec.id == provider_id:
-            return spec
+            return _with_runtime_local(spec) if spec.local_hop else spec
     return None
 
 
@@ -468,7 +508,8 @@ def list_catalog(
             continue
         if needed_by and needed_by not in spec.needed_by:
             continue
-        rows.append(spec.to_dict())
+        live = _with_runtime_local(spec) if spec.local_hop else spec
+        rows.append(live.to_dict())
     return rows
 
 
@@ -480,7 +521,9 @@ def spendable_for_freeroute() -> list[dict[str, Any]]:
     is not skipped as 'no catalogued model'.
     """
     return [
-        spec.to_dict() for spec in PROVIDER_CATALOG if spec.openai_compatible and spec.chat_models
+        (_with_runtime_local(spec) if spec.local_hop else spec).to_dict()
+        for spec in PROVIDER_CATALOG
+        if spec.openai_compatible and spec.chat_models
     ]
 
 
@@ -544,6 +587,9 @@ def catalog_coverage_report(vault_provider_ids: set[str] | frozenset[str]) -> di
     for consumer in missing:
         for spec in PROVIDER_CATALOG:
             if consumer not in spec.needed_by:
+                continue
+            if spec.id == LOCAL_QWEN_ID:
+                # Listed on FreeRoute without a vault row. Not a coverage gap.
                 continue
             if spec.id not in vault_provider_ids and spec.tier != "local":
                 # local always "available" as installable; still list if not vaulted
