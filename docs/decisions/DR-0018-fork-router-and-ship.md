@@ -86,7 +86,25 @@ FreeRoute and FreeBuild.
   bootstrap credential, `X-OmniRoute-*` header names, the `/api/omniroute/status` path,
   and internal identifiers.
 
-<!-- FILL: ship specifics after agent report -->
+### FreeBuild (`apps/ship`)
+
+- Hard-disable: `hosted_cloud_disabled` (cloud/billing routes, cloud/tunnel
+  migrations, cloud-mode branching). Removed from shipped UI and MCP: cloud/tunnel
+  modal tabs, "Openship Cloud" prose (208 rewrites), cloud-only MCP descriptions.
+- Keys: `packages/core/src/netie/keyvault.ts`. Provider credential choke point is
+  `packages/platform/.../credential.service.ts:requireProvider()`, which gates
+  creation/updates and returns `keys_managed_by_openvault` for
+  `OPENVAULT_MANAGED_CREDENTIAL_PROVIDERS` (currently `cloudflare`).
+  `resolveCredentialSecrets` and `listProviderCredentials` read live from KeyVault
+  per credential label.
+- Kept on purpose: env-var names (`OPENSHIP_*`), internal identifiers
+  (`ensureOpenship*`, SQL `openship_` prefixes), `@repo/*` workspace paths. Mail
+  hosting works (apps/email restored). Stores not moved: docker-registry auth,
+  GitHub App identity, SSH keys (per-host file paths), SMTP relay creds, Stripe
+  billing key (already disabled), user sessions, deployment env vars.
+- Known gap: ~650 internal-identifier lines in MCP descriptions and config files
+  not swept (requires per-line review at scale; MCP-client-visible strings were
+  prioritized and finished).
 
 ## Consequences
 
