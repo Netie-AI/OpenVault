@@ -96,12 +96,13 @@ SOFTWARE.```
 | Change notices | Modified files carry `Modified by Netie AI, 2026`; files without a comment syntax are listed in `apps/ship/NOTICE` |
 | History | Imported as one squashed snapshot (commit `import(ship): ...` on this repo). Upstream history is not carried; see the upstream repo at the commit above. |
 
-Left out of the import (not shipped here): `apps/email`, `apps/web`,
+Left out of the import (not shipped here): `apps/web`,
 `apps/desktop`, `apps/cli`, `apps/edge`, `packages/db-email`,
 `packages/openship`, `docs/`, `fixtures/`, `docker/`, `bun.lock`, upstream
 agent files, and the MaxMind GeoLite2 country database
 (`apps/api/assets/geoip/GeoLite2-Country.mmdb`, which has its own license and is
-not redistributed here).
+not redistributed here). `apps/email` is included, minus ten onboarding and
+pricing images over 500 KB under `apps/email/client/public/`.
 
 ---
 
