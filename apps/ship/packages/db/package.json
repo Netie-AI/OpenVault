@@ -43,15 +43,15 @@
     "db:push": "drizzle-kit push",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
-    "db:heal-pglite": "bun scripts/heal-pglite.ts",
-    "db:heal-pglite-resetwal": "bun scripts/heal-pglite-resetwal.ts",
-    "db:heal-orphans": "bun scripts/heal-orphan-tables.ts",
-    "db:dump": "bun scripts/dump.ts",
-    "db:restore": "bun scripts/restore.ts",
+    "db:heal-pglite": "tsx scripts/heal-pglite.ts",
+    "db:heal-pglite-resetwal": "tsx scripts/heal-pglite-resetwal.ts",
+    "db:heal-orphans": "tsx scripts/heal-orphan-tables.ts",
+    "db:dump": "tsx scripts/dump.ts",
+    "db:restore": "tsx scripts/restore.ts",
     "clean": "rm -rf dist .turbo node_modules"
   },
   "dependencies": {
-    "@repo/core": "workspace:*",
+    "@repo/core": "*",
     "drizzle-orm": "^0.45.1",
     "pg": "^8.20.0",
     "@electric-sql/pglite": "^0.3.15"

@@ -363,7 +363,7 @@ export function CloudProvider({ children }: { children: ReactNode }) {
         // served over private-LAN HTTP, where browser security APIs differ
         // from HTTPS. Keep the window open with an actionable local error if
         // setup still fails after the PKCE fallback.
-        console.error("Unable to prepare Openship Cloud sign-in", error);
+        console.error("Unable to prepare the hosted cloud service sign-in", error);
         handle.navigate(`${window.location.origin}/cloud-connect-callback?setup_error=pkce`);
       });
     handle.onClose(() => checkStatus());
@@ -419,7 +419,7 @@ export function CloudProvider({ children }: { children: ReactNode }) {
 
             {/* Title */}
             <h2 className="text-lg font-semibold text-foreground">
-              Connect Openship Cloud
+              Connect the hosted cloud service
             </h2>
             {modalFeature.description ? (
               <div className="mt-1 space-y-1.5 text-sm leading-relaxed">
@@ -429,7 +429,7 @@ export function CloudProvider({ children }: { children: ReactNode }) {
             ) : (
               <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
                 <strong className="text-foreground">{modalFeature.feature}</strong> requires
-                an Openship Cloud connection. Connect your account to unlock:
+                a hosted cloud service connection. Connect your account to unlock:
               </p>
             )}
 
@@ -468,7 +468,7 @@ export function CloudProvider({ children }: { children: ReactNode }) {
                 ) : (
                   <UiIcon name="external-link" className="size-4" />
                 )}
-                {connecting ? "Waiting for sign in…" : (modalFeature.ctaLabel ?? "Connect to Openship Cloud")}
+                {connecting ? "Waiting for sign in…" : (modalFeature.ctaLabel ?? "Connect to the hosted cloud service")}
               </Button>
               <Button
                 variant="ghost"

@@ -3,7 +3,6 @@ import { useCommandPalette } from '../context/command-palette-context.js';
 import { LabelDialog } from '@/components/labels/label-dialog';
 import { useActiveConnection } from '@/hooks/use-connections';
 import { useMutation } from '@tanstack/react-query';
-import { MessageSquare } from '../icons/icons';
 import { useSidebar } from '../context/sidebar-context';
 import { useTRPC } from '@/providers/query-provider';
 import { type NavItem } from '@/config/navigation';
@@ -172,18 +171,9 @@ export function NavMain({ items }: NavMainProps) {
   return (
     <SidebarGroup className={`${state !== 'collapsed' ? '' : 'mt-1'} space-y-2.5 py-0 md:px-0`}>
       <SidebarMenu>
-        {isBottomNav ? (
-          <SidebarMenuItem key={'feedback'}>
-            <NavItem
-              isActive={isUrlActive('https://github.com/oblien/openship/issues')}
-              href={'https://github.com/oblien/openship/issues'}
-              url={'https://github.com/oblien/openship/issues'}
-              icon={MessageSquare}
-              target={'_blank'}
-              title={m['navigation.sidebar.feedback']()}
-            />
-          </SidebarMenuItem>
-        ) : null}
+        {/* Modified by Netie AI, 2026: removed — it linked to Openship's own
+            GitHub issues, which is not where this fork's users get support. */}
+        {null}
         {items.map((section) => (
           <SidebarMenuItem key={section.title}>
             {state !== 'collapsed' ? (

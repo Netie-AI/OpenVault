@@ -100,7 +100,9 @@ export function ErrorView({
   code,
   codeLabel,
   actions,
-  docsHref = "https://openship.io/docs",
+  // Modified by Netie AI, 2026: no default docs link (openship.io is not this
+  // fork's site); a caller may still pass its own docsHref.
+  docsHref,
   docsLabel,
   githubLabel,
 }: {
@@ -176,20 +178,25 @@ export function ErrorView({
         </p>
       )}
 
-      {/* Escape hatches. These screens are where a self-hoster is most stuck, so
-          docs + the issue tracker are one click away. */}
+      {/* Escape hatches. These screens are where a self-hoster is most stuck.
+          Modified by Netie AI, 2026: the docs link only renders when a caller
+          passes one (openship.io was never this fork's site), and the GitHub
+          link now credits the upstream project instead of implying an issue
+          tracker this fork doesn't use. */}
       <div className="mt-6 flex items-center gap-5 text-xs text-muted-foreground/60">
+        {docsHref && (
+          <a
+            href={docsHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="transition-colors hover:text-foreground"
+          >
+            {docsLabel}
+          </a>
+        )}
+        {docsHref && <span aria-hidden className="size-1 rounded-full bg-muted-foreground/30" />}
         <a
-          href={docsHref}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="transition-colors hover:text-foreground"
-        >
-          {docsLabel}
-        </a>
-        <span aria-hidden className="size-1 rounded-full bg-muted-foreground/30" />
-        <a
-          href="https://github.com/oblien/openship/issues"
+          href="https://github.com/oblien/openship"
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground"

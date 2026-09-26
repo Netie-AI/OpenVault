@@ -468,8 +468,9 @@ export async function listOrganizationIssues(
       scope: "platform",
       source: "component",
       title: "This desktop is offline",
-      message: "The machine running Openship has no active network connection. Remote server health cannot be checked. Reconnect, then recheck monitoring.",
-      target: { scope: "platform", id: "desktop", name: "Openship", href: "/monitoring" },
+      // Modified by Netie AI, 2026: brand rebranded to FreeBuild.
+      message: "The machine running FreeBuild has no active network connection. Remote server health cannot be checked. Reconnect, then recheck monitoring.",
+      target: { scope: "platform", id: "desktop", name: "FreeBuild", href: "/monitoring" },
       resolveWith: [],
     });
   }

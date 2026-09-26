@@ -1,8 +1,9 @@
 /**
  * Shared constants used across the monorepo.
  */
+// Modified by Netie AI, 2026: brand rebranded to FreeBuild.
 
-export const APP_NAME = "Openship";
+export const APP_NAME = "FreeBuild";
 
 /** Authenticated organization admins may intentionally create a shareable
  * invitation without asking the server to deliver email. Shared by the
@@ -55,15 +56,19 @@ export function isInvitationClaimPath(path: string): boolean {
  */
 export const DEFAULT_IMAGE_REGISTRY = "ghcr.io/oblien";
 
+// Modified by Netie AI, 2026: openship.io / discord.gg / x.com were Openship's
+// own site, support form, and social account — none of them are FreeBuild's.
+// `github` stays as the upstream credit link (Apache-2.0 attribution); the
+// rest are empty rather than pointing at pages this fork does not run.
 export const BRAND_LINKS = {
-  site: "https://openship.io",
-  docs: "https://openship.io/docs",
-  support: "https://openship.io/support",
-  contact: "https://openship.io/contact",
+  site: "",
+  docs: "",
+  support: "",
+  contact: "",
   github: "https://github.com/oblien/openship",
-  issues: "https://github.com/oblien/openship/issues/new",
-  community: "https://discord.gg/Q9eWNCeXjg",
-  x: "https://x.com/openship",
+  issues: "",
+  community: "",
+  x: "",
 } as const;
 
 export const DEPLOYMENT_STATUSES = [

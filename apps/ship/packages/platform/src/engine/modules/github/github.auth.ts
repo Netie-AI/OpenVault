@@ -1354,7 +1354,7 @@ export async function resolveInstallUrl(
     // Signal unreachable so the caller tells the user the truth instead
     // of handing them a dead link.
     console.warn(
-      "[GitHub] install URL unavailable — Openship Cloud unreachable (cloud-app mode); refusing stateless local fallback",
+      "[GitHub] install URL unavailable — the hosted cloud service unreachable (cloud-app mode); refusing stateless local fallback",
     );
     return { url: "", state: "", cloudUnreachable: true };
   }

@@ -22,7 +22,7 @@
     "clear": "Clear filters"
   },
   "scopes": {
-    "platform": "Openship",
+    "platform": "FreeBuild",
     "server": "Servers",
     "project": "Projects",
     "domain": "Domains"
@@ -100,6 +100,6 @@
     "offlineHint": "Monitoring may be out of date. Reconnect to refresh and recheck the servers.",
     "retryStatus": "Retry status",
     "recheck": "Recheck",
-    "unknownHealth": "Container health is unknown until Openship can reach this server."
+    "unknownHealth": "Container health is unknown until FreeBuild can reach this server."
   }
 }

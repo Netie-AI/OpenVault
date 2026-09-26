@@ -37,7 +37,7 @@ export async function listPlans(input: NonNullable<Parameters<BillingOperations[
     return parseInput(BillingPlansSchema, payload.data);
   } catch {
     throw new AppError(
-      "Openship Cloud prices are temporarily unavailable. Please retry.",
+      "The hosted cloud service prices are temporarily unavailable. Please retry.",
       503,
       "BILLING_CATALOG_UNAVAILABLE",
     );

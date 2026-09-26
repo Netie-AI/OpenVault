@@ -293,7 +293,7 @@ function labelFor(mode: TeamMode): string {
     case "self_hosted_remote":
       return "your server";
     case "cloud_hosted":
-      return "Openship Cloud";
+      return "The hosted cloud service";
     case "tunneled":
       return "the tunnel";
     default:

@@ -55,21 +55,13 @@ async function resolveRequestLocale(): Promise<Locale> {
  */
 export const dynamic = "force-dynamic";
 
+// Modified by Netie AI, 2026: FreeBuild's "FB" monogram (a single SVG favicon)
+// replaces Openship's PNG/ICO favicon set — see public/favicon.svg.
 const BASE_METADATA: Metadata = {
   description: "Manage your deployments, domains, and infrastructure.",
   icons: {
-    icon: [
-      { url: '/favicon.ico' },
-      { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
-      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
-    ],
-    apple: [
-      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
-    ],
-    other: [
-      { url: '/android-chrome-192x192.png', sizes: '192x192', type: 'image/png' },
-      { url: '/android-chrome-512x512.png', sizes: '512x512', type: 'image/png' },
-    ],
+    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
+    apple: [{ url: "/favicon.svg", type: "image/svg+xml" }],
   },
   manifest: '/site.webmanifest',
 };

@@ -35,8 +35,8 @@ describe("baked edge nginx.conf", () => {
   );
 
   test("the checked-in file is up to date", () => {
-    // If this fails: `bun run edge:conf` in packages/adapters. Never hand-edit
-    // apps/edge/nginx.conf — the next regeneration silently reverts it.
+    // If this fails: `npm run edge:conf` in packages/adapters. Never hand-edit
+    // the vendored nginx.conf fixture — the next regeneration silently reverts it.
     expect(onDisk).toBe(conf);
   });
 

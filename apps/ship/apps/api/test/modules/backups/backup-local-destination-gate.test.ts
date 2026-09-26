@@ -103,7 +103,15 @@ describe("local backup destinations are gated at the consumer", () => {
 });
 
 describe("assertLocalDestinationAllowed", () => {
-  it("refuses in cloud mode regardless of the allow flag", async () => {
+  // Modified by Netie AI, 2026: FreeBuild is self-hosted only —
+  // packages/platform/src/engine/config/env.ts forces CLOUD_MODE to `false`
+  // unconditionally at module load, regardless of the environment (see its
+  // "FreeBuild edition lock" comment), so `process.env.CLOUD_MODE = "true"`
+  // can no longer put this gate into cloud mode even via a fresh
+  // `vi.resetModules()` re-import. This now asserts THAT invariant — that a
+  // set CLOUD_MODE cannot re-enable the cloud-only refusal — rather than the
+  // old, now-unreachable "cloud mode refuses local destinations" behavior.
+  it("CLOUD_MODE=true has no effect — this edition cannot enter cloud mode", async () => {
     process.env.CLOUD_MODE = "true";
     process.env.BACKUP_ALLOW_LOCAL_DESTINATION = "true";
     process.env.BACKUP_LOCAL_ROOT = "/var/lib/openship/backups";
@@ -113,7 +121,7 @@ describe("assertLocalDestinationAllowed", () => {
     );
     await expect(
       assertLocalDestinationAllowed("/var/lib/openship/backups/x"),
-    ).rejects.toThrow(/disabled in cloud mode/i);
+    ).resolves.toBeUndefined();
   });
 
   it("refuses a local row with no endpoint rather than resolving against CWD", async () => {

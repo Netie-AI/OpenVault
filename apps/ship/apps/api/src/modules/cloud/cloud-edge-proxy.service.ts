@@ -42,7 +42,7 @@ export async function syncCloudEdgeProxy(
       ok: false,
       status: 400,
       error:
-        `"${input.target}" is an Openship Cloud edge address, so routing ${hostname} there ` +
+        `"${input.target}" is a hosted-cloud-service edge address, so routing ${hostname} there ` +
         `would loop back to the edge. Send the server's own public IP or hostname.`,
     };
   }
@@ -110,7 +110,7 @@ function assertVerifiableTarget(
       ok: false,
       status: 400,
       error:
-        `"${target}" is an Openship Cloud edge address. Verifying it would prove control ` +
+        `"${target}" is a hosted-cloud-service edge address. Verifying it would prove control ` +
         `of the edge rather than of a server. Send the server's own public IP or hostname.`,
     };
   }
@@ -119,7 +119,7 @@ function assertVerifiableTarget(
       ok: false,
       status: 400,
       error:
-        `"${target}" is not publicly reachable, so Openship Cloud cannot fetch a challenge ` +
+        `"${target}" is not publicly reachable, so the hosted cloud service cannot fetch a challenge ` +
         `from it. Verification needs an address reachable from the internet on port 80.`,
     };
   }

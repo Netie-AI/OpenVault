@@ -44,7 +44,7 @@ describe("billing sidebar", () => {
 
   it("keeps the no-plan promotion visible when the provider has no free product", () => {
     const out = render(<BillingSidebar state={state("free")} />);
-    expect(text(out)).toContain("Launch on Openship Cloud");
+    expect(text(out)).toContain("Launch on the hosted cloud service");
     expect(out).toContain("/billing/plans");
     expect(text(out)).not.toContain("Unlimited");
   });

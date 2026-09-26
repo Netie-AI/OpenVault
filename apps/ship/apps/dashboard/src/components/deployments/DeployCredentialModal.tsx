@@ -164,7 +164,7 @@ export function DeployCredentialModal({
   const handleInstallApp = useCallback(() => {
     if (!installUrl) {
       showToast(
-        "Install URL is not available — connect Openship Cloud first.",
+        "Install URL is not available — connect the hosted cloud service first.",
         "error",
         "GitHub App",
       );
@@ -238,7 +238,7 @@ export function DeployCredentialModal({
 
   // ── Copy ───────────────────────────────────────────────────────────
   const targetLabel =
-    deployTarget === "cloud" ? "Openship Cloud" : "your server";
+    deployTarget === "cloud" ? "The hosted cloud service" : "your server";
   const headline =
     trigger === "preflight-gate"
       ? `How should we clone ${owner} on the build worker?`

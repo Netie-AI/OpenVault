@@ -1,7 +1,10 @@
+// Modified by Netie AI, 2026: FreeBuild's default ports are 3030 (api) / 3031
+// (dashboard), not Openship's upstream 4000/3001 — see PRODUCT_ROLES.md. Both
+// stay overridable via PORT/OPENSHIP_DASHBOARD_PORT.
 export const DEFAULT_PORT = {
   web: 3000,
-  dashboard: 3001,
-  api: 4000,
+  dashboard: 3031,
+  api: 3030,
   saasDashboard: 3002,
   saasApi: 4100,
 } as const;

@@ -1235,7 +1235,7 @@ async function removeLiveDomain(ctx: RequestContext, domain: Domain, project: Pr
     : await releaseManagedHostnames([domain.hostname], { organizationId: ctx.organizationId });
   if (edgeFailures.length > 0) {
     throw new AppError(
-      `Couldn't release the free ${domain.hostname} route on Openship Cloud (${edgeFailures.join(", ")}). ` +
+      `Couldn't release the free ${domain.hostname} route on the hosted cloud service (${edgeFailures.join(", ")}). ` +
         `The domain was kept so you can retry — removing it now would leave the URL resolving and the name reserved.`,
       502,
       "MANAGED_EDGE_RELEASE_FAILED",

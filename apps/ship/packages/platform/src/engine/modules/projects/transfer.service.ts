@@ -68,7 +68,7 @@ export class TransferConflictError extends Error {
 export class TransferNotConnectedError extends Error {
   readonly code = "TRANSFER_NOT_CONNECTED" as const;
   constructor() {
-    super("This organization is not connected to Openship Cloud.");
+    super("This organization is not connected to the hosted cloud service.");
     this.name = "TransferNotConnectedError";
   }
 }

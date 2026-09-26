@@ -25,9 +25,9 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@repo/core": "workspace:*",
-    "@repo/contracts": "workspace:*",
-    "@repo/platform": "workspace:*"
+    "@repo/core": "*",
+    "@repo/contracts": "*",
+    "@repo/platform": "*"
   },
   "devDependencies": {
     "@types/node": "^22.13.0",

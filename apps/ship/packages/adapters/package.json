@@ -21,19 +21,18 @@
   "scripts": {
     "build": "tsup src/index.ts --format esm --dts --clean",
     "dev": "tsup src/index.ts --format esm --dts --watch",
-    "embed:lua": "bun scripts/embed-lua.ts",
-    "embed:catalog": "bun scripts/embed-catalog.ts",
-    "edge:conf": "bun scripts/generate-edge-conf.ts",
+    "embed:lua": "tsx scripts/embed-lua.ts",
+    "embed:catalog": "tsx scripts/embed-catalog.ts",
+    "edge:conf": "tsx scripts/generate-edge-conf.ts",
     "lint": "tsc --noEmit",
     "test": "vitest run",
-    "test:bun": "bun test --preload ./test/bun-vitest-shim.ts src/runtime/docker-ssh-agent.test.ts",
     "clean": "rm -rf dist .turbo node_modules"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.668.0",
     "@aws-sdk/lib-storage": "^3.668.0",
     "@aws-sdk/s3-request-presigner": "^3.668.0",
-    "@repo/core": "workspace:*",
+    "@repo/core": "*",
     "dockerode": "^4.0.9",
     "ignore": "^7.0.5",
     "oblien": "2.4.0",

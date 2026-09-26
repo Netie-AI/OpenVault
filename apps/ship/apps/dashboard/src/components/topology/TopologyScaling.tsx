@@ -216,7 +216,7 @@ export function TopologyScaling({
           <p className="text-xs leading-relaxed text-muted-foreground">
             {project.serverName ||
               (project.deployTarget === "cloud"
-                ? "OpenShip Cloud"
+                ? "The hosted cloud service"
                 : project.deployTarget === "local"
                   ? "Local machine"
                   : "Current server")}

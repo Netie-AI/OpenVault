@@ -176,7 +176,7 @@ describe("resolveEdgeTargetHost — a probed IP is the last resort", () => {
     const result = await resolveEdgeTargetHost(ORG);
 
     expect(result.host).toBeNull();
-    expect(result.reason).toContain("Openship Cloud edge");
+    expect(result.reason).toContain("hosted cloud service edge");
   });
 
   it("reports no public address when there is genuinely nothing", async () => {

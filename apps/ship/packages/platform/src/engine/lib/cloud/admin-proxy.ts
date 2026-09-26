@@ -9,7 +9,7 @@ export function createRemoteCloudAdmin(organizationId: string): CloudAdminProxy 
     const response = await client.request(path, body === undefined ? undefined : {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
     });
-    if (!response) throw new Error("Connect Openship Cloud before managing cloud resources");
+    if (!response) throw new Error("Connect the hosted cloud service before managing cloud resources");
     if (!response.ok) throw await cloudRequestError(response, "Cloud resource operation");
     return await response.json() as T;
   }

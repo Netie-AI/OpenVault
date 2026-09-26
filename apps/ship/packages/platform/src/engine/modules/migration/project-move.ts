@@ -152,7 +152,7 @@ export function assertProjectMovable(input: {
     throw new ProjectMoveRefused(
       "not_server_hosted",
       target === "cloud"
-        ? `"${project.name}" runs on Openship Cloud. Moving between Cloud and a server isn't supported yet.`
+        ? `"${project.name}" runs on the hosted cloud service. Moving between Cloud and a server isn't supported yet.`
         : target === "cluster"
         ? `"${project.name}" runs on Kubernetes. Docker host migration cannot move its cluster workloads.`
         : `"${project.name}" isn't bound to a server, so there's no source host to move it from.`,

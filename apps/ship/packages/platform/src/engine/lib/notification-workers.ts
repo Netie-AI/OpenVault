@@ -224,8 +224,11 @@ export function buildDiscordMessage(input: {
   timestamp: string;
 }): DiscordMessage {
   return {
-    username: "Openship",
-    avatar_url: "https://openship.io/favicon.ico",
+    // Modified by Netie AI, 2026: brand rebranded to FreeBuild; avatar_url
+    // (was openship.io) is now empty — Discord shows its own default avatar
+    // for an empty one rather than linking a broken image.
+    username: "FreeBuild",
+    avatar_url: "",
     embeds: [
       {
         title: truncate(input.title, DISCORD_TITLE_LIMIT),

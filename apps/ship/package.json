@@ -1,66 +1,52 @@
 {
-  "name": "@repo/workspace",
+  "name": "@netie/freebuild",
   "version": "0.8.0",
-  "description": "Open-source, self-hostable deployment platform",
+  "description": "FreeBuild: Netie's self-hosted deploy/host engine. Runs under OpenVault. Based on Openship (Apache-2.0).",
   "license": "Apache-2.0",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/oblien/openship.git"
-  },
   "workspaces": [
     "apps/*",
     "packages/*"
-  ],
-  "trustedDependencies": [
-    "electron",
-    "esbuild"
   ],
   "scripts": {
     "build": "turbo run build --filter=@repo/api --filter=@repo/dashboard",
     "build:all": "turbo run build",
     "start": "turbo run start --filter=@repo/api --filter=@repo/dashboard --concurrency=10",
-    "build:desktop": "bun run --cwd apps/desktop make",
-    "build:cli": "bun run --cwd apps/cli build",
-    "cli": "bun run --cwd apps/cli cli",
-    "build:server": "bun run --cwd apps/api build-release",
-    "build:email": "bun run --cwd apps/email build",
+    "build:server": "npm run build-release --workspace=@repo/api",
     "update:geoip": "node scripts/update-geoip.mjs",
     "update:cloudflare-ips": "node scripts/update-cloudflare-ips.mjs",
     "update:world-map": "node scripts/update-world-map.mjs",
     "update:country-hues": "node scripts/update-country-hues.mjs",
-    "start:desktop": "node apps/desktop/build/run.mjs",
     "dev:all": "turbo run dev --concurrency=20",
     "dev:api": "turbo run dev --filter=@repo/api...",
     "dev": "turbo run dev --filter=@repo/api --filter=@repo/dashboard --concurrency=10",
     "dev:saas": "turbo run dev:saas --filter=@repo/api --filter=@repo/dashboard --concurrency=10",
     "dev:local-saas": "turbo run dev:local-saas --filter=@repo/api --filter=@repo/dashboard --concurrency=10",
     "dev:dashboard": "turbo run dev --filter=@repo/dashboard",
-    "dev:desktop": "turbo run dev --filter=@repo/desktop",
-    "dev:web": "turbo run dev --filter=@repo/web",
-    "dev:email": "turbo run dev --filter=@repo/email",
     "dev:turbo": "turbo run dev",
     "clean": "ps -A -o pid,command 2>/dev/null | grep -E 'src/index\\.ts|next/dist/bin/next' | grep -v grep | awk '{print $1}' | xargs -I {} kill -9 {} 2>/dev/null; for p in 4000 4100 3001 3002; do pid=$(lsof -ti tcp:$p 2>/dev/null); [ -n \"$pid\" ] && kill -9 $pid 2>/dev/null; done; echo 'cleaned'",
-    "lint": "turbo run lint --filter=!@repo/email",
-    "test": "turbo run test --filter=!@repo/email --concurrency=1",
-    "test:scripts": "bun test ./scripts/",
+    "lint": "turbo run lint",
+    "test": "turbo run test --concurrency=1 && npm run test:scripts && npm run test:smoke",
+    "test:scripts": "vitest run --config scripts/vitest.config.ts",
+    "test:smoke": "node --import tsx --test netie/smoke.test.mjs",
+    "postinstall": "patch -p1 -N -s -d node_modules/oblien < patches/oblien+2.4.0.patch || true",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "db:generate": "turbo run db:generate --filter=@repo/db",
     "db:push": "turbo run db:push --filter=@repo/db",
     "db:migrate": "turbo run db:migrate --filter=@repo/db",
     "dev:clean": "turbo run clean && rm -rf node_modules",
     "clean:modules": "find apps packages -name node_modules -type d -prune -exec rm -rf {} + && rm -rf node_modules",
-    "release": "bun scripts/release.ts",
+    "release": "node --import tsx scripts/release.ts",
     "prepare": "git config core.hooksPath .githooks || true",
-    "build:sdk": "bun run --cwd packages/openship build",
     "docs:reference": "node scripts/generate-api-reference.mjs --write && node scripts/generate-cli-reference.mjs --write && node scripts/generate-mcp-reference.mjs --write",
     "docs:check": "node scripts/check-docs.mjs"
   },
   "devDependencies": {
     "prettier": "^3.8.1",
+    "tsx": "^4.21.0",
     "turbo": "^2.8.14",
     "typescript": "^5.9.3"
   },
-  "packageManager": "bun@1.3.10",
+  "packageManager": "npm@10.9.7",
   "engines": {
     "node": ">=22.0.0"
   },
@@ -68,8 +54,17 @@
     "api": "^6.1.3",
     "sonner": "^2.0.7"
   },
-  "private": true,
-  "patchedDependencies": {
-    "oblien@2.4.0": "packages/adapters/patches/oblien@2.4.0.patch"
-  }
+  "overrides": {
+    "vitest": "4.0.18",
+    "better-auth": "1.5.4",
+    "@better-auth/drizzle-adapter": "1.5.4",
+    "@better-auth/kysely-adapter": "1.5.4",
+    "@better-auth/memory-adapter": "1.5.4",
+    "@better-auth/mongo-adapter": "1.5.4",
+    "@better-auth/prisma-adapter": "1.5.4",
+    "@better-auth/core": "1.5.4",
+    "@better-auth/telemetry": "1.5.4",
+    "@better-auth/utils": "0.4.2"
+  },
+  "private": true
 }

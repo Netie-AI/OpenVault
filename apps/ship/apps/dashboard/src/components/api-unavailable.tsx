@@ -23,6 +23,9 @@ export function ApiUnavailable() {
   const brand = useBrandName();
   const c = t.chrome;
 
+  // Modified by Netie AI, 2026: no docsHref passed below — openship.io was
+  // never this fork's site; error-view.tsx renders only the GitHub credit
+  // link when docsHref is unset.
   return (
     <div className="flex min-h-dvh items-center justify-center px-6 py-12">
       <ErrorView
@@ -42,7 +45,6 @@ export function ApiUnavailable() {
             icon: <UiIcon name="refresh" className="size-4" />,
           },
         ]}
-        docsHref="https://openship.io/docs/getting-started/installation"
         docsLabel={c.apiDown.docs}
         githubLabel={c.errorLinks.github}
       />

@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: default branding values rebranded to FreeBuild.
 /**
  * Branding - filesystem-backed white-label config.
  *
@@ -42,9 +43,9 @@ export type Branding = {
 };
 
 export const defaultBranding: Branding = {
-  siteTitle: 'OpenShip Mail',
+  siteTitle: 'FreeBuild Mail',
   siteDescription: 'Your self-hosted mailbox.',
-  loginHeading: 'OpenShip Mail',
+  loginHeading: 'FreeBuild Mail',
   loginSubtext: 'Sign in with your mailbox credentials',
   loginFooter: 'Self-hosted on your own mail server. No third parties.',
   homeHtml: null,

@@ -86,7 +86,7 @@ export async function ensureCloudDockerWorkspace(input: {
     }
     if (env.CLOUD_MODE) await assertCloudCanSpend(input.organizationId);
     const credentials = env.CLOUD_MODE ? await issueNamespaceToken(input.organizationId) : await getOrgCloudToken(input.organizationId);
-    if (!credentials) throw new AppError("Connect Openship Cloud before deploying", 503, "CLOUD_NOT_CONNECTED");
+    if (!credentials) throw new AppError("Connect the hosted cloud service before deploying", 503, "CLOUD_NOT_CONNECTED");
     const { namespace, token } = credentials;
     const client = new Oblien({ token, baseUrl: env.OBLIEN_API_URL });
     const binding = existing ?? await repos.cloudDockerWorkspace.reserve({

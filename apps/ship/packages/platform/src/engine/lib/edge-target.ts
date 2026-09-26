@@ -35,12 +35,12 @@ export interface EdgeTargetResult {
 }
 
 const NO_PUBLIC_HOST =
-  "this server has no public address Openship Cloud can reach — set OPENSHIP_PUBLIC_URL or SERVER_IP";
+  "this server has no public address the hosted cloud service can reach — set OPENSHIP_PUBLIC_URL or SERVER_IP";
 
 /** Why a `.opsh.io` target is refused. `fix` differs by source: the instance's own
  *  address comes from env, a server row's comes from the row. */
 const cloudEdgeTargetReason = (address: string, fix: string) =>
-  `"${address}" is a ${SYSTEM.DOMAINS.CLOUD_DOMAIN} hostname, which IS the Openship Cloud edge — ` +
+  `"${address}" is a ${SYSTEM.DOMAINS.CLOUD_DOMAIN} hostname, which IS the hosted cloud service edge — ` +
   `proxying there would loop back to the edge instead of reaching the box. ${fix}`;
 
 const CLOUD_EDGE_FIX_INSTANCE = "Set SERVER_IP to this server's own public IP.";
@@ -191,7 +191,7 @@ function usableTargets(candidates: readonly Candidate[]): string[] {
  */
 const hostnameTargetWarning = (host: string, fix: string) =>
   `routed by name ("${host}") rather than by IP. That serves fine while the name resolves to this ` +
-  `server on port 80, but Openship Cloud's edge re-resolves it per request, so putting a CDN/proxy in ` +
+  `server on port 80, but the hosted cloud service's edge re-resolves it per request, so putting a CDN/proxy in ` +
   `front of it — or an https redirect on it — would stop the free URL reaching this app. ${fix}`;
 
 const HOSTNAME_FIX_INSTANCE = "Set SERVER_IP to this server's public IP to pin it.";

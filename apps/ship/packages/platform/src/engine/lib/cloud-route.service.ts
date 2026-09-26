@@ -23,7 +23,7 @@ export interface CloudRouteInput {
 
 async function tenantClient(organizationId: string) {
   const token = env.CLOUD_MODE ? await issueNamespaceToken(organizationId) : await getOrgCloudToken(organizationId);
-  if (!token) throw new AppError("Connect Openship Cloud before changing cloud routes", 503, "CLOUD_NOT_CONNECTED");
+  if (!token) throw new AppError("Connect the hosted cloud service before changing cloud routes", 503, "CLOUD_NOT_CONNECTED");
   const client = new Oblien({ token: token.token, baseUrl: env.OBLIEN_API_URL });
   const adminProxy = env.CLOUD_MODE ? createTenantCloudAdmin(organizationId, token.namespace) : createRemoteCloudAdmin(organizationId);
   return { client, namespace: token.namespace, adminProxy };

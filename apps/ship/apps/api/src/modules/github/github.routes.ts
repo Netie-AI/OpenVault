@@ -37,7 +37,7 @@ r.get(
   { tag: "github:read", authorizationHandledByOperation: true, auditHandledByOperation: true, mcp: { description: "GitHub connection status for the org." }, query: GitHubCollectionSchemas.getStatus.input },
   ctrl.getStatus,
 );
-r.get("/local-status", { tag: "github:read", authorizationHandledByOperation: true, auditHandledByOperation: true, localOnly: true, mcp: { description: "Read this self-hosted controller’s GitHub identity status and any connection problem. Local here means the Openship controller, not the MCP client." } }, ctrl.getLocalStatus);
+r.get("/local-status", { tag: "github:read", authorizationHandledByOperation: true, auditHandledByOperation: true, localOnly: true, mcp: { description: "Read this self-hosted controller’s GitHub identity status and any connection problem. Local here means the FreeBuild controller, not the MCP client." } }, ctrl.getLocalStatus);
 r.get("/connect/poll", { tag: "github:read", authorizationHandledByOperation: true, auditHandledByOperation: true, localOnly: true, mcp: { description: "Read progress of an existing self-hosted GitHub device authorization. The user must complete GitHub’s browser approval; polling does not grant access." } }, ctrl.pollConnect);
 r.get(
   "/home",
@@ -216,7 +216,7 @@ r.get(
   },
   ctrl.listWebhooks,
 );
-r.post("/repos/:owner/:repo/webhooks", { tag: "github:write", authorizationHandledByOperation: true, auditHandledByOperation: true, mcp: { description: "Register Openship’s deployment webhook for this repository. Prefer the project auto-deploy tool when configuring an existing project; it chooses the correct delivery strategy." } }, ctrl.registerWebhook);
+r.post("/repos/:owner/:repo/webhooks", { tag: "github:write", authorizationHandledByOperation: true, auditHandledByOperation: true, mcp: { description: "Register FreeBuild’s deployment webhook for this repository. Prefer the project auto-deploy tool when configuring an existing project; it chooses the correct delivery strategy." } }, ctrl.registerWebhook);
 r.delete("/repos/:owner/:repo/webhooks", { tag: "github:admin", authorizationHandledByOperation: true, auditHandledByOperation: true, mcp: { description: "Delete a repository webhook identified by body.hookId. Read the repository webhook list first; removing it can stop automatic deployments." }, body: WebhookDeleteBody }, ctrl.deleteWebhook);
 
 export const githubRoutes = r.hono;

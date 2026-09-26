@@ -93,7 +93,7 @@ export async function proxyToSaaS(
   const res = await cloudFetchAsOrgOwner(organizationId, path, init);
   if (!res) {
     return c.json(
-      { error: "Openship Cloud is unreachable", code: CLOUD_UNREACHABLE_CODE },
+      { error: "The hosted cloud service is unreachable", code: CLOUD_UNREACHABLE_CODE },
       503,
     );
   }

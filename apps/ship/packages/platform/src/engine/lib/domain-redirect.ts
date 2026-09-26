@@ -75,7 +75,7 @@ export function normalizeRedirect(input: RedirectInput): {
 export function assertRedirectSupported(opts: { isCloudProject: boolean; hostname: string }): void {
   if (opts.isCloudProject) {
     throw new ValidationError(
-      `Redirects aren't available for projects running on Openship Cloud — the managed edge owns routing for ${opts.hostname}. ` +
+      `Redirects aren't available for projects running on the hosted cloud service — the managed edge owns routing for ${opts.hostname}. ` +
         `Point the extra hostname at the same app instead.`,
     );
   }

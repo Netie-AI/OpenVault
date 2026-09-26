@@ -212,8 +212,10 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+/* Modified by Netie AI, 2026: OpenVault's font stack (see
+   apps/web/src/app/globals.css) — no web fonts, no third-party font CDN. */
 @theme inline {
-  --font-sans: 'Gellix', 'SF Arabic', system-ui, -apple-system, sans-serif;
+  --font-sans: ui-sans-serif, system-ui, "Segoe UI Variable Text", "Segoe UI", sans-serif;
   --text-xs: 0.8125rem;
   --text-xs--line-height: 1.25rem;
 }

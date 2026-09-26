@@ -51,7 +51,7 @@ export function CloudWaitlistModal({ onClose }: { onClose: () => void }) {
           <UiIcon name="cloud" className="size-5" />
         </div>
         <div>
-          <h3 className="text-lg font-semibold text-foreground">Openship Cloud is almost here</h3>
+          <h3 className="text-lg font-semibold text-foreground">the hosted cloud service is almost here</h3>
           <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
             Thanks for your interest! We&apos;re building a fast, scalable, and efficient managed
             cloud — one-click deploys with zero infrastructure to run. Launching soon.
@@ -62,7 +62,7 @@ export function CloudWaitlistModal({ onClose }: { onClose: () => void }) {
       {status === "done" ? (
         <div className="flex items-center gap-2.5 rounded-xl bg-success-bg px-4 py-3 text-sm text-success">
           <UiIcon name="check" className="size-4 shrink-0" />
-          Thank you — we&apos;ll email you the moment Openship Cloud is ready.
+          Thank you — we&apos;ll email you the moment the hosted cloud service is ready.
         </div>
       ) : (
         <div className="space-y-2">

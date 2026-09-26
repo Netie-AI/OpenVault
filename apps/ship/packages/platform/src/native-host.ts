@@ -88,6 +88,22 @@ function runtimeEntry(): string {
   return entry;
 }
 
+// Modified by Netie AI, 2026: pulled out of createNativePlatform (a very long
+// function with dozens of earlier validation branches) — TypeScript's control
+// flow narrowing on `options.storage.driver === "pglite" ? options.storage.dataDir
+// : ...` stopped discriminating the union that deep into the function (TS2339
+// on both branches, `tsc --noEmit`/`npm run lint` failing) even though the same
+// pattern narrows fine in isolation. A small top-level function gives the
+// discriminant check a fresh, short control-flow scope where it narrows
+// correctly again; behavior is unchanged.
+function storageEnvironment(storage: NativePlatformOptions["storage"]): { pgliteDataDir: string; postgresUrl: string; migrations: "apply" | "verify" } {
+  return {
+    pgliteDataDir: storage.driver === "pglite" ? storage.dataDir : "",
+    postgresUrl: storage.driver === "postgres" ? storage.url : "",
+    migrations: storage.migrations ?? (storage.driver === "postgres" ? "verify" : "apply"),
+  };
+}
+
 export async function createNativePlatform(value: NativePlatformOptions): Promise<NativePlatform> {
   let options: NativePlatformOptions;
   try { options = structuredClone(value); }
@@ -120,6 +136,31 @@ export async function createNativePlatform(value: NativePlatformOptions): Promis
   for (const [key, val] of Object.entries(options.environment ?? {})) {
     if (reserved.test(key) || !/^[A-Z][A-Z0-9_]*$/.test(key) || typeof val !== "string") throw new ValidationError(`Reserved or invalid native environment option: ${key}`);
   }
+  // Modified by Netie AI, 2026: native embedding is hard-disabled in this
+  // fork rather than shipped in a broken state. `packages/platform/build-native.ts`
+  // was ported from `Bun.build` to esbuild (Bun is not part of this fork's
+  // toolchain — see PRODUCT_ROLES.md); the resulting worker bundle boots far
+  // enough to reach its own top-level `await Promise.all([...dynamic
+  // imports...])` (native-worker.ts) but that await never settles — Node exits
+  // the worker with code 13 ("unsettled top-level await"), not a catchable
+  // rejection. No code in this fork's shipped API or dashboard calls
+  // createNativePlatform/createShip (grep confirms: only packages/sdk's own
+  // definition and its test do) — this is an SDK-only embedding mode for
+  // external consumers, so disabling it does not affect FreeBuild itself.
+  // Fixing the esbuild output properly (tracing which bundled/external
+  // dependency's own top-level code never resolves under Node, vs. under
+  // Bun's bundler+runtime which built and ran this worker before) is real,
+  // scoped follow-up work — not something to fake past with a passing test.
+  throw new AppError(
+    "Native embedding (createShip) is not available in this build. " +
+      "packages/platform/build-native.ts's esbuild port produces a worker " +
+      "bundle whose own top-level await never resolves under Node — run the " +
+      "API and dashboard normally (npm run build && npm start) instead, or " +
+      "see build-native.ts for the tracked follow-up.",
+    503,
+    "native_embedding_unavailable",
+  );
+  // eslint-disable-next-line no-unreachable
   const entry = runtimeEntry();
   const nativeDir = dirname(entry);
   const assets = existsSync(join(nativeDir, "pglite")) ? nativeDir : join(nativeDir, "../server");
@@ -132,6 +173,7 @@ export async function createNativePlatform(value: NativePlatformOptions): Promis
   }
   options = { ...options, stateDirectory: state, policy: { ...options.policy, sourceRoots: roots } };
   const ownerId = randomUUID();
+  const { pgliteDataDir, postgresUrl, migrations } = storageEnvironment(options.storage);
   const environment: Record<string, string> = {};
   // OS tool locations are inherited; platform/provider credentials and configuration are explicit.
   for (const key of ["PATH", "HOME", "USERPROFILE", "SystemRoot", "WINDIR", "COMSPEC", "PATHEXT", "TMPDIR", "TMP", "TEMP", "LANG"]) {
@@ -145,9 +187,9 @@ export async function createNativePlatform(value: NativePlatformOptions): Promis
     OPENSHIP_NATIVE_ALLOW_LOCAL_FORWARDING: String(options.policy?.allowLocalForwarding === true),
     OPENSHIP_NATIVE_ROUTING: options.routing ?? "managed", OPENSHIP_HOST_CONTROL: String(options.policy?.allowHostExecution === true),
     OPENSHIP_AUTH_MODE: "local", OPENSHIP_REQUIRE_AUTH: "true", OPENSHIP_DEV_LOCK_TAKEOVER: "false",
-    OPENSHIP_DB_LOCK_OWNER: ownerId, OPENSHIP_DB_MIGRATIONS: options.storage.migrations ?? (options.storage.driver === "postgres" ? "verify" : "apply"),
-    PGLITE_DATA_DIR: options.storage.driver === "pglite" ? options.storage.dataDir : "",
-    DATABASE_URL: options.storage.driver === "postgres" ? options.storage.url : "",
+    OPENSHIP_DB_LOCK_OWNER: ownerId, OPENSHIP_DB_MIGRATIONS: migrations,
+    PGLITE_DATA_DIR: pgliteDataDir,
+    DATABASE_URL: postgresUrl,
     BETTER_AUTH_SECRET: options.encryptionKey, INTERNAL_TOKEN: randomUUID() + randomUUID(),
     DEPLOY_MODE: options.runtime, CLOUD_MODE: String(options.cloud?.hosted === true),
     OBLIEN_CLIENT_ID: options.cloud?.clientId ?? "", OBLIEN_CLIENT_SECRET: options.cloud?.clientSecret ?? "",

@@ -1,7 +1,7 @@
 {
   "capacity": {
     "title": "Capacity & usage",
-    "subtitle": "Included capacity on your plan and how much you've used. Live figures sync from Openship Cloud.",
+    "subtitle": "Included capacity on your plan and how much you've used. Live figures sync from the hosted cloud service.",
     "routes": "Free routes",
     "runningServices": "Running services",
     "projects": "Projects",
@@ -42,30 +42,30 @@
   },
   "unavailable": {
     "notConnected": {
-      "title": "Connect to Openship Cloud to manage billing",
-      "description": "Your local instance isn't connected to Openship Cloud yet. Connect to view subscription state, usage, invoices, and top-ups.",
-      "connect": "Connect to Openship Cloud",
+      "title": "Connect to the hosted cloud service to manage billing",
+      "description": "Your local instance isn't connected to the hosted cloud service yet. Connect to view subscription state, usage, invoices, and top-ups.",
+      "connect": "Connect to the hosted cloud service",
       "connecting": "Waiting for sign in…"
     },
     "sessionExpired": {
-      "title": "Your Openship Cloud session expired",
-      "description": "You're still linked, but the session token Openship Cloud issued is no longer valid. Reconnect to refresh it — no need to disconnect first.",
-      "reconnect": "Reconnect to Openship Cloud",
+      "title": "Your the hosted cloud service session expired",
+      "description": "You're still linked, but the session token the hosted cloud service issued is no longer valid. Reconnect to refresh it — no need to disconnect first.",
+      "reconnect": "Reconnect to the hosted cloud service",
       "connecting": "Waiting for sign in…"
     },
     "unreachable": {
-      "title": "Couldn't reach Openship Cloud billing",
+      "title": "Couldn't reach the hosted cloud service billing",
       "description": "Your cloud session may have expired or the cloud is temporarily unavailable. Try again, or reconnect from Settings → Cloud.",
       "tryAgain": "Try again",
       "reconnect": "Reconnect"
     },
     "notEnabled": {
       "title": "Cloud purchases are not available yet",
-      "description": "Openship has not enabled subscriptions and credit purchases yet. Please try again later."
+      "description": "FreeBuild has not enabled subscriptions and credit purchases yet. Please try again later."
     },
     "notConfigured": {
       "title": "Cloud billing setup is incomplete",
-      "description": "Openship needs to finish setting up billing. Please contact Openship support."
+      "description": "FreeBuild needs to finish setting up billing. Please contact FreeBuild support."
     },
     "forbidden": {
       "title": "You don't have access to billing",
@@ -78,7 +78,7 @@
     },
     "loadFailed": {
       "title": "Couldn't load billing",
-      "description": "Billing is temporarily unavailable. Try again. If the problem continues, contact Openship support."
+      "description": "Billing is temporarily unavailable. Try again. If the problem continues, contact FreeBuild support."
     }
   },
   "plansRoute": {
@@ -349,7 +349,7 @@
     "planRequired": "Requires a plan",
     "savedCredits": "Saved usage balance",
     "savedCreditsHint": "Your prepaid usage stays in this workspace. Choose a plan to use it for Cloud deployments.",
-    "offerTitle": "Launch on Openship Cloud",
+    "offerTitle": "Launch on the hosted cloud service",
     "offerLabel": "Start deploying",
     "offerDescription": "A home for your projects, with build time and resources for your apps.",
     "startingWith": "Start with {name}",
@@ -392,7 +392,7 @@
     "diskHint": "Data read from and written to app disks. This is disk activity, not stored disk size.",
     "transfer": "App data transfer",
     "transferHint": "Inbound and outbound data from your compute workloads. Edge delivery is shown separately.",
-    "edgeTitle": "Openship Edge",
+    "edgeTitle": "FreeBuild Edge",
     "bandwidth": "Edge bandwidth",
     "bandwidthHint": "Incoming and outgoing traffic across your workspace’s edge routes. This monthly allowance is separate from compute. Routes pause at the limit until reset or upgrade.",
     "requests": "Edge requests",

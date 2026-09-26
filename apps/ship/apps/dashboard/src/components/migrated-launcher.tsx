@@ -8,9 +8,16 @@ interface MigratedLauncherProps {
   migrationTargetUrl: string;
   /**
    * Migration variant — controls copy.
-   *   self_hosted_remote → operator's own VPS
-   *   cloud_hosted       → api.openship.io
-   *   tunneled           → Oblien edge tunnel routing back to this machine
+   *   self_hosted_remote → operator's own VPS (the only path this fork's UI
+   *     can still start — see MigrateModal.tsx)
+   *
+   * Modified by Netie AI, 2026: "cloud_hosted" and "tunneled" removed from
+   * the type. FreeBuild is self-hosted only; nothing can put an instance in
+   * either state anymore (start-cloud/start-tunnel always answer 501
+   * hosted_cloud_disabled). A `teamMode` column value from before this fork
+   * disabled them would fall through the switch below same as any other
+   * non-"self_hosted_remote" value — the server variant, which is at least
+   * accurate about there being no cloud/tunnel destination to launch into.
    */
   teamMode: "self_hosted_remote" | "cloud_hosted" | "tunneled";
 }
@@ -30,24 +37,10 @@ export function MigratedLauncher({
 }: MigratedLauncherProps) {
   const { t } = useI18n();
   const m = t.chrome.migration;
-  const variant =
-    teamMode === "cloud_hosted"
-      ? {
-          title: m.cloudTitle,
-          body: m.cloudBody,
-          cta: m.cloudCta,
-        }
-      : teamMode === "tunneled"
-        ? {
-            title: m.tunneledTitle,
-            body: m.tunneledBody,
-            cta: m.tunneledCta,
-          }
-        : {
-            title: m.serverTitle,
-            body: m.serverBody,
-            cta: m.serverCta,
-          };
+  // Every teamMode this fork can produce renders the same "moved to your
+  // server" copy — see the type doc above.
+  const variant = { title: m.serverTitle, body: m.serverBody, cta: m.serverCta };
+  void teamMode;
 
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center bg-black p-8 text-white">

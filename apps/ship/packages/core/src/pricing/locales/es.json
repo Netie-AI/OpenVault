@@ -2,7 +2,7 @@
   "plans": {
     "free": {
       "name": "Free",
-      "tagline": "Publica sitios estáticos en Openship Cloud sin costo."
+      "tagline": "Publica sitios estáticos en el servicio de nube alojado sin costo."
     },
     "starter": {
       "name": "Starter",

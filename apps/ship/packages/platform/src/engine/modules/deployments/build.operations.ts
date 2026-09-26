@@ -53,14 +53,14 @@ export const buildDependencies: BuildDependencies = {
         try { await promoteProjectToCloud(ctx, input.projectId); }
         catch (error) {
           if (error instanceof TransferConflictError) {
-            if (error.conflictKind === "slug") throw new AppError(`The name "${error.conflictValue}" is already taken on Openship Cloud. Rename this project and try again.`, 409, "CLOUD_SLUG_TAKEN");
-            throw new AppError("This project already has a copy on Openship Cloud (leftover from an earlier transfer). Clean it up and retry to promote this local copy.", 409, "CLOUD_PROMOTE_CONFLICT");
+            if (error.conflictKind === "slug") throw new AppError(`The name "${error.conflictValue}" is already taken on the hosted cloud service. Rename this project and try again.`, 409, "CLOUD_SLUG_TAKEN");
+            throw new AppError("This project already has a copy on the hosted cloud service (leftover from an earlier transfer). Clean it up and retry to promote this local copy.", 409, "CLOUD_PROMOTE_CONFLICT");
           }
           throw error;
         }
       }
       const response = await cloudFetchAsOrgOwner(ctx.organizationId, "/api/deployments/build/access", { method: "POST", body: JSON.stringify(input) });
-      if (!response) throw new AppError("Openship Cloud is unreachable", 503, CLOUD_UNREACHABLE_CODE);
+      if (!response) throw new AppError("The hosted cloud service is unreachable", 503, CLOUD_UNREACHABLE_CODE);
       const body = await response.json().catch(() => null) as Record<string, unknown> | null;
       if (!response.ok) throw new AppError(typeof body?.error === "string" ? body.error : typeof body?.message === "string" ? body.message : "Cloud deployment failed", response.status, typeof body?.code === "string" ? body.code : undefined);
       if (!isCreateDeploymentResult(body)) throw new AppError("Invalid cloud build response", 502, "INVALID_CLOUD_RESPONSE");

@@ -333,7 +333,7 @@ export function TopologyInspector({
                     ? undefined
                     : project.serverName ||
                       (project.deployTarget === "cloud"
-                        ? "OpenShip Cloud"
+                        ? "The hosted cloud service"
                         : project.deployTarget === "cluster"
                           ? "Server cluster"
                           : project.deployTarget === "local"

@@ -129,7 +129,7 @@ export function describeTlsIssuedElsewhere(where: TlsIssuedElsewhere, hostname: 
     case "manual_cert":
       return `${hostname} serves an uploaded certificate — certbot is not run for it.`;
     default:
-      return `TLS for ${hostname} is handled by Openship Cloud — no local certificate needed.`;
+      return `TLS for ${hostname} is handled by the hosted cloud service — no local certificate needed.`;
   }
 }
 

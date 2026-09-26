@@ -3,7 +3,14 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-/** Repo root, found by marker so moving this file cannot silently no-op a check. */
+/**
+ * Repo root, found by marker so moving this file cannot silently no-op a check.
+ *
+ * Modified by Netie AI, 2026: apps/email is back in this fork (restored
+ * byte-identical from upstream — see PRODUCT_ROLES.md, mail hosting is in
+ * scope), so this reads the real vendored master.cf again instead of the
+ * fixture copy a previous pass vendored while apps/email was pruned.
+ */
 function repoRoot(): string {
   let dir = dirname(fileURLToPath(import.meta.url));
   for (let i = 0; i < 12; i++) {

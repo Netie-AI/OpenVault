@@ -36,6 +36,42 @@ function failure(error: unknown) {
   };
 }
 
+// Modified by Netie AI, 2026: this body used to sit directly at module scope,
+// so its own `await Promise.all([...])` was a real ES module top-level await —
+// Node's worker-thread loader flagged it "Detected unsettled top-level await"
+// and force-exited the thread (code 13) rather than raising a catchable
+// rejection. Wrapping it in `boot()`, called without a top-level `await`
+// (the host already waits for the "ready"/"failed" message before sending
+// anything else — see native-host.ts — so a tick's delay before
+// `port.on("message", ...)` registers is safe), removes that specific
+// watchdog trip.
+//
+// It does NOT fix the underlying hang. Traced with the actual esbuild output
+// (packages/platform/build-native.ts) run standalone: every one of the 5
+// raced imports resolves in isolation and unbundled (confirmed via `tsx`,
+// both on the main thread and inside a real Worker), but bundling
+// `./engine/lib/platform` pulls in a genuine ESM import cycle —
+// `engine/modules/deployments/build.service.ts` statically imports
+// `./build-pipeline` and `build-pipeline.ts` statically imports back from
+// `./build.service` (only a `type`-only binding, which erases — the cycle is
+// still there as a VALUE-level ordering problem for esbuild's lazy `__esm`
+// initializers). Bundled, esbuild sequences each side as
+// `await init_build_service2()` / `await init_build_pipeline2()`; one of
+// those two initializer promises never settles, and with no other pending
+// work the process stalls (or, at the outer module-scope await this used to
+// sit at, trips Node's watchdog at ~2.4s). Isolating each of the 5 imports
+// individually (bypassing this file, bundled the same way) reproduces the
+// hang from `./engine/lib/platform` alone, standalone, outside any worker —
+// so this is an esbuild circular-module bug surfacing through that pair, not
+// a Worker-thread or top-level-await-specific issue as originally guessed.
+// Breaking the build.service/build-pipeline cycle (e.g. moving the shared
+// `DeploymentConfigSnapshot` type, or the handful of symbols each pulls from
+// the other, into their own module) is the real fix; it is a
+// deployments-module change, not something to force from here, so it is
+// left as tracked follow-up rather than attempted blind under this round's
+// time budget. `createNativePlatform` (native-host.ts) still hard-disables
+// this embedding rather than ship it broken.
+async function boot() {
 let closeProviders: (() => Promise<void>) | undefined;
 try {
   const [{ getPlatformKernel }, adapters, database, identities, { runWithOperationSource }] = await Promise.all([
@@ -347,3 +383,5 @@ try {
   port.postMessage({ event: "failed", error: failure(error) });
   port.close();
 }
+}
+void boot();

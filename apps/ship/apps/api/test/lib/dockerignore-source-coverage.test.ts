@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
@@ -17,9 +18,12 @@ import { describe, expect, it } from "vitest";
  * worst place for a bug to be visible for the first time.
  */
 
-const REPO_ROOT = execFileSync("git", ["rev-parse", "--show-toplevel"], {
-  encoding: "utf8",
-}).trim();
+// Modified by Netie AI, 2026: this fork lives nested inside a larger monorepo
+// (apps/ship has no .git of its own), so `git rev-parse --show-toplevel`
+// resolved the WRONG root (the outer repo, which has no `.dockerignore` at
+// all). apps/ship's own root — where its `.dockerignore` and Dockerfiles
+// actually are — is a fixed number of directories up from this test file.
+const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../../..");
 
 /** Port of moby/patternmatcher's pattern→regex conversion (BuildKit uses it for
  *  `.dockerignore`): `*` stops at a separator, `**` spans segments, `?` is one

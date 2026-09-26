@@ -19,7 +19,7 @@ export function TransferRequirements({ manifest }: { manifest?: TransferManifest
         <div>
           <h4 className="text-sm font-medium text-foreground">Required on the destination</h4>
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-            Use the same servers or OpenShip Cloud account shown below. They are required to
+            Use the same servers or the hosted cloud service account shown below. They are required to
             reconnect the imported project to its existing workloads.
           </p>
         </div>
@@ -55,7 +55,7 @@ export function TransferRequirements({ manifest }: { manifest?: TransferManifest
             <li key={account.organizationId} className="flex items-start gap-3 py-3">
               <UiIcon name="cloud" className="mt-0.5 size-4 shrink-0 text-primary" />
               <div className="min-w-0">
-                <p className="text-sm font-medium text-foreground">OpenShip Cloud account</p>
+                <p className="text-sm font-medium text-foreground">the hosted cloud service account</p>
                 <p className="mt-0.5 break-all text-xs text-muted-foreground">
                   {account.email ? <BlurIp>{account.email}</BlurIp> : "Source account — reconnect it before importing."}
                 </p>

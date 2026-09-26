@@ -115,7 +115,7 @@ describe("assertRedirectTargets", () => {
 describe("assertRedirectSupported", () => {
   it("refuses a cloud project, naming the reason", () => {
     expect(() => assertRedirectSupported({ isCloudProject: true, hostname: "www.example.com" }))
-      .toThrow(/Openship Cloud/);
+      .toThrow(/hosted cloud service/);
   });
 
   it("allows a self-hosted project", () => {

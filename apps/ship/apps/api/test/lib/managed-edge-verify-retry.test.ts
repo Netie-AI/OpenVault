@@ -113,12 +113,12 @@ describe("ensureManagedEdgeProxy", () => {
       expect(sync).not.toHaveBeenCalled();
     });
 
-    it("409 when no member has linked Openship Cloud — a setup step", async () => {
+    it("409 when no member has linked the hosted cloud service — a setup step", async () => {
       sync.mockResolvedValue(null);
 
       await expect(ensureManagedEdgeProxy("org-1", "myapp")).rejects.toMatchObject({
         status: 409,
-        message: expect.stringContaining("linked Openship Cloud"),
+        message: expect.stringContaining("linked the hosted cloud service"),
       });
     });
 

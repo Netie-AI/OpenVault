@@ -46,7 +46,7 @@ describe("planProjectMove refusals", () => {
   it("refuses a cloud project, naming Cloud", () => {
     expect(() =>
       plan({ project: { ...project, cloudWorkspaceId: "ws_1", serverId: null } }),
-    ).toThrow(/Openship Cloud/);
+    ).toThrow(/hosted cloud service/);
   });
 
   it("refuses a project bound to no server", () => {

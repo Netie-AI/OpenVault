@@ -7,6 +7,7 @@
  * Host/port are deliberately NOT user-controllable - see
  * apps/email/server/src/lib/schemas.ts for the trust rationale.
  */
+// Modified by Netie AI, 2026: rebranded the footer's "Powered by" row — see below.
 
 import { useState } from 'react';
 import { Eye, EyeOff, Loader2, Lock, Mail } from 'lucide-react';
@@ -218,42 +219,16 @@ export function LoginClient() {
       {showPoweredBy && (
         <footer className="relative z-10">
           <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-3 px-6 py-6 sm:flex-row">
+            {/* Modified by Netie AI, 2026: "OpenShip" -> "FreeBuild"; the
+                openship.io Docs/Privacy/Terms links are gone (not this
+                project's site) and the GitHub link now credits the upstream
+                project this is based on, matching the "credit upstream on an
+                About/notices surface" rule. */}
             <div className="flex items-center gap-2 text-[13px] text-muted-foreground">
               <span>Powered by</span>
-              <a
-                href="https://openship.io"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-medium text-foreground transition-colors hover:text-foreground/70"
-              >
-                OpenShip
-              </a>
+              <span className="font-medium text-foreground">FreeBuild</span>
             </div>
             <nav className="flex items-center gap-6 text-[13px] text-muted-foreground">
-              <a
-                href="https://openship.io/docs"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="transition-colors hover:text-foreground"
-              >
-                Docs
-              </a>
-              <a
-                href="https://openship.io/privacy"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="transition-colors hover:text-foreground"
-              >
-                Privacy
-              </a>
-              <a
-                href="https://openship.io/terms"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="transition-colors hover:text-foreground"
-              >
-                Terms
-              </a>
               <a
                 href="https://github.com/oblien/openship"
                 target="_blank"
@@ -262,7 +237,7 @@ export function LoginClient() {
                 className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground"
               >
                 <GitHubMark className="h-4 w-4" />
-                <span className="hidden sm:inline">GitHub</span>
+                <span className="hidden sm:inline">Based on Openship</span>
               </a>
             </nav>
           </div>

@@ -23,7 +23,7 @@
     "updating": "Updating…",
     "updateFailed": "Update failed",
     "toastTitle": "Source",
-    "cliManaged": "This is the Openship control plane — it updates itself. Run \"openship update\" on the host to upgrade it; there's nothing to change here."
+    "cliManaged": "This is the FreeBuild control plane — it updates itself. Run \"openship update\" on the host to upgrade it; there's nothing to change here."
   },
   "releaseImageSource": {
     "validationInvalid": "Invalid release image source.",
@@ -114,7 +114,7 @@
     "installing": "Installing…",
     "advanced": "Advanced deployment options",
     "nameLabel": "Name",
-    "nameHint": "How this app appears in Openship.",
+    "nameHint": "How this app appears in FreeBuild.",
     "domainTitle": "Where should it live?",
     "domainFree": "Free subdomain",
     "domainFreeHint": "A free subdomain on {domain}",
@@ -163,8 +163,8 @@
     "routePortLabel": "Port only (no domain)",
     "routePortDesc": "Reachable at the host address and port — no domain or Cloud needed.",
     "routeFreeLabel": "Free subdomain",
-    "routeFreeDesc": "A free subdomain on {domain}, routed by Openship Cloud.",
-    "routeFreeNeedsCloud": "Connect Openship Cloud to use a free subdomain.",
+    "routeFreeDesc": "A free subdomain on {domain}, routed by the hosted cloud service.",
+    "routeFreeNeedsCloud": "Connect the hosted cloud service to use a free subdomain.",
     "routeCustomLabel": "Your own domain",
     "routeCustomDesc": "Point a domain you own at this app.",
     "routeDomainLabel": "Domain",
@@ -259,7 +259,7 @@
     },
     "statusActive": "Active",
     "statusDisabled": "Disabled",
-    "hostedCloud": "Openship Cloud",
+    "hostedCloud": "The hosted cloud service",
     "hostedServer": "Server",
     "hostedLocal": "Local",
     "projectStatus": {
@@ -280,7 +280,7 @@
       "currentServer": "Current server",
       "migrate": "Migrate",
       "noOtherServers": "Add a second server to move this project to one.",
-      "cloudLater": "Server to server. Moving to or from Openship Cloud isn't supported yet.",
+      "cloudLater": "Server to server. Moving to or from the hosted cloud service isn't supported yet.",
       "startFailed": "Couldn't start the migration",
       "confirmTitle": "Move {project} to {server}",
       "confirmSubtitle": "Nothing changes until you start the move.",
@@ -328,7 +328,7 @@
       "anotherServer": "Another server",
       "targetLocal": "Local Machine",
       "targetServer": "Self-Hosted Server",
-      "targetCloud": "Openship Cloud"
+      "targetCloud": "The hosted cloud service"
     },
     "danger": {
       "title": "Danger Zone",
@@ -631,13 +631,13 @@
     },
     "appBanner": {
       "title": "GitHub App not installed",
-      "description": "Install the Openship GitHub App on your account or organization to enable auto-deploy and webhook-triggered deployments for cloud projects.",
+      "description": "Install the FreeBuild GitHub App on your account or organization to enable auto-deploy and webhook-triggered deployments for cloud projects.",
       "install": "Install GitHub App"
     },
     "webhookBanner": {
       "summary": "Public endpoint required",
       "title": "Enable auto-deploy",
-      "description": "Auto-deploy needs a direct webhook endpoint. Expose this Openship API on a public URL or configure a verified webhook domain for direct delivery."
+      "description": "Auto-deploy needs a direct webhook endpoint. Expose this FreeBuild API on a public URL or configure a verified webhook domain for direct delivery."
     },
     "source": {
       "title": "Source Repository",
@@ -667,7 +667,7 @@
       "active": "Active",
       "inactive": "Inactive",
       "descDirect": "Events deliver directly via {domain}",
-      "descActive": "Repository events are reaching Openship",
+      "descActive": "Repository events are reaching FreeBuild",
       "descInactive": "Webhook has not been configured or is not responding"
     },
     "rollbackStrategy": {
@@ -866,10 +866,10 @@
     "cancel": "Cancel",
     "confirmDeleteEnvWipe": "Delete environment + wipe data",
     "confirmDeleteEnv": "Delete environment",
-    "recordOnlyLabel": "Remove from Openship only",
-    "recordOnlyDesc": "Keeps the app and its data running on your server — only the Openship record is removed. You can re-import it later.",
+    "recordOnlyLabel": "Remove from FreeBuild only",
+    "recordOnlyDesc": "Keeps the app and its data running on your server — only the FreeBuild record is removed. You can re-import it later.",
     "recordOnlyReversible": "Reversible — the app stays on your server.",
-    "recordOnlyNote": "Nothing on the server is touched — the app keeps running with its data. Only Openship's record is removed, and it can be re-imported later.",
+    "recordOnlyNote": "Nothing on the server is touched — the app keeps running with its data. Only FreeBuild's record is removed, and it can be re-imported later.",
     "confirmRecordOnly": "Remove record",
     "linkedTitleOne": "{count} project is connected to this app",
     "linkedTitleOther": "{count} projects are connected to this app",
@@ -955,7 +955,7 @@
       "includeWwwDesc": "Also generate records for www.{domain}",
       "includeWwwFallback": "yourdomain.com",
       "externalIngress": "External ingress & TLS",
-      "externalIngressDesc": "TLS terminates at your reverse proxy (Cloudflare Tunnel, Nginx Proxy Manager, or a load balancer). The domain need not point at this server, and Openship won't issue a certificate.",
+      "externalIngressDesc": "TLS terminates at your reverse proxy (Cloudflare Tunnel, Nginx Proxy Manager, or a load balancer). The domain need not point at this server, and FreeBuild won't issue a certificate.",
       "dnsChallenge": "Use DNS-01 challenge",
       "dnsChallengeDesc": "Issue and renew the certificate through your connected DNS provider. Use this when port 80 cannot be reached.",
       "dnsChallengeWildcardDesc": "Wildcard certificates require DNS-01 and a connected DNS provider.",
@@ -1121,8 +1121,8 @@
         "deployment": "This route is waiting for a deployment. Deploy the project to apply it.",
         "disabled": "This project or service is disabled. Enable it before checking the route.",
         "removing": "This domain is being removed. No verification is scheduled.",
-        "manual_certificate": "This domain uses an uploaded certificate. Upload a valid replacement, then recheck it. Openship does not renew it automatically.",
-        "managed_certificate": "TLS is managed by your external proxy or Openship Cloud. Check that provider’s configuration.",
+        "manual_certificate": "This domain uses an uploaded certificate. Upload a valid replacement, then recheck it. FreeBuild does not renew it automatically.",
+        "managed_certificate": "TLS is managed by your external proxy or the hosted cloud service. Check that provider’s configuration.",
         "route_missing": "This configured route has not been applied. Retry routing to apply it. No automatic routing retry is scheduled."
       }
     }

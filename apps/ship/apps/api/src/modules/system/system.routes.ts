@@ -74,8 +74,8 @@ r.public(
  * After bootstrap-admin, the wizard registers Openship itself as an app
  * (shows under Apps) + attaches its domain — free (Oblien edge) or custom
  * (OpenResty + Let's Encrypt, streamed). All internal-token gated. */
-r.public("get", "/cloud-status", { reason: "CLI setup — read Openship Cloud connection state; internal-token gated" }, internalAuth, selfApp.cloudStatus);
-r.public("post", "/cloud-connect", { reason: "CLI setup — finalize Openship Cloud PKCE handshake for a free domain; internal-token gated" }, internalAuth, selfApp.cloudConnect);
+r.public("get", "/cloud-status", { reason: "CLI setup — read the hosted cloud service connection state; internal-token gated" }, internalAuth, selfApp.cloudStatus);
+r.public("post", "/cloud-connect", { reason: "CLI setup — finalize the hosted cloud service PKCE handshake for a free domain; internal-token gated" }, internalAuth, selfApp.cloudConnect);
 r.public("post", "/self-register", { reason: "CLI setup — register the control plane as an app + attach its domain; internal-token gated" }, internalAuth, selfApp.selfRegister);
 r.public("get", "/self-register/stream", { reason: "CLI setup — SSE progress for custom-domain edge provisioning; internal-token gated" }, internalAuth, selfApp.selfRegisterStream);
 r.public("post", "/self-edge/preflight", { reason: "CLI setup — detect what owns ports 80/443 before installing OpenResty; internal-token gated" }, internalAuth, selfApp.selfEdgePreflight);

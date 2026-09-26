@@ -234,7 +234,7 @@ export async function cloudCallback(c: Context) {
     if (!state) {
       const data = await exchangeCodeWithCloud(code);
       if (!data) {
-        return c.html(desktopResultPage("Authentication failed", "Could not verify with Openship Cloud. Please return to Openship and try again."));
+        return c.html(desktopResultPage("Authentication failed", "Could not verify with the hosted cloud service. Please return to Openship and try again."));
       }
 
       const mirroredUserId = await mirrorCloudUser(data.user);
@@ -259,7 +259,7 @@ export async function cloudCallback(c: Context) {
     const data = await exchangeCodeWithCloud(code, validated.codeVerifier);
     if (!data) {
       failDesktopAuth(validated.nonce);
-      return c.html(desktopResultPage("Authentication failed", "Could not verify with Openship Cloud. Please return to Openship and try again."));
+      return c.html(desktopResultPage("Authentication failed", "Could not verify with the hosted cloud service. Please return to Openship and try again."));
     }
 
     // Always mirror the cloud user for record-keeping

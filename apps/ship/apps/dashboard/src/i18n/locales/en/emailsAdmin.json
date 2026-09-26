@@ -142,7 +142,7 @@
     "webmailAt": "Webmail at",
     "openWebmail": "Open webmail",
     "deployWebmail": "Deploy webmail",
-    "legacyWebmail": "Deployed by an older Openship — it can be replaced with the webmail app, which updates with your releases.",
+    "legacyWebmail": "Deployed by an older FreeBuild — it can be replaced with the webmail app, which updates with your releases.",
     "upgradeWebmail": "Replace webmail",
     "setupGuides": "Setup guides",
     "setupGuidesDesc": "Step-by-step walkthroughs for every common way to use this mailbox - from your phone to your codebase. Opens in a new tab.",
@@ -406,7 +406,7 @@
     "dnsEmpty": "No DNS records on file yet. Finish the install wizard to populate the scan.",
     "reachability": {
       "title": "Public mail ports",
-      "desc": "Checks local listeners and then connects from the Openship control plane to the public mail address.",
+      "desc": "Checks local listeners and then connects from the FreeBuild control plane to the public mail address.",
       "descFor": "Checks local listeners and off-box access to {hostname} at {address}.",
       "remediation": "The server is listening, but one or more public ports are unavailable. Allow TCP 25, 465, 587 and 993 in both the host firewall and your provider firewall/security group/security list/NSG.",
       "reachableHint": "Listening on the host and reachable from the control plane.",
@@ -686,7 +686,7 @@
     "legacyNote": "This server runs the legacy host-native engine (systemd Postfix/Dovecot), so there is no container to inspect.",
     "start": "Start the engine",
     "missingTitle": "No mail engine on this server",
-    "missingBody": "Openship can't find a mail engine here — neither the engine container nor the Postfix/Dovecot units. Re-run mail setup to reinstall it.",
+    "missingBody": "FreeBuild can't find a mail engine here — neither the engine container nor the Postfix/Dovecot units. Re-run mail setup to reinstall it.",
     "rerunSetup": "Re-run mail setup",
     "cardBlocked": "Unavailable until the mail engine is running."
   },

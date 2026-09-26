@@ -81,7 +81,7 @@ export class TunnelMustBeCloudConnectedError extends Error {
   readonly code = "TUNNEL_MUST_BE_CLOUD_CONNECTED" as const;
   constructor() {
     super(
-      "This instance must be connected to Openship Cloud to provision an edge tunnel. Connect your cloud account in Settings first.",
+      "This instance must be connected to the hosted cloud service to provision an edge tunnel. Connect your cloud account in Settings first.",
     );
     this.name = "TunnelMustBeCloudConnectedError";
   }

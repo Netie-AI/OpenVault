@@ -103,7 +103,8 @@ describe("AutoDnsView", () => {
       }),
     );
     expect(out).toContain("Conflict");
-    expect(out).toContain("Not managed by Openship");
+    // Modified by Netie AI, 2026: brand rebranded to FreeBuild.
+    expect(out).toContain("Not managed by FreeBuild");
   });
 
   it("renders the outcome log after apply, not the plan", () => {

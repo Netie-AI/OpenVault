@@ -28,6 +28,47 @@ vi.mock("@repo/platform/engine/lib/credential-encryption", () => ({
   decryptSecretField: decrypt,
 }));
 
+/**
+ * Modified by Netie AI, 2026: Cloudflare is now an OPENVAULT_MANAGED_CREDENTIAL_PROVIDERS
+ * provider (packages/core/src/netie/keyvault.ts) — credential.service.ts's
+ * listProviderCredentials/resolveCredentialSecrets read it from OpenVault instead of
+ * `repos.credential` for "cloudflare". Bridged straight through the SAME
+ * `credentialRepo`/`decrypt` mocks every case below already configures, so none of them
+ * needed to change: `findKeysForFreeBuildProvider` replays `listActiveByProvider`'s rows
+ * as OpenVault keys, and `getSecret` decrypts the matching row's envelope, exactly what
+ * the local-store path used to do.
+ */
+vi.mock("@repo/core", async (importOriginal) => {
+  const original = await importOriginal<object>();
+  const rowById = new Map<string, { id: string; secretsEnc: string }>();
+  return {
+    ...original,
+    OPENVAULT_MANAGED_CREDENTIAL_PROVIDERS: new Set(["cloudflare"]),
+    findKeysForFreeBuildProvider: async (providerId: string) => {
+      if (providerId !== "cloudflare") return [];
+      const rows = await credentialRepo.listActiveByProvider("org_1", "cloudflare");
+      return rows.map((row: { id: string; secretsEnc: string }) => {
+        rowById.set(row.id, row);
+        return { id: row.id, label: "Cloudflare (test)", provider: "cloudflare", enabled: true };
+      });
+    },
+    getSecret: async (id: string) => {
+      const row = rowById.get(id);
+      if (!row) throw new Error(`no OpenVault key "${id}" (test bridge)`);
+      // An empty string (not a thrown error) surfaces to listProviderCredentials as
+      // `readable: false` — matching the local-store path's old "re-connect it"
+      // handling for a rotated encryption key. A real OpenVault would never hand back
+      // ciphertext to decrypt in the first place; this is purely a test-bridge shim.
+      try {
+        const plain = decrypt(row.secretsEnc);
+        return (JSON.parse(plain) as { apiToken: string }).apiToken;
+      } catch {
+        return "";
+      }
+    },
+  };
+});
+
 const provider = vi.hoisted(() => ({
   name: "cloudflare" as const,
   descriptor: {

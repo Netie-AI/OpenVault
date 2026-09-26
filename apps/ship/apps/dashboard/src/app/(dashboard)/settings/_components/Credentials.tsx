@@ -1,4 +1,7 @@
 "use client";
+// Modified by Netie AI, 2026: providers OpenVault manages (see
+// OPENVAULT_MANAGED_PROVIDER_IDS below) link out to OpenVault instead of
+// rendering an add/edit form that the API would refuse anyway.
 
 import { Icon as UiIcon } from "@repo/ui/icons";
 
@@ -28,6 +31,13 @@ import { SettingsSection } from "./SettingsSection";
 
 /** Same devicon base `STACK_ICONS` uses, so a provider logo needs no new asset pipeline. */
 const DEVICON = "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons";
+
+// Modified by Netie AI, 2026: providers whose secret OpenVault's KeyVault owns
+// (packages/core/src/netie/keyvault.ts, OPENVAULT_MANAGED_CREDENTIAL_PROVIDERS)
+// — kept as a plain literal here (not imported from @repo/core) so this
+// client bundle never pulls in the server-only OpenVault fetch client.
+const OPENVAULT_MANAGED_PROVIDER_IDS = new Set(["cloudflare"]);
+const OPENVAULT_KEYS_URL = "http://127.0.0.1:3010/keys";
 
 function ProviderLogo({ slug, className }: { slug: string; className?: string }) {
   const [failed, setFailed] = useState(false);
@@ -130,27 +140,56 @@ export function Credentials() {
         <div className="space-y-6">
           {providers.map((provider) => {
             const held = byProvider.get(provider.id) ?? [];
+            // Modified by Netie AI, 2026: providers OpenVault manages (see
+            // packages/core/src/netie/keyvault.ts) are never added here — the
+            // API already refuses the write with `keys_managed_by_openvault`.
+            // Point the operator at OpenVault instead of showing a form that
+            // can only fail.
+            const managedByOpenVault = OPENVAULT_MANAGED_PROVIDER_IDS.has(provider.id);
             return (
               <div key={provider.id} className="rounded-xl border border-border/50 p-4">
                 <div className="mb-3 flex items-start gap-3">
                   <ProviderLogo slug={provider.icon} className="mt-0.5 size-5 shrink-0" />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-foreground">{provider.label}</p>
-                    <p className="text-xs text-muted-foreground">{provider.summary}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {managedByOpenVault
+                        ? "Managed by OpenVault, not stored here."
+                        : provider.summary}
+                    </p>
                   </div>
-                  <button
-                    onClick={() => {
-                      setAdding(adding === provider.id ? null : provider.id);
-                      setEditing(null);
-                    }}
-                    className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-muted/50 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
-                  >
-                    <UiIcon name="plus" className="size-3.5" />
-                    {copy.add}
-                  </button>
+                  {managedByOpenVault ? (
+                    <a
+                      href={OPENVAULT_KEYS_URL}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-muted/50 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+                    >
+                      <UiIcon name="external-link" className="size-3.5" />
+                      Open in OpenVault
+                    </a>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setAdding(adding === provider.id ? null : provider.id);
+                        setEditing(null);
+                      }}
+                      className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-muted/50 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+                    >
+                      <UiIcon name="plus" className="size-3.5" />
+                      {copy.add}
+                    </button>
+                  )}
                 </div>
 
-                {adding === provider.id && (
+                {managedByOpenVault && held.length === 0 ? (
+                  <p className="py-1 text-xs text-muted-foreground">
+                    Add a {provider.label} key in OpenVault's KeyVault; FreeBuild reads it from
+                    there and never stores it itself.
+                  </p>
+                ) : null}
+
+                {!managedByOpenVault && adding === provider.id && (
                   <CredentialForm
                     provider={provider}
                     onCancel={() => setAdding(null)}

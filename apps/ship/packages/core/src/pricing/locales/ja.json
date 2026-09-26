@@ -2,7 +2,7 @@
   "plans": {
     "free": {
       "name": "Free",
-      "tagline": "静的サイトを Openship Cloud に無料でデプロイできます。"
+      "tagline": "静的サイトをホスティング型クラウドサービスに無料でデプロイできます。"
     },
     "starter": {
       "name": "Starter",
@@ -49,7 +49,7 @@
     "selfHostedUnlimited": "デプロイ、プロジェクト、サーバー、ドメインすべて無制限",
     "selfHostedServices": "マネージドサービスはすべて利用可能 — Postgres、Redis、メール",
     "selfHostedClients": "CLI、Web、デスクトップ — バックエンドは一つ",
-    "selfHostedFreeSubdomains": "Openship Cloud に接続すると、無料の {freeDomainSuffix} サブドメインが {freeSubdomains} 個"
+    "selfHostedFreeSubdomains": "ホスティング型クラウドサービスに接続すると、無料の {freeDomainSuffix} サブドメインが {freeSubdomains} 個"
   },
   "selfHosted": {
     "name": "セルフホスト",

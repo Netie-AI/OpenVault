@@ -79,7 +79,7 @@ export function cloudClient(scope: CloudClientScope): CloudClient {
       ...(opts.body !== undefined ? { body: JSON.stringify(opts.body) } : {}),
     });
     if (!res) {
-      return { ok: false, error: "Not connected to Openship Cloud" };
+      return { ok: false, error: "Not connected to the hosted cloud service" };
     }
     if (!res.ok) {
       const err = await readCloudJson<{
@@ -155,7 +155,7 @@ export function cloudClient(scope: CloudClientScope): CloudClient {
         });
         if (!res) {
           throw new Error(
-            "Not connected to Openship Cloud — connect your account in Settings.",
+            "Not connected to the hosted cloud service — connect your account in Settings.",
           );
         }
         if (!res.ok) {
@@ -179,7 +179,7 @@ export function cloudClient(scope: CloudClientScope): CloudClient {
         });
         if (!res) {
           throw new Error(
-            "Not connected to Openship Cloud — connect your account in Settings.",
+            "Not connected to the hosted cloud service — connect your account in Settings.",
           );
         }
         if (!res.ok) {
@@ -196,7 +196,7 @@ export function cloudClient(scope: CloudClientScope): CloudClient {
         });
         if (!res) {
           throw new Error(
-            "Not connected to Openship Cloud — connect your account in Settings.",
+            "Not connected to the hosted cloud service — connect your account in Settings.",
           );
         }
         if (!res.ok) {
@@ -213,7 +213,7 @@ export function cloudClient(scope: CloudClientScope): CloudClient {
         });
         if (!res) {
           throw new Error(
-            "Not connected to Openship Cloud — connect your account in Settings.",
+            "Not connected to the hosted cloud service — connect your account in Settings.",
           );
         }
         if (!res.ok) {

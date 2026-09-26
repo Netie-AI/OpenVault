@@ -21,6 +21,7 @@
  */
 
 import type { Context } from "hono";
+import { HostedCloudDisabledError } from "@repo/core";
 import { repos } from "@repo/db";
 import { getRequestContext } from "../../../lib/request-context";
 import { assertInstanceAdmin } from "../../../middleware/instance-admin";
@@ -180,6 +181,17 @@ export async function start(c: Context) {
  * flips local teamMode to "cloud_hosted". Dashboard launcher then
  * points at app.openship.io.
  */
+// Modified by Netie AI, 2026: FreeBuild is self-hosted only — migrating an
+// instance's control plane onto Openship Cloud is not available. The body
+// below (migrateInstanceToCloud + its error mapping) is upstream's, kept
+// commented out rather than deleted so a future maintainer can see exactly
+// what this replaced; see PRODUCT_ROLES.md.
+export async function startCloud(_c: Context) {
+  throw new HostedCloudDisabledError(
+    "Migrating to the hosted cloud service is not available in this self-hosted edition.",
+  );
+}
+/*
 export async function startCloud(c: Context) {
   const ctx = getRequestContext(c);
   await assertInstanceAdmin(ctx);
@@ -236,6 +248,7 @@ export async function startCloud(c: Context) {
     return c.json({ error: message }, 500);
   }
 }
+*/
 
 /**
  * POST /api/system/migration/start-tunnel
@@ -247,6 +260,15 @@ export async function startCloud(c: Context) {
  * long-lived TunnelClient so the public URL begins forwarding to the
  * local dashboard port. No data move, no SSH.
  */
+// Modified by Netie AI, 2026: FreeBuild is self-hosted only — exposing this
+// instance via an Oblien edge tunnel is not available. Upstream's body kept
+// commented out below (not deleted) — see PRODUCT_ROLES.md.
+export async function startTunnel(_c: Context) {
+  throw new HostedCloudDisabledError(
+    "Migrating to a tunneled hosted-cloud-service edge is not available in this self-hosted edition.",
+  );
+}
+/*
 export async function startTunnel(c: Context) {
   const ctx = getRequestContext(c);
   await assertInstanceAdmin(ctx);
@@ -306,6 +328,7 @@ export async function startTunnel(c: Context) {
     return c.json({ error: message }, 500);
   }
 }
+*/
 
 /**
  * POST /api/system/migration/switch-back

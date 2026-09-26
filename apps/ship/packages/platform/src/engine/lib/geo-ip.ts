@@ -7,10 +7,17 @@
  * only network path is a last-resort download when the asset is somehow absent,
  * and it points at OUR repo (overridable via OPENSHIP_GEOIP_URL), never an
  * upstream mirror. Refreshing the vendored copy is a maintainer action
- * (`bun run update:geoip`), not something the running server does.
+ * (`npm run update:geoip`), not something the running server does.
  *
  * Everything is best-effort: a missing DB, no network, or a private/loopback IP
  * just yields `null`, and the UI falls back to a neutral glyph.
+ *
+ * Modified by Netie AI, 2026: this fork does not vendor the GeoLite2-Country
+ * .mmdb (apps/api/assets/geoip/ ships a README only — see NOTICE). Degradation
+ * is now VISIBLE instead of silent: a one-time warning logs on first lookup
+ * once the database is confirmed unavailable, and {@link countryForIp} returns
+ * the sentinel string `"unknown"` (rather than `null`) for a valid IP once
+ * that state is reached, so a caller can render "unknown" instead of nothing.
  */
 import { open, type Reader, type CountryResponse } from "maxmind";
 import { isIP } from "node:net";
@@ -50,6 +57,20 @@ function candidatePaths(): string[] {
 
 let readerPromise: Promise<Reader<CountryResponse> | null> | null = null;
 let resolvedReader: Reader<CountryResponse> | null = null;
+/** Set once we've confirmed no DB is available and won't become available. */
+let dbConfirmedUnavailable = false;
+let warnedMissingDb = false;
+
+function warnMissingDbOnce(): void {
+  if (warnedMissingDb) return;
+  warnedMissingDb = true;
+  console.warn(
+    "[geo-ip] No GeoLite2-Country.mmdb found (this fork does not vendor one — " +
+      "see apps/api/assets/geoip/README.md) and no fallback download succeeded. " +
+      "Country lookups will report \"unknown\". Set OPENSHIP_GEOIP_DB to a local " +
+      "database file, or OPENSHIP_GEOIP_URL to a mirror, to enable them.",
+  );
+}
 
 /** First existing candidate, else download our copy into the cache. */
 async function resolveDbPath(): Promise<string | null> {
@@ -79,11 +100,17 @@ function getReader(): Promise<Reader<CountryResponse> | null> {
   if (readerPromise) return readerPromise;
   readerPromise = (async () => {
     const path = await resolveDbPath();
-    if (!path) return null;
+    if (!path) {
+      dbConfirmedUnavailable = true;
+      warnMissingDbOnce();
+      return null;
+    }
     try {
       resolvedReader = await open<CountryResponse>(path);
       return resolvedReader;
     } catch {
+      dbConfirmedUnavailable = true;
+      warnMissingDbOnce();
       return null;
     }
   })();
@@ -107,11 +134,13 @@ export async function primeGeo(timeoutMs = 1500): Promise<void> {
   }
 }
 
-/** ISO-3166-1 alpha-2 (uppercase) for a literal IP, or null. Sync + never
- *  throws; null until the reader is warmed (primeGeo) and for hostnames /
- *  private ranges not present in the DB. */
+/** ISO-3166-1 alpha-2 (uppercase) for a literal IP, `"unknown"` once the DB is
+ *  confirmed unavailable, or null. Sync + never throws; null for a bad host /
+ *  private range, or while the reader is still warming (primeGeo). */
 export function countryForIp(host: string | null | undefined): string | null {
-  if (!host || !resolvedReader || isIP(host) === 0) return null;
+  if (!host || isIP(host) === 0) return null;
+  if (dbConfirmedUnavailable) return "unknown";
+  if (!resolvedReader) return null;
   try {
     return resolvedReader.get(host)?.country?.iso_code ?? null;
   } catch {

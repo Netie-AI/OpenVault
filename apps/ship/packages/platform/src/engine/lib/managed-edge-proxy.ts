@@ -7,7 +7,7 @@ import { isCloudManagedHostname, managedHostnameToSlug } from "./public-endpoint
 import { ensureTargetVerified } from "./edge-target-verify";
 
 const NO_CLOUD_MEMBER =
-  "Cannot sync edge proxy: no member of this organization has linked Openship Cloud";
+  "Cannot sync edge proxy: no member of this organization has linked the hosted cloud service";
 
 /**
  * A managed-edge failure the caller has to answer differently.
@@ -94,7 +94,7 @@ export async function ensureManagedEdgeProxy(
     }
     // Prove control, then retry once. `canonicalEdgeTarget` is the SAME normalizer
     // the SaaS applies before calling Cloud, so what we verify is what gets routed.
-    opts?.onLog?.(`Proving this server controls ${host} for Openship Cloud routing...\n`);
+    opts?.onLog?.(`Proving this server controls ${host} for the hosted cloud service's routing...\n`);
     const verdict = await ensureTargetVerified(organizationId, canonicalEdgeTarget(host), {
       ...(opts?.serverId ? { serverId: opts.serverId } : {}),
       ...(opts?.routing ? { routing: opts.routing } : {}),
@@ -102,7 +102,7 @@ export async function ensureManagedEdgeProxy(
     });
     if (!verdict.verified) {
       throw new ManagedEdgeError(
-        `Openship Cloud won't route to ${host} until it can confirm this server controls it: ` +
+        `The hosted cloud service won't route to ${host} until it can confirm this server controls it: ` +
           `${verdict.reason ?? "verification did not complete"}`,
         502,
       );
@@ -145,7 +145,7 @@ export async function syncManagedEdgeRoutes(
       });
       // Name the target. It's the one fact that explains whether this URL will
       // serve the app, and the operator could not see it anywhere before.
-      opts.onLog?.(`  ${tgt.hostname} → http://${target} (Openship Cloud edge → this server)\n`);
+      opts.onLog?.(`  ${tgt.hostname} → http://${target} (the hosted cloud service edge → this server)\n`);
       if (warning) opts.onLog?.(`Note: ${tgt.hostname} is ${warning}\n`, "warn");
     } catch (err) {
       const reason = safeErrorMessage(err);
@@ -228,6 +228,6 @@ export function edgeUnsyncedWarning(failures: string[], retryHint: string): stri
   return (
     `Deployed, but the free domain routing didn't sync for ${failures.join(", ")}. ` +
     `The app is live on the server; the free .opsh.io URL won't resolve until the edge route is created. ` +
-    `Check that the server is reachable from Openship Cloud on port 80, then ${retryHint}.`
+    `Check that the server is reachable from the hosted cloud service on port 80, then ${retryHint}.`
   );
 }

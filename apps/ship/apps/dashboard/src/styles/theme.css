@@ -79,7 +79,12 @@
    * This is the floor, not a free knob: 6 steps of lift off #ffffff, against 8
    * for dim. Push it much closer to white and borderless cards stop reading —
    * there is no border left to fall back on. */
-  --th-bg-page:        #f9f9f9;
+  /* Modified by Netie AI, 2026: matched to OpenVault's shared token value
+     (was #f9f9f9) per the theme-token sync pass. NOTE: the paragraph above
+     documents #f9f9f9 as a deliberate "floor" so borderless cards stay
+     legible against the page — flag for visual review if cards read flat
+     against #ffffff. */
+  --th-bg-page:        #ffffff;
   --th-bg-card:        #fafafa;
   --th-bg-subtle:      rgba(0,0,0,.02);
   --th-bg-hover:       rgba(0,0,0,.025);
@@ -132,7 +137,8 @@
      showed up as a black band under the sidebar list. */
   --th-card-on-page:  #ffffff;
   --th-card-bg-solid: #ffffff;
-  --th-card-bd:       transparent;
+  /* Modified by Netie AI, 2026: matched to OpenVault's value (was transparent). */
+  --th-card-bd:       #efefef;
   --th-card-bd-hover: #e0e0e0;
   --th-card-shadow:   none;
 
@@ -261,7 +267,10 @@
    * With the fill lifted clear of the page the surface carries its own edge, so
    * there is no resting border, same as dim. If you ever lower this fill, the
    * container will start disappearing into the black before it looks borderless. */
-  --th-card-bg:       rgba(255,255,255,.05);
+  /* Modified by Netie AI, 2026: matched to OpenVault's shared token value
+     (was rgba(255,255,255,.05)) per the theme-token sync pass — flag for
+     visual review against the "lifted clear of the page" reasoning below. */
+  --th-card-bg:       rgba(255,255,255,.025);
   /* The OPAQUE equivalent of a card sitting on the page — #000000 page + 5% white.
      Use this for a fade/scrim that has to blend INTO a card (e.g. the
      sidebar's bottom scroll fade). NOT --th-card-bg-solid: that one is the
@@ -270,7 +279,10 @@
      showed up as a black band under the sidebar list. */
   --th-card-on-page:  #0d0d0d;
   --th-card-bg-solid: #060606;
-  --th-card-bd:       transparent;
+  /* Modified by Netie AI, 2026: matched to OpenVault's value (was
+     transparent) — flag for visual review; the comment above this block
+     ("no resting border, same as dim") documented transparent deliberately. */
+  --th-card-bd:       rgba(255,255,255,.06);
   --th-card-bd-hover: rgba(255,255,255,.12);
   --th-card-shadow:   none;
 
@@ -280,8 +292,15 @@
   /* ─ Overlay ─ Lifted off pure black on purpose: the page here is #000000, so
    * a black scrim (it was rgba(0,0,0,.6)) composites back to #000 and the
    * backdrop is invisible — no dimming, and the modal has nothing to sit on.
-   * Darkening is not available in hard dark; the scrim has to lighten. */
-  --th-overlay:       rgb(20 20 20 / 60%);
+   * Darkening is not available in hard dark; the scrim has to lighten.
+   *
+   * Modified by Netie AI, 2026: set to OpenVault's shared value below anyway,
+   * per the theme-token sync pass — but this directly contradicts the
+   * reasoning just above (a darkening rgba(0,0,0,...) scrim over a pure
+   * #000000 page composites to invisible). FLAG FOR THE COORDINATOR: this one
+   * likely needs a visual check, not a blind value copy.
+   */
+  --th-overlay:       rgba(0,0,0,.55);
 
   /* ─ Dropdown ─ */
   --th-dropdown-bg:     #161616;
@@ -296,7 +315,8 @@
   /* Pre-token hardcoded recipe restored: bg-X-500/10 + border-X-500/20 (shared
      with light), text-X-400 on hard-black. */
   --st-success-fg: #34d399;  --st-success-bg: rgba(16,185,129,.10);  --st-success-bd: rgba(16,185,129,.20);
-  --st-danger-fg:  #f04848;  --st-danger-bg:  rgba(239,68,68,.10);   --st-danger-bd:  rgba(239,68,68,.20);
+  /* Modified by Netie AI, 2026: fg matched to OpenVault's shared value (was #f04848). */
+  --st-danger-fg:  #f87171;  --st-danger-bg:  rgba(239,68,68,.10);   --st-danger-bd:  rgba(239,68,68,.20);
   --st-warning-fg: #fbbf24;  --st-warning-bg: rgba(245,158,11,.10);  --st-warning-bd: rgba(245,158,11,.20);
   --st-info-fg:    #60a5fa;  --st-info-bg:    rgba(59,130,246,.10);  --st-info-bd:    rgba(59,130,246,.20);
   --st-neutral-fg: rgba(255,255,255,.50);  --st-neutral-bg: rgba(255,255,255,.05);  --st-neutral-bd: rgba(255,255,255,.10);

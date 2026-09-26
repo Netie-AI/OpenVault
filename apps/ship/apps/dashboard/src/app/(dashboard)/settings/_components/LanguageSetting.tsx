@@ -13,30 +13,16 @@ import { useI18n } from "@/components/i18n-provider";
 import { isRtl, locales, type Locale } from "@/i18n";
 import { SettingsSection } from "./SettingsSection";
 
+// Modified by Netie AI, 2026: English-only — the other 8 locale dirs are
+// gone (see apps/dashboard/src/i18n/index.ts), so these maps have one entry.
 /** Each language's own name, in its own script (never translated). */
 const NATIVE: Record<Locale, string> = {
   en: "English",
-  ar: "العربية",
-  es: "Español",
-  fr: "Français",
-  de: "Deutsch",
-  pt: "Português",
-  ja: "日本語",
-  zh: "中文",
-  tr: "Türkçe",
 };
 
 /** Short glyph for the card's leading tile. */
 const CODE: Record<Locale, string> = {
   en: "EN",
-  ar: "ع",
-  es: "ES",
-  fr: "FR",
-  de: "DE",
-  pt: "PT",
-  ja: "日",
-  zh: "中",
-  tr: "TR",
 };
 
 export function LanguageSetting() {

@@ -19,11 +19,17 @@ import { describe, expect, it } from "vitest";
 describe("hostChannelAccount is the only place that spells the channel-account fallback", () => {
   const REPO = join(__dirname, "../../..");
 
-  /** Every file that legitimately needs the account, plus the resolver's own home. */
+  /**
+   * Every file that legitimately needs the account, plus the resolver's own home.
+   *
+   * Modified by Netie AI, 2026: `apps/cli/src/lib/compose.ts` is not part of this
+   * fork (apps/cli was pruned — see PRODUCT_ROLES.md) and is removed from this
+   * list rather than left pointing at a file that cannot exist here; the
+   * assertion for the two files this fork does ship is unchanged.
+   */
   const CONSUMERS = [
     "packages/adapters/src/system/executor.ts",
     "packages/platform/src/engine/lib/startup/self-server.ts",
-    "apps/cli/src/lib/compose.ts",
   ];
 
   /**

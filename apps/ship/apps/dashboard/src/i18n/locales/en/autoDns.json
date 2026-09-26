@@ -1,7 +1,7 @@
 {
   "checking": "Checking your DNS provider…",
   "noProviderTitle": "Set these records automatically",
-  "noProviderDesc": "Connect a DNS provider and Openship can add these records for you.",
+  "noProviderDesc": "Connect a DNS provider and FreeBuild can add these records for you.",
   "connect": "Connect a DNS provider",
   "unauthorizedTitle": "DNS provider needs reconnecting",
   "unauthorizedDesc": "Your saved token was rejected. Reconnect it to auto-configure DNS.",
@@ -19,7 +19,7 @@
   "actionAdopt": "Repoint",
   "actionInSync": "In place",
   "actionConflict": "Conflict",
-  "conflictNote": "Not managed by Openship — remove it or set this record manually.",
+  "conflictNote": "Not managed by FreeBuild — remove it or set this record manually.",
   "outcomeApplied": "Applied",
   "outcomeSkipped": "Skipped",
   "outcomeFailed": "Failed",

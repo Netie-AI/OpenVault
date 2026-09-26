@@ -11,7 +11,7 @@ import * as sources from "./github-source-application.service";
 import { audit, operationAuditContext } from "../../lib/audit-emitter";
 
 function localOnly() {
-  if (env.CLOUD_MODE) throw new AppError("Not available on Openship Cloud", 400, "NOT_SUPPORTED");
+  if (env.CLOUD_MODE) throw new AppError("Not available on the hosted cloud service", 400, "NOT_SUPPORTED");
 }
 function ownerOnly(ctx: ExecutionContext) {
   localOnly();

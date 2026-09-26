@@ -120,7 +120,7 @@ beforeEach(() => {
 
 describe("resolveDeploymentRuntimeForRead — reaches the deploy's host, without the platform", () => {
   it("never falls back to this host when a bound Cloud Docker project is disconnected", async () => {
-    await expect(read({ deployTarget: "cloud", buildStrategy: "server", cloudDockerWorkspace: { projectId: "p1", workspaceId: "vm1" } })).rejects.toThrow("linked Openship Cloud");
+    await expect(read({ deployTarget: "cloud", buildStrategy: "server", cloudDockerWorkspace: { projectId: "p1", workspaceId: "vm1" } })).rejects.toThrow("linked the hosted cloud service");
     expect(socketCalls()).toBe(0);
     expect(sshHosts()).toEqual([]);
   });

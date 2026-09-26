@@ -27,11 +27,11 @@ r.get("/status", { tag: "mail_server:read", mcp: { description: "Read saved setu
 r.get("/servers", { tag: "mail_server:list", mcp: { description: "List mail servers managed by this workspace, their installation state and linked webmail projects." } }, mail.listMailServers);
 // Stop managing a mail server: drop the DB row only, leave the stack + state
 // file intact so it can be re-adopted. Non-destructive; see forgetMailServer.
-r.delete("/servers/:serverId", { tag: "mail_server:admin", mcp: { description: "Forget Openship’s mail-server registration without uninstalling daemons or deleting mail data. Scan and adopt can restore the registration." } }, mail.forgetMailServer);
+r.delete("/servers/:serverId", { tag: "mail_server:admin", mcp: { description: "Forget FreeBuild’s mail-server registration without uninstalling daemons or deleting mail data. Scan and adopt can restore the registration." } }, mail.forgetMailServer);
 // Re-adopt an existing mail install whose orchestrator state was lost (lost PC):
 // scan a server for iRedMail + its on-server state, then adopt it back.
 r.post("/scan", { tag: "mail_server:write", mcp: { description: "Inspect an existing mail installation on body.serverId without reinstalling it. Returns adoptable state; use adopt to register an existing stack." }, body: MailRequestSchemas.server, readOnly: true }, mail.scanMailInstall);
-r.post("/adopt", { tag: "mail_server:write", mcp: { description: "Register an existing Openship mail installation found by scan. Restores control-plane ownership without reinstalling the stack." }, body: MailRequestSchemas.server }, mail.adoptMailServer);
+r.post("/adopt", { tag: "mail_server:write", mcp: { description: "Register an existing FreeBuild mail installation found by scan. Restores control-plane ownership without reinstalling the stack." }, body: MailRequestSchemas.server }, mail.adoptMailServer);
 r.post("/setup", { tag: "mail_server:write", mcpExcluded: "Mail installation is an interactive SSE wizard with DNS/PTR checkpoints. Open Emails → Set up mail; MCP can inspect status and administer or adopt existing installations." }, mail.startSetup);
 r.post("/setup/cancel", { tag: "mail_server:write", mcpExcluded: "Controls the active browser mail-installation SSE session. Finish or cancel that setup in the Emails wizard." }, mail.cancelSetup);
 r.post("/setup/dns-ack", { tag: "mail_server:write", mcpExcluded: "Acknowledges a checkpoint in the active mail-installation wizard. Use the Emails wizard; existing domain DNS has dedicated MCP tools." }, mail.acknowledgeDns);

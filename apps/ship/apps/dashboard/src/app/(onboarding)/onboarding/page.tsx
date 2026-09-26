@@ -19,16 +19,10 @@ import "./onboarding.css";
 
 /* ── SVG icons used in the top bar ── */
 
+// Modified by Netie AI, 2026: English-only — see apps/dashboard/src/i18n/index.ts.
 /** Each language's own name / short glyph, in its own script (never translated). */
-const LANG_NATIVE: Record<Locale, string> = {
-  en: "English", ar: "العربية", es: "Español", fr: "Français",
-  de: "Deutsch", pt: "Português", ja: "日本語", zh: "中文",
-  tr: "Türkçe",
-};
-const LANG_CODE: Record<Locale, string> = {
-  en: "EN", ar: "ع", es: "ES", fr: "FR", de: "DE", pt: "PT", ja: "日", zh: "中",
-  tr: "TR",
-};
+const LANG_NATIVE: Record<Locale, string> = { en: "English" };
+const LANG_CODE: Record<Locale, string> = { en: "EN" };
 
 function OnboardingInner() {
   const { t, locale, setLocale } = useI18n();
@@ -120,9 +114,11 @@ function OnboardingInner() {
               </>
             )}
           </div>
-          <a className="ob-top-bar-link" href="https://openship.io" target="_blank" rel="noopener noreferrer" title={t.onboarding.topBar.website}>
-            <UiIcon name="globe" size={18} />
-          </a>
+          {/* Modified by Netie AI, 2026: dropped the upstream openship.io marketing-site
+              link — FreeBuild has no equivalent site, and linking a self-hosted product's
+              onboarding at a different, unrelated commercial product's homepage is a real
+              product-confusion risk, not just a name to swap. The github credit link below
+              stays: it points at the actual upstream project this fork is built on. */}
           <a className="ob-top-bar-link" href="https://github.com/oblien/openship" target="_blank" rel="noopener noreferrer" title={t.onboarding.topBar.github}>
             <UiIcon name="github" size={18} />
           </a>

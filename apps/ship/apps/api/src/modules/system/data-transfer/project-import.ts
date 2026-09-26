@@ -524,7 +524,7 @@ export async function planProjectImport(
     );
     if (!connection.connected || !connection.user?.email)
       blockers.push(
-        "Connect this destination workspace to the source Openship Cloud account before importing cloud projects. Cloud servers will not work with a different account.",
+        "Connect this destination workspace to the source the hosted cloud service account before importing cloud projects. Cloud servers will not work with a different account.",
       );
     else if ([...expected].some((email) => email !== connection.user!.email.toLowerCase()))
       blockers.push(

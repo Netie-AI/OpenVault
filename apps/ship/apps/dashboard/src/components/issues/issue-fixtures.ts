@@ -161,9 +161,11 @@ const SELF_UPDATE = mk({
   severity: "advisory",
   scope: "platform",
   source: "update",
-  title: "Openship",
+  // Modified by Netie AI, 2026: brand rebranded to FreeBuild (matches the
+  // real self-app project name — see apps/api/src/modules/system/self-app.controller.ts).
+  title: "FreeBuild",
   message: "0.4.1 → 0.5.0",
-  target: { scope: "platform", id: "openship", name: "Openship", href: "/settings?tab=instance" },
+  target: { scope: "platform", id: "openship", name: "FreeBuild", href: "/settings?tab=instance" },
 });
 
 const APP_UPDATE = mk({

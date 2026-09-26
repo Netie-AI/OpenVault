@@ -22,7 +22,7 @@
   },
   "adopt": {
     "title": "Adopt existing mail server",
-    "intro": "Already set up a mail server with Openship on one of your servers? Pick it and scan — if a mail stack is found, it's re-adopted into the dashboard without reinstalling or touching your data.",
+    "intro": "Already set up a mail server with FreeBuild on one of your servers? Pick it and scan — if a mail stack is found, it's re-adopted into the dashboard without reinstalling or touching your data.",
     "scanning": "Scanning…",
     "scan": "Scan server",
     "detected": "Mail server detected",

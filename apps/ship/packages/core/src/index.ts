@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: re-export ./netie/keyvault (OpenVault KeyVault client).
 export * from "./types";
 export * from "./stacks";
 export * from "./volumes";
@@ -45,6 +46,7 @@ export * from "./languages";
 export * from "./metadata";
 export * from "./openship-config";
 export * from "./mail-server";
+export * from "./netie/keyvault";
 export * from "./app-templates";
 export {
   appTemplateSchema,

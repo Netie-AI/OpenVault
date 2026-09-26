@@ -26,7 +26,7 @@ r.get(
     tag: "project:list",
     mcp: {
       description:
-        "THE place to answer \"what is broken right now?\" across the whole installation — start here before per-project tools. One org-wide feed that merges every check Openship already runs: container health incidents (unhealthy / crash_loop / down, plus a server-level `server_unreachable` row when a whole box is offline), managed edge/mail container state, deploy blockers and held prompts, partial-release decisions, unsynced routing, port advisories, unverified domains, certificate errors, and available updates. Each item carries `severity` (`outage` = not being served right now, `action_required`, `advisory`), a `target` with a dashboard href, and `resolveWith` — concrete {method, path} calls that fix it, callable as-is. Items whose fix is a managed container carry `infraFix` instead (a UI flow, not an API call). `?status=resolved` returns incident HISTORY (the only source with a lifecycle; up to 30 days), so a resolved-tab absence never means \"nothing else ever broke\". Infrastructure rows require server read access and are absent in cloud mode.",
+        "THE place to answer \"what is broken right now?\" across the whole installation — start here before per-project tools. One org-wide feed that merges every check FreeBuild already runs: container health incidents (unhealthy / crash_loop / down, plus a server-level `server_unreachable` row when a whole box is offline), managed edge/mail container state, deploy blockers and held prompts, partial-release decisions, unsynced routing, port advisories, unverified domains, certificate errors, and available updates. Each item carries `severity` (`outage` = not being served right now, `action_required`, `advisory`), a `target` with a dashboard href, and `resolveWith` — concrete {method, path} calls that fix it, callable as-is. Items whose fix is a managed container carry `infraFix` instead (a UI flow, not an API call). `?status=resolved` returns incident HISTORY (the only source with a lifecycle; up to 30 days), so a resolved-tab absence never means \"nothing else ever broke\". Infrastructure rows require server read access and are absent in cloud mode.",
     },
     query: IssueCollectionSchemas.list.input,
   },
@@ -67,7 +67,7 @@ r.post(
     localOnly: true,
     mcp: {
       description:
-        "Check the current container state of every deployed workload in the caller's organization. Reuses the health watch scanner and refreshes only its in-memory snapshots: it does not enable a job, update incident history, send alerts, or start Docker event subscriptions. Available on desktop and self-hosted runtimes while Openship is running.",
+        "Check the current container state of every deployed workload in the caller's organization. Reuses the health watch scanner and refreshes only its in-memory snapshots: it does not enable a job, update incident history, send alerts, or start Docker event subscriptions. Available on desktop and self-hosted runtimes while FreeBuild is running.",
     },
   },
   ctrl.scanCurrentHealth,

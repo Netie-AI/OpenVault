@@ -97,14 +97,14 @@
 			"serviceCountOne": "{count} service",
 			"serviceCountOther": "{count} services",
 			"searchPlaceholder": "Search by name, image, or tag…",
-			"cloudConnectHint": "Connect Openship Cloud to browse the cloud service catalog. You can still add any image manually.",
-			"cloudConnectTitle": "Connect Openship Cloud",
-			"cloudConnectBody": "Link this instance to Openship Cloud to browse and add managed cloud images. You can still add any image manually from Local images.",
-			"cloudConnectButton": "Connect to Openship Cloud",
+			"cloudConnectHint": "Connect the hosted cloud service to browse the cloud service catalog. You can still add any image manually.",
+			"cloudConnectTitle": "Connect the hosted cloud service",
+			"cloudConnectBody": "Link this instance to the hosted cloud service to browse and add managed cloud images. You can still add any image manually from Local images.",
+			"cloudConnectButton": "Connect to the hosted cloud service",
 			"noMatchesTitle": "No matches",
 			"noMatchesBody": "Try a different category or search term - or pick Custom image from the rail.",
 			"localImages": "Local images",
-			"openshipCloud": "Openship Cloud",
+			"openshipCloud": "The hosted cloud service",
 			"localDocker": "Local Docker",
 			"customEntryName": "Custom image",
 			"customEntryDescription": "Pull any public or private Docker image by tag.",
@@ -178,7 +178,7 @@
 			"saveEnvironment": "Save environment",
 			"environmentState": {
 				"helpTitle": "How environment variables work",
-				"description": "Saved in Openship. Service overrides take precedence over Compose and shared project values. Editing an inherited value creates an override for this service.",
+				"description": "Saved in FreeBuild. Service overrides take precedence over Compose and shared project values. Editing an inherited value creates an override for this service.",
 				"sources": {
 					"service": "Service override",
 					"compose": "Compose",
@@ -201,11 +201,11 @@
 					"not-deployed": "These variables will be used when this service is deployed.",
 					"unsupported": "Redeploy this service to apply its saved environment."
 				},
-				"recoveryHint": "The running container has variables that are not saved in Openship. Recover them before applying if you want to keep them:",
+				"recoveryHint": "The running container has variables that are not saved in FreeBuild. Recover them before applying if you want to keep them:",
 				"recover": "Recover from running service",
 				"removeRuntime": "Apply without recovering these variables; remove them from the running service.",
 				"recovered": "Recovered from running service — not saved yet",
-				"recoveredHint": "Recovered values are ready for review. Save to keep them in Openship.",
+				"recoveredHint": "Recovered values are ready for review. Save to keep them in FreeBuild.",
 				"recoveryFailed": "Could not recover variables from the running service. Saved variables have not been changed."
 			},
 			"environmentApply": {

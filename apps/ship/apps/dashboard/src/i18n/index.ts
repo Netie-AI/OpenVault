@@ -42,13 +42,19 @@ import autoDns from "./locales/en/autoDns.json";
 export const baseDictionary = { brand, auth, dashboard, settings, servers, billing, library, onboarding, deploy, deployments, importProject, projects, projectSettings, projectDetail, emails, emailsAdmin, chrome, overview, widgets, misc, migration, jobs, issues, autoDns };
 export type Dictionary = typeof baseDictionary;
 
-export const locales = ["en", "ar", "es", "fr", "de", "pt", "ja", "zh", "tr"] as const;
+// Modified by Netie AI, 2026: English-only — the other 8 locale dirs
+// (ar/de/es/fr/ja/pt/tr/zh) are deleted; loadDictionary()'s per-locale
+// dynamic import below is now dead code (locale is always "en") but left in
+// place rather than restructured, so re-adding a language later is still
+// "drop a locales/<code>/ dir + add its code here", nothing else.
+export const locales = ["en"] as const;
 export type Locale = (typeof locales)[number];
 export const defaultLocale: Locale = "en";
 export const LOCALE_COOKIE = "openship-locale";
 
-/** RTL languages. */
-const rtlLocales = new Set<Locale>(["ar"]);
+/** RTL languages. Modified by Netie AI, 2026: empty — "ar" was the only one,
+ *  and its locale dir is gone (English-only). */
+const rtlLocales = new Set<Locale>([]);
 export function isRtl(locale: Locale): boolean {
   return rtlLocales.has(locale);
 }

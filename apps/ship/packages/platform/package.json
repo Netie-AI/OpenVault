@@ -27,16 +27,16 @@
     "build": "tsup src/index.ts --format esm --dts --clean",
     "lint": "tsc --noEmit",
     "test": "vitest run",
-    "build:native": "bun run build-native.ts"
+    "build:native": "tsx build-native.ts"
   },
   "dependencies": {
     "@better-auth/drizzle-adapter": "^1.5.4",
     "@octokit/auth-oauth-device": "^8.0.3",
     "@octokit/request": "^10.0.8",
-    "@repo/adapters": "workspace:*",
-    "@repo/contracts": "workspace:*",
-    "@repo/core": "workspace:*",
-    "@repo/db": "workspace:*",
+    "@repo/adapters": "*",
+    "@repo/contracts": "*",
+    "@repo/core": "*",
+    "@repo/db": "*",
     "@sinclair/typebox": "^0.34.48",
     "better-auth": "^1.5.4",
     "bullmq": "^5.70.4",
@@ -55,7 +55,9 @@
   },
   "devDependencies": {
     "@types/node": "^22.13.0",
+    "esbuild": "^0.25.0",
     "tsup": "^8.5.1",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vitest": "^4.0.18",
     "@types/nodemailer": "^8.0.1"

@@ -36,8 +36,11 @@ describe("UpdateCenter changelog links", () => {
       </I18nProvider>,
     );
 
-    expect(html).toContain("Updated to Openship 0.6.9");
-    expect(html).toContain('href="https://openship.io/changelog/v0-6-9"');
+    // Modified by Netie AI, 2026: brand rebranded to FreeBuild; BRAND_LINKS.site
+    // is now "" (openship.io was never this fork's site), so the changelog
+    // link is relative.
+    expect(html).toContain("Updated to FreeBuild 0.6.9");
+    expect(html).toContain('href="/changelog/v0-6-9"');
     expect(html).not.toContain("github.com/oblien/openship");
   });
 });

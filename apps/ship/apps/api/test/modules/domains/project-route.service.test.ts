@@ -111,21 +111,24 @@ beforeEach(() => {
   deregisterManagedEdge.mockReset().mockResolvedValue({ failures: [] });
 });
 
+// Modified by Netie AI, 2026: FreeBuild's default ports are 3030 (api) / 3031
+// (dashboard), not Openship's upstream 4000/3001 — see
+// packages/core/src/runtime-config.ts / PRODUCT_ROLES.md.
 describe("shouldRefuseLoopbackRoute", () => {
   it("refuses a tenant project's public route to the dashboard port on loopback", () => {
-    expect(shouldRefuseLoopbackRoute("127.0.0.1", 3001, { isSelfApp: false })).toBe(true);
+    expect(shouldRefuseLoopbackRoute("127.0.0.1", 3031, { isSelfApp: false })).toBe(true);
   });
 
   it("refuses a tenant project's public route to the admin API port on loopback", () => {
-    expect(shouldRefuseLoopbackRoute("127.0.0.1", 4000, { isSelfApp: false })).toBe(true);
+    expect(shouldRefuseLoopbackRoute("127.0.0.1", 3030, { isSelfApp: false })).toBe(true);
   });
 
   it("allows the self-app's own public route to the dashboard port on loopback", () => {
-    expect(shouldRefuseLoopbackRoute("127.0.0.1", 3001, { isSelfApp: true })).toBe(false);
+    expect(shouldRefuseLoopbackRoute("127.0.0.1", 3031, { isSelfApp: true })).toBe(false);
   });
 
   it("does not exempt the API or edge management port even for the self-app", () => {
-    expect(shouldRefuseLoopbackRoute("127.0.0.1", 4000, { isSelfApp: true })).toBe(true);
+    expect(shouldRefuseLoopbackRoute("127.0.0.1", 3030, { isSelfApp: true })).toBe(true);
     expect(shouldRefuseLoopbackRoute("127.0.0.1", 9145, { isSelfApp: true })).toBe(true);
   });
 
@@ -134,7 +137,7 @@ describe("shouldRefuseLoopbackRoute", () => {
   });
 
   it("allows any port on a non-loopback host (container IP)", () => {
-    expect(shouldRefuseLoopbackRoute("172.17.0.5", 3001, { isSelfApp: false })).toBe(false);
+    expect(shouldRefuseLoopbackRoute("172.17.0.5", 3031, { isSelfApp: false })).toBe(false);
   });
 });
 
@@ -197,7 +200,7 @@ describe("reapplyProjectLiveRoutes self-app loopback route (issue #129)", () => 
   const project = {
     id: "proj-openship",
     slug: "openship",
-    port: 3001,
+    port: 3031,
     cloudWorkspaceId: null,
     activeDeploymentId: "dep-1",
     organizationId: "org-1",
@@ -217,7 +220,7 @@ describe("reapplyProjectLiveRoutes self-app loopback route (issue #129)", () => 
         hostname: "panel.example.com",
         isPrimary: true,
         serviceId: null,
-        targetPort: 3001,
+        targetPort: 3031,
         targetPath: null,
         domainType: "free",
       },
@@ -246,10 +249,10 @@ describe("reapplyProjectLiveRoutes self-app loopback route (issue #129)", () => 
     expect(reconcile.mock.calls[0][1].registers).toEqual([
       {
         hostname: "panel.example.com",
-        targetUrl: "http://127.0.0.1:3001",
+        targetUrl: "http://127.0.0.1:3031",
         isCustomDomain: false,
         observedLoopbackPublishes: [
-          { serviceId: null, containerId: "dep-1", containerPort: 3001, hostPort: 3001 },
+          { serviceId: null, containerId: "dep-1", containerPort: 3031, hostPort: 3031 },
         ],
       },
     ]);
@@ -665,11 +668,12 @@ describe("container-served static project routes (#879)", () => {
     },
   );
 
+  // Modified by Netie AI, 2026: FreeBuild's reserved dashboard port is 3031, not 3001.
   it("retains the reserved host-port guard", async () => {
     info.mockResolvedValue({
       containerId,
       status: "running",
-      hostPortByContainerPort: { 80: 3001 },
+      hostPortByContainerPort: { 80: 3031 },
     });
     const onWarning = vi.fn();
     await reapplyProjectLiveRoutes(project, [], { onWarning });

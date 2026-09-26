@@ -414,8 +414,8 @@ async function resolveCloudPlatformForOrg(organizationId?: string, docker?: Depl
     const linkedUserId = await resolveOrgCloudUserId(organizationId).catch(() => null);
     throw new Error(
       linkedUserId
-        ? "Openship Cloud is unreachable right now — couldn't validate the linked session. Check the connection in Settings and try again."
-        : "No member of this organization has linked Openship Cloud. Connect via Settings.",
+        ? "The hosted cloud service is unreachable right now — couldn't validate the linked session. Check the connection in Settings and try again."
+        : "No member of this organization has linked the hosted cloud service. Connect via Settings.",
     );
   }
 

@@ -796,7 +796,7 @@ export async function collectProjectManifest(
       );
       if (linkUserId === null) {
         console.warn(
-          `[cleanup] cloud workspace ${project.cloudWorkspaceId} skipped — org ${project.organizationId} has no Openship Cloud link (${safeErrorMessage(err)}); workspace may remain on Oblien. Re-link to clean it up.`,
+          `[cleanup] cloud workspace ${project.cloudWorkspaceId} skipped — org ${project.organizationId} has no the hosted cloud service link (${safeErrorMessage(err)}); workspace may remain on Oblien. Re-link to clean it up.`,
         );
       } else {
         resources.push({

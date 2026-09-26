@@ -325,7 +325,9 @@ export function shouldRefuseLoopbackRoute(
   port: number,
   opts: ReapplyProjectLiveRoutesOptions = {},
 ): boolean {
-  const ownDashboard = opts.isSelfApp && port === (env.OPENSHIP_DASHBOARD_PORT || 3001);
+  // Modified by Netie AI, 2026: fallback literal matches FreeBuild's default
+  // dashboard port (was 3001) — see packages/core/src/runtime-config.ts.
+  const ownDashboard = opts.isSelfApp && port === (env.OPENSHIP_DASHBOARD_PORT || 3031);
   return isLoopbackHost(host) && isReservedLoopbackPort(port) && !ownDashboard;
 }
 

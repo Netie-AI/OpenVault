@@ -1,261 +1,75 @@
-<h1 align="center">Openship</h1>
+# FreeBuild
 
-<p align="center">
-  Open-source, self-hostable deployment platform with built-in CI/CD.<br>
-  Point it at a repo — it builds, ships, routes, and TLS-terminates your app. Drive it from a desktop app, web dashboard, or CLI.
-</p>
+FreeBuild is Netie's self-hosted deploy and host engine. Point it at a git
+repository and it builds, deploys, routes, and TLS-terminates the app —
+including the domain routing, container runtime, backups, and a dashboard to
+run all of it from.
 
-<p align="center">
-  <a href="https://trendshift.io/repositories/38817?utm_source=repository-badge&utm_medium=badge&utm_campaign=badge-repository-38817">
-    <img src="https://trendshift.io/api/badge/repositories/38817" alt="Trendshift" width="250" height="55" />
-  </a>
-</p>
+FreeBuild runs under [OpenVault](../../README.md), Netie's local control
+plane. It does not run standalone against Netie's own infrastructure, and it
+does not connect to any hosted service run by this project's upstream.
 
-<p align="center">
-  <a href="https://www.npmjs.com/package/openship"><img src="https://img.shields.io/npm/v/openship?color=0b7285&label=npm" alt="npm version" /></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="License" /></a>
-  <a href="https://openship.io"><img src="https://img.shields.io/badge/website-openship.io-0b7285" alt="Website" /></a>
-</p>
+## What this edition is
 
-<p align="center">
-  <a href="#quick-start">Quick Start</a> ·
-  <a href="#how-it-works">How It Works</a> ·
-  <a href="#interfaces">Interfaces</a> ·
-  <a href="https://openship.io/docs">Docs</a> ·
-  <a href="CONTRIBUTING.md">Contributing</a>
-</p>
+This is the **self-hosted-only** edition. Concretely:
 
-<p align="center">
-  <a href="README.md"><img src="https://img.shields.io/badge/lang-English-0b7285" alt="English" /></a>
-  <a href="docs/i18n/README.ar.md"><img src="https://img.shields.io/badge/lang-العربية-555" alt="العربية" /></a>
-  <a href="docs/i18n/README.zh.md"><img src="https://img.shields.io/badge/lang-简体中文-555" alt="简体中文" /></a>
-  <a href="docs/i18n/README.es.md"><img src="https://img.shields.io/badge/lang-Español-555" alt="Español" /></a>
-  <a href="docs/i18n/README.fr.md"><img src="https://img.shields.io/badge/lang-Français-555" alt="Français" /></a>
-  <a href="docs/i18n/README.ja.md"><img src="https://img.shields.io/badge/lang-日本語-555" alt="日本語" /></a>
-  <a href="docs/i18n/README.pt.md"><img src="https://img.shields.io/badge/lang-Português-555" alt="Português" /></a>
-  <a href="docs/i18n/README.de.md"><img src="https://img.shields.io/badge/lang-Deutsch-555" alt="Deutsch" /></a>
-  <a href="docs/i18n/README.tr.md"><img src="https://img.shields.io/badge/lang-Türkçe-555" alt="Türkçe" /></a>
-  <a href="docs/i18n/README.ko.md"><img src="https://img.shields.io/badge/lang-한국어-555" alt="한국어" /></a>
-</p>
+- There is no "connect this instance to the cloud" option, no cloud-only
+  billing, and no cloud-managed GitHub App. Every one of those routes answers
+  HTTP 501 with a machine-readable `hosted_cloud_disabled` code instead of
+  silently failing or phoning the upstream vendor.
+- Provider API keys (Cloudflare, and any future single-secret provider this
+  catalog gains) are never stored in FreeBuild's own database. They live in
+  OpenVault's KeyVault; FreeBuild reads them from there at the moment it needs
+  them, caches the plaintext in memory for at most 60 seconds, and never
+  writes it to disk or a log. A route that would otherwise save one of those
+  keys into FreeBuild's own store answers HTTP 501 with
+  `keys_managed_by_openvault` and points the operator at
+  `http://127.0.0.1:3010/keys`.
+- Telemetry that would phone the upstream project's vendor is off.
 
-<p align="center">
-  <img src="docs/screenshots/screen.png" alt="Openship dashboard" width="800" />
-</p>
+What is **not** disabled: everything else — building and deploying your own
+apps, domains and TLS, backups, the server terminal, Docker migration, the
+one-click app catalog, and so on. Those run exactly as the upstream project
+built them.
 
----
+## Run it
 
-## Quick Start
-
-There's one decision to make first: **how you run Openship itself** (the control plane). Everything else is the same afterwards.
-
-| If you're… | Run Openship as | Where your apps run |
-|---|---|---|
-| **Solo, one machine, no ops** | **Desktop app** | A server you connect over SSH, or Openship Cloud |
-| **A team — or you want push-to-deploy / to host apps on your own box** | **Self-hosted server** (`openship up`) | On that box (Compose mode) — or out to another server / Cloud (bare mode) |
-| **Not interested in running anything** | **Openship Cloud** | Managed sandboxes, zero setup |
-
-> [!TIP]
-> **Solo? Use the desktop app.** It runs Openship's control plane on your own machine *only while the app is open* — nothing is left running on an always-on server, nothing is exposed publicly. You only need an always-on server install once you want **push-to-deploy (CI/CD)**, **team access**, or to **host apps on that box** — the things that need a public, always-on endpoint.
-
-### Solo — desktop app
-
-The control plane runs locally and drives your servers over SSH. No login, no terminal, no public surface — download, open, done:
-
-| Platform | Download |
-|---|---|
-| **macOS** (Apple Silicon) | [Openship-arm64.dmg](https://github.com/oblien/openship/releases/latest/download/Openship-arm64.dmg) |
-| **macOS** (Intel) | [Openship-x64.dmg](https://github.com/oblien/openship/releases/latest/download/Openship-x64.dmg) |
-| **Windows** | [Openship-win32-x64.zip](https://github.com/oblien/openship/releases/latest/download/Openship-win32-x64.zip) |
-| **Linux** | [Openship.AppImage](https://github.com/oblien/openship/releases/latest/download/Openship.AppImage) |
-
-Linux: `chmod +x Openship.AppImage && ./Openship.AppImage`. Already have the CLI? `openship install` fetches and launches it. Links always point at the newest release.
-
-From the desktop app you connect a server (SSH) or Openship Cloud and deploy to it — the app itself doesn't host public apps on your laptop.
-
-### Team / always-on — self-hosted server
-
-Install the CLI (it bundles the API + dashboard), then run **`openship`** — an interactive wizard creates the first admin, wires your domain, and installs Openship as a boot service. Run it again anytime to manage the instance.
+FreeBuild is one workspace: an API (Hono, Node) and a dashboard (Next.js).
 
 ```bash
-curl -fsSL https://get.openship.io | sh          # install  (or: npm i -g openship — needs Node 22+)
-openship                                          # guided setup, then control panel
+npm install
+npm run build
+npm start
 ```
 
-The install script brings its own Node when your system one is older than 22; a package-manager
-install runs on the Node you already have.
+The API listens on `127.0.0.1:3030` by default; the dashboard on
+`127.0.0.1:3031`. Both bind to loopback only unless you set
+`OPENSHIP_API_HOST` / the dashboard's `HOSTNAME` to something else. See
+`.env.example` for the full list of environment variables — names kept from
+upstream (`OPENSHIP_*`, `CLOUD_MODE`, ...) are documented there; `CLOUD_MODE`
+and `DEPLOY_MODE=cloud` are accepted but always forced off in this edition.
 
-For CI / headless boxes, skip the wizard and drive `openship up` directly:
+Storage needs Postgres by default (`DATABASE_URL`); leave it unset for an
+embedded PGlite database during development.
 
-```bash
-openship up                                       # install + start as a background service (boots + auto-restarts)
-openship up --public-url https://openship.example.com   # + serve the dashboard on your domain (edge + TLS handled)
-```
+## Keys
 
-**`openship up` picks how it runs for you:**
+Provider API keys are managed by OpenVault, not by FreeBuild. Add them at
+OpenVault's KeyVault (`http://127.0.0.1:3010/keys` by default, or wherever
+`OPENVAULT_URL` points) and FreeBuild picks them up automatically — nothing to
+configure here. See `packages/core/src/netie/keyvault.ts` for the client and
+the exact contract it expects from OpenVault.
 
-- **On Linux with Docker → Compose mode** (the default). Brings up the full stack — Postgres, Redis, API, dashboard, and a containerized **OpenResty edge on :80/:443** — from published images. This is the flavor that **hosts your deployed apps on the same box**, with automatic domains + Let's Encrypt TLS. Force it with `--compose`.
-- **Everywhere else → bare mode** (macOS, Windows, or Linux without Docker). A single lightweight process with an embedded database — an always-on control plane that **deploys apps out to a server (SSH) or Cloud**, like the desktop app but always on and login-required. Force it with `--bare`.
+Not every credential FreeBuild handles is a "provider API key" in that sense.
+Deployment environment variables for *your own* deployed apps, your login
+session, a registry username paired with its password, SSH host keys needed
+on disk, and outbound SMTP relay credentials all stay exactly where upstream
+put them — moving those into a keys vault meant for provider API tokens would
+not be a clean fit. See the fork report for the file-by-file list.
 
-A self-hosted instance **always requires login** (the admin you create in setup). `openship open` opens the dashboard · `openship stop` stops it · `openship update` upgrades · `openship up --foreground` runs attached.
+## Based on Openship
 
-> **Preview an unreleased build (dev).** To run the CLI built straight from source — a branch, tag, or `main` ahead of the next release — install the from-source build:
->
-> ```bash
-> curl -fsSL https://get.openship.io/dev | sh                  # main (default)
-> curl -fsSL https://get.openship.io/dev | OPENSHIP_REF=dev sh  # a branch/tag (var goes on sh, not curl)
-> openship-dev                                     # same CLI, built from source
-> openship-dev update                              # pull latest source + rebuild (no release needed)
-> ```
->
-> It installs as a **separate `openship-dev`** command with its own isolated home (`~/.openship-dev`) and boot service, so your production `openship` and its data are never touched. Needs Bun + git; it's an unverified dev build (the dashboard compile wants real RAM/CPU) — not a production path.
-
-**Deploy a project:**
-
-```bash
-cd your-project
-openship init            # link this directory to a project
-openship deploy
-```
-
-Full server guide + complete CLI reference: **[openship.io/docs](https://openship.io/docs)**.
-
-<details>
-<summary>Shell completion (bash/zsh/fish)</summary>
-
-Two ways to enable Tab-completion for `openship`:
-
-| | Setup | Trade-off |
-|---|---|---|
-| **Static file** (recommended) | `openship completion <shell> > <path>` | Instant shell startup. Regenerate after upgrading to pick up newly added commands. |
-| **Live-sourced** | add `source <(openship completion <shell>)` to your shell config | Always reflects the currently installed version. Adds a small delay to every new shell session. |
-
-**Static file:**
-```bash
-openship completion bash > /etc/bash_completion.d/openship
-openship completion zsh  > ~/.zsh/completions/_openship
-openship completion fish > ~/.config/fish/completions/openship.fish
-```
-Open a new terminal — done.
-
-**Live-sourced** (zsh example):
-```bash
-echo 'source <(openship completion zsh)' >> ~/.zshrc
-```
-
-</details>
-
-<details>
-<summary>Self-host with raw Docker Compose (no CLI)</summary>
-
-The self-hosted stack lives in **`docker/docker-compose.yml`** and **pulls** published images from GitHub Container Registry (`ghcr.io/oblien/*`) — no build tooling, no monorepo compile. Run it from the repo root:
-
-```bash
-git clone https://github.com/oblien/openship.git && cd openship
-cp .env.example .env          # then edit
-docker compose --env-file .env -f docker/docker-compose.yml up -d
-```
-
-The stack is **postgres + redis + api + dashboard + edge**. The `edge` is OpenResty on **:80/:443** as a container (`network_mode: host`) — routing + Let's Encrypt, no bare host install. **Linux only** (host networking); on mac/win use `openship up` (bare). The `api` container mounts the host Docker socket so the control plane can build + run your apps as host containers — it's host-privileged through the socket, so run it only on a trusted host.
-
-**Upgrade:** pin `OPENSHIP_VERSION` in `.env` for reproducible pulls, then `docker compose --env-file .env -f docker/docker-compose.yml pull && … up -d`. `openship update` only reconciles a stack the CLI installed, and `openship up` would *adopt* this one — don't reach for either here. **Build from source instead:** add `-f docker/docker-compose.build.yml … up -d --build`.
-
-**Host operations** (`:80`/`:443` takeover, the mail engine, host terminal/port scans) need the container→host SSH channel, which `openship up` provisions and this path does not — the five manual steps are in `.env.example` under *Host operations from the container*, and the failure it produces is [Troubleshooting → Host control channel](https://openship.io/docs/troubleshooting/host-channel). Everything else, including deploys, works without it.
-
-> The **root** `docker-compose.yml` is a different file: it's the SaaS / from-source **control plane** (builds from source, ships the marketing site, no edge/socket). It does **not** self-host your apps — use `docker/docker-compose.yml` above or `openship up`.
-
-</details>
-
----
-
-## How It Works
-
-Point Openship at a source — a **GitHub repo**, a **local folder**, or a **prebuilt artifact** — and it runs one pipeline end to end:
-
-1. **Detect.** It reads your `package.json`, framework config, lockfiles, and any `docker-compose.yml` / `openship.json` to work out the stack, package manager, build/start commands, and port. Zero config files required; an `openship.json` overrides the guesses if you want control.
-2. **Build.** On the target server or locally on the orchestrator, into a Docker image or a bare release. The resolved config is frozen into a snapshot, so redeploys and rollbacks re-run *exactly* what shipped.
-3. **Run.** As a container (published on loopback only — never a public port) or a supervised host process.
-4. **Route + secure.** The OpenResty edge writes a reverse-proxy vhost to your domain and issues a Let's Encrypt certificate (HTTP-01). Because routing and TLS happen *after* the app is up, a DNS or cert hiccup surfaces as "action required" — it never fails the deploy or takes your app down.
-5. **Push-to-deploy.** A GitHub webhook re-runs the pipeline on every push to the tracked branch — rebuilding only the services a monorepo push actually touched.
-
-Databases, domains, SSL, CDN, mail, and backups are managed from the same place. (Push-to-deploy and public domains need an always-on server or Cloud — a desktop/loopback instance has no public endpoint to receive webhooks.)
-
----
-
-## Interfaces
-
-Three ways to drive the same backend:
-
-- **Desktop app** — full GUI, real-time logs, one-click everything. Best for solo.
-- **Web dashboard** — the same UI in the browser, built for teams.
-- **CLI** — scriptable and CI-friendly; also how you install and manage a self-hosted instance.
-
-An **MCP** endpoint (for AI agents) and a **REST API** round it out for automation. Only routes that opt in are exposed as MCP tools, every call re-checks your permissions, and credential/token routes can never become tools. Full reference at [openship.io/docs](https://openship.io/docs).
-
-> [!NOTE]
-> The docs are actively being filled out. If something's missing or unclear, [contributions](CONTRIBUTING.md) are hugely welcome.
-
----
-
-## Features
-
-| | |
-|---|---|
-| **Built-in CI/CD** | Push-to-deploy, preview environments, staging/prod flows, rollbacks |
-| **Any stack** | Node, Python, Go, Rust, PHP, Ruby, Java, .NET, Docker, monorepos |
-| **Full backend** | Postgres, MySQL, MongoDB, Redis, workers, WebSockets, storage |
-| **Domains & SSL** | Automatic Let's Encrypt, wildcards, unlimited domains, auto-renewal |
-| **CDN** | Edge caching, HTTP/3, Brotli compression, instant purge |
-| **Mail server** | Built-in SMTP with DKIM/SPF/DMARC — no Mailgun or SES needed |
-| **Backups** | Scheduled, databases + volumes, one-click restore, export anytime |
-| **Real-time monitoring** | Live build logs, container metrics, visitor geography and per-code response mix — [~1.4 µs per request, zero DB writes per request](docs/monitoring.md) |
-| **Scaling** | Auto-scaling on cloud, multi-node ready on self-hosted |
-| **Portability** | Standard Docker containers — move between providers freely |
-| **Docker Compose** | Deploy existing compose files as-is |
-
----
-
-## Deploy Anywhere
-
-- **Openship Cloud** — managed, auto-scaling, zero setup
-- **Any VPS** — Hetzner, DigitalOcean, Linode, OVH, and the rest
-- **Dedicated servers** — bare metal, colo, homelab
-- **Multi-server** — spread workloads across machines
-
-Same interface regardless of where you deploy.
-
----
-
-## Status
-
-Production-ready core, actively developed. Self-hosting is **free** (no billing).
-
-**Coming next:** multi-node clusters, load-balancing UI, private networking, advanced monitoring, and visual CI/CD pipelines.
-
----
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md).
-
----
-
-## Security
-
-Found a vulnerability? We welcome your report — please disclose it **privately**,
-never in a public issue, PR, or discussion.
-
-- **Report it here (preferred):** [Report a vulnerability](https://github.com/oblien/openship/security/advisories/new) — a private GitHub advisory, visible only to you and the maintainers.
-- Scope, what to include, and our response/disclosure process: [SECURITY.md](SECURITY.md).
-
-Good-faith security research is **authorized** under our
-[safe-harbor policy](SECURITY.md#safe-harbor), and we're happy to credit valid
-first reports.
-
-## License
-
-Openship-authored code is licensed under the [Apache License 2.0](LICENSE).
-Bundled third-party components retain their own licenses. In particular,
-the [iRedMail engine](apps/email/engine/LICENSE) is GPL-licensed and is included
-in several control-plane distributions even when mail setup is not used.
-See the [component and packaging inventory](docs/licensing.md) for the recorded
-license boundaries and outstanding upstream notice review.
+FreeBuild is a fork of [Openship](https://github.com/oblien/openship) by
+Oblien, licensed Apache-2.0. See `NOTICE` and `THIRD_PARTY_NOTICES.md` at the
+repository root for the full upstream credit and the list of files Netie
+modified.

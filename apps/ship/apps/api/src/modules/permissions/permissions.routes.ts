@@ -6,7 +6,7 @@ const r = secureRouter(new Hono(), { module: "permissions", basePath: "/api/perm
 const shared = { authorizationHandledByOperation: true, auditHandledByOperation: true } as const;
 r.get("/workspaces", {
   tag: "permissions:read", ...shared,
-   mcp: { description: "List the Openship workspaces (organizations/workgroups) available to this credential, including empty workspaces. Returns each name, organizationId, slug and role, plus currentOrganizationId, boundOrganizationId, canSwitchOrganization and readOnly. Call before creating an app or Compose project; pass the chosen organizationId as a top-level tool argument on every call. Bound credentials can only list and target their own workspace.",
+   mcp: { description: "List the FreeBuild workspaces (organizations/workgroups) available to this credential, including empty workspaces. Returns each name, organizationId, slug and role, plus currentOrganizationId, boundOrganizationId, canSwitchOrganization and readOnly. Call before creating an app or Compose project; pass the chosen organizationId as a top-level tool argument on every call. Bound credentials can only list and target their own workspace.",
  },
 }, ctrl.listWorkspaces);
 r.get("/org-meta", { tag: "permissions:read", ...shared, mcp: { description: "Read this workspace’s identity, team status and member count." } }, ctrl.orgMeta);

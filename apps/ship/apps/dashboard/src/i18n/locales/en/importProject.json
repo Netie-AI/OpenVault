@@ -61,7 +61,7 @@
       "title": "Health checks",
       "subtitle": "Off — the deploy finishes as soon as your app is running",
       "subtitleOn": "On — the deploy waits for your app before going live",
-      "description": "Openship doesn't wait for your app after it starts, so a slow boot never delays or fails a deploy. Once it's live, the port is checked anyway and reported without blocking anything. Turn these on only if you want the deploy itself to refuse to go green.",
+      "description": "FreeBuild doesn't wait for your app after it starts, so a slow boot never delays or fails a deploy. Once it's live, the port is checked anyway and reported without blocking anything. Turn these on only if you want the deploy itself to refuse to go green.",
       "probeLabel": "Wait for the app to answer",
       "probeDesc": "After the container starts, dial the app's port and wait for it to accept a connection.",
       "pathLabel": "HTTP path",
@@ -217,7 +217,7 @@
       "statefulWarnBold": "not carried across rebuilds",
       "statefulWarnPart2": ". Back up and restore data explicitly before replacing the workspace.",
       "volumeHint": "Named volume or host path → container path.",
-      "volumeCloudNote": "Persistent volume mounts are not supported on Openship Cloud. Choose a server for workloads that require volumes.",
+      "volumeCloudNote": "Persistent volume mounts are not supported on the hosted cloud service. Choose a server for workloads that require volumes.",
       "sourcePlaceholder": "Source",
       "containerPathPlaceholder": "Container path",
       "readOnlyMount": "Read-only mount",
@@ -298,7 +298,7 @@
     "deploymentModeDesc": "{mode} · Switch between per-app runtimes and single-app handling."
   },
   "deploymentProcessing": {
-    "targetOpenshipCloud": "Openship Cloud",
+    "targetOpenshipCloud": "The hosted cloud service",
     "targetServerNamed": "Server · {name}",
     "targetServer": "Server",
     "targetLocal": "Local machine",
@@ -310,9 +310,9 @@
       "port": "Port",
       "process": "Process",
       "unitDescription": "Unit Description",
-      "openshipDeployment": "Openship Deployment",
+      "openshipDeployment": "FreeBuild Deployment",
       "sites": {
-        "lead": "{count} site(s) are currently served by the existing proxy. Migrating imports them into Openship before it takes over ports 80/443:",
+        "lead": "{count} site(s) are currently served by the existing proxy. Migrating imports them into FreeBuild before it takes over ports 80/443:",
         "tlsBadge": "TLS",
         "staticLabel": "static:",
         "warningsTitle": "Couldn't be migrated automatically — re-add these manually:"
@@ -442,7 +442,7 @@
     "title": "Some of this repo's openship.json was not applied",
     "description": "The fields listed below were skipped; the rest of the file was applied. The deploy will still run.",
     "titleWholeFile": "This repo's openship.json was ignored",
-    "descriptionWholeFile": "None of it was applied. The deploy will still run, using the settings Openship detected.",
+    "descriptionWholeFile": "None of it was applied. The deploy will still run, using the settings FreeBuild detected.",
     "refused": "Refused",
     "unrecognized": "Not recognized",
     "hint": "Run `openship config validate` in the repo to check the file before your next deploy."

@@ -24,11 +24,13 @@ import { blankComments as code } from "./source-scan.fixtures";
  */
 const REPO = fileURLToPath(new URL("../../../..", import.meta.url));
 
+// Modified by Netie AI, 2026: "apps/cli/src" removed — apps/cli is not part of
+// this fork (see PRODUCT_ROLES.md). Scope over the roots this fork ships is
+// unchanged.
 const ROOTS = [
   "packages/adapters/src",
   "packages/core/src",
   "apps/api/src",
-  "apps/cli/src",
   "apps/dashboard/src",
 ] as const;
 
@@ -158,10 +160,10 @@ const RULES: readonly OwnershipRule[] = [
       // Re-enables a unit IT disabled during an edge takeover, on rollback. The unit came
       // from a systemd scan, so systemd is a fact about that unit and not an assumption.
       "packages/adapters/src/system/proxy/takeover-journal.ts",
-      // Installs Openship's OWN service on the machine the CLI runs on: a user-level unit
-      // plus `loginctl enable-linger`, which is not a shape `envOps` speaks. It already
-      // takes the systemd/launchd decision from the resolver rather than probing.
-      "apps/cli/src/lib/service.ts",
+      // Modified by Netie AI, 2026: "apps/cli/src/lib/service.ts" (installed Openship's
+      // own service on the machine the CLI ran on) removed — apps/cli is not part of
+      // this fork (see PRODUCT_ROLES.md), so that owner and the pattern it used to
+      // author no longer exist anywhere in scope.
     ],
     why:
       "Whether a service survives a reboot — and what command says so — is per-init " +

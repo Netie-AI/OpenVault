@@ -57,7 +57,7 @@ export class MigrateToCloudNotConnectedError extends Error {
   readonly code = cloudRequiredCode("migrate-to-cloud");
   constructor() {
     super(
-      "This instance is not connected to Openship Cloud. Connect your cloud account in Settings first.",
+      "This instance is not connected to the hosted cloud service. Connect your cloud account in Settings first.",
     );
     this.name = "MigrateToCloudNotConnectedError";
   }
@@ -67,7 +67,7 @@ export class MigrateToCloudTargetNotEmptyError extends Error {
   readonly code = "MIGRATE_TO_CLOUD_TARGET_NOT_EMPTY" as const;
   constructor(public readonly projectCount: number) {
     super(
-      `Your Openship Cloud organization already has ${projectCount} project(s). Set allowNonEmptyTarget=true to proceed.`,
+      `Your the hosted cloud service organization already has ${projectCount} project(s). Set allowNonEmptyTarget=true to proceed.`,
     );
     this.name = "MigrateToCloudTargetNotEmptyError";
   }
@@ -138,7 +138,7 @@ export async function migrateInstanceToCloud(
         }
         // cloudClient maps a missing session to this exact string — translate
         // to a typed error so the controller can return a clean 412.
-        if (result.error === "Not connected to Openship Cloud") {
+        if (result.error === "Not connected to the hosted cloud service") {
           throw new MigrateToCloudNotConnectedError();
         }
         throw new MigrateToCloudFailedError(result.error);

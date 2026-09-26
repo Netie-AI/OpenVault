@@ -21,7 +21,7 @@ r.get("/:id", { tag: "backup_destination:read", mcp: { description: "Read one ba
 r.get("/:id/usage", { tag: "backup_destination:read", mcp: { description: "List projects, services and policies using this backup destination so changes or deletion can be reviewed." } }, ctrl.getUsage);
 r.get("/:id/runs", { tag: "backup_destination:read", mcp: { description: "List backups stored at this destination, newest first. Use query.limit and query.before to continue history." }, query: ListBackupDestinationRunsSchema }, ctrl.listRuns);
 r.patch("/:id", { tag: "backup_destination:write", body: UpdateBackupDestinationSchema, auditHandledByOperation: true, mcp: { description: "Update a backup destination’s settings. Omitted credentials are preserved. Destination address changes are refused while dependent backups or cluster databases require the original location." } }, ctrl.update);
-r.delete("/:id", { tag: "backup_destination:admin", auditHandledByOperation: true, mcp: { description: "Remove an unused backup destination from Openship. Check usage first; dependencies can block removal. This does not erase backup objects from external storage." } }, ctrl.remove);
+r.delete("/:id", { tag: "backup_destination:admin", auditHandledByOperation: true, mcp: { description: "Remove an unused backup destination from FreeBuild. Check usage first; dependencies can block removal. This does not erase backup objects from external storage." } }, ctrl.remove);
 r.post("/:id/preflight", { tag: "backup_destination:write", auditHandledByOperation: true, mcp: { description: "Test this saved backup destination’s connectivity and required access, returning the actual checks and errors." } }, ctrl.preflight);
 
 export const backupDestinationRoutes = r.hono;

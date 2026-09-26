@@ -173,7 +173,7 @@ export function ExportPanel({
               imports without a password.
             </p>
             <p className="text-xs leading-relaxed text-muted-foreground">
-              The destination needs the same servers or OpenShip Cloud account to reconnect to
+              The destination needs the same servers or the hosted cloud service account to reconnect to
               existing workloads. Their details will be shown after download.
             </p>
             <p aria-live="polite" className="text-xs text-muted-foreground">
@@ -315,7 +315,7 @@ export function ExportPanel({
       {cloudProjects.length > 0 && (
         <p className="rounded-lg border border-warning-border bg-warning-bg p-3 text-xs leading-relaxed text-warning">
           Cloud projects will not work until the destination workspace is connected to the same
-          Openship Cloud account. This export preserves cloud workspace references; it cannot
+          the hosted cloud service account. This export preserves cloud workspace references; it cannot
           transfer a cloud server between accounts.
         </p>
       )}

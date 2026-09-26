@@ -61,7 +61,7 @@ const BUG_REPORT =
 const PROMPTS: PromptDef[] = [
   {
     name: "openship-overview",
-    title: "Openship: how to drive it via MCP",
+    title: "FreeBuild: how to drive it via MCP",
     description:
       "Orientation: the main tool groups, the entry points for each flow, and how permission scoping (incl. per-repo GitHub grants) affects what you can see and do.",
     build: (_args, ref) =>
@@ -199,7 +199,7 @@ const PROMPTS: PromptDef[] = [
   {
     name: "migrate-docker-project",
     title: "Migrate Docker workloads with verified cutover",
-    description: "Discover/adopt existing containers or move an Openship project, preserving environment/data and explicitly handling partial transfers and cutover.",
+    description: "Discover/adopt existing containers or move a FreeBuild project, preserving environment/data and explicitly handling partial transfers and cutover.",
     localOnly: true,
     build: (_args, ref) => [
       `1. Discover servers, then ${ref("POST", "/api/migration/scan")} on the source. Select container IDs from that scan to distinguish services with the same name in different Compose groups. Secrets are masked; the server rediscovers real source values. Never submit masked values as replacement secrets.`,

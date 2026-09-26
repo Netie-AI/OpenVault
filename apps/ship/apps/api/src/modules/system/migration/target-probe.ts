@@ -25,7 +25,7 @@ export class TargetIsCloudError extends Error {
   readonly code = "TARGET_IS_CLOUD" as const;
   constructor(url: string) {
     super(
-      `Refusing to migrate: ${url} is a multi-tenant Openship Cloud instance, not a self-hosted box. ` +
+      `Refusing to migrate: ${url} is a multi-tenant the hosted cloud service instance, not a self-hosted box. ` +
         `A whole-instance import would wipe every tenant.`,
     );
     this.name = "TargetIsCloudError";

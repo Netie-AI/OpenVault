@@ -729,7 +729,7 @@ export async function ingestSubgraphHandler(c: Context) {
       if (nameTaken) {
         return c.json(
           {
-            error: "A project with this name already exists on Openship Cloud. Rename this project and retry.",
+            error: "A project with this name already exists on the hosted cloud service. Rename this project and retry.",
             code: "SLUG_TAKEN",
             table: err.table,
           },

@@ -68,7 +68,7 @@ export async function ensureEdgeChallengeReady(
     const result = await routing.serveEdgeChallenge({ host, ...(tokens.length ? { tokens } : {}) });
     if (!result.served) {
       opts.onLog?.(
-        `Note: ${host} can't answer Openship Cloud's target check yet — ${result.reason ?? "unknown reason"}\n`,
+        `Note: ${host} can't answer the hosted cloud service's target check yet — ${result.reason ?? "unknown reason"}\n`,
       );
       return { ready: false, host, reason: result.reason };
     }

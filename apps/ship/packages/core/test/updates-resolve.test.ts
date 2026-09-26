@@ -46,11 +46,13 @@ describe("changelog release details", () => {
     );
   });
 
+  // Modified by Netie AI, 2026: BRAND_LINKS.site is now "" (openship.io was
+  // never this fork's site), so these are relative paths off nothing.
   it("links to the website changelog and its version route, never GitHub", () => {
-    expect(changelogUrl()).toBe("https://openship.io/changelog");
-    expect(changelogUrl("v0.6.9")).toBe("https://openship.io/changelog/v0-6-9");
-    expect(changelogUrl("0.7.0-dev.1")).toBe("https://openship.io/changelog");
-    expect(changelogUrl("not-a-version")).toBe("https://openship.io/changelog");
+    expect(changelogUrl()).toBe("/changelog");
+    expect(changelogUrl("v0.6.9")).toBe("/changelog/v0-6-9");
+    expect(changelogUrl("0.7.0-dev.1")).toBe("/changelog");
+    expect(changelogUrl("not-a-version")).toBe("/changelog");
   });
 });
 

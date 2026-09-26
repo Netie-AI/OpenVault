@@ -1,4 +1,14 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
+// Modified by Netie AI, 2026: run this generator script itself under Node/tsx
+// (it has no Bun-specific API calls). NOTE — the artifact it PRODUCES still
+// targets the Bun runtime at the destination server (raw TS via `bun run
+// src/index.ts`, a `bun.lock`, `bun install`). That is a real, evidenced Bun
+// dependency of this one alternate "source release" packaging mode; it is
+// NOT required to build or run FreeBuild itself — `npm run build` (tsup) +
+// `node dist/index.js` is the Node-native path this fork ships and tests.
+// Redesigning this generator to emit a Node-runnable release (pre-built
+// dist/index.js instead of raw src/, no bun.lock) was out of scope for this
+// pass; left as a known follow-up rather than silently faking it.
 /**
  * Build a single, self-contained `apps/api/release-dist/` that ships
  * both the Openship API (raw TS, bun runs it directly) and the

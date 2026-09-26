@@ -95,7 +95,8 @@ describe("ServerForm variants", () => {
 
     const html = render({ server });
     expect(placeholders(html)).not.toContain("~/.ssh/id_rsa");
-    expect(text(html)).toContain("Absolute path to the private key on the machine running Openship.");
+    // Modified by Netie AI, 2026: brand rebranded to FreeBuild.
+    expect(text(html)).toContain("Absolute path to the private key on the machine running FreeBuild.");
   });
 
   /**

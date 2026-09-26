@@ -303,7 +303,16 @@ setupWebSocket(app);
   app.route("/api/services/terminal", serviceTerminalRoutes);
 }
 
-/* ---------- Cloud-only routes (gated by CLOUD_MODE) ---------- */
+/*
+ * ---------- Cloud-only routes (gated by CLOUD_MODE) ----------
+ * Modified by Netie AI, 2026: env.CLOUD_MODE is forced `false` unconditionally
+ * in packages/platform/src/engine/config/env.ts, so this branch is
+ * structurally unreachable in FreeBuild — the `else` below always runs. Left
+ * in place rather than deleted, since @repo/platform still exports the
+ * underlying operations (used by the SDK's native embedding mode too) and
+ * this keeps the diff against upstream small. See ./netie/hosted-cloud-disabled.routes.ts
+ * for what self-hosted instances get at these same paths instead.
+ */
 if (env.CLOUD_MODE) {
   const { cloudSaasRoutes } = await import("./modules/cloud/cloud-saas.routes");
   app.route("/api/cloud", cloudSaasRoutes);
@@ -339,13 +348,17 @@ if (env.CLOUD_MODE) {
   const { terminalRoutes } = await import("./modules/terminal/terminal.routes");
   app.route("/api/terminal", terminalRoutes);
 
-  /** Cloud account management - connect/disconnect to Openship Cloud */
-  const { cloudLocalRoutes } = await import("./modules/cloud/cloud-local.routes");
-  app.route("/api/cloud", cloudLocalRoutes);
-
-  /** Billing proxy - cloud-connected local instances proxy to SaaS */
-  const { billingLocalRoutes } = await import("./modules/billing/billing-local.routes");
-  app.route("/api/billing", billingLocalRoutes);
+  /**
+   * FreeBuild is self-hosted only — there is no "connect this instance to
+   * Openship Cloud" bridge and no cloud-proxied billing. Every path under
+   * /api/cloud and every /api/billing path other than the always-mounted
+   * GET /plans (billingPlansRoutes, above) answers `hosted_cloud_disabled`.
+   * Modified by Netie AI, 2026: replaces Openship's cloud-local.routes /
+   * billing-local.routes mounts (self-hosted-instance-proxies-to-SaaS).
+   */
+  const { hostedCloudDisabledRoutes } = await import("./modules/netie/hosted-cloud-disabled.routes");
+  app.route("/api/cloud", hostedCloudDisabledRoutes);
+  app.route("/api/billing", hostedCloudDisabledRoutes);
 
   // Analytics is scraped on two triggers, neither wired here: the
   // `analytics:scrape` system job owns durability (the edge holds counters in RAM

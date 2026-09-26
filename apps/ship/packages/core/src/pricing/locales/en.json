@@ -2,7 +2,7 @@
   "plans": {
     "free": {
       "name": "Free",
-      "tagline": "Ship static sites on Openship Cloud at no cost."
+      "tagline": "Ship static sites on the hosted cloud service at no cost."
     },
     "starter": {
       "name": "Starter",

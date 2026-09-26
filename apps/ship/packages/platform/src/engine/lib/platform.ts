@@ -141,7 +141,7 @@ export function getPlatformKernel(): PlatformKernel {
         body: JSON.stringify({ ...input, ...(options.trigger && { trigger: options.trigger }) }),
       });
       if (!response)
-        throw new AppError("Openship Cloud is unreachable", 503, CLOUD_UNREACHABLE_CODE);
+        throw new AppError("The hosted cloud service is unreachable", 503, CLOUD_UNREACHABLE_CODE);
       const body = (await response.json().catch(() => null)) as Record<string, unknown> | null;
       if (!response.ok) {
         throw new AppError(

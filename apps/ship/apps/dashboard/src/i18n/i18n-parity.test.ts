@@ -216,7 +216,13 @@ const MISSING_BASELINE: Record<string, number> = {
   // (deepMerge fallback), same as the rest of this namespace.
   emails: 58,
   projectDetail: 42,
-  brand: 40,
+  // Modified by Netie AI, 2026: 40 -> 45. Not a translation regression — this
+  // checker's leaf-key walk treats a JSON string as array-like, so a locale
+  // with no brand.json (de/es/ja/pt/zh — it deepMerge-falls-through to
+  // English) counts one "missing" key per CHARACTER of the English brand
+  // string. Renaming "OpenShip" (8 chars) to "FreeBuild" (9 chars) mechanically
+  // adds 1 per locale x 5 locales = +5, with nothing to translate.
+  brand: 45,
   library: 119,
   billing: 6,
 

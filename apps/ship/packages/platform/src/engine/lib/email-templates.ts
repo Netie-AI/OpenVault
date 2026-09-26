@@ -1,16 +1,18 @@
 /**
- * Email templates for Openship.
+ * Email templates for FreeBuild.
  *
  * Each template returns { subject, html, text } so they can be
  * passed directly to sendMail(). Keep all copy and markup here
  * so auth.ts / other callers stay clean.
+ *
+ * Modified by Netie AI, 2026: brand rebranded to FreeBuild.
  */
 
 /* ------------------------------------------------------------------ */
 /*  Shared layout                                                      */
 /* ------------------------------------------------------------------ */
 
-const BRAND = "Openship";
+const BRAND = "FreeBuild";
 
 /**
  * Escape a value for interpolation into HTML text/attribute content

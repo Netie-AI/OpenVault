@@ -23,14 +23,14 @@
   },
   "serverCta": {
     "title": "Deploy to your own server",
-    "description": "Connect a server over SSH to run projects on your own infrastructure alongside Openship Cloud.",
+    "description": "Connect a server over SSH to run projects on your own infrastructure alongside the hosted cloud service.",
     "button": "Connect a server"
   },
   "filters": {
     "title": "Filter by target",
     "subtitle": "Where projects are deployed",
     "allProjects": "All projects",
-    "cloud": "Openship Cloud",
+    "cloud": "The hosted cloud service",
     "local": "Local"
   },
   "card": {
@@ -108,7 +108,7 @@
     "cleanupFailedTitle": "Cleanup failed",
     "alreadyDeleted": "Project already deleted",
     "forceModalTitle": "Couldn't remove it from the source",
-    "forceModalBody": "The runtime couldn't be reached (or kept failing), so this project wasn't torn down. You can delete it from Openship anyway — the record is removed now and any leftover resources are reclaimed automatically once the server is reachable.",
+    "forceModalBody": "The runtime couldn't be reached (or kept failing), so this project wasn't torn down. You can delete it from FreeBuild anyway — the record is removed now and any leftover resources are reclaimed automatically once the server is reachable.",
     "forceModalConfirm": "Delete from storage",
     "forceModalCancel": "Cancel",
     "unlinked": "Unlinked from {projects} — redeploy them to apply.",
@@ -254,7 +254,7 @@
     "delete": "Delete"
   },
   "overview": {
-    "platformCloud": "Openship Cloud",
+    "platformCloud": "The hosted cloud service",
     "platformServer": "Self-hosted (Server)",
     "platformLocal": "Self-hosted (Local)",
     "modeStatic": "Static Site",
@@ -518,7 +518,7 @@
     "watchOffTitle": "The container health watch is off",
     "watchOffBody": "No incidents are being recorded and no alerts will be sent, so an empty list here doesn't mean everything is healthy.",
     "watchOffCta": "Turn it on in Jobs",
-    "serverDownTitle": "Openship can't reach this project's server",
+    "serverDownTitle": "FreeBuild can't reach this project's server",
     "serverDownBody": "Nothing on this machine has been observed for {duration}, so the incidents below may be out of date.",
     "loadFailed": "Couldn't load incidents.",
     "ongoing": "ongoing for {duration}",

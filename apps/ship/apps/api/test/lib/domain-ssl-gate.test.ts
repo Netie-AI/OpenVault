@@ -146,7 +146,7 @@ describe("tlsIssuedElsewhere", () => {
   });
 
   it("explains itself to the operator", () => {
-    expect(describeTlsIssuedElsewhere("managed_edge", "box.opsh.io")).toContain("Openship Cloud");
+    expect(describeTlsIssuedElsewhere("managed_edge", "box.opsh.io")).toContain("hosted cloud service");
     expect(describeTlsIssuedElsewhere("external_ingress", "app.example.com")).toContain("your own ingress");
     expect(describeTlsIssuedElsewhere("manual_cert", "app.example.com")).toContain("uploaded certificate");
   });

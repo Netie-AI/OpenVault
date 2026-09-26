@@ -22,7 +22,17 @@ import { redactSensitiveRequestPath } from "../lib/request-log-redaction";
  * never propagates up to a parent middleware's `await next()`, so a
  * try/catch-around-next middleware would never see downstream throws.
  */
+// Modified by Netie AI, 2026: FreeBuild's two hard-disabled-feature codes get
+// the nested `{error:{code,message}}` shape (see PRODUCT_ROLES.md's Netie
+// keyvault + hosted-cloud contract) instead of the flat AppError shape below —
+// callers should match on `error.code`, not on message text.
+const NETIE_DISABLED_CODES = new Set(["hosted_cloud_disabled", "keys_managed_by_openvault"]);
+
 export function handleApiError(err: unknown, c: Context) {
+  if (err instanceof AppError && err.code && NETIE_DISABLED_CODES.has(err.code)) {
+    return c.json({ error: { code: err.code, message: err.message } }, err.statusCode as 501);
+  }
+
   if (err instanceof ZodError) {
     return c.json(
       {

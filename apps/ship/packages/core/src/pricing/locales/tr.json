@@ -2,7 +2,7 @@
   "plans": {
     "free": {
       "name": "Free",
-      "tagline": "Statik sitelerinizi Openship Cloud'da ücretsiz yayına alın."
+      "tagline": "Statik sitelerinizi barındırılan bulut hizmetinde ücretsiz yayına alın."
     },
     "starter": {
       "name": "Starter",

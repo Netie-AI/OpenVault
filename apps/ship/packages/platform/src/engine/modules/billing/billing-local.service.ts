@@ -40,7 +40,7 @@ export async function proxyToCloudBilling(
     return {
       status: 502,
       payload: {
-        error: "Couldn't reach Openship Cloud billing.",
+        error: "Couldn't reach the hosted cloud service billing.",
         code: "cloud_unreachable",
       },
     };
@@ -50,7 +50,7 @@ export async function proxyToCloudBilling(
     return {
       status: 403,
       payload: {
-        error: "Not connected to Openship Cloud.",
+        error: "Not connected to the hosted cloud service.",
         // Single-sourced from the shared cloud-capability registry.
         code: CLOUD_CAPABILITIES.billing.code,
       },
@@ -77,7 +77,7 @@ export async function proxyToCloudBilling(
     return {
       status: 401,
       payload: {
-        error: "Your Openship Cloud session has expired. Please reconnect.",
+        error: "Your the hosted cloud service session has expired. Please reconnect.",
         code: "cloud_session_expired",
         upstream: payload,
       },

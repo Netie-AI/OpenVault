@@ -234,8 +234,15 @@ function ModalHeader({
 
 /* ─── Step 1: Choose ───────────────────────────────────────────────── */
 
+// Modified by Netie AI, 2026: removed the Cloud and Tunnel option cards —
+// FreeBuild is self-hosted only, and POST /api/system/migration/start-cloud
+// and /start-tunnel now always answer 501 hosted_cloud_disabled (see
+// apps/api/src/modules/system/migration/migration.controller.ts). Only the
+// "server" (self-hosted-remote) path remains reachable from this UI. The
+// `cloud`/`tunnel` PathKind values, and the CloudForm/TunnelForm steps below,
+// are left in place as dead code rather than excised everywhere they're
+// typed, since nothing can navigate to them anymore.
 function ChooseStep({
-  cloudConnected,
   onPick,
 }: {
   cloudConnected: boolean;
@@ -254,24 +261,6 @@ function ChooseStep({
         body={t.settings.migrate.cards.serverBody}
         meta={t.settings.migrate.cards.serverMeta}
         onClick={() => onPick("server")}
-      />
-
-      <PathCard
-        icon={"cloud"}
-        title={t.settings.migrate.cards.cloudTitle}
-        body={t.settings.migrate.cards.cloudBody}
-        meta={cloudConnected ? t.settings.migrate.cards.cloudMetaConnected : t.settings.migrate.cards.metaRequiresCloud}
-        warn={!cloudConnected ? t.settings.migrate.cards.cloudWarn : undefined}
-        onClick={() => onPick("cloud")}
-      />
-
-      <PathCard
-        icon={"network"}
-        title={t.settings.migrate.cards.tunnelTitle}
-        body={t.settings.migrate.cards.tunnelBody}
-        meta={cloudConnected ? t.settings.migrate.cards.tunnelMetaConnected : t.settings.migrate.cards.metaRequiresCloud}
-        warn={!cloudConnected ? t.settings.migrate.cards.tunnelWarn : undefined}
-        onClick={() => onPick("tunnel")}
       />
     </div>
   );

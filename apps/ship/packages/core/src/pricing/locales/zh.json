@@ -2,7 +2,7 @@
   "plans": {
     "free": {
       "name": "Free",
-      "tagline": "在 Openship Cloud 上免费部署静态站点。"
+      "tagline": "在托管云服务上免费部署静态站点。"
     },
     "starter": {
       "name": "Starter",

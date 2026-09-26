@@ -41,7 +41,7 @@ export const oblienProvider: TunnelProvider = {
       return {
         ok: false,
         reason:
-          "Oblien tunnels require CLOUD_MODE — this instance must be connected to Openship Cloud first.",
+          "Oblien tunnels require CLOUD_MODE — this instance must be connected to the hosted cloud service first.",
       };
     }
     return { ok: true };

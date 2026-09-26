@@ -67,13 +67,13 @@ const r = secureRouter(new Hono(), {
    own `organization_id` — no session-mutating auto-switch needed. */
 
 /* ─── Local-only routes (hidden in cloud mode) ─────────────────────────── */
-r.get("/local", { tag: "project:list", localOnly: true, mcp: { description: "List projects registered from directories on this Openship controller. These paths are not on the MCP client machine." } }, ctrl.listLocal);
+r.get("/local", { tag: "project:list", localOnly: true, mcp: { description: "List projects registered from directories on this FreeBuild controller. These paths are not on the MCP client machine." } }, ctrl.listLocal);
 // Collection-scoped writes: org from request (X-Organization-Id or
 // session default); no :id in the URL — the controller resolves the
 // project from the JSON body. `collection: true` keeps the existing
 // :id-required default safe for per-resource routes below.
-r.post("/scan", { tag: "project:write", collection: true, localOnly: true, auditHandledByOperation: true, mcp: { description: "Inspect a source directory accessible to the Openship controller and detect build or Compose configuration. For a folder on the MCP client machine, use the folder-upload workflow." }, body: ScanLocalProjectBody }, ctrl.scanLocal);
-r.post("/import", { tag: "project:write", collection: true, projectCreate: true, localOnly: true, auditHandledByOperation: true, mcp: { description: "Register a project from a source directory accessible to the Openship controller. This creates project configuration; deploy separately after reviewing the detected settings." }, body: ImportLocalProjectBody }, ctrl.importLocal);
+r.post("/scan", { tag: "project:write", collection: true, localOnly: true, auditHandledByOperation: true, mcp: { description: "Inspect a source directory accessible to the FreeBuild controller and detect build or Compose configuration. For a folder on the MCP client machine, use the folder-upload workflow." }, body: ScanLocalProjectBody }, ctrl.scanLocal);
+r.post("/import", { tag: "project:write", collection: true, projectCreate: true, localOnly: true, auditHandledByOperation: true, mcp: { description: "Register a project from a source directory accessible to the FreeBuild controller. This creates project configuration; deploy separately after reviewing the detected settings." }, body: ImportLocalProjectBody }, ctrl.importLocal);
 
 /* ─── Live edge config read-back (saved vs. served, per hostname) ───────── */
 r.get("/:id/edge-config", { tag: "project:read", localOnly: true, mcp: { description: "Compare saved project routes with the configuration currently served by the self-hosted edge. Use this to investigate routing drift before retrying." } }, edgeConfig.getEdgeConfig);
@@ -712,7 +712,7 @@ r.get("/:id/server-logs/stream", { tag: "project:read", mcpExcluded: "SSE transp
 // 404s them there — never proxied, never run in CLOUD_MODE.
 r.post(
   "/:id/transfer/to-cloud",
-  { tag: "project:admin", localOnly: true, auditHandledByOperation: true, mcp: { description: "Transfer this project’s control-plane records to the connected Openship Cloud. Inspect the returned deployment guidance: record transfer is not workload or volume migration. k3s projects cannot use this Docker/Cloud transfer path." } },
+  { tag: "project:admin", localOnly: true, auditHandledByOperation: true, mcp: { description: "Transfer this project’s control-plane records to the connected hosted cloud service. Inspect the returned deployment guidance: record transfer is not workload or volume migration. k3s projects cannot use this Docker/Cloud transfer path." } },
   transfer.transferToCloud,
 );
 r.post(

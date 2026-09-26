@@ -669,7 +669,7 @@ async function executeBuildAndDeploy(
     });
     if (willRunServices && resolveEffectiveTarget(plat.target, snapshot) === "cloud" &&
         await usesCloudDockerWorkspace(project, snapshot.serviceDeploymentMode)) {
-      logger.log("→ Preparing the project's shared Docker workspace on Openship Cloud.\n");
+      logger.log("→ Preparing the project's shared Docker workspace on the hosted cloud service.\n");
       snapshot.cloudDockerWorkspace = await ensureCloudDockerWorkspace({
         projectId: project.id, organizationId: dep.organizationId,
         resources: cloudDockerResources({

@@ -2,7 +2,7 @@
   "plans": {
     "free": {
       "name": "Free",
-      "tagline": "Déployez des sites statiques sur Openship Cloud, gratuitement."
+      "tagline": "Déployez des sites statiques sur le service cloud hébergé, gratuitement."
     },
     "starter": {
       "name": "Starter",

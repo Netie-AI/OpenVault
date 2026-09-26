@@ -1,3 +1,7 @@
+// Modified by Netie AI, 2026: FreeBuild ships self-hosted only — CLOUD_MODE and
+// DEPLOY_MODE="cloud" (Openship Cloud / Oblien hosted mode) are forced off
+// below regardless of the environment, and the FreeBuild default ports
+// (3030/3031) replace Openship's upstream defaults. See PRODUCT_ROLES.md.
 import { z } from "zod";
 import { createPrivateKey } from "crypto";
 import { assertCloudBillingEnvironment } from "./cloud-billing-env";
@@ -122,8 +126,8 @@ const envSchema = z.object({
    * wizard's "managed edge" path; off = bring-your-own reverse proxy.
    */
   OPENSHIP_MANAGED_EDGE: envBool("false"),
-  /** Loopback dashboard port the managed edge proxies to (defaults 3001). */
-  OPENSHIP_DASHBOARD_PORT: z.coerce.number().int().positive().catch(3001),
+  /** Loopback dashboard port the managed edge proxies to (defaults 3031 — see PRODUCT_ROLES.md). */
+  OPENSHIP_DASHBOARD_PORT: z.coerce.number().int().positive().catch(3031),
   /** ACME account contact email (defaults to the admin during guided setup). */
   OPENSHIP_ACME_EMAIL: z.string().optional(),
   /** Alternate ACME directory URL. Unset keeps Certbot's Let's Encrypt default. */
@@ -503,6 +507,31 @@ const envSchema = z.object({
 type Env = z.infer<typeof envSchema>;
 
 export const env: Env = envSchema.parse(process.env);
+
+/**
+ * FreeBuild edition lock: self-hosted only.
+ *
+ * Openship Cloud (Oblien-hosted, multi-tenant SaaS) mode is not part of this
+ * fork — see PRODUCT_ROLES.md. Force it off here, once, regardless of what
+ * CLOUD_MODE / DEPLOY_MODE the environment sets, so every downstream branch
+ * that reads `env.CLOUD_MODE` or `env.DEPLOY_MODE` (billing, the cloud-saas
+ * routes, the canonical GitHub App, team-mode cloud/tunnel migration, etc.)
+ * takes the self-hosted path unconditionally. This is a deliberate mutation
+ * of the parsed config object, not a schema default, because the schema
+ * still needs to ACCEPT the vars (an operator's old .env may set them) —
+ * FreeBuild just never acts on them.
+ */
+if (env.CLOUD_MODE || env.DEPLOY_MODE === "cloud") {
+  console.warn(
+    "[env] CLOUD_MODE/DEPLOY_MODE=\"cloud\" was set, but the hosted cloud service " +
+      "is disabled in FreeBuild (self-hosted only). Forcing self-hosted.",
+  );
+}
+(env as { CLOUD_MODE: boolean }).CLOUD_MODE = false;
+if (env.DEPLOY_MODE === "cloud") {
+  (env as { DEPLOY_MODE: Env["DEPLOY_MODE"] }).DEPLOY_MODE = "docker";
+}
+
 assertCloudBillingEnvironment(env, runtimeTarget.api);
 
 /**

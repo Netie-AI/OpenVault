@@ -1,6 +1,9 @@
 /**
  * Shared error classes used across the monorepo.
  */
+// Modified by Netie AI, 2026: added HostedCloudDisabledError and
+// KeysManagedByOpenVaultError for FreeBuild's self-hosted edition — see
+// packages/core/src/netie/keyvault.ts and apps/api/src/middleware/error-handler.ts.
 
 export class AppError extends Error {
   constructor(
@@ -80,6 +83,41 @@ export class DeployError extends AppError {
   ) {
     super(message, 500, code);
     this.name = "DeployError";
+  }
+}
+
+/**
+ * A feature that depends on Openship Cloud (the Oblien-hosted SaaS) — team-mode
+ * cloud/tunnel migration, the Cloud connect bridge, the cloud-only billing and
+ * analytics proxy, etc. FreeBuild is self-hosted only (PRODUCT_ROLES.md), so
+ * every one of those routes answers this instead of reaching the upstream
+ * vendor. `code` is always "hosted_cloud_disabled" — see
+ * apps/api/src/middleware/error-handler.ts for the nested `{error:{code,
+ * message}}` wire shape this maps to.
+ */
+export class HostedCloudDisabledError extends AppError {
+  constructor(
+    message = "The hosted cloud service is not available in this self-hosted edition.",
+  ) {
+    super(message, 501, "hosted_cloud_disabled");
+    this.name = "HostedCloudDisabledError";
+  }
+}
+
+/**
+ * A route tried to save a third-party provider API key into FreeBuild's own
+ * store. FreeBuild reads provider keys from OpenVault's KeyVault only (see
+ * packages/core/src/netie/keyvault.ts) and never persists them itself.
+ * `code` is always "keys_managed_by_openvault".
+ */
+export class KeysManagedByOpenVaultError extends AppError {
+  constructor(openVaultKeysUrl = "http://127.0.0.1:3010/keys") {
+    super(
+      `Provider keys are stored in OpenVault. Add them at ${openVaultKeysUrl}.`,
+      501,
+      "keys_managed_by_openvault",
+    );
+    this.name = "KeysManagedByOpenVaultError";
   }
 }
 

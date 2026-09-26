@@ -16,6 +16,15 @@
  *    its reasoning generalizes: an unverified credential silently owns the lookup for
  *    every consumer that matches it, so storing a broken registry login turns a working
  *    anonymous pull into a failing authenticated one.
+ *
+ * Modified by Netie AI, 2026 — THIRD RULE this file now also enforces:
+ *
+ * 3. A PROVIDER OPENVAULT MANAGES IS NEVER STORED HERE. `OPENVAULT_MANAGED_CREDENTIAL_PROVIDERS`
+ *    (@repo/core, packages/core/src/netie/keyvault.ts) lists FreeBuild's own providers whose
+ *    secret is a clean fit for OpenVault's KeyVault (currently: "cloudflare"). `createCredential`
+ *    / `updateCredential` refuse those with `KeysManagedByOpenVaultError` before touching the DB,
+ *    and `resolveCredentialSecrets` / `listProviderCredentials` read the live secret from
+ *    OpenVault instead of the local encrypted envelope. See PRODUCT_ROLES.md / BRIEF.md section 4.
  */
 
 import { repos, type Credential } from "@repo/db";
@@ -28,9 +37,59 @@ import {
   type CredentialProvider,
 } from "@repo/core";
 
-import { ConflictError, NotFoundError, ValidationError } from "@repo/core";
+import {
+  ConflictError,
+  KeysManagedByOpenVaultError,
+  NotFoundError,
+  ValidationError,
+  OPENVAULT_MANAGED_CREDENTIAL_PROVIDERS,
+  findKeysForFreeBuildProvider,
+  getSecret as getOpenVaultSecret,
+} from "@repo/core";
 import { encryptSecretField, decryptSecretField } from "../../lib/credential-encryption";
 import { hasVerifier, verifyCredentialValues, type CredentialSecrets } from "./verify";
+
+/**
+ * The single secret field an OpenVault-managed provider declares (e.g.
+ * Cloudflare's `apiToken`). These providers are enforced (in
+ * {@link requireProvider}) to have no OTHER required field besides the
+ * selector, so there is exactly one secret key to fill from OpenVault.
+ */
+function managedSecretFieldKey(provider: CredentialProvider): string {
+  const field = provider.fields.find((f) => f.type === "secret");
+  if (!field) {
+    throw new Error(`OpenVault-managed provider "${provider.id}" declares no secret field.`);
+  }
+  return field.key;
+}
+
+/** Live read from OpenVault for an OPENVAULT_MANAGED_CREDENTIAL_PROVIDERS provider. */
+async function resolveFromOpenVault(providerId: string): Promise<ResolvedCredential | undefined> {
+  const [resolved] = await resolveAllFromOpenVault(providerId);
+  return resolved;
+}
+
+/**
+ * Every OpenVault key matching an OPENVAULT_MANAGED_CREDENTIAL_PROVIDERS
+ * provider, each resolved to its live secret — an operator may label more
+ * than one key for the same provider (e.g. one Cloudflare token per zone
+ * they own), same as multiple local `credential` rows used to support.
+ */
+async function resolveAllFromOpenVault(providerId: string): Promise<ResolvedCredential[]> {
+  const provider = getCredentialProvider(providerId);
+  if (!provider) return [];
+  const keys = await findKeysForFreeBuildProvider(providerId);
+  if (!keys.length) return []; // "no credential configured" — same as the local-store case
+  const secretKey = managedSecretFieldKey(provider);
+  // Sequential, not Promise.all: OpenVault unreachable must fail loud on the
+  // first call, not race N identical failures into one.
+  const out: ResolvedCredential[] = [];
+  for (const key of keys) {
+    const secret = await getOpenVaultSecret(key.id); // throws (fails loud) if OpenVault is unreachable/sealed
+    out.push({ id: key.id, publicFields: {}, secrets: { [secretKey]: secret } });
+  }
+  return out;
+}
 
 // ─── Read shape ──────────────────────────────────────────────────────────────
 
@@ -138,6 +197,10 @@ export async function getCredential(
 function requireProvider(providerId: string): CredentialProvider {
   const provider = getCredentialProvider(providerId);
   if (!provider) throw new ValidationError(`Unknown credential provider "${providerId}".`);
+  // Rule 3: OpenVault, not this table, owns the secret for these providers.
+  if (OPENVAULT_MANAGED_CREDENTIAL_PROVIDERS.has(provider.id)) {
+    throw new KeysManagedByOpenVaultError();
+  }
   // A provider Openship cannot check must not be storable: rule 2 above would be
   // unenforceable for it, and the operator would get a credential that looks fine.
   if (!hasVerifier(provider.id)) {
@@ -320,6 +383,9 @@ export async function resolveCredentialSecrets(opts: {
   provider: string;
   selector: string | null;
 }): Promise<ResolvedCredential | undefined> {
+  if (OPENVAULT_MANAGED_CREDENTIAL_PROVIDERS.has(opts.provider)) {
+    return resolveFromOpenVault(opts.provider);
+  }
   const row = await repos.credential.findActive(opts.organizationId, opts.provider, opts.selector);
   if (!row) return undefined;
   const secrets = readSecrets(row);
@@ -352,6 +418,15 @@ export async function listProviderCredentials(
   organizationId: string,
   provider: string,
 ): Promise<ProviderCredential[]> {
+  if (OPENVAULT_MANAGED_CREDENTIAL_PROVIDERS.has(provider)) {
+    const resolved = await resolveAllFromOpenVault(provider);
+    return resolved.map((r) => ({
+      id: r.id,
+      publicFields: r.publicFields,
+      secrets: r.secrets,
+      readable: Object.values(r.secrets).every((v) => v.length > 0),
+    }));
+  }
   const rows = await repos.credential.listActiveByProvider(organizationId, provider);
   return rows.map((row) => {
     const secrets = readSecrets(row);

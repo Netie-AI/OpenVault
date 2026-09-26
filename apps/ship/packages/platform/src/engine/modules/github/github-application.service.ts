@@ -141,7 +141,7 @@ export async function getHome(ctx: ExecutionContext) {
 const CLOUD_UNREACHABLE_CONNECT = {
   error: "cloud_unreachable",
   message:
-    "Openship Cloud is unreachable, so GitHub can't be connected right now. GitHub connection runs through Openship Cloud — reconnect it in Settings or check your network, then try again.",
+    "The hosted cloud service is unreachable, so GitHub can't be connected right now. GitHub connection runs through the hosted cloud service — reconnect it in Settings or check your network, then try again.",
 } as const;
 
 async function installationRedirect(ctx: ExecutionContext) {
@@ -481,7 +481,7 @@ export async function pollConnect(ctx: ExecutionContext) {
  */
 export async function setInstanceToken(ctx: ExecutionContext, input: NonNullable<Parameters<GitHubOperations["setInstanceToken"]>[0]>) {
   if (env.CLOUD_MODE) {
-    throw responseError({ error: "Not available on Openship Cloud", code: "NOT_SUPPORTED" }, 400);
+    throw responseError({ error: "Not available on the hosted cloud service", code: "NOT_SUPPORTED" }, 400);
   }
   const body = input;
   const token = body?.token?.trim();

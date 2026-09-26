@@ -1336,11 +1336,11 @@ async function checkCloudRuntime(
     if (connected) {
       return {
         id: "runtime",
-        label: requirement === "cloud-runtime" ? "Openship Cloud" : "Free domain routing",
+        label: requirement === "cloud-runtime" ? "The hosted cloud service" : "Free domain routing",
         status: "fail",
         code: PREFLIGHT_ERROR_CODES.CLOUD_UNREACHABLE,
         message:
-          "Openship Cloud is connected, but the cloud API didn't respond just now. This is usually transient — retry the deploy in a moment.",
+          "The hosted cloud service is connected, but the cloud API didn't respond just now. This is usually transient — retry the deploy in a moment.",
       };
     }
 
@@ -1350,7 +1350,7 @@ async function checkCloudRuntime(
         label: "Free domain routing",
         status: "fail",
         code: PREFLIGHT_ERROR_CODES.CLOUD_REQUIRED_MANAGED_PROJECT_DOMAIN,
-        message: `Free .${getRoutingBaseDomain()} domains require Openship Cloud for routing. To deploy to your own server, either connect Openship Cloud or switch this project to a custom domain.`,
+        message: `Free .${getRoutingBaseDomain()} domains require the hosted cloud service for routing. To deploy to your own server, either connect the hosted cloud service or switch this project to a custom domain.`,
       };
     }
 
@@ -1360,31 +1360,31 @@ async function checkCloudRuntime(
         label: "Free domain routing",
         status: "fail",
         code: PREFLIGHT_ERROR_CODES.CLOUD_REQUIRED_MANAGED_COMPOSE_DOMAINS,
-        message: `One or more exposed services use free .${getRoutingBaseDomain()} domains. Connect Openship Cloud or switch those services to custom domains before deploying to your own server.`,
+        message: `One or more exposed services use free .${getRoutingBaseDomain()} domains. Connect the hosted cloud service or switch those services to custom domains before deploying to your own server.`,
       };
     }
 
     return {
       id: "runtime",
-      label: "Openship Cloud",
+      label: "The hosted cloud service",
       status: "fail",
       code: PREFLIGHT_ERROR_CODES.CLOUD_REQUIRED_TARGET,
       message:
-        "This deployment target runs on Openship Cloud, but no cloud account is connected. Connect your account first.",
+        "This deployment target runs on the hosted cloud service, but no cloud account is connected. Connect your account first.",
     };
   }
 
   if (cloud.runtime.ok) {
     return {
       id: "runtime",
-      label: requirement === "cloud-runtime" ? "Openship Cloud" : "Free domain routing",
+      label: requirement === "cloud-runtime" ? "The hosted cloud service" : "Free domain routing",
       status: "pass",
     };
   }
 
   return {
     id: "runtime",
-    label: requirement === "cloud-runtime" ? "Openship Cloud" : "Free domain routing",
+    label: requirement === "cloud-runtime" ? "The hosted cloud service" : "Free domain routing",
     status: "fail",
     message: cloud.runtime.message,
   };
@@ -1708,7 +1708,7 @@ export async function runPreflightChecks(
       label: "Public URL",
       status: "warn",
       message:
-        "This deploy has no public domain attached. It will build and start but nothing will route to it. Add a custom domain on the Domains tab or connect Openship Cloud to get a free .opsh.io subdomain.",
+        "This deploy has no public domain attached. It will build and start but nothing will route to it. Add a custom domain on the Domains tab or connect the hosted cloud service to get a free .opsh.io subdomain.",
     });
   }
 

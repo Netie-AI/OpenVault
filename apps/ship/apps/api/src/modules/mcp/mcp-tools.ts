@@ -26,7 +26,7 @@ export const McpOrganizationIdSchema = Type.String({
   // Unlike $, the final assertion cannot match before a trailing newline.
   pattern: "^[!-~]+(?![\\s\\S])",
   description:
-    "Openship workspace ID from get_permissions_workspaces. Fixes this call to that workspace within the credential's access. Omit to use the credential/account default.",
+    "FreeBuild workspace ID from get_permissions_workspaces. Fixes this call to that workspace within the credential's access. Omit to use the credential/account default.",
 });
 
 /**

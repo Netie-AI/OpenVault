@@ -83,7 +83,9 @@ async function ensureControlPlaneApp(organizationId: string, port?: number): Pro
   if (existing) return existing.id;
   const created = await createProject(
     {
-      name: "Openship",
+      // Modified by Netie AI, 2026: display name rebranded to FreeBuild
+      // (APP_SLUG stays "openship" — an internal identifier/DB value).
+      name: "FreeBuild",
       isApp: true,
       appTemplateId: APP_TEMPLATE_ID,
       hasBuild: false,
@@ -129,7 +131,7 @@ export async function cloudConnect(c: Context) {
     );
     const { clearAuthModeCache, isAuthModePinned } = await import("@repo/platform/engine/lib/auth-mode");
     const data = await exchangeCodeWithCloud(body.code, body.codeVerifier);
-    if (!data) return c.json({ error: "Could not verify with Openship Cloud" }, 401);
+    if (!data) return c.json({ error: "Could not verify with the hosted cloud service" }, 401);
     const email = (data.user as { email?: string | null }).email ?? null;
 
     // If this box ALREADY has a real local admin account, Openship Cloud is linked

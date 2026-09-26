@@ -1,84 +1,11 @@
 /*
  * ─────────────────────────────────────────────────────────────────
- *  OPENSHIP FONTS
- *  Gellix (Latin) + SF Arabic (RTL fallback)
- *  Imported once in globals.css
+ *  FREEBUILD FONTS
+ *  Modified by Netie AI, 2026: no web fonts, no third-party font CDN.
+ *  Upstream loaded "Gellix" + "SF Arabic" from cdn.oblien.com; FreeBuild
+ *  follows OpenVault's own font policy instead (system-ui / native stack —
+ *  see globals.css's --font-sans) and does not fetch fonts over the network.
+ *  Kept as an empty file (not deleted) so the `@import "../styles/fonts.css"`
+ *  in globals.css stays valid.
  * ─────────────────────────────────────────────────────────────────
  */
-
-/* ── Gellix ───────────────────────────────────────────────────── */
-
-@font-face {
-  font-family: 'Gellix';
-  src: url('https://cdn.oblien.com/fonts/Gellix-Thin.woff2') format('woff2');
-  font-weight: 100;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Gellix';
-  src: url('https://cdn.oblien.com/fonts/Gellix-Light.woff2') format('woff2');
-  font-weight: 300;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Gellix';
-  src: url('https://cdn.oblien.com/fonts/Gellix-Regular.woff2') format('woff2');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Gellix';
-  src: url('https://cdn.oblien.com/fonts/Gellix-Medium.woff2') format('woff2');
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Gellix';
-  src: url('https://cdn.oblien.com/fonts/Gellix-SemiBold.woff2') format('woff2');
-  font-weight: 600;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Gellix';
-  src: url('https://cdn.oblien.com/fonts/Gellix-Bold.woff2') format('woff2');
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Gellix';
-  src: url('https://cdn.oblien.com/fonts/Gellix-ExtraBold.woff2') format('woff2');
-  font-weight: 800;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Gellix';
-  src: url('https://cdn.oblien.com/fonts/Gellix-Black.woff2') format('woff2');
-  font-weight: 900;
-  font-style: normal;
-  font-display: swap;
-}
-
-/* ── SF Arabic ────────────────────────────────────────────────── */
-
-@font-face {
-  font-family: 'SF Arabic';
-  src: local('SF Arabic'), local('SFArabic-Regular'),
-    url('https://cdn.oblien.com/fonts/SFArabic-Regular.ttf') format('truetype');
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}

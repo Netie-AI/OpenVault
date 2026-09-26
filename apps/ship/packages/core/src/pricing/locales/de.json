@@ -2,7 +2,7 @@
   "plans": {
     "free": {
       "name": "Free",
-      "tagline": "Statische Websites kostenlos auf Openship Cloud deployen."
+      "tagline": "Statische Websites kostenlos auf dem gehosteten Cloud-Dienst deployen."
     },
     "starter": {
       "name": "Starter",
@@ -49,7 +49,7 @@
     "selfHostedUnlimited": "Unbegrenzt viele Deploys, Projekte, Server und Domains",
     "selfHostedServices": "Alle Managed Services – Postgres, Redis, Mail",
     "selfHostedClients": "CLI, Web und Desktop – ein Backend",
-    "selfHostedFreeSubdomains": "{freeSubdomains} kostenlose Subdomains unter {freeDomainSuffix} bei Verbindung mit Openship Cloud"
+    "selfHostedFreeSubdomains": "{freeSubdomains} kostenlose Subdomains unter {freeDomainSuffix} bei Verbindung mit dem gehosteten Cloud-Dienst"
   },
   "selfHosted": {
     "name": "Selbst gehostet",

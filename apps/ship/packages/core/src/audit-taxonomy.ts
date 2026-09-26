@@ -826,7 +826,7 @@ export const AUDIT_EVENTS: Record<string, AuditEventDef> = {
   },
   "cloud.disconnect": {
     category: "system",
-    action: "disconnected from Openship Cloud",
+    action: "disconnected from the hosted cloud service",
     label: "Cloud disconnected",
     tone: "warning",
   },
@@ -1090,7 +1090,7 @@ export const AUDIT_RESOURCE_LABELS: Record<string, string> = {
   incoming_webhook: "a webhook",
   mcp_client: "a connected AI agent",
   billing: "billing",
-  cloud: "Openship Cloud",
+  cloud: "The hosted cloud service",
   settings: "settings",
   "instance-settings": "instance settings",
   instance: "this instance",

@@ -18,7 +18,7 @@
     "switchOrganization": "Switch organization",
     "current": "Current",
     "cloudLabel": "Cloud: {email}",
-    "linkedToCloud": "Linked to Openship Cloud as {email}",
+    "linkedToCloud": "Linked to the hosted cloud service as {email} (disabled in this edition)",
     "backToSetup": "Back to setup",
     "personal": "Personal"
   },
@@ -34,12 +34,6 @@
     "newLocation": "New location",
     "switchBackPrompt": "Need single-user mode back on this machine?",
     "switchBackAction": "Switch back to single user",
-    "cloudTitle": "This instance moved to Openship Cloud",
-    "cloudBody": "Your team now collaborates at the URL below. This local instance no longer holds your projects, settings, or deployments — open the cloud dashboard to continue.",
-    "cloudCta": "Open cloud dashboard",
-    "tunneledTitle": "Your openship is now reachable via the tunnel",
-    "tunneledBody": "Teammates can sign in at the URL below when your machine is online. Data still lives on this device — the tunnel just exposes it through the Oblien edge.",
-    "tunneledCta": "Open tunnel URL",
     "serverTitle": "This instance moved to your server",
     "serverBody": "Your team now collaborates at the URL below. This local instance no longer holds your projects, settings, or deployments — open the team dashboard to continue.",
     "serverCta": "Open team dashboard"
@@ -61,16 +55,16 @@
   },
   "apiDown": {
     "title": "Can't reach the API",
-    "description": "The dashboard is running, but it can't talk to the Openship API — so there's nothing to show yet. Your deployments keep running regardless.",
-    "hintStatus": "Check that the API is up: run `openship status` on the host.",
-    "hintStart": "Not running? Start it with `openship up`.",
+    "description": "The dashboard is running, but it can't talk to the FreeBuild API — so there's nothing to show yet. Your deployments keep running regardless.",
+    "hintStatus": "Check that the API process is up and reachable on its configured port.",
+    "hintStart": "Not running? Start it with `npm start` (or your process manager's equivalent).",
     "hintRemote": "Managing a remote box? Confirm its URL and that the API port is reachable from here.",
     "retry": "Retry",
     "docs": "Self-hosting docs"
   },
   "errorLinks": {
     "docs": "Documentation",
-    "github": "Report an issue"
+    "github": "Based on Openship"
   },
   "window": {
     "minimize": "Minimize",
