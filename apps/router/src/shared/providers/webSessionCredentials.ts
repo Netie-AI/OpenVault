@@ -283,12 +283,12 @@ export const WEB_SESSION_CREDENTIAL_REQUIREMENTS = {
     storageKeys: ["token"],
     hintKey: "zaiWebCredentialHint",
     hintFallback:
-      'Copy only the "token" value from chat.z.ai Local Storage. Do not copy a Cookie header. OmniRoute uses its browser transport to obtain the per-request CAPTCHA proof.',
+      'Copy only the "token" value from chat.z.ai Local Storage. Do not copy a Cookie header. FreeRoute uses its browser transport to obtain the per-request CAPTCHA proof.',
     guideSteps: [
       "Open chat.z.ai and sign in.",
       "Open DevTools → Application → Local Storage → https://chat.z.ai.",
       'Find the row named "token" and copy only its value. Do not copy any Cookie header.',
-      "Paste the token below and check the connection. OmniRoute handles the per-request CAPTCHA through its browser transport.",
+      "Paste the token below and check the connection. FreeRoute handles the per-request CAPTCHA through its browser transport.",
     ],
     guideNote:
       "Treat the token like a password. Browser transport is enabled by default; do not set OMNIROUTE_BROWSER_POOL=off for this connection. If Z.ai signs you out or the token expires, repeat these steps with the new value.",
@@ -346,7 +346,7 @@ export const WEB_SESSION_CREDENTIAL_REQUIREMENTS = {
     kind: "token",
     credentialName: "MaxAI access token (Bearer) + device id",
     placeholder:
-      "Use browser sign-in — OmniRoute mints the MaxAI access token, device id, and user id for you",
+      "Use browser sign-in — FreeRoute mints the MaxAI access token, device id, and user id for you",
     acceptsFullCookieHeader: false,
     storageKeys: [
       "accessToken",

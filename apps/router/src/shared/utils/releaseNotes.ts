@@ -1,5 +1,9 @@
 import { z } from "zod";
 
+// FreeRoute: these upstream-OmniRoute content URLs are kept as named constants
+// only so any stray reference still resolves to a real (if unused) string —
+// nothing in this file fetches them anymore. See fetchNewsPayload() below and
+// the FreeRoute changelog page (src/app/(dashboard)/dashboard/changelog).
 export const NEWS_JSON_URL =
   "https://raw.githubusercontent.com/diegosouzapw/OmniRoute/main/news.json";
 export const CHANGELOG_RAW_URL =
@@ -117,21 +121,20 @@ export type NewsAnnouncement = {
 type NewsFetchResponse = Pick<Response, "json" | "ok">;
 type NewsFetch = (url: string, init: RequestInit) => Promise<NewsFetchResponse>;
 
+/**
+ * FreeRoute: disabled. Upstream fetched product-announcement JSON from
+ * `raw.githubusercontent.com/diegosouzapw/OmniRoute/...` — this edition must
+ * not check or display upstream OmniRoute announcements/releases (see
+ * PRODUCT_ROLES.md), so this always resolves `null` (the same value the
+ * original returned on a network failure) without ever calling `fetchNews`.
+ * Both NewsBanner and NewsViewer already treat `null` as "no announcement" /
+ * "couldn't load", so no other change was needed at either call site.
+ */
 export async function fetchNewsPayload(
-  fetchNews: NewsFetch = fetch,
-  signal?: AbortSignal
+  _fetchNews: NewsFetch = fetch,
+  _signal?: AbortSignal
 ): Promise<unknown | null> {
-  try {
-    const response = await fetchNews(NEWS_JSON_URL, {
-      cache: "no-store",
-      credentials: "omit",
-      referrerPolicy: "no-referrer",
-      signal,
-    });
-    return response.ok ? await response.json() : null;
-  } catch {
-    return null;
-  }
+  return null;
 }
 
 function stableHash(value: string): string {

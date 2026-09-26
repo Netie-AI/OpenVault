@@ -401,7 +401,7 @@ async function handleExchange(
       startedAt,
       principal: null,
       connectionId: null,
-      error: "OmniRoute API key rejected",
+      error: "FreeRoute API key rejected",
     });
     return principal;
   }

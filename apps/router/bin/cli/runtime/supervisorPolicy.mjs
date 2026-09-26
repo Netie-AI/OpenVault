@@ -44,7 +44,7 @@ function canBind(port, host) {
  * Probing a single address is not enough. Node sets `SO_REUSEADDR` on every listener it
  * creates, and on macOS/BSD that lets a specific-address bind coexist with an existing
  * wildcard bind (and vice versa) — unlike Linux, which keeps rejecting the overlap in
- * LISTEN state. A gateway listening on `0.0.0.0:20128`, which is what `omniroute serve`
+ * LISTEN state. A gateway listening on `0.0.0.0:20128`, which is what `freeroute serve`
  * binds by default, was therefore reported as "free" by the old loopback-only probe: the
  * supervisor skipped its wait, the respawned child hit EADDRINUSE, and the crash loop
  * that #4425 set out to fix kept running. Probe every address the server may have bound.

@@ -26,7 +26,7 @@ export function registerAuthExport(program) {
   // parses the bare word `export` as a required positional argument of `auth`, so the
   // action received (exportArgValue, options, command) while expecting (options, command)
   // and crashed with "cmd.optsWithGlobals is not a function". Register `export` as a
-  // proper nested subcommand instead; the CLI surface stays `omniroute auth export`.
+  // proper nested subcommand instead; the CLI surface stays `freeroute auth export`.
   program
     .command("auth")
     .description(t("authExport.description"))

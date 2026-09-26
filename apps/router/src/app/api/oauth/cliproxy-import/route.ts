@@ -15,7 +15,7 @@ import {
  * don't have to re-login every account individually.
  *
  *   GET  → preview the importable accounts (provider/email/type only — never tokens).
- *   POST → import them as OmniRoute connections (upsert via createProviderConnection).
+ *   POST → import them as FreeRoute connections (upsert via createProviderConnection).
  */
 
 function cliProxyConfigDir(): string {

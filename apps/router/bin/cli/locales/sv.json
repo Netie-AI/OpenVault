@@ -1,8 +1,8 @@
 {
   "common": {
     "error": "Fel: {message}",
-    "serverOffline": "OmniRoute-servern är offline. Starta med: omniroute serve",
-    "authRequired": "Autentisering krävs. Ange OMNIROUTE_API_KEY eller kör: omniroute setup",
+    "serverOffline": "FreeRoute-servern är offline. Starta med: freeroute serve",
+    "authRequired": "Autentisering krävs. Ange OMNIROUTE_API_KEY eller kör: freeroute setup",
     "rateLimited": "Begäransgräns nådd. Försök igen om {seconds}s.",
     "timeout": "Begäran tog slut efter {ms}ms.",
     "success": "Klar.",
@@ -15,7 +15,7 @@
     "yesOpt": "Hoppa över bekräftelse"
   },
   "setup": {
-    "title": "OmniRoute-konfiguration",
+    "title": "FreeRoute-konfiguration",
     "passwordPrompt": "Administratörslösenord",
     "providerPrompt": "Standardleverantör (lämna tomt för att hoppa över)",
     "done": "Konfigurationen är klar",
@@ -30,19 +30,19 @@
     "opencode": "Installera och konfigurera det medföljande @omniroute/opencode-plugin för OpenCode"
   },
   "doctor": {
-    "title": "OmniRoute-diagnostik",
+    "title": "FreeRoute-diagnostik",
     "dbOk": "Databas: OK ({path})",
-    "dbMissing": "Databas: inte initierad – kör `omniroute setup`",
+    "dbMissing": "Databas: inte initierad – kör `freeroute setup`",
     "portOk": "Port {port}: tillgänglig",
     "portConflict": "Port {port}: används av en annan process",
     "encryptionOk": "Krypteringsnyckel: konfigurerad",
-    "encryptionMissing": "Krypteringsnyckel saknas – kör `omniroute setup`",
+    "encryptionMissing": "Krypteringsnyckel saknas – kör `freeroute setup`",
     "allGood": "Alla kontroller godkändes.",
     "warnings": "{count} varning(ar) – se ovan."
   },
   "providers": {
     "title": "Leverantörer",
-    "noProviders": "Inga leverantörer har konfigurerats. Kör: omniroute setup",
+    "noProviders": "Inga leverantörer har konfigurerats. Kör: freeroute setup",
     "testing": "Testar {name}...",
     "available": "{count} leverantör(er) tillgänglig(a)",
     "connected": "Ansluten",
@@ -71,7 +71,7 @@
       "dryRunOpt": "Visa vad som skulle ändras utan att skriva något",
       "confirmPrompt": "Ersätt API-nyckeln för anslutningen \"{name}\" ({id})? [y/N]",
       "dryRunResult": "[dry-run] Skulle rotera nyckeln för \"{name}\" ({id}). Inga ändringar gjordes.",
-      "oauthHint": "OAuth-anslutning — kör: omniroute oauth {provider}",
+      "oauthHint": "OAuth-anslutning — kör: freeroute oauth {provider}",
       "envVarEmpty": "Miljövariabeln {var} är inte angiven eller är tom.",
       "success": "Nyckeln har roterats för \"{name}\". Kör `providers test {id}` för att verifiera.",
       "testPassed": "Testet efter rotationen lyckades.",
@@ -82,7 +82,7 @@
       "providerOpt": "Filtrera efter leverantörsnamn",
       "header": "ID         Leverantör     Namn                     Utgång Status  Teststatus   Vänteperiod till",
       "noData": "Det finns inga data om leverantörsanslutningar.",
-      "requiresServer": "providers status kräver att OmniRoute-servern körs."
+      "requiresServer": "providers status kräver att FreeRoute-servern körs."
     }
   },
   "keys": {
@@ -90,8 +90,8 @@
     "addDescription": "Lägg till eller uppdatera en API-nyckel för en leverantör",
     "listDescription": "Lista alla konfigurerade API-nycklar",
     "removeDescription": "Ta bort en API-nyckel för en leverantör",
-    "regenerateDescription": "Generera en ny OmniRoute API-nyckel",
-    "revokeDescription": "Återkalla en OmniRoute API-nyckel",
+    "regenerateDescription": "Generera en ny FreeRoute API-nyckel",
+    "revokeDescription": "Återkalla en FreeRoute API-nyckel",
     "revealDescription": "Visa det omaskerade API-nyckelvärdet",
     "usageDescription": "Visa senaste användningen av en API-nyckel",
     "usageLimitOpt": "Antal senaste förfrågningar",
@@ -142,7 +142,7 @@
     "warning": "⚠ Detta skriver ut/sparar DEKRYPTERADE API-nycklar och OAuth-token i klartext. Se till att din skärm, skikhistorik och eventuella utdatafiler förblir privata.",
     "confirmHeading": "⚠ VARNING: detta exporterar DEKRYPTERADE leverantörsuppgifter i klartext",
     "confirmBody": "Detta kommando dekrypterar och skriver ut/sparar apiKey, accessToken, refreshToken och\nidToken för de valda anslutningarna. Behandla dessa utdata som en hemlighet.",
-    "confirmFooter": "Bekräfta genom att köra:\n  omniroute auth export --force",
+    "confirmFooter": "Bekräfta genom att köra:\n  freeroute auth export --force",
     "missingKey": "STORAGE_ENCRYPTION_KEY krävs för att exportera autentiseringsuppgifter.",
     "notFound": "Anslutningen hittades inte: {id}",
     "invalidFormat": "Ogiltigt format: {format}. Använd json eller env."
@@ -220,10 +220,10 @@
     "reasoning": "Nivå för resonemangsansträngning (low|medium|high)",
     "thinking": "Tokenbudget för utökat tänkande",
     "explain": "Skriv reservträdet och kostnadsintervallet till stderr",
-    "noCombo": "Ingen matchande kombination hittades. Konfigurera en med: omniroute combo create"
+    "noCombo": "Ingen matchande kombination hittades. Konfigurera en med: freeroute combo create"
   },
   "chat": {
-    "description": "Skicka en enstaka chattprompt till OmniRoute",
+    "description": "Skicka en enstaka chattprompt till FreeRoute",
     "file": "Läs prompt från fil",
     "stdin": "Läs prompt från standardindata",
     "system": "Systemprompt",
@@ -242,8 +242,8 @@
     }
   },
   "serve": {
-    "description": "Starta OmniRoute-servern (standardåtgärd)",
-    "starting": "Startar OmniRoute-servern på port {port}...",
+    "description": "Starta FreeRoute-servern (standardåtgärd)",
+    "starting": "Startar FreeRoute-servern på port {port}...",
     "ready": "Redo på http://localhost:{port}",
     "stopping": "Stoppar servern (PID {pid})...",
     "stopped": "Servern har stoppats.",
@@ -262,7 +262,7 @@
   },
   "backup": {
     "title": "Säkerhetskopiering",
-    "description": "Skapa en säkerhetskopia av OmniRoute-data",
+    "description": "Skapa en säkerhetskopia av FreeRoute-data",
     "creating": "Skapar säkerhetskopia...",
     "done": "Säkerhetskopian sparades i {path}",
     "noFiles": "Inga filer att säkerhetskopiera (databasen har inte initierats)",
@@ -274,7 +274,7 @@
     "noBackups": "Inga säkerhetskopior hittades.",
     "notFound": "Säkerhetskopian hittades inte: {name}",
     "confirmRestore": "Skriv över aktuella data med säkerhetskopian från {ts}?",
-    "createDescription": "Skapa en säkerhetskopia av OmniRoute-data",
+    "createDescription": "Skapa en säkerhetskopia av FreeRoute-data",
     "nameOpt": "Anpassat namn på säkerhetskopian",
     "cloudOpt": "Ladda upp säkerhetskopian till molnlagring",
     "encryptOpt": "Kryptera säkerhetskopian med AES-256-GCM",
@@ -292,14 +292,14 @@
       "statusDescription": "Visa aktuell status för säkerhetskopieringsschemat",
       "cronOpt": "Cron-uttryck för schemat (standard: dagligen kl. 03.00)",
       "enabled": "Automatisk säkerhetskopiering aktiverad (cron: {cron}).",
-      "hint": "Schemat läses av omniroute serve vid start.",
+      "hint": "Schemat läses av freeroute serve vid start.",
       "disabled": "Automatisk säkerhetskopiering inaktiverad.",
       "notConfigured": "Inget schema för säkerhetskopiering har konfigurerats."
     }
   },
   "health": {
     "description": "Kontrollera serverns hälsa och komponentstatus",
-    "noServer": "Servern körs inte. Starta med: omniroute serve",
+    "noServer": "Servern körs inte. Starta med: freeroute serve",
     "title": "Hälsa",
     "status": "Status: {status}",
     "uptime": "Drifttid: {uptime}",
@@ -308,21 +308,21 @@
   },
   "quota": {
     "description": "Visa användning av leverantörskvot",
-    "noServer": "Servern körs inte. Starta med: omniroute serve",
+    "noServer": "Servern körs inte. Starta med: freeroute serve",
     "noData": "Ingen kvotinformation är tillgänglig."
   },
   "cache": {
     "description": "Hantera svarscache",
-    "noServer": "Servern körs inte. Starta med: omniroute serve",
+    "noServer": "Servern körs inte. Starta med: freeroute serve",
     "cleared": "Cachen har rensats.",
     "clearFailed": "Det gick inte att rensa cachen."
   },
   "redis": {
-    "description": "Starta en lokal Redis-container med ett klick (Podman eller Docker) för OmniRoute-cachning och kvotspårning"
+    "description": "Starta en lokal Redis-container med ett klick (Podman eller Docker) för FreeRoute-cachning och kvotspårning"
   },
   "test": {
     "description": "Testa en leverantörsanslutning",
-    "noServer": "Servern körs inte. Starta med: omniroute serve",
+    "noServer": "Servern körs inte. Starta med: freeroute serve",
     "testing": "Testar {provider} / {model}...",
     "passed": "Anslutningen lyckades!",
     "failed": "Anslutningen misslyckades: {error}",
@@ -334,7 +334,7 @@
     "saved": "Resultaten har sparats i {path}",
     "compareTitle": "Modelljämförelse",
     "compareMinTwo": "Minst två modeller krävs för --compare (kommaseparerade)",
-    "noProviders": "Inga leverantörer har konfigurerats. Lägg till en med: omniroute keys add"
+    "noProviders": "Inga leverantörer har konfigurerats. Lägg till en med: freeroute keys add"
   },
   "update": {
     "checking": "Söker efter uppdateringar...",
@@ -348,7 +348,7 @@
     "running": "MCP-servern körs ({transport})",
     "stopped": "MCP-servern har stoppats.",
     "restarted": "MCP-servern har startats om.",
-    "stoppedHint": "Kör `omniroute mcp enable` för att aktivera den.",
+    "stoppedHint": "Kör `freeroute mcp enable` för att aktivera den.",
     "enabled": "MCP-servern har aktiverats.",
     "disabled": "MCP-servern har inaktiverats.",
     "enable": {
@@ -416,7 +416,7 @@
     }
   },
   "policy": {
-    "description": "Hantera OmniRoute-auktoriseringspolicyer",
+    "description": "Hantera FreeRoute-auktoriseringspolicyer",
     "list": {
       "description": "Lista policyer",
       "kind": "Filtrera efter typ (allow|deny|rate-limit|cost-cap)",
@@ -453,7 +453,7 @@
     }
   },
   "compression": {
-    "description": "Konfigurera och inspektera OmniRoutes komprimeringspipeline",
+    "description": "Konfigurera och inspektera FreeRoutes komprimeringspipeline",
     "status": {
       "description": "Visa aktuell komprimeringsstatus och aktuella inställningar"
     },
@@ -507,18 +507,18 @@
     "confirmRotate": "Rotera tunnel {type}? (en ny URL kommer att genereras)"
   },
   "stop": {
-    "description": "Stoppa OmniRoute-servern",
+    "description": "Stoppa FreeRoute-servern",
     "stopping": "Stoppar servern (PID {pid})...",
     "stopped": "Servern stoppades.",
     "notRunning": "Ingen server körs.",
     "portFallback": "Ingen PID-fil hittades, försöker stoppa baserat på port..."
   },
   "restart": {
-    "description": "Starta om OmniRoute-servern",
-    "restarting": "Startar om OmniRoute-servern..."
+    "description": "Starta om FreeRoute-servern",
+    "restarting": "Startar om FreeRoute-servern..."
   },
   "dashboard": {
-    "description": "Öppna OmniRoute-instrumentpanelen i en webbläsare",
+    "description": "Öppna FreeRoute-instrumentpanelen i en webbläsare",
     "opening": "Öppnar instrumentpanelen på {url}",
     "urlOnly": "Skriv ut instrumentpanelens URL utan att öppna webbläsaren",
     "tui": "Öppna en interaktiv TUI-instrumentpanel (terminalgränssnitt, 7 flikar)"
@@ -526,7 +526,7 @@
   "models": {
     "description": "Lista tillgängliga modeller (kräver server)",
     "search": "Filtrera modeller efter id, namn, leverantör eller beskrivning",
-    "noServer": "Servern körs inte. Starta med: omniroute serve",
+    "noServer": "Servern körs inte. Starta med: freeroute serve",
     "noModels": "Inga modeller hittades."
   },
   "audit": {
@@ -558,7 +558,7 @@
     }
   },
   "skills": {
-    "description": "Hantera OmniRoute-färdigheter (sandbox, builtin, custom, hybrid, skillssh)",
+    "description": "Hantera FreeRoute-färdigheter (sandbox, builtin, custom, hybrid, skillssh)",
     "list": {
       "description": "Lista installerade färdigheter",
       "type": "Filtrera efter typ (sandbox|custom|builtin|hybrid|skillssh)",
@@ -631,7 +631,7 @@
     }
   },
   "memory": {
-    "description": "Hantera OmniRoutes konversationsminne (FTS5 + vektor)",
+    "description": "Hantera FreeRoutes konversationsminne (FTS5 + vektor)",
     "search": {
       "description": "Sök efter minnesposter med en semantisk fråga",
       "type": "Filtrera efter minnestyp (user|feedback|project|reference)",
@@ -789,7 +789,7 @@
     }
   },
   "webhooks": {
-    "description": "Hantera OmniRoute-webhooks",
+    "description": "Hantera FreeRoute-webhooks",
     "events": {
       "description": "Lista alla tillgängliga händelsetyper för webhooks"
     },
@@ -821,14 +821,14 @@
     }
   },
   "program": {
-    "description": "OmniRoute — Smart AI-router med automatisk fallback",
+    "description": "FreeRoute — Smart AI-router med automatisk fallback",
     "version": "Skriv ut version och avsluta",
     "output": "Utdataformat (table, json, jsonl, csv)",
     "quiet": "Undertryck icke-väsentlig utdata",
     "no_color": "Inaktivera färgad utdata",
     "timeout": "HTTP-begärans timeout i millisekunder",
-    "api_key": "API-nyckel för OmniRoute-servern",
-    "base_url": "OmniRoute-serverns bas-URL",
+    "api_key": "API-nyckel för FreeRoute-servern",
+    "base_url": "FreeRoute-serverns bas-URL",
     "context": "Serverkontext/profil för det här kommandot",
     "lang": "Ange CLI-visningsspråk (åsidosätter OMNIROUTE_LANG)"
   },
@@ -1079,7 +1079,7 @@
     }
   },
   "openapi": {
-    "description": "Öppna och testa OmniRoute OpenAPI-specifikationen",
+    "description": "Öppna och testa FreeRoute OpenAPI-specifikationen",
     "dump": {
       "description": "Skriv OpenAPI-specifikationen till stdout eller en fil",
       "format": "Utdataformat: yaml|json (standard: yaml)",
@@ -1149,7 +1149,7 @@
     }
   },
   "open": {
-    "description": "Öppna en specifik OmniRoute-instrumentpanelsida i webbläsaren",
+    "description": "Öppna en specifik FreeRoute-instrumentpanelsida i webbläsaren",
     "url": "Skriv endast ut URL:en, öppna inte webbläsaren"
   },
   "telemetry": {
@@ -1166,7 +1166,7 @@
     }
   },
   "sync": {
-    "description": "Synkronisera konfiguration mellan OmniRoute-instanser",
+    "description": "Synkronisera konfiguration mellan FreeRoute-instanser",
     "push": {
       "description": "Skicka konfiguration till molnet eller en fjärrinstans",
       "target": "Mål (cloud eller context:name)",
@@ -1222,8 +1222,8 @@
       "listTitle": "Tillgängliga språk",
       "current": "Språk: {code} ({name})",
       "saved": "Språket har ställts in på {code} ({name}).",
-      "noCode": "Språkkod krävs. Kör 'omniroute config lang list' för att visa tillgängliga koder.",
-      "unknown": "Okänd språkkod: {code}. Kör 'omniroute config lang list' för att visa tillgängliga koder.",
+      "noCode": "Språkkod krävs. Kör 'freeroute config lang list' för att visa tillgängliga koder.",
+      "unknown": "Okänd språkkod: {code}. Kör 'freeroute config lang list' för att visa tillgängliga koder.",
       "alreadySet": "Språket är redan inställt på {code}.",
       "envHint": "Tips: du kan även ställa in OMNIROUTE_LANG={code} i din miljö."
     }
@@ -1242,7 +1242,7 @@
     "filter": "Filtrera efter nivå (error,warn,info) — kommaseparerat",
     "lines": "Antal rader att hämta",
     "timeout": "Tidsgräns för anslutning i ms",
-    "baseUrl": "Bas-URL för OmniRoute API",
+    "baseUrl": "Bas-URL för FreeRoute API",
     "requestId": "Filtrera efter begärande-ID",
     "apiKey": "Filtrera efter API-nyckel",
     "combo": "Filtrera efter kombinationsnamn",
@@ -1258,10 +1258,10 @@
     "description": "Styr ikonen i systemfältet",
     "show": "Visa ikonen i systemfältet (om servern körs med --tray)",
     "hide": "Dölj ikonen i systemfältet",
-    "quit": "Avsluta OmniRoute via systemfältet"
+    "quit": "Avsluta FreeRoute via systemfältet"
   },
   "autostart": {
-    "description": "Hantera automatisk start av OmniRoute vid systemstart (Linux: systemd-användartjänst)",
+    "description": "Hantera automatisk start av FreeRoute vid systemstart (Linux: systemd-användartjänst)",
     "enable": "Aktivera automatisk start vid systemstart",
     "disable": "Inaktivera automatisk start vid systemstart",
     "toggle": "Växla automatisk start vid systemstart",
@@ -1293,19 +1293,19 @@
     "scaffold": "Skapa en grundstruktur för ett nytt insticksprogram"
   },
   "launch": {
-    "description": "Starta Claude Code ansluten till OmniRoute (lokalt eller på distans, med --profile)",
+    "description": "Starta Claude Code ansluten till FreeRoute (lokalt eller på distans, med --profile)",
     "token": "Token som Claude-klienten ska skicka (ANTHROPIC_AUTH_TOKEN)",
-    "notRunning": "OmniRoute kan inte nås på {port}. Starta det med 'omniroute serve'.",
+    "notRunning": "FreeRoute kan inte nås på {port}. Starta det med 'freeroute serve'.",
     "notFound": "CLI-verktyget 'claude' hittades inte i PATH."
   },
   "run": {
-    "description": "Starta ett CLI-mål som stöds via OmniRoute"
+    "description": "Starta ett CLI-mål som stöds via FreeRoute"
   },
   "setupClaude": {
-    "description": "Generera Claude Code-profiler i ~/.claude/profiles från OmniRoutes modellkatalog"
+    "description": "Generera Claude Code-profiler i ~/.claude/profiles från FreeRoutes modellkatalog"
   },
   "connect": {
-    "description": "Anslut till en fjärrserver för OmniRoute och aktivera fjärrläge"
+    "description": "Anslut till en fjärrserver för FreeRoute och aktivera fjärrläge"
   },
   "tokens": {
     "description": "Hantera omfångsbegränsade CLI-åtkomsttoken (fjärrläge)"
@@ -1314,10 +1314,10 @@
     "description": "Välj en leverantör och modell från den aktiva servern och konfigurera ett lokalt CLI-verktyg som stöds"
   },
   "launchCodex": {
-    "description": "Starta Codex CLI anslutet till OmniRoute (lokalt eller på en fjärr-VPS)"
+    "description": "Starta Codex CLI anslutet till FreeRoute (lokalt eller på en fjärr-VPS)"
   },
   "setupCodex": {
-    "description": "Generera profilfiler i ~/.codex från OmniRoutes aktuella modellkatalog"
+    "description": "Generera profilfiler i ~/.codex från FreeRoutes aktuella modellkatalog"
   },
   "packs": {
     "description": "Hantera valfria körningspaket (ML/webbläsarautomatisering)",
@@ -1330,7 +1330,7 @@
     "errUnknown": "okänt paket: {name}",
     "errNoIndex": "paketindexet hittades inte; ange --source <dir> som innehåller paketdata (i skrivbordspaketen finns det bredvid appen)",
     "installed": "paketet \"{name}\" har installerats och verifierats i {dir}",
-    "restartHint": "starta om OmniRoute-servern (eller skrivbordsappen) så att körmiljön registrerar paketet",
+    "restartHint": "starta om FreeRoute-servern (eller skrivbordsappen) så att körmiljön registrerar paketet",
     "removed": "paketet \"{name}\" har tagits bort",
     "notInstalled": "paketet \"{name}\" var inte installerat",
     "verifyOk": "alla installerade paket har verifierats",

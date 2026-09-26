@@ -1,5 +1,5 @@
 /**
- * omniroute setup-goose — configure Goose (block/goose) for OmniRoute.
+ * freeroute setup-goose — configure Goose (block/goose) for FreeRoute.
  *
  * Goose is a terminal AI agent with a file-based config at
  * ~/.config/goose/config.yaml and env-var overrides. For a custom OpenAI-
@@ -98,13 +98,13 @@ export async function runSetupGooseCommand(opts = {}) {
 
   const guard = await guardHostConfigTarget(configPath, {
     toolLabel: "Goose",
-    hostCommand: "omniroute setup-goose",
+    hostCommand: "freeroute setup-goose",
     allowContainerWrite: Boolean(opts.allowContainerWrite ?? opts["allow-container-write"]),
     dryRun,
   });
   if (guard !== 0) return guard;
 
-  printHeading("OmniRoute → Goose (openai-compatible)");
+  printHeading("FreeRoute → Goose (openai-compatible)");
   printInfo(`OPENAI_HOST: ${host}   (no /v1 — Goose appends it)`);
 
   let model = opts.model;
@@ -148,11 +148,11 @@ export function registerSetupGoose(program) {
   program
     .command("setup-goose")
     .description(
-      "Configure Goose for OmniRoute: write ~/.config/goose/config.yaml + print the env recipe"
+      "Configure Goose for FreeRoute: write ~/.config/goose/config.yaml + print the env recipe"
     )
-    .option("--port <port>", "Local OmniRoute port (ignored when --remote is set)", "20128")
-    .option("--remote <url>", "Remote OmniRoute URL, e.g. http://192.168.0.15:20128")
-    .option("--api-key <key>", "OmniRoute API key (defaults to OMNIROUTE_API_KEY env var)")
+    .option("--port <port>", "Local FreeRoute port (ignored when --remote is set)", "20128")
+    .option("--remote <url>", "Remote FreeRoute URL, e.g. http://192.168.0.15:20128")
+    .option("--api-key <key>", "FreeRoute API key (defaults to OMNIROUTE_API_KEY env var)")
     .option("--model <id>", "Model id for Goose (required unless picked interactively)")
     .option("--config-path <path>", "config.yaml path (default: ~/.config/goose/config.yaml)")
     .option("--yes", "Non-interactive: do not prompt (requires --model)")

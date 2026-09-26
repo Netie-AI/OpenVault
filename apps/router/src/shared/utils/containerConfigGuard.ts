@@ -9,7 +9,7 @@
 export interface ContainerWriteRefusalOptions {
   /** Human label for the tool being configured, e.g. "Codex". */
   toolLabel?: string;
-  /** The command that would fix it from the host, e.g. "omniroute setup-codex". */
+  /** The command that would fix it from the host, e.g. "freeroute setup-codex". */
   hostCommand?: string;
   /** How to override, worded for the surface that is refusing. */
   overrideHint?: string;
@@ -42,14 +42,14 @@ export function buildContainerWriteRefusal(
   const subject = toolLabel ? `${toolLabel} config` : "CLI tool config";
 
   return [
-    `${REFUSAL_PREFIX} ${subject} to ${targetPath} — OmniRoute is running in a container ` +
+    `${REFUSAL_PREFIX} ${subject} to ${targetPath} — FreeRoute is running in a container ` +
       `and that path is not mounted from the host, so the file would be discarded when the ` +
       `container is recreated and your host CLI would never read it.`,
     "",
     "Configure from the host instead (recommended):",
     "  npm install -g omniroute",
     "  omniroute connect http://localhost:20128",
-    `  ${hostCommand || "omniroute setup-<tool>"}`,
+    `  ${hostCommand || "freeroute setup-<tool>"}`,
     "",
     'Or bind-mount the host config dir into the container (compose profile "host"):',
     '  volumes:     [ "~/.codex:/host-home/.codex:rw" ]',

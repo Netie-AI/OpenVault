@@ -5,8 +5,8 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const APP_LABEL = "com.omniroute.autostart";
-const WIN_REG_VALUE = "OmniRoute";
-const WIN_STARTUP_FILE = "OmniRoute.vbs";
+const WIN_REG_VALUE = "FreeRoute";
+const WIN_STARTUP_FILE = "FreeRoute.vbs";
 const LINUX_SERVICE_NAME = "omniroute.service";
 const LINUX_DESKTOP_NAME = "omniroute.desktop";
 
@@ -121,7 +121,7 @@ function writeLinuxSystemdUnit(cliPath) {
   const pathEnv = `${nodeBinDir}:${userLocalBin}:/usr/local/sbin:/usr/local/bin:/usr/bin:/bin`;
   const lines = [
     "[Unit]",
-    "Description=OmniRoute AI proxy router",
+    "Description=FreeRoute AI proxy router",
     "After=network-online.target graphical-session.target",
     "Wants=network-online.target",
     "",
@@ -153,7 +153,7 @@ function writeLinuxDesktopEntry(cliPath) {
     [
       "[Desktop Entry]",
       "Type=Application",
-      "Name=OmniRoute",
+      "Name=FreeRoute",
       "Comment=AI proxy router with auto fallback",
       `Exec=${buildServeExecLine(cliPath, { tray: true })}`,
       "Terminal=false",
@@ -261,7 +261,7 @@ export function isLaunchdAgentLoaded(runList) {
  * managing under our agent label.
  *
  * `launchctl unload`/`load -w` for a user-domain agent sends SIGTERM to the
- * running process. When the running OmniRoute cli was itself spawned by the
+ * running process. When the running FreeRoute cli was itself spawned by the
  * autostart launchd agent (autostart was enabled, then the machine rebooted,
  * then the user clicked the tray "Disable Autostart" item), an unload would
  * kill the very process executing the click handler — the tray icon would
@@ -367,7 +367,7 @@ function winStartupPath() {
 }
 
 /**
- * Builds the VBScript source that launches OmniRoute with WSH's Run method
+ * Builds the VBScript source that launches FreeRoute with WSH's Run method
  * using SW_HIDE (0) so no console window appears.
  *
  * 9Router uses the same pattern: a .vbs file in the Startup folder that calls

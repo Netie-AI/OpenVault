@@ -1,8 +1,8 @@
 {
   "common": {
     "error": "Earráid: {message}",
-    "serverOffline": "Tá freastalaí OmniRoute as líne. Tosaigh le: omniroute serve",
-    "authRequired": "Fíordheimhniú ag teastáil. Socraigh OMNIROUTE_API_KEY nó rith: omniroute setup",
+    "serverOffline": "Tá freastalaí FreeRoute as líne. Tosaigh le: freeroute serve",
+    "authRequired": "Fíordheimhniú ag teastáil. Socraigh OMNIROUTE_API_KEY nó rith: freeroute setup",
     "rateLimited": "Teorainn ráta sáraithe. Athbheochan i ndiaidh {seconds}s.",
     "timeout": "Am istigh tar éis {ms}ms.",
     "success": "Déanta.",
@@ -15,7 +15,7 @@
     "yesOpt": "Scipeáil an契ordheimhniú"
   },
   "setup": {
-    "title": "Socrú OmniRoute",
+    "title": "Socrú FreeRoute",
     "passwordPrompt": "Pasfhocal riaracháin",
     "providerPrompt": "Soláthraí réamhshocraithe (fág bán le scipeáil)",
     "done": "Socrú críochnaithe",
@@ -30,19 +30,19 @@
     "opencode": "Suiteáil agus coinníollach an @omniroute/opencode-plugin comhtháite le haghaidh OpenCode"
   },
   "doctor": {
-    "title": "Doiciméadóir OmniRoute",
+    "title": "Doiciméadóir FreeRoute",
     "dbOk": "Bunachar sonraí: ceart go leor ({path})",
-    "dbMissing": "Bunachar sonraí: gan túsú — rith `omniroute setup`",
+    "dbMissing": "Bunachar sonraí: gan túsú — rith `freeroute setup`",
     "portOk": "Port {port}: ar fáil",
     "portConflict": "Port {port}: in úsáid ag próiseas eile",
     "encryptionOk": "Eochair chriptithe: socraithe",
-    "encryptionMissing": "Eochair chriptithe in easnamh — rith `omniroute setup`",
+    "encryptionMissing": "Eochair chriptithe in easnamh — rith `freeroute setup`",
     "allGood": "Tá gach seiceáil rathúil.",
     "warnings": "{count} rabhadh (rabhaidh) — feic thuas."
   },
   "providers": {
     "title": "Soláthraithe",
-    "noProviders": "Níl aon soláthraithe socraithe. Rith: omniroute setup",
+    "noProviders": "Níl aon soláthraithe socraithe. Rith: freeroute setup",
     "testing": "Ag tástáil {name}...",
     "available": "{count} soláthraí (soláthraithe) ar fáil",
     "connected": "Ceangailte",
@@ -71,7 +71,7 @@
       "dryRunOpt": "Priontáil cad a athrófar gan scríobh",
       "confirmPrompt": "Cuir in ionad eochair API do cheangal \"{name}\" ({id})? [y/N]",
       "dryRunResult": "[dry-run] Rothlófaí eochair do \"{name}\" ({id}). Níor déanadh aon athruithe.",
-      "oauthHint": "Ceangal OAuth — rith: omniroute oauth {provider}",
+      "oauthHint": "Ceangal OAuth — rith: freeroute oauth {provider}",
       "envVarEmpty": "Níl athróg timpeallachta {var} socraithe nó tá sé folamh.",
       "success": "Rothlaíodh eochair do \"{name}\". Rith `providers test {id}` le fíorú.",
       "testPassed": "Tháinig an tástáil i ndiaidh rothlaithe tríd.",
@@ -82,7 +82,7 @@
       "providerOpt": "Scag de réir ainm soláthraí",
       "header": "ID         Soláthraí       Ainm                     Stádas dul in éag  Stádas tástála  Fuarú go dtí",
       "noData": "Níl aon sonraí ceangail soláthraí ar fáil.",
-      "requiresServer": "Éilíonn stádas soláthraithe go mbeadh an freastalaí OmniRoute ag rith."
+      "requiresServer": "Éilíonn stádas soláthraithe go mbeadh an freastalaí FreeRoute ag rith."
     }
   },
   "keys": {
@@ -90,8 +90,8 @@
     "addDescription": "Cuir leis nó nuashonraigh eochair API do sholáthraí",
     "listDescription": "Liostaigh gach eochair API cumraithe",
     "removeDescription": "Bain eochair API do sholáthraí",
-    "regenerateDescription": "Athghine eochair API OmniRoute",
-    "revokeDescription": "Cealaigh eochair API OmniRoute",
+    "regenerateDescription": "Athghine eochair API FreeRoute",
+    "revokeDescription": "Cealaigh eochair API FreeRoute",
     "revealDescription": "Nocht luach na heochrach API gan masc",
     "usageDescription": "Taispeáin úsáid le déanaí do eochair API",
     "usageLimitOpt": "Líon na n-iarratas le déanaí",
@@ -142,7 +142,7 @@
     "warning": "⚠ Scríobhann/prints seo DECRYPTED plain-text eochracha API agus comharthaí OAuth. Déan cinnte go dtaobhann do scáileán, stair shell, agus aon chomhain aschurtha príobháideach.",
     "confirmHeading": "⚠ RABHADH: easpórtálann seo comhthéacsanna soláthraí DECRYPTED i plain-text",
     "confirmBody": "Díchódann an t-ordú seo agus scríobhann/prints apiKey, accessToken, refreshToken, agus\nidToken do na ceangail roghnaithe. Déan déileáil leis an aschur mar rún.",
-    "confirmFooter": "Le deimhniú, rith:\n  omniroute auth export --force",
+    "confirmFooter": "Le deimhniú, rith:\n  freeroute auth export --force",
     "missingKey": "É i dteideal STORAGE_ENCRYPTION_KEY onnmhairiú creidiúintí.",
     "notFound": "Ní aimsíodh an nasc: {id}",
     "invalidFormat": "Formáid neamh bhailí: {format}. Úsáid json nó env."
@@ -220,10 +220,10 @@
     "reasoning": "Leibhéal iarrachta réasúnaigh (íseal|meánach|ard)",
     "thinking": "Buget comharthaí smaointeoireachta sínte",
     "explain": "Priontáil crann filleadh agus raon costais go dtí stderr",
-    "noCombo": "Níor aimsíodh comhoibriú comhoiriúnach. Cumraigh ceann le: omniroute combo create"
+    "noCombo": "Níor aimsíodh comhoibriú comhoiriúnach. Cumraigh ceann le: freeroute combo create"
   },
   "chat": {
-    "description": "Seol teachtaireacht comhrá aon-uair go OmniRoute",
+    "description": "Seol teachtaireacht comhrá aon-uair go FreeRoute",
     "file": "Léigh an t-impulse ó chomhad",
     "stdin": "Léigh an t-impulse ó stdin",
     "system": "Impulse córais",
@@ -242,8 +242,8 @@
     }
   },
   "serve": {
-    "description": "Tosaigh freastalaí OmniRoute (gníomh réamhshocraithe)",
-    "starting": "Ag tosú freastalaí OmniRoute ar port {port}...",
+    "description": "Tosaigh freastalaí FreeRoute (gníomh réamhshocraithe)",
+    "starting": "Ag tosú freastalaí FreeRoute ar port {port}...",
     "ready": "Réidh ag http://localhost:{port}",
     "stopping": "Ag stopadh freastalaí (PID {pid})...",
     "stopped": "Tá an freastalaí stoptha.",
@@ -262,7 +262,7 @@
   },
   "backup": {
     "title": "Cúltaca",
-    "description": "Cruthaigh cúltaca de shonraí OmniRoute",
+    "description": "Cruthaigh cúltaca de shonraí FreeRoute",
     "creating": "Ag cruthú cúltaca...",
     "done": "Cúltaca shábháilte go {path}",
     "noFiles": "Níl aon chomhaid le cúltaca (níl an bunachar sonraí cumasaithe)",
@@ -274,7 +274,7 @@
     "noBackups": "Níl aon chúltacaí aimsithe.",
     "notFound": "Cúltaca gan aimsiú: {name}",
     "confirmRestore": "Forscríobh sonraí reatha le cúltaca ó {ts}?",
-    "createDescription": "Cruthaigh cúltaca de shonraí OmniRoute",
+    "createDescription": "Cruthaigh cúltaca de shonraí FreeRoute",
     "nameOpt": "Ainm saincheaptha cúltaca",
     "cloudOpt": "Uaslódáil cúltaca go stóráil scamall",
     "encryptOpt": "Criptigh cúltaca le AES-256-GCM",
@@ -292,14 +292,14 @@
       "statusDescription": "Taispeáin stádas reatha sceideal cúltaca",
       "cronOpt": "Slonn cron le haghaidh sceidil (réamhshocrú: go laethúil ag 3am)",
       "enabled": "Cúltaca uathoibríoch cumasaithe (cron: {cron}).",
-      "hint": "Léann omniroute serve an sceideal ag tosú.",
+      "hint": "Léann freeroute serve an sceideal ag tosú.",
       "disabled": "Cúltaca uathoibríoch díchumasaithe.",
       "notConfigured": "Níl sceideal cúltaca cumraithe."
     }
   },
   "health": {
     "description": "Seiceáil sláinte an fhreastalaí agus stádas comhpháirteanna",
-    "noServer": "Níl an freastalaí ag rith. Tosaigh le: omniroute serve",
+    "noServer": "Níl an freastalaí ag rith. Tosaigh le: freeroute serve",
     "title": "Sláinte",
     "status": "Stádas: {status}",
     "uptime": "Am feidhmiúcháin: {uptime}",
@@ -308,21 +308,21 @@
   },
   "quota": {
     "description": "Taispeáin úsáid cion an soláthraí",
-    "noServer": "Níl an freastalaí ag rith. Tosaigh le: omniroute serve",
+    "noServer": "Níl an freastalaí ag rith. Tosaigh le: freeroute serve",
     "noData": "Níl aon fhaisnéis cion ar fáil."
   },
   "cache": {
     "description": "Bainistigh taisce freagartha",
-    "noServer": "Níl an freastalaí ag rith. Tosaigh le: omniroute serve",
+    "noServer": "Níl an freastalaí ag rith. Tosaigh le: freeroute serve",
     "cleared": "Taisce glanta.",
     "clearFailed": "Theip ar ghlanadh na taisce."
   },
   "redis": {
-    "description": "Seol coimeádán Redis áitiúil le cliceáil amháin (Podman nó Docker) le haghaidh taisce agus rianú cion le haghaidh OmniRoute"
+    "description": "Seol coimeádán Redis áitiúil le cliceáil amháin (Podman nó Docker) le haghaidh taisce agus rianú cion le haghaidh FreeRoute"
   },
   "test": {
     "description": "Tástáil ceangal soláthraí",
-    "noServer": "Níl an freastalaí ag rith. Tosaigh le: omniroute serve",
+    "noServer": "Níl an freastalaí ag rith. Tosaigh le: freeroute serve",
     "testing": "Ag tástáil {provider} / {model}...",
     "passed": "Ceangal rathúil!",
     "failed": "Theip ar an gceangal: {error}",
@@ -334,7 +334,7 @@
     "saved": "Torthaí sábháilte go {path}",
     "compareTitle": "Comparáid Samhlacha",
     "compareMinTwo": "Ní mór dhá samhail ar a laghad le haghaidh --compare (ina n-aonar le camóga)",
-    "noProviders": "Níl aon soláthraí cumraithe. Cuir ceann le: omniroute keys add"
+    "noProviders": "Níl aon soláthraí cumraithe. Cuir ceann le: freeroute keys add"
   },
   "update": {
     "checking": "Ag seiceáil le haghaidh nuashonruithe...",
@@ -348,7 +348,7 @@
     "running": "Tá freastalaí MCP ag rith ({transport})",
     "stopped": "Tá freastalaí MCP stoptha.",
     "restarted": "Tá freastalaí MCP atosaíte.",
-    "stoppedHint": "Rith `omniroute mcp enable` chun é a chur ar siúl.",
+    "stoppedHint": "Rith `freeroute mcp enable` chun é a chur ar siúl.",
     "enabled": "Freastalaí MCP cumasaithe.",
     "disabled": "Freastalaí MCP díchumasaithe.",
     "enable": {
@@ -416,7 +416,7 @@
     }
   },
   "policy": {
-    "description": "Bainistigh polasaithe údarúcháin OmniRoute",
+    "description": "Bainistigh polasaithe údarúcháin FreeRoute",
     "list": {
       "description": "Liostaigh polasaithe",
       "kind": "Scag de réir cineáil (allow|deny|rate-limit|cost-cap)",
@@ -453,7 +453,7 @@
     }
   },
   "compression": {
-    "description": "Cumraigh agus déan iniúchadh ar phipelines comhbhrúite OmniRoute",
+    "description": "Cumraigh agus déan iniúchadh ar phipelines comhbhrúite FreeRoute",
     "status": {
       "description": "Taispeáin stádas comhbhrúite reatha agus socruithe"
     },
@@ -507,18 +507,18 @@
     "confirmRotate": "Rothlaigh túinéal {type}? (ginefar URL nua)"
   },
   "stop": {
-    "description": "Stop freastalaí OmniRoute",
+    "description": "Stop freastalaí FreeRoute",
     "stopping": "Ag stopadh freastalaí (PID {pid})...",
     "stopped": "Freastalaí stoptha.",
     "notRunning": "Níl freastalaí ag rith.",
     "portFallback": "Comhad PID gan aimsiú, ag triail stop bunaithe ar phort..."
   },
   "restart": {
-    "description": "Atosaigh freastalaí OmniRoute",
-    "restarting": "Ag atosú freastalaí OmniRoute..."
+    "description": "Atosaigh freastalaí FreeRoute",
+    "restarting": "Ag atosú freastalaí FreeRoute..."
   },
   "dashboard": {
-    "description": "Oscail painéal riaracháin OmniRoute i mbrabhsálaí",
+    "description": "Oscail painéal riaracháin FreeRoute i mbrabhsálaí",
     "opening": "Ag oscailt an phainéil ag {url}",
     "urlOnly": "Priontáil URL an phainéil gan oscailt an bhrabhsálaí",
     "tui": "Oscail painéal idirghníomhach TUI (éadáil teirminéil, 7 cluaisín)"
@@ -526,7 +526,7 @@
   "models": {
     "description": "Liostaigh samhlacha ar fáil (teastáiltear freastalaí)",
     "search": "Scag samhlacha de réir aitheantais, ainm, soláthraí, nó cur síos",
-    "noServer": "Níl an freastalaí ag rith. Tosaigh le: omniroute serve",
+    "noServer": "Níl an freastalaí ag rith. Tosaigh le: freeroute serve",
     "noModels": "Níor aimsíodh samhlacha."
   },
   "audit": {
@@ -558,7 +558,7 @@
     }
   },
   "skills": {
-    "description": "Bainistigh scileanna OmniRoute (sandbox, builtin, custom, hybrid, skillssh)",
+    "description": "Bainistigh scileanna FreeRoute (sandbox, builtin, custom, hybrid, skillssh)",
     "list": {
       "description": "Liostaigh scileanna suiteáilte",
       "type": "Scag de réir cineáil (sandbox|custom|builtin|hybrid|skillssh)",
@@ -631,7 +631,7 @@
     }
   },
   "memory": {
-    "description": "Bainistigh cuimhne comhrá OmniRoute (FTS5 + veicteoir)",
+    "description": "Bainistigh cuimhne comhrá FreeRoute (FTS5 + veicteoir)",
     "search": {
       "description": "Cuardaigh iontrálacha cuimhne le ceist shéimeantach",
       "type": "Scag de réir cineál cuimhne (úsáideoir|aiseolas|tionscadal|tagairt)",
@@ -789,7 +789,7 @@
     }
   },
   "webhooks": {
-    "description": "Bainistigh ciorcaid shnáithe OmniRoute",
+    "description": "Bainistigh ciorcaid shnáithe FreeRoute",
     "events": {
       "description": "Liostaigh gach cineál ócáid webhook atá ar fáil"
     },
@@ -821,14 +821,14 @@
     }
   },
   "program": {
-    "description": "OmniRoute — Ródaí AI Cliste le Filleadh Uathoibríoch",
+    "description": "FreeRoute — Ródaí AI Cliste le Filleadh Uathoibríoch",
     "version": "Priontáil leagan agus scoir",
     "output": "Formáid aschuir (bord, json, jsonl, csv)",
     "quiet": "Bac aschur neamhriachtanach",
     "no_color": "Díchumasaigh aschur daite",
     "timeout": "Am ama iarratais HTTP i soicindí milliúmana",
-    "api_key": "Eochair API do fhreastalaí OmniRoute",
-    "base_url": "Bun-URL freastalaí OmniRoute",
+    "api_key": "Eochair API do fhreastalaí FreeRoute",
+    "base_url": "Bun-URL freastalaí FreeRoute",
     "context": "Comhthéacs/próifíl freastalaí le húsáid don ordú seo",
     "lang": "Socraigh teanga taispeáinte CLI (forbronnar OMNIROUTE_LANG)"
   },
@@ -1079,7 +1079,7 @@
     }
   },
   "openapi": {
-    "description": "Rochtain agus tástáil an spec OpenAPI OmniRoute",
+    "description": "Rochtain agus tástáil an spec OpenAPI FreeRoute",
     "dump": {
       "description": "Dumpáil an spec OpenAPI go stdout nó comhad",
       "format": "Formáid aschur: yaml|json (réamhshocrú: yaml)",
@@ -1149,7 +1149,7 @@
     }
   },
   "open": {
-    "description": "Oscail leathanach painéil rialaithe OmniRoute sonrach sa bhrabhsálaí",
+    "description": "Oscail leathanach painéil rialaithe FreeRoute sonrach sa bhrabhsálaí",
     "url": "Priontáil URL amháin, ná oscail an brabhsálaí"
   },
   "telemetry": {
@@ -1166,7 +1166,7 @@
     }
   },
   "sync": {
-    "description": "Sioncronaigh cumraíocht idir imthaispíní OmniRoute",
+    "description": "Sioncronaigh cumraíocht idir imthaispíní FreeRoute",
     "push": {
       "description": "Brúigh cumraíocht go scamall nó imthaispín iargúlta",
       "target": "Sprioc (scamall nó comhthéacs:ainm)",
@@ -1222,8 +1222,8 @@
       "listTitle": "Teangacha Ar Fáil",
       "current": "Teanga: {code} ({name})",
       "saved": "Teanga socrtha go {code} ({name}).",
-      "noCode": "Cód teanga de dhíth. Rith 'omniroute config lang list' chun códanna atá ar fáil a fheiceáil.",
-      "unknown": "Cód teanga anaithnid: {code}. Rith 'omniroute config lang list' chun códanna atá ar fáil a fheiceáil.",
+      "noCode": "Cód teanga de dhíth. Rith 'freeroute config lang list' chun códanna atá ar fáil a fheiceáil.",
+      "unknown": "Cód teanga anaithnid: {code}. Rith 'freeroute config lang list' chun códanna atá ar fáil a fheiceáil.",
       "alreadySet": "Tá an teanga socrtha cheana féin go {code}.",
       "envHint": "Leid: is féidir leat OMNIROUTE_LANG={code} a shocrú i do thimpeallacht."
     }
@@ -1242,7 +1242,7 @@
     "filter": "Scag de réir leibhéal (earráid, rabhadh, eolas) — le cultacha leithliseach",
     "lines": "Líon na línte le fáil",
     "timeout": "Am feithimh ceangail i ms",
-    "baseUrl": "URL bonn API OmniRoute",
+    "baseUrl": "URL bonn API FreeRoute",
     "requestId": "Scag de réir ID iarratais",
     "apiKey": "Scag de réir eochair API",
     "combo": "Scag de réir ainm an chomhá",
@@ -1258,10 +1258,10 @@
     "description": "Rialaigh an t-ícon trála córais",
     "show": "Taispeáin an t-ícon trála (má tá an tseirbhís ag rith le --tray)",
     "hide": "Folaigh an t-ícon trála",
-    "quit": "Scoir OmniRoute tríd an trála"
+    "quit": "Scoir FreeRoute tríd an trála"
   },
   "autostart": {
-    "description": "Bainistigh tús-uathoibriú OmniRoute ag tosú (Linux: seirbhís úsáideora systemd)",
+    "description": "Bainistigh tús-uathoibriú FreeRoute ag tosú (Linux: seirbhís úsáideora systemd)",
     "enable": "Cumasaigh tús-uathoibriú ag tosú",
     "disable": "Díchumasaigh tús-uathoibriú ag tosú",
     "toggle": "Scoránaigh tús-uathoibriú ag tosú",
@@ -1293,19 +1293,19 @@
     "scaffold": "Creadum i mbunchaighde breiseáin nua"
   },
   "launch": {
-    "description": "Seol Claude Code dírithe ar OmniRoute (logánta nó cianda, le --profile)",
+    "description": "Seol Claude Code dírithe ar FreeRoute (logánta nó cianda, le --profile)",
     "token": "Comhartha a sheolfaidh an cliant Claude (ANTHROPIC_AUTH_TOKEN)",
-    "notRunning": "Níl OmniRoute inrochtana ag {port}. Tosaigh é le 'omniroute serve'.",
+    "notRunning": "Níl FreeRoute inrochtana ag {port}. Tosaigh é le 'freeroute serve'.",
     "notFound": "Níor aimsíodh an CLI 'claude' i PATH."
   },
   "run": {
-    "description": "Seol sprioc CLI a thacaítear trí OmniRoute"
+    "description": "Seol sprioc CLI a thacaítear trí FreeRoute"
   },
   "setupClaude": {
-    "description": "Gineadh próifílí ~/.claude/profiles Claude Code ó chatalóg samhlacha OmniRoute"
+    "description": "Gineadh próifílí ~/.claude/profiles Claude Code ó chatalóg samhlacha FreeRoute"
   },
   "connect": {
-    "description": "Ceangail le freastalaí cianda OmniRoute agus téigh isteach i mód cianda"
+    "description": "Ceangail le freastalaí cianda FreeRoute agus téigh isteach i mód cianda"
   },
   "tokens": {
     "description": "Bainistigh comharthacha rochtana CLI scópáilte (mód cianda)"
@@ -1314,10 +1314,10 @@
     "description": "Roghnaigh soláthraí+samhail ón bhfreastalaí gníomhach agus cumraigh CLI áitiúil a thacaítear"
   },
   "launchCodex": {
-    "description": "Seol Codex CLI dírithe ar OmniRoute (áitiúil nó VPS cianda)"
+    "description": "Seol Codex CLI dírithe ar FreeRoute (áitiúil nó VPS cianda)"
   },
   "setupCodex": {
-    "description": "Gineadh comhaid próifíle ~/.codex ó chatalóg beo samhlacha OmniRoute"
+    "description": "Gineadh comhaid próifíle ~/.codex ó chatalóg beo samhlacha FreeRoute"
   },
   "packs": {
     "description": "Bainistigh paicéid rithaithe roghnach (ML / uathoibriú brabhsálaí)",
@@ -1330,7 +1330,7 @@
     "errUnknown": "paicéad anaithnid: {name}",
     "errNoIndex": "innéacs paicéad gan aimsiú; seol --source <dir> a shealbhaíonn ualach an phaicéid (seoltar é i mbraisle deisce in aice an aip)",
     "installed": "paicéad \"{name}\" suiteáilte agus deimhnithe ag {dir}",
-    "restartHint": "atosaigh freastalaí OmniRoute (nó an aip deisce) ionas go bhfaigheann an rith an paicéad suas",
+    "restartHint": "atosaigh freastalaí FreeRoute (nó an aip deisce) ionas go bhfaigheann an rith an paicéad suas",
     "removed": "paicéad \"{name}\" bainte",
     "notInstalled": "paicéad \"{name}\" ní raibh suiteáilte",
     "verifyOk": "gach paicéad suiteáilte deimhnithe",

@@ -1,8 +1,8 @@
 {
   "common": {
     "error": "Ralat: {message}",
-    "serverOffline": "Pelayan OmniRoute di luar talian. Mulakannya dengan: omniroute serve",
-    "authRequired": "Pengesahan diperlukan. Tetapkan OMNIROUTE_API_KEY atau jalankan: omniroute setup",
+    "serverOffline": "Pelayan FreeRoute di luar talian. Mulakannya dengan: freeroute serve",
+    "authRequired": "Pengesahan diperlukan. Tetapkan OMNIROUTE_API_KEY atau jalankan: freeroute setup",
     "rateLimited": "Had kadar telah dilebihi. Cuba semula selepas {seconds}s.",
     "timeout": "Permintaan tamat masa selepas {ms}ms.",
     "success": "Selesai.",
@@ -15,7 +15,7 @@
     "yesOpt": "Langkau gesaan pengesahan"
   },
   "setup": {
-    "title": "Persediaan OmniRoute",
+    "title": "Persediaan FreeRoute",
     "passwordPrompt": "Kata laluan pentadbir",
     "providerPrompt": "Penyedia lalai (biarkan kosong untuk langkau)",
     "done": "Persediaan selesai",
@@ -30,19 +30,19 @@
     "opencode": "Pasang dan konfigurasikan @omniroute/opencode-plugin terbina dalam untuk OpenCode"
   },
   "doctor": {
-    "title": "Diagnostik OmniRoute",
+    "title": "Diagnostik FreeRoute",
     "dbOk": "Pangkalan data: OK ({path})",
-    "dbMissing": "Pangkalan data: belum dimulakan — jalankan `omniroute setup`",
+    "dbMissing": "Pangkalan data: belum dimulakan — jalankan `freeroute setup`",
     "portOk": "Port {port}: tersedia",
     "portConflict": "Port {port}: sedang digunakan oleh proses lain",
     "encryptionOk": "Kunci penyulitan: dikonfigurasikan",
-    "encryptionMissing": "Kunci penyulitan tiada — jalankan `omniroute setup`",
+    "encryptionMissing": "Kunci penyulitan tiada — jalankan `freeroute setup`",
     "allGood": "Semua semakan berjaya.",
     "warnings": "{count} amaran — lihat di atas."
   },
   "providers": {
     "title": "Penyedia",
-    "noProviders": "Tiada penyedia dikonfigurasikan. Jalankan: omniroute setup",
+    "noProviders": "Tiada penyedia dikonfigurasikan. Jalankan: freeroute setup",
     "testing": "Menguji {name}...",
     "available": "{count} penyedia tersedia",
     "connected": "Disambungkan",
@@ -71,7 +71,7 @@
       "dryRunOpt": "Paparkan perubahan yang akan dilakukan tanpa menulis",
       "confirmPrompt": "Gantikan kunci API untuk sambungan \"{name}\" ({id})? [y/N]",
       "dryRunResult": "[dry-run] Akan menggilirkan kunci untuk \"{name}\" ({id}). Tiada perubahan dibuat.",
-      "oauthHint": "Sambungan OAuth — jalankan: omniroute oauth {provider}",
+      "oauthHint": "Sambungan OAuth — jalankan: freeroute oauth {provider}",
       "envVarEmpty": "Pemboleh ubah persekitaran {var} tidak ditetapkan atau kosong.",
       "success": "Kunci telah digilirkan untuk \"{name}\". Jalankan `providers test {id}` untuk mengesahkan.",
       "testPassed": "Ujian selepas penggiliran berjaya.",
@@ -82,7 +82,7 @@
       "providerOpt": "Tapis mengikut nama penyedia",
       "header": "ID         Penyedia       Nama                     Status Tamat Tempoh  Status Ujian  Tempoh Bertenang Hingga",
       "noData": "Tiada data sambungan penyedia tersedia.",
-      "requiresServer": "providers status memerlukan pelayan OmniRoute sedang berjalan."
+      "requiresServer": "providers status memerlukan pelayan FreeRoute sedang berjalan."
     }
   },
   "keys": {
@@ -90,8 +90,8 @@
     "addDescription": "Tambah atau kemas kini kunci API untuk penyedia",
     "listDescription": "Senaraikan semua kunci API yang dikonfigurasikan",
     "removeDescription": "Alih keluar kunci API untuk penyedia",
-    "regenerateDescription": "Jana semula kunci API OmniRoute",
-    "revokeDescription": "Batalkan kunci API OmniRoute",
+    "regenerateDescription": "Jana semula kunci API FreeRoute",
+    "revokeDescription": "Batalkan kunci API FreeRoute",
     "revealDescription": "Dedahkan nilai kunci API yang tidak disamarkan",
     "usageDescription": "Tunjukkan penggunaan terkini untuk kunci API",
     "usageLimitOpt": "Bilangan permintaan terkini",
@@ -142,7 +142,7 @@
     "warning": "⚠ Tindakan ini mencetak/menulis kunci API dan token OAuth yang telah DINYAHKRIP dalam bentuk teks biasa. Pastikan skrin, sejarah shell dan sebarang fail output anda kekal peribadi.",
     "confirmHeading": "⚠ AMARAN: tindakan ini mengeksport kelayakan penyedia yang telah DINYAHKRIP dalam bentuk teks biasa",
     "confirmBody": "Perintah ini menyahkrip dan mencetak/menulis apiKey, accessToken, refreshToken, dan\nidToken untuk sambungan yang dipilih. Anggap output ini sebagai rahsia.",
-    "confirmFooter": "Untuk mengesahkan, jalankan:\n  omniroute auth export --force",
+    "confirmFooter": "Untuk mengesahkan, jalankan:\n  freeroute auth export --force",
     "missingKey": "STORAGE_ENCRYPTION_KEY diperlukan untuk mengeksport bukti kelayakan.",
     "notFound": "Sambungan tidak ditemukan: {id}",
     "invalidFormat": "Format tidak sah: {format}. Gunakan json atau env."
@@ -220,10 +220,10 @@
     "reasoning": "Tahap usaha penaakulan (low|medium|high)",
     "thinking": "Bajet token pemikiran lanjutan",
     "explain": "Cetak pepohon fallback dan julat kos ke stderr",
-    "noCombo": "Tiada combo yang sepadan ditemui. Konfigurasikan satu dengan: omniroute combo create"
+    "noCombo": "Tiada combo yang sepadan ditemui. Konfigurasikan satu dengan: freeroute combo create"
   },
   "chat": {
-    "description": "Hantar gesaan sembang sekali sahaja kepada OmniRoute",
+    "description": "Hantar gesaan sembang sekali sahaja kepada FreeRoute",
     "file": "Baca gesaan daripada fail",
     "stdin": "Baca gesaan daripada stdin",
     "system": "Gesaan sistem",
@@ -242,8 +242,8 @@
     }
   },
   "serve": {
-    "description": "Mulakan pelayan OmniRoute (tindakan lalai)",
-    "starting": "Memulakan pelayan OmniRoute pada port {port}...",
+    "description": "Mulakan pelayan FreeRoute (tindakan lalai)",
+    "starting": "Memulakan pelayan FreeRoute pada port {port}...",
     "ready": "Sedia di http://localhost:{port}",
     "stopping": "Menghentikan pelayan (PID {pid})...",
     "stopped": "Pelayan dihentikan.",
@@ -262,7 +262,7 @@
   },
   "backup": {
     "title": "Sandaran",
-    "description": "Cipta sandaran data OmniRoute",
+    "description": "Cipta sandaran data FreeRoute",
     "creating": "Mencipta sandaran...",
     "done": "Sandaran disimpan ke {path}",
     "noFiles": "Tiada fail untuk disandarkan (pangkalan data belum dimulakan)",
@@ -274,7 +274,7 @@
     "noBackups": "Tiada sandaran ditemukan.",
     "notFound": "Sandaran tidak ditemukan: {name}",
     "confirmRestore": "Tulis ganti data semasa dengan sandaran daripada {ts}?",
-    "createDescription": "Cipta sandaran data OmniRoute",
+    "createDescription": "Cipta sandaran data FreeRoute",
     "nameOpt": "Nama sandaran tersuai",
     "cloudOpt": "Muat naik sandaran ke storan awan",
     "encryptOpt": "Sulitkan sandaran dengan AES-256-GCM",
@@ -292,14 +292,14 @@
       "statusDescription": "Tunjukkan status jadual sandaran semasa",
       "cronOpt": "Ungkapan cron untuk jadual (lalai: setiap hari pada pukul 3 pagi)",
       "enabled": "Sandaran automatik didayakan (cron: {cron}).",
-      "hint": "Jadual dibaca oleh omniroute serve semasa permulaan.",
+      "hint": "Jadual dibaca oleh freeroute serve semasa permulaan.",
       "disabled": "Sandaran automatik dilumpuhkan.",
       "notConfigured": "Tiada jadual sandaran dikonfigurasikan."
     }
   },
   "health": {
     "description": "Semak kesihatan pelayan dan status komponen",
-    "noServer": "Pelayan tidak berjalan. Mulakan dengan: omniroute serve",
+    "noServer": "Pelayan tidak berjalan. Mulakan dengan: freeroute serve",
     "title": "Kesihatan",
     "status": "Status: {status}",
     "uptime": "Masa operasi: {uptime}",
@@ -308,21 +308,21 @@
   },
   "quota": {
     "description": "Tunjukkan penggunaan kuota penyedia",
-    "noServer": "Pelayan tidak berjalan. Mulakan dengan: omniroute serve",
+    "noServer": "Pelayan tidak berjalan. Mulakan dengan: freeroute serve",
     "noData": "Tiada maklumat kuota tersedia."
   },
   "cache": {
     "description": "Urus cache respons",
-    "noServer": "Pelayan tidak berjalan. Mulakan dengan: omniroute serve",
+    "noServer": "Pelayan tidak berjalan. Mulakan dengan: freeroute serve",
     "cleared": "Cache dikosongkan.",
     "clearFailed": "Gagal mengosongkan cache."
   },
   "redis": {
-    "description": "Lancarkan kontena Redis tempatan dengan satu klik (Podman atau Docker) untuk caching dan penjejakan kuota OmniRoute"
+    "description": "Lancarkan kontena Redis tempatan dengan satu klik (Podman atau Docker) untuk caching dan penjejakan kuota FreeRoute"
   },
   "test": {
     "description": "Uji sambungan penyedia",
-    "noServer": "Pelayan tidak berjalan. Mulakan dengan: omniroute serve",
+    "noServer": "Pelayan tidak berjalan. Mulakan dengan: freeroute serve",
     "testing": "Menguji {provider} / {model}...",
     "passed": "Sambungan berjaya!",
     "failed": "Sambungan gagal: {error}",
@@ -334,7 +334,7 @@
     "saved": "Hasil disimpan ke {path}",
     "compareTitle": "Perbandingan Model",
     "compareMinTwo": "Sekurang-kurangnya dua model diperlukan untuk --compare (dipisahkan koma)",
-    "noProviders": "Tiada penyedia dikonfigurasikan. Tambah satu dengan: omniroute keys add"
+    "noProviders": "Tiada penyedia dikonfigurasikan. Tambah satu dengan: freeroute keys add"
   },
   "update": {
     "checking": "Menyemak kemas kini...",
@@ -348,7 +348,7 @@
     "running": "Pelayan MCP sedang berjalan ({transport})",
     "stopped": "Pelayan MCP dihentikan.",
     "restarted": "Pelayan MCP dimulakan semula.",
-    "stoppedHint": "Jalankan `omniroute mcp enable` untuk menghidupkannya.",
+    "stoppedHint": "Jalankan `freeroute mcp enable` untuk menghidupkannya.",
     "enabled": "Pelayan MCP didayakan.",
     "disabled": "Pelayan MCP dilumpuhkan.",
     "enable": {
@@ -416,7 +416,7 @@
     }
   },
   "policy": {
-    "description": "Urus dasar kebenaran OmniRoute",
+    "description": "Urus dasar kebenaran FreeRoute",
     "list": {
       "description": "Senaraikan dasar",
       "kind": "Tapis mengikut jenis (allow|deny|rate-limit|cost-cap)",
@@ -453,7 +453,7 @@
     }
   },
   "compression": {
-    "description": "Konfigurasikan dan periksa saluran pemampatan OmniRoute",
+    "description": "Konfigurasikan dan periksa saluran pemampatan FreeRoute",
     "status": {
       "description": "Tunjukkan status dan tetapan pemampatan semasa"
     },
@@ -507,18 +507,18 @@
     "confirmRotate": "Tukar URL terowong {type}? (URL baharu akan dijana)"
   },
   "stop": {
-    "description": "Hentikan pelayan OmniRoute",
+    "description": "Hentikan pelayan FreeRoute",
     "stopping": "Sedang menghentikan pelayan (PID {pid})...",
     "stopped": "Pelayan dihentikan.",
     "notRunning": "Tiada pelayan sedang berjalan.",
     "portFallback": "Tiada fail PID ditemukan, cuba menghentikan berdasarkan port..."
   },
   "restart": {
-    "description": "Mulakan semula pelayan OmniRoute",
-    "restarting": "Sedang memulakan semula pelayan OmniRoute..."
+    "description": "Mulakan semula pelayan FreeRoute",
+    "restarting": "Sedang memulakan semula pelayan FreeRoute..."
   },
   "dashboard": {
-    "description": "Buka papan pemuka OmniRoute dalam pelayar",
+    "description": "Buka papan pemuka FreeRoute dalam pelayar",
     "opening": "Sedang membuka papan pemuka di {url}",
     "urlOnly": "Paparkan URL papan pemuka tanpa membuka pelayar",
     "tui": "Buka papan pemuka TUI interaktif (UI terminal, 7 tab)"
@@ -526,7 +526,7 @@
   "models": {
     "description": "Senaraikan model yang tersedia (memerlukan pelayan)",
     "search": "Tapis model mengikut ID, nama, penyedia atau perihalan",
-    "noServer": "Pelayan tidak berjalan. Mulakan dengan: omniroute serve",
+    "noServer": "Pelayan tidak berjalan. Mulakan dengan: freeroute serve",
     "noModels": "Tiada model ditemukan."
   },
   "audit": {
@@ -558,7 +558,7 @@
     }
   },
   "skills": {
-    "description": "Urus kemahiran OmniRoute (sandbox, builtin, custom, hybrid, skillssh)",
+    "description": "Urus kemahiran FreeRoute (sandbox, builtin, custom, hybrid, skillssh)",
     "list": {
       "description": "Senaraikan kemahiran yang dipasang",
       "type": "Tapis mengikut jenis (sandbox|custom|builtin|hybrid|skillssh)",
@@ -631,7 +631,7 @@
     }
   },
   "memory": {
-    "description": "Urus memori perbualan OmniRoute (FTS5 + vector)",
+    "description": "Urus memori perbualan FreeRoute (FTS5 + vector)",
     "search": {
       "description": "Cari entri memori menggunakan pertanyaan semantik",
       "type": "Tapis mengikut jenis memori (user|feedback|project|reference)",
@@ -789,7 +789,7 @@
     }
   },
   "webhooks": {
-    "description": "Urus webhook OmniRoute",
+    "description": "Urus webhook FreeRoute",
     "events": {
       "description": "Senaraikan semua jenis peristiwa webhook yang tersedia"
     },
@@ -821,14 +821,14 @@
     }
   },
   "program": {
-    "description": "OmniRoute — Penghala AI Pintar dengan Sandaran Automatik",
+    "description": "FreeRoute — Penghala AI Pintar dengan Sandaran Automatik",
     "version": "Paparkan versi dan keluar",
     "output": "Format output (table, json, jsonl, csv)",
     "quiet": "Sembunyikan output yang tidak penting",
     "no_color": "Nyahdayakan output berwarna",
     "timeout": "Had masa permintaan HTTP dalam milisaat",
-    "api_key": "Kunci API untuk pelayan OmniRoute",
-    "base_url": "URL asas pelayan OmniRoute",
+    "api_key": "Kunci API untuk pelayan FreeRoute",
+    "base_url": "URL asas pelayan FreeRoute",
     "context": "Konteks/profil pelayan untuk digunakan bagi perintah ini",
     "lang": "Tetapkan bahasa paparan CLI (mengatasi OMNIROUTE_LANG)"
   },
@@ -1079,7 +1079,7 @@
     }
   },
   "openapi": {
-    "description": "Akses dan uji spesifikasi OpenAPI OmniRoute",
+    "description": "Akses dan uji spesifikasi OpenAPI FreeRoute",
     "dump": {
       "description": "Eksport spesifikasi OpenAPI ke stdout atau fail",
       "format": "Format output: yaml|json (lalai: yaml)",
@@ -1149,7 +1149,7 @@
     }
   },
   "open": {
-    "description": "Buka halaman papan pemuka OmniRoute tertentu dalam pelayar",
+    "description": "Buka halaman papan pemuka FreeRoute tertentu dalam pelayar",
     "url": "Cetak URL sahaja, jangan buka pelayar"
   },
   "telemetry": {
@@ -1166,7 +1166,7 @@
     }
   },
   "sync": {
-    "description": "Segerakkan konfigurasi antara tika OmniRoute",
+    "description": "Segerakkan konfigurasi antara tika FreeRoute",
     "push": {
       "description": "Tolak konfigurasi ke awan atau tika jauh",
       "target": "Sasaran (cloud atau context:name)",
@@ -1222,8 +1222,8 @@
       "listTitle": "Bahasa Tersedia",
       "current": "Bahasa: {code} ({name})",
       "saved": "Bahasa ditetapkan kepada {code} ({name}).",
-      "noCode": "Kod bahasa diperlukan. Jalankan 'omniroute config lang list' untuk melihat kod yang tersedia.",
-      "unknown": "Kod bahasa tidak diketahui: {code}. Jalankan 'omniroute config lang list' untuk melihat kod yang tersedia.",
+      "noCode": "Kod bahasa diperlukan. Jalankan 'freeroute config lang list' untuk melihat kod yang tersedia.",
+      "unknown": "Kod bahasa tidak diketahui: {code}. Jalankan 'freeroute config lang list' untuk melihat kod yang tersedia.",
       "alreadySet": "Bahasa telah pun ditetapkan kepada {code}.",
       "envHint": "Petua: anda juga boleh menetapkan OMNIROUTE_LANG={code} dalam persekitaran anda."
     }
@@ -1242,7 +1242,7 @@
     "filter": "Tapis mengikut tahap (error,warn,info) — dipisahkan dengan koma",
     "lines": "Bilangan baris untuk diambil",
     "timeout": "Tamat masa sambungan dalam ms",
-    "baseUrl": "URL asas API OmniRoute",
+    "baseUrl": "URL asas API FreeRoute",
     "requestId": "Tapis mengikut ID permintaan",
     "apiKey": "Tapis mengikut kunci API",
     "combo": "Tapis mengikut nama kombo",
@@ -1258,10 +1258,10 @@
     "description": "Kawal ikon dulang sistem",
     "show": "Tunjukkan ikon dulang (jika pelayan sedang berjalan dengan --tray)",
     "hide": "Sembunyikan ikon dulang",
-    "quit": "Keluar daripada OmniRoute melalui dulang"
+    "quit": "Keluar daripada FreeRoute melalui dulang"
   },
   "autostart": {
-    "description": "Urus mula automatik OmniRoute semasa but (Linux: perkhidmatan pengguna systemd)",
+    "description": "Urus mula automatik FreeRoute semasa but (Linux: perkhidmatan pengguna systemd)",
     "enable": "Dayakan mula automatik semasa but",
     "disable": "Lumpuhkan mula automatik semasa but",
     "toggle": "Togol mula automatik semasa but",
@@ -1293,19 +1293,19 @@
     "scaffold": "Jana rangka asas pemalam baharu"
   },
   "launch": {
-    "description": "Lancarkan Claude Code yang diarahkan ke OmniRoute (setempat atau jauh, dengan --profile)",
+    "description": "Lancarkan Claude Code yang diarahkan ke FreeRoute (setempat atau jauh, dengan --profile)",
     "token": "Token yang perlu dihantar oleh klien Claude (ANTHROPIC_AUTH_TOKEN)",
-    "notRunning": "OmniRoute tidak dapat dicapai pada {port}. Mulakannya dengan 'omniroute serve'.",
+    "notRunning": "FreeRoute tidak dapat dicapai pada {port}. Mulakannya dengan 'freeroute serve'.",
     "notFound": "CLI 'claude' tidak ditemukan dalam PATH."
   },
   "run": {
-    "description": "Lancarkan sasaran CLI yang disokong melalui OmniRoute"
+    "description": "Lancarkan sasaran CLI yang disokong melalui FreeRoute"
   },
   "setupClaude": {
-    "description": "Jana profil Claude Code ~/.claude/profiles daripada katalog model OmniRoute"
+    "description": "Jana profil Claude Code ~/.claude/profiles daripada katalog model FreeRoute"
   },
   "connect": {
-    "description": "Sambung ke pelayan OmniRoute jauh dan masuk ke mod jauh"
+    "description": "Sambung ke pelayan FreeRoute jauh dan masuk ke mod jauh"
   },
   "tokens": {
     "description": "Urus token akses CLI berskop (mod jauh)"
@@ -1314,10 +1314,10 @@
     "description": "Pilih penyedia+model daripada pelayan aktif dan konfigurasikan CLI setempat yang disokong"
   },
   "launchCodex": {
-    "description": "Lancarkan Codex CLI yang diarahkan ke OmniRoute (VPS setempat atau jauh)"
+    "description": "Lancarkan Codex CLI yang diarahkan ke FreeRoute (VPS setempat atau jauh)"
   },
   "setupCodex": {
-    "description": "Jana fail profil ~/.codex daripada katalog model langsung OmniRoute"
+    "description": "Jana fail profil ~/.codex daripada katalog model langsung FreeRoute"
   },
   "packs": {
     "description": "Urus pek masa jalan pilihan (ML / automasi pelayar)",
@@ -1330,7 +1330,7 @@
     "errUnknown": "pek tidak diketahui: {name}",
     "errNoIndex": "indeks pek tidak ditemukan; berikan --source <dir> yang mengandungi muatan pek (berkas desktop menyertakannya bersebelahan dengan aplikasi)",
     "installed": "pek \"{name}\" dipasang dan disahkan di {dir}",
-    "restartHint": "mulakan semula pelayan OmniRoute (atau aplikasi desktop) supaya masa jalan mengesan pek tersebut",
+    "restartHint": "mulakan semula pelayan FreeRoute (atau aplikasi desktop) supaya masa jalan mengesan pek tersebut",
     "removed": "pek \"{name}\" dialih keluar",
     "notInstalled": "pek \"{name}\" tidak dipasang",
     "verifyOk": "semua pek yang dipasang telah disahkan",

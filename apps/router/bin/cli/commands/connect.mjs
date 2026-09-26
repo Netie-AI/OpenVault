@@ -6,7 +6,7 @@ import { t } from "../i18n.mjs";
 /**
  * `omniroute connect <host>` — remote mode.
  *
- * Logs into a remote OmniRoute server and saves the result as the active context
+ * Logs into a remote FreeRoute server and saves the result as the active context
  * so every subsequent command targets that server. Two flows:
  *   - password: prompts for the management password → POST /api/cli/connect →
  *     server mints a scoped access token (default scope: admin).
@@ -106,7 +106,7 @@ export async function runConnectCommand(host, opts = {}) {
     baseUrl,
     accessToken,
     scope,
-    description: `Remote OmniRoute (${host})`,
+    description: `Remote FreeRoute (${host})`,
   };
   cfg.currentContext = name;
   await saveContextsSecure(cfg);
@@ -121,7 +121,7 @@ export function registerConnect(program) {
   program
     .command("connect <host>")
     .description(
-      t("connect.description") || "Connect to a remote OmniRoute server and enter remote mode"
+      t("connect.description") || "Connect to a remote FreeRoute server and enter remote mode"
     )
     .option("--port <port>", "Server port when the host has none", "20128")
     .option("--key <token>", "Use a pre-generated scoped access token (skips the password prompt)")

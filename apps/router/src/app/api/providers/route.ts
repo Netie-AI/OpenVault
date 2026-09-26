@@ -1,5 +1,6 @@
 import { getAllProviderLimitsCache } from "@/lib/db/providerLimits";
 import { NextResponse } from "next/server";
+import { renderKeysManagedByOpenVault } from "@omniroute/open-sse/netie/policy.ts";
 export const dynamic = "force-dynamic";
 import { getAuditRequestContext, logAuditEvent } from "@/lib/compliance/index";
 import {
@@ -195,6 +196,12 @@ export async function POST(request: Request) {
       rejectRetiredCommonChatGptWebProvider(requestedProvider) ??
       rejectRetiredCommonChatGptWebProvider(provider);
     if (retirementResponse) return retirementResponse;
+
+    // FreeRoute: provider API keys live only in OpenVault's KeyVault. Refuse
+    // to persist one into this app's own store (open-sse/netie/policy.ts).
+    if (apiKey) {
+      return renderKeysManagedByOpenVault();
+    }
 
     // Business validation
     const isValidProvider =

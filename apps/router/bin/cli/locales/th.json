@@ -1,8 +1,8 @@
 {
   "common": {
     "error": "ข้อผิดพลาด: {message}",
-    "serverOffline": "เซิร์ฟเวอร์ OmniRoute ออฟไลน์ เริ่มด้วย: omniroute serve",
-    "authRequired": "ต้องการการยืนยันตัวตน ตั้งค่า OMNIROUTE_API_KEY หรือรัน: omniroute setup",
+    "serverOffline": "เซิร์ฟเวอร์ FreeRoute ออฟไลน์ เริ่มด้วย: freeroute serve",
+    "authRequired": "ต้องการการยืนยันตัวตน ตั้งค่า OMNIROUTE_API_KEY หรือรัน: freeroute setup",
     "rateLimited": "เกินขีดจำกัดคำขอ ลองใหม่หลังจาก {seconds}วินาที",
     "timeout": "คำขอหมดเวลาหลังจาก {ms}ms",
     "success": "เสร็จสิ้น",
@@ -15,7 +15,7 @@
     "yesOpt": "ข้ามการยืนยัน"
   },
   "setup": {
-    "title": "ตั้งค่า OmniRoute",
+    "title": "ตั้งค่า FreeRoute",
     "passwordPrompt": "รหัสผ่านผู้ดูแลระบบ",
     "providerPrompt": "ผู้ให้บริการเริ่มต้น (เว้นว่างเพื่อข้าม)",
     "done": "ตั้งค่าเสร็จสมบูรณ์",
@@ -30,19 +30,19 @@
     "opencode": "ติดตั้งและกำหนดค่า @omniroute/opencode-plugin ที่รวมมาให้สำหรับ OpenCode"
   },
   "doctor": {
-    "title": "OmniRoute Doctor",
+    "title": "FreeRoute Doctor",
     "dbOk": "ฐานข้อมูล: ปกติ ({path})",
-    "dbMissing": "ฐานข้อมูล: ยังไม่ได้เริ่มต้น — เรียกใช้ `omniroute setup`",
+    "dbMissing": "ฐานข้อมูล: ยังไม่ได้เริ่มต้น — เรียกใช้ `freeroute setup`",
     "portOk": "พอร์ต {port}: พร้อมใช้งาน",
     "portConflict": "พอร์ต {port}: ถูกใช้งานโดยกระบวนการอื่น",
     "encryptionOk": "คีย์การเข้ารหัส: กำหนดค่าแล้ว",
-    "encryptionMissing": "ไม่พบคีย์การเข้ารหัส — เรียกใช้ `omniroute setup`",
+    "encryptionMissing": "ไม่พบคีย์การเข้ารหัส — เรียกใช้ `freeroute setup`",
     "allGood": "การตรวจสอบทั้งหมดผ่านแล้ว",
     "warnings": "คำเตือน {count} รายการ — ดูรายละเอียดด้านบน"
   },
   "providers": {
     "title": "ผู้ให้บริการ",
-    "noProviders": "ยังไม่ได้กำหนดค่าผู้ให้บริการ เรียกใช้: omniroute setup",
+    "noProviders": "ยังไม่ได้กำหนดค่าผู้ให้บริการ เรียกใช้: freeroute setup",
     "testing": "กำลังทดสอบ {name}...",
     "available": "มีผู้ให้บริการพร้อมใช้งาน {count} ราย",
     "connected": "เชื่อมต่อแล้ว",
@@ -71,7 +71,7 @@
       "dryRunOpt": "แสดงสิ่งที่จะเปลี่ยนแปลงโดยไม่เขียนข้อมูล",
       "confirmPrompt": "แทนที่คีย์ API สำหรับการเชื่อมต่อ \"{name}\" ({id}) หรือไม่? [y/N]",
       "dryRunResult": "[dry-run] จะหมุนเวียนคีย์สำหรับ \"{name}\" ({id}) ไม่มีการเปลี่ยนแปลงใด ๆ",
-      "oauthHint": "การเชื่อมต่อ OAuth — เรียกใช้: omniroute oauth {provider}",
+      "oauthHint": "การเชื่อมต่อ OAuth — เรียกใช้: freeroute oauth {provider}",
       "envVarEmpty": "ตัวแปรสภาพแวดล้อม {var} ไม่ได้ถูกตั้งค่าหรือว่างเปล่า",
       "success": "หมุนเวียนคีย์สำหรับ \"{name}\" แล้ว เรียกใช้ `providers test {id}` เพื่อตรวจสอบ",
       "testPassed": "การทดสอบหลังหมุนเวียนคีย์ผ่านแล้ว",
@@ -82,7 +82,7 @@
       "providerOpt": "กรองตามชื่อผู้ให้บริการ",
       "header": "ID         ผู้ให้บริการ       ชื่อ                     สถานะการหมดอายุ  สถานะการทดสอบ  พักใช้งานจนถึง",
       "noData": "ไม่มีข้อมูลการเชื่อมต่อผู้ให้บริการ",
-      "requiresServer": "คำสั่ง providers status ต้องให้เซิร์ฟเวอร์ OmniRoute ทำงานอยู่"
+      "requiresServer": "คำสั่ง providers status ต้องให้เซิร์ฟเวอร์ FreeRoute ทำงานอยู่"
     }
   },
   "keys": {
@@ -90,8 +90,8 @@
     "addDescription": "เพิ่มหรืออัปเดตคีย์ API สำหรับผู้ให้บริการ",
     "listDescription": "แสดงคีย์ API ที่กำหนดค่าไว้ทั้งหมด",
     "removeDescription": "ลบคีย์ API สำหรับผู้ให้บริการ",
-    "regenerateDescription": "สร้างคีย์ API ของ OmniRoute ใหม่",
-    "revokeDescription": "เพิกถอนคีย์ API ของ OmniRoute",
+    "regenerateDescription": "สร้างคีย์ API ของ FreeRoute ใหม่",
+    "revokeDescription": "เพิกถอนคีย์ API ของ FreeRoute",
     "revealDescription": "แสดงค่าคีย์ API แบบไม่ปกปิด",
     "usageDescription": "แสดงการใช้งานล่าสุดของคีย์ API",
     "usageLimitOpt": "จำนวนคำขอล่าสุด",
@@ -142,7 +142,7 @@
     "warning": "⚠ การดำเนินการนี้จะพิมพ์/เขียน API key และโทเค็น OAuth ที่ถอดรหัสแล้วเป็นข้อความธรรมดา โปรดตรวจสอบว่าหน้าจอ ประวัติ shell และไฟล์เอาต์พุตของคุณเป็นส่วนตัว",
     "confirmHeading": "⚠ คำเตือน: การดำเนินการนี้จะส่งออกข้อมูลประจำตัวของผู้ให้บริการที่ถอดรหัสแล้วเป็นข้อความธรรมดา",
     "confirmBody": "คำสั่งนี้จะถอดรหัสและพิมพ์/เขียน apiKey, accessToken, refreshToken และ\nidToken สำหรับการเชื่อมต่อที่เลือก โปรดถือว่าเอาต์พุตเป็นข้อมูลลับ",
-    "confirmFooter": "เพื่อยืนยัน ให้เรียกใช้:\n  omniroute auth export --force",
+    "confirmFooter": "เพื่อยืนยัน ให้เรียกใช้:\n  freeroute auth export --force",
     "missingKey": "จำเป็นต้องมี STORAGE_ENCRYPTION_KEY เพื่อส่งออกข้อมูลประจำตัว",
     "notFound": "ไม่พบการเชื่อมต่อ: {id}",
     "invalidFormat": "รูปแบบไม่ถูกต้อง: {format} โปรดใช้ json หรือ env"
@@ -220,10 +220,10 @@
     "reasoning": "ระดับความพยายามในการใช้เหตุผล (low|medium|high)",
     "thinking": "งบประมาณโทเค็นสำหรับการคิดแบบขยาย",
     "explain": "พิมพ์โครงสร้างทางเลือกสำรองและช่วงค่าใช้จ่ายไปยัง stderr",
-    "noCombo": "ไม่พบคอมโบที่ตรงกัน กำหนดค่าคอมโบด้วย: omniroute combo create"
+    "noCombo": "ไม่พบคอมโบที่ตรงกัน กำหนดค่าคอมโบด้วย: freeroute combo create"
   },
   "chat": {
-    "description": "ส่งพรอมต์แชตแบบครั้งเดียวไปยัง OmniRoute",
+    "description": "ส่งพรอมต์แชตแบบครั้งเดียวไปยัง FreeRoute",
     "file": "อ่านพรอมต์จากไฟล์",
     "stdin": "อ่านพรอมต์จาก stdin",
     "system": "พรอมต์ระบบ",
@@ -242,8 +242,8 @@
     }
   },
   "serve": {
-    "description": "เริ่มเซิร์ฟเวอร์ OmniRoute (การดำเนินการเริ่มต้น)",
-    "starting": "กำลังเริ่มเซิร์ฟเวอร์ OmniRoute บนพอร์ต {port}...",
+    "description": "เริ่มเซิร์ฟเวอร์ FreeRoute (การดำเนินการเริ่มต้น)",
+    "starting": "กำลังเริ่มเซิร์ฟเวอร์ FreeRoute บนพอร์ต {port}...",
     "ready": "พร้อมใช้งานที่ http://localhost:{port}",
     "stopping": "กำลังหยุดเซิร์ฟเวอร์ (PID {pid})...",
     "stopped": "หยุดเซิร์ฟเวอร์แล้ว",
@@ -262,7 +262,7 @@
   },
   "backup": {
     "title": "สำรองข้อมูล",
-    "description": "สร้างข้อมูลสำรองของข้อมูล OmniRoute",
+    "description": "สร้างข้อมูลสำรองของข้อมูล FreeRoute",
     "creating": "กำลังสร้างข้อมูลสำรอง...",
     "done": "บันทึกข้อมูลสำรองไปยัง {path} แล้ว",
     "noFiles": "ไม่มีไฟล์ให้สำรองข้อมูล (ยังไม่ได้เริ่มต้นฐานข้อมูล)",
@@ -274,7 +274,7 @@
     "noBackups": "ไม่พบข้อมูลสำรอง",
     "notFound": "ไม่พบข้อมูลสำรอง: {name}",
     "confirmRestore": "เขียนทับข้อมูลปัจจุบันด้วยข้อมูลสำรองจาก {ts} หรือไม่?",
-    "createDescription": "สร้างข้อมูลสำรองของ OmniRoute",
+    "createDescription": "สร้างข้อมูลสำรองของ FreeRoute",
     "nameOpt": "ชื่อข้อมูลสำรองแบบกำหนดเอง",
     "cloudOpt": "อัปโหลดข้อมูลสำรองไปยังพื้นที่จัดเก็บบนคลาวด์",
     "encryptOpt": "เข้ารหัสข้อมูลสำรองด้วย AES-256-GCM",
@@ -292,14 +292,14 @@
       "statusDescription": "แสดงสถานะปัจจุบันของกำหนดการสำรองข้อมูล",
       "cronOpt": "นิพจน์ Cron สำหรับกำหนดการ (ค่าเริ่มต้น: ทุกวันเวลา 03:00 น.)",
       "enabled": "เปิดใช้งานการสำรองข้อมูลอัตโนมัติแล้ว (cron: {cron})",
-      "hint": "omniroute serve จะอ่านกำหนดการเมื่อเริ่มทำงาน",
+      "hint": "freeroute serve จะอ่านกำหนดการเมื่อเริ่มทำงาน",
       "disabled": "ปิดใช้งานการสำรองข้อมูลอัตโนมัติแล้ว",
       "notConfigured": "ยังไม่ได้กำหนดค่ากำหนดการสำรองข้อมูล"
     }
   },
   "health": {
     "description": "ตรวจสอบสถานะความพร้อมใช้งานของเซิร์ฟเวอร์และสถานะของคอมโพเนนต์",
-    "noServer": "เซิร์ฟเวอร์ไม่ได้ทำงาน เริ่มด้วย: omniroute serve",
+    "noServer": "เซิร์ฟเวอร์ไม่ได้ทำงาน เริ่มด้วย: freeroute serve",
     "title": "ความพร้อมใช้งาน",
     "status": "สถานะ: {status}",
     "uptime": "ระยะเวลาทำงาน: {uptime}",
@@ -308,21 +308,21 @@
   },
   "quota": {
     "description": "แสดงการใช้โควตาของผู้ให้บริการ",
-    "noServer": "เซิร์ฟเวอร์ไม่ได้ทำงาน เริ่มด้วย: omniroute serve",
+    "noServer": "เซิร์ฟเวอร์ไม่ได้ทำงาน เริ่มด้วย: freeroute serve",
     "noData": "ไม่มีข้อมูลโควตา"
   },
   "cache": {
     "description": "จัดการแคชการตอบกลับ",
-    "noServer": "เซิร์ฟเวอร์ไม่ได้ทำงาน เริ่มด้วย: omniroute serve",
+    "noServer": "เซิร์ฟเวอร์ไม่ได้ทำงาน เริ่มด้วย: freeroute serve",
     "cleared": "ล้างแคชแล้ว",
     "clearFailed": "ล้างแคชไม่สำเร็จ"
   },
   "redis": {
-    "description": "เปิดใช้คอนเทนเนอร์ Redis ในเครื่องด้วยการคลิกเดียว (Podman หรือ Docker) สำหรับการแคชและการติดตามโควตาของ OmniRoute"
+    "description": "เปิดใช้คอนเทนเนอร์ Redis ในเครื่องด้วยการคลิกเดียว (Podman หรือ Docker) สำหรับการแคชและการติดตามโควตาของ FreeRoute"
   },
   "test": {
     "description": "ทดสอบการเชื่อมต่อกับผู้ให้บริการ",
-    "noServer": "เซิร์ฟเวอร์ไม่ได้ทำงาน เริ่มต้นด้วย: omniroute serve",
+    "noServer": "เซิร์ฟเวอร์ไม่ได้ทำงาน เริ่มต้นด้วย: freeroute serve",
     "testing": "กำลังทดสอบ {provider} / {model}...",
     "passed": "เชื่อมต่อสำเร็จ!",
     "failed": "การเชื่อมต่อล้มเหลว: {error}",
@@ -334,7 +334,7 @@
     "saved": "บันทึกผลลัพธ์ไปยัง {path} แล้ว",
     "compareTitle": "การเปรียบเทียบโมเดล",
     "compareMinTwo": "ต้องมีอย่างน้อยสองโมเดลสำหรับ --compare (คั่นด้วยจุลภาค)",
-    "noProviders": "ยังไม่ได้กำหนดค่าผู้ให้บริการ เพิ่มได้ด้วย: omniroute keys add"
+    "noProviders": "ยังไม่ได้กำหนดค่าผู้ให้บริการ เพิ่มได้ด้วย: freeroute keys add"
   },
   "update": {
     "checking": "กำลังตรวจสอบการอัปเดต...",
@@ -348,7 +348,7 @@
     "running": "เซิร์ฟเวอร์ MCP กำลังทำงาน ({transport})",
     "stopped": "เซิร์ฟเวอร์ MCP หยุดทำงานแล้ว",
     "restarted": "รีสตาร์ตเซิร์ฟเวอร์ MCP แล้ว",
-    "stoppedHint": "เรียกใช้ `omniroute mcp enable` เพื่อเปิดใช้งาน",
+    "stoppedHint": "เรียกใช้ `freeroute mcp enable` เพื่อเปิดใช้งาน",
     "enabled": "เปิดใช้งานเซิร์ฟเวอร์ MCP แล้ว",
     "disabled": "ปิดใช้งานเซิร์ฟเวอร์ MCP แล้ว",
     "enable": {
@@ -416,7 +416,7 @@
     }
   },
   "policy": {
-    "description": "จัดการนโยบายการอนุญาตของ OmniRoute",
+    "description": "จัดการนโยบายการอนุญาตของ FreeRoute",
     "list": {
       "description": "แสดงรายการนโยบาย",
       "kind": "กรองตามประเภท (allow|deny|rate-limit|cost-cap)",
@@ -453,7 +453,7 @@
     }
   },
   "compression": {
-    "description": "กำหนดค่าและตรวจสอบไปป์ไลน์การบีบอัดของ OmniRoute",
+    "description": "กำหนดค่าและตรวจสอบไปป์ไลน์การบีบอัดของ FreeRoute",
     "status": {
       "description": "แสดงสถานะและการตั้งค่าการบีบอัดปัจจุบัน"
     },
@@ -507,18 +507,18 @@
     "confirmRotate": "เปลี่ยน URL ของทันเนล {type} หรือไม่ (ระบบจะสร้าง URL ใหม่)"
   },
   "stop": {
-    "description": "หยุดเซิร์ฟเวอร์ OmniRoute",
+    "description": "หยุดเซิร์ฟเวอร์ FreeRoute",
     "stopping": "กำลังหยุดเซิร์ฟเวอร์ (PID {pid})...",
     "stopped": "หยุดเซิร์ฟเวอร์แล้ว",
     "notRunning": "ไม่มีเซิร์ฟเวอร์ที่กำลังทำงานอยู่",
     "portFallback": "ไม่พบไฟล์ PID กำลังพยายามหยุดตามพอร์ต..."
   },
   "restart": {
-    "description": "รีสตาร์ตเซิร์ฟเวอร์ OmniRoute",
-    "restarting": "กำลังรีสตาร์ตเซิร์ฟเวอร์ OmniRoute..."
+    "description": "รีสตาร์ตเซิร์ฟเวอร์ FreeRoute",
+    "restarting": "กำลังรีสตาร์ตเซิร์ฟเวอร์ FreeRoute..."
   },
   "dashboard": {
-    "description": "เปิดแดชบอร์ด OmniRoute ในเบราว์เซอร์",
+    "description": "เปิดแดชบอร์ด FreeRoute ในเบราว์เซอร์",
     "opening": "กำลังเปิดแดชบอร์ดที่ {url}",
     "urlOnly": "แสดง URL ของแดชบอร์ดโดยไม่เปิดเบราว์เซอร์",
     "tui": "เปิดแดชบอร์ด TUI แบบโต้ตอบ (UI เทอร์มินัล 7 แท็บ)"
@@ -526,7 +526,7 @@
   "models": {
     "description": "แสดงรายการโมเดลที่พร้อมใช้งาน (ต้องเปิดเซิร์ฟเวอร์)",
     "search": "กรองโมเดลตาม id, ชื่อ, provider หรือคำอธิบาย",
-    "noServer": "เซิร์ฟเวอร์ไม่ได้ทำงาน เริ่มด้วย: omniroute serve",
+    "noServer": "เซิร์ฟเวอร์ไม่ได้ทำงาน เริ่มด้วย: freeroute serve",
     "noModels": "ไม่พบโมเดล"
   },
   "audit": {
@@ -558,7 +558,7 @@
     }
   },
   "skills": {
-    "description": "จัดการทักษะของ OmniRoute (sandbox, builtin, custom, hybrid, skillssh)",
+    "description": "จัดการทักษะของ FreeRoute (sandbox, builtin, custom, hybrid, skillssh)",
     "list": {
       "description": "แสดงรายการทักษะที่ติดตั้งแล้ว",
       "type": "กรองตามประเภท (sandbox|custom|builtin|hybrid|skillssh)",
@@ -631,7 +631,7 @@
     }
   },
   "memory": {
-    "description": "จัดการหน่วยความจำการสนทนาของ OmniRoute (FTS5 + vector)",
+    "description": "จัดการหน่วยความจำการสนทนาของ FreeRoute (FTS5 + vector)",
     "search": {
       "description": "ค้นหารายการหน่วยความจำด้วยคำค้นหาเชิงความหมาย",
       "type": "กรองตามประเภทหน่วยความจำ (user|feedback|project|reference)",
@@ -789,7 +789,7 @@
     }
   },
   "webhooks": {
-    "description": "จัดการเว็บฮุกของ OmniRoute",
+    "description": "จัดการเว็บฮุกของ FreeRoute",
     "events": {
       "description": "แสดงรายการประเภทเหตุการณ์เว็บฮุกทั้งหมดที่พร้อมใช้งาน"
     },
@@ -821,14 +821,14 @@
     }
   },
   "program": {
-    "description": "OmniRoute — AI Router อัจฉริยะพร้อม Auto Fallback",
+    "description": "FreeRoute — AI Router อัจฉริยะพร้อม Auto Fallback",
     "version": "แสดงเวอร์ชันและออก",
     "output": "รูปแบบเอาต์พุต (table, json, jsonl, csv)",
     "quiet": "ซ่อนเอาต์พุตที่ไม่จำเป็น",
     "no_color": "ปิดใช้งานเอาต์พุตสี",
     "timeout": "หมดเวลา HTTP request ในมิลลิวินาที",
-    "api_key": "API Key สำหรับ OmniRoute server",
-    "base_url": "Base URL ของ OmniRoute server",
+    "api_key": "API Key สำหรับ FreeRoute server",
+    "base_url": "Base URL ของ FreeRoute server",
     "context": "บริบท/โปรไฟล์ของเซิร์ฟเวอร์สำหรับคำสั่งนี้",
     "lang": "ตั้งค่าภาษาแสดงผล CLI (แทนที่ OMNIROUTE_LANG)"
   },
@@ -1079,7 +1079,7 @@
     }
   },
   "openapi": {
-    "description": "เข้าถึงและทดสอบข้อกำหนด OpenAPI ของ OmniRoute",
+    "description": "เข้าถึงและทดสอบข้อกำหนด OpenAPI ของ FreeRoute",
     "dump": {
       "description": "ส่งออกข้อกำหนด OpenAPI ไปยัง stdout หรือไฟล์",
       "format": "รูปแบบเอาต์พุต: yaml|json (ค่าเริ่มต้น: yaml)",
@@ -1149,7 +1149,7 @@
     }
   },
   "open": {
-    "description": "เปิดหน้าแดชบอร์ด OmniRoute ที่ระบุในเบราว์เซอร์",
+    "description": "เปิดหน้าแดชบอร์ด FreeRoute ที่ระบุในเบราว์เซอร์",
     "url": "แสดงเฉพาะ URL โดยไม่เปิดเบราว์เซอร์"
   },
   "telemetry": {
@@ -1166,7 +1166,7 @@
     }
   },
   "sync": {
-    "description": "ซิงค์การกำหนดค่าระหว่างอินสแตนซ์ OmniRoute",
+    "description": "ซิงค์การกำหนดค่าระหว่างอินสแตนซ์ FreeRoute",
     "push": {
       "description": "พุชการกำหนดค่าไปยังระบบคลาวด์หรืออินสแตนซ์ระยะไกล",
       "target": "เป้าหมาย (cloud หรือ context:name)",
@@ -1222,8 +1222,8 @@
       "listTitle": "ภาษาที่ใช้ได้",
       "current": "ภาษา: {code} ({name})",
       "saved": "ตั้งค่าภาษาเป็น {code} ({name}) แล้ว",
-      "noCode": "ต้องระบุรหัสภาษา เรียกใช้ 'omniroute config lang list' เพื่อดูรหัสที่ใช้ได้",
-      "unknown": "ไม่รู้จักรหัสภาษา: {code} เรียกใช้ 'omniroute config lang list' เพื่อดูรหัสที่ใช้ได้",
+      "noCode": "ต้องระบุรหัสภาษา เรียกใช้ 'freeroute config lang list' เพื่อดูรหัสที่ใช้ได้",
+      "unknown": "ไม่รู้จักรหัสภาษา: {code} เรียกใช้ 'freeroute config lang list' เพื่อดูรหัสที่ใช้ได้",
       "alreadySet": "ตั้งค่าภาษาเป็น {code} อยู่แล้ว",
       "envHint": "เคล็ดลับ: คุณสามารถตั้งค่า OMNIROUTE_LANG={code} ในสภาพแวดล้อมของคุณได้เช่นกัน"
     }
@@ -1242,7 +1242,7 @@
     "filter": "กรองตามระดับ (error,warn,info) — คั่นด้วยเครื่องหมายจุลภาค",
     "lines": "จำนวนบรรทัดที่จะดึงข้อมูล",
     "timeout": "ระยะหมดเวลาการเชื่อมต่อ หน่วยเป็น ms",
-    "baseUrl": "URL ฐานของ OmniRoute API",
+    "baseUrl": "URL ฐานของ FreeRoute API",
     "requestId": "กรองตาม ID คำขอ",
     "apiKey": "กรองตามคีย์ API",
     "combo": "กรองตามชื่อคอมโบ",
@@ -1258,10 +1258,10 @@
     "description": "ควบคุมไอคอนในถาดระบบ",
     "show": "แสดงไอคอนในถาดระบบ (หากเซิร์ฟเวอร์กำลังทำงานด้วย --tray)",
     "hide": "ซ่อนไอคอนในถาดระบบ",
-    "quit": "ออกจาก OmniRoute ผ่านถาดระบบ"
+    "quit": "ออกจาก FreeRoute ผ่านถาดระบบ"
   },
   "autostart": {
-    "description": "จัดการการเริ่ม OmniRoute อัตโนมัติเมื่อบูต (Linux: บริการผู้ใช้ systemd)",
+    "description": "จัดการการเริ่ม FreeRoute อัตโนมัติเมื่อบูต (Linux: บริการผู้ใช้ systemd)",
     "enable": "เปิดใช้การเริ่มอัตโนมัติเมื่อบูต",
     "disable": "ปิดใช้การเริ่มอัตโนมัติเมื่อบูต",
     "toggle": "สลับสถานะการเริ่มอัตโนมัติเมื่อบูต",
@@ -1293,19 +1293,19 @@
     "scaffold": "สร้างโครงเริ่มต้นสำหรับปลั๊กอินใหม่"
   },
   "launch": {
-    "description": "เปิด Claude Code ที่เชื่อมต่อกับ OmniRoute (ภายในเครื่องหรือระยะไกล พร้อม --profile)",
+    "description": "เปิด Claude Code ที่เชื่อมต่อกับ FreeRoute (ภายในเครื่องหรือระยะไกล พร้อม --profile)",
     "token": "โทเค็นที่ไคลเอนต์ Claude ควรส่ง (ANTHROPIC_AUTH_TOKEN)",
-    "notRunning": "ไม่สามารถเข้าถึง OmniRoute ที่ {port} ได้ เริ่มต้นด้วย 'omniroute serve'",
+    "notRunning": "ไม่สามารถเข้าถึง FreeRoute ที่ {port} ได้ เริ่มต้นด้วย 'freeroute serve'",
     "notFound": "ไม่พบ CLI 'claude' ใน PATH"
   },
   "run": {
-    "description": "เปิดเป้าหมาย CLI ที่รองรับผ่าน OmniRoute"
+    "description": "เปิดเป้าหมาย CLI ที่รองรับผ่าน FreeRoute"
   },
   "setupClaude": {
-    "description": "สร้างโปรไฟล์ Claude Code ใน ~/.claude/profiles จากแค็ตตาล็อกโมเดล OmniRoute"
+    "description": "สร้างโปรไฟล์ Claude Code ใน ~/.claude/profiles จากแค็ตตาล็อกโมเดล FreeRoute"
   },
   "connect": {
-    "description": "เชื่อมต่อกับเซิร์ฟเวอร์ OmniRoute ระยะไกลและเข้าสู่โหมดระยะไกล"
+    "description": "เชื่อมต่อกับเซิร์ฟเวอร์ FreeRoute ระยะไกลและเข้าสู่โหมดระยะไกล"
   },
   "tokens": {
     "description": "จัดการโทเค็นการเข้าถึง CLI แบบกำหนดขอบเขต (โหมดระยะไกล)"
@@ -1314,10 +1314,10 @@
     "description": "เลือกผู้ให้บริการ+โมเดลจากเซิร์ฟเวอร์ที่ใช้งานอยู่และกำหนดค่า CLI ภายในเครื่องที่รองรับ"
   },
   "launchCodex": {
-    "description": "เปิด Codex CLI ที่เชื่อมต่อกับ OmniRoute (ภายในเครื่องหรือ VPS ระยะไกล)"
+    "description": "เปิด Codex CLI ที่เชื่อมต่อกับ FreeRoute (ภายในเครื่องหรือ VPS ระยะไกล)"
   },
   "setupCodex": {
-    "description": "สร้างไฟล์โปรไฟล์ใน ~/.codex จากแค็ตตาล็อกโมเดลแบบสดของ OmniRoute"
+    "description": "สร้างไฟล์โปรไฟล์ใน ~/.codex จากแค็ตตาล็อกโมเดลแบบสดของ FreeRoute"
   },
   "packs": {
     "description": "จัดการแพ็กรันไทม์เสริม (ML / ระบบอัตโนมัติของเบราว์เซอร์)",
@@ -1330,7 +1330,7 @@
     "errUnknown": "แพ็กที่ไม่รู้จัก: {name}",
     "errNoIndex": "ไม่พบดัชนีแพ็ก โปรดส่ง --source <dir> ที่เก็บเพย์โหลดของแพ็ก (บันเดิลเดสก์ท็อปมีไฟล์นี้อยู่ถัดจากแอป)",
     "installed": "ติดตั้งและตรวจสอบแพ็ก \"{name}\" ที่ {dir} แล้ว",
-    "restartHint": "รีสตาร์ทเซิร์ฟเวอร์ OmniRoute (หรือแอปเดสก์ท็อป) เพื่อให้รันไทม์ตรวจพบแพ็ก",
+    "restartHint": "รีสตาร์ทเซิร์ฟเวอร์ FreeRoute (หรือแอปเดสก์ท็อป) เพื่อให้รันไทม์ตรวจพบแพ็ก",
     "removed": "นำแพ็ก \"{name}\" ออกแล้ว",
     "notInstalled": "ยังไม่ได้ติดตั้งแพ็ก \"{name}\"",
     "verifyOk": "ตรวจสอบแพ็กที่ติดตั้งทั้งหมดเรียบร้อยแล้ว",

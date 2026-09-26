@@ -1,5 +1,6 @@
-import type { NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { runAuthzPipeline } from "./server/authz/pipeline";
+import { matchHardDisabledRoute } from "./lib/netie/hardDisabledRoutes";
 
 // #10627: the proxy runs in its own Next.js runtime and never executes
 // instrumentation-node.ts's startup warm-ups, so its FIRST request used to
@@ -21,6 +22,14 @@ void import("./lib/db/readCache")
   });
 
 export async function proxy(request: NextRequest) {
+  // FreeRoute: whole route families that only exist to pool a consumer
+  // subscription account or relay a browser chat session are hard-disabled
+  // before auth, routing, or any handler code runs. See
+  // src/lib/netie/hardDisabledRoutes.ts.
+  const hardDisabled = matchHardDisabledRoute(new URL(request.url).pathname);
+  if (hardDisabled) {
+    return NextResponse.json(hardDisabled.body, { status: hardDisabled.status });
+  }
   return runAuthzPipeline(request, { enforce: true });
 }
 

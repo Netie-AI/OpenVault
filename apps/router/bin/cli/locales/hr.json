@@ -1,8 +1,8 @@
 {
   "common": {
     "error": "Greška: {message}",
-    "serverOffline": "OmniRoute poslužitelj je izvan mreže. Pokrenite ga s: omniroute serve",
-    "authRequired": "Potrebna je autentifikacija. Postavite OMNIROUTE_API_KEY ili pokrenite: omniroute setup",
+    "serverOffline": "FreeRoute poslužitelj je izvan mreže. Pokrenite ga s: freeroute serve",
+    "authRequired": "Potrebna je autentifikacija. Postavite OMNIROUTE_API_KEY ili pokrenite: freeroute setup",
     "rateLimited": "Prekoračeno ograničenje brzine zahtjeva. Pokušajte ponovo nakon {seconds}s.",
     "timeout": "Zahtjev je istekao nakon {ms}ms.",
     "success": "Gotovo.",
@@ -15,7 +15,7 @@
     "yesOpt": "Preskoči upit za potvrdu"
   },
   "setup": {
-    "title": "OmniRoute Postavljanje",
+    "title": "FreeRoute Postavljanje",
     "passwordPrompt": "Administratorska lozinka",
     "providerPrompt": "Zadani pružatelj usluge (ostavite prazno za preskakanje)",
     "done": "Postavljanje dovršeno",
@@ -30,19 +30,19 @@
     "opencode": "Instalirajte i konfigurirajte priloženi @omniroute/opencode-plugin za OpenCode"
   },
   "doctor": {
-    "title": "OmniRoute Dijagnostika",
+    "title": "FreeRoute Dijagnostika",
     "dbOk": "Baza podataka: U redu ({path})",
-    "dbMissing": "Baza podataka: nije inicijalizirana — pokrenite `omniroute setup`",
+    "dbMissing": "Baza podataka: nije inicijalizirana — pokrenite `freeroute setup`",
     "portOk": "Priključak {port}: dostupan",
     "portConflict": "Priključak {port}: koristi ga drugi proces",
     "encryptionOk": "Ključ za šifriranje: konfiguriran",
-    "encryptionMissing": "Nedostaje ključ za šifriranje — pokrenite `omniroute setup`",
+    "encryptionMissing": "Nedostaje ključ za šifriranje — pokrenite `freeroute setup`",
     "allGood": "Sve provjere su prošle.",
     "warnings": "{count} upozorenje/a — pogledajte gore."
   },
   "providers": {
     "title": "Pružatelji usluga",
-    "noProviders": "Nema konfiguriranih pružatelja usluga. Pokrenite: omniroute setup",
+    "noProviders": "Nema konfiguriranih pružatelja usluga. Pokrenite: freeroute setup",
     "testing": "Testiranje {name}...",
     "available": "{count} pružatelj/a usluga dostupan/dostupno",
     "connected": "Spojeno",
@@ -71,7 +71,7 @@
       "dryRunOpt": "Ispiši što bi se promijenilo bez zapisivanja",
       "confirmPrompt": "Zamijeni API ključ za vezu \"{name}\" ({id})? [y/N]",
       "dryRunResult": "[dry-run] Rotirao bi ključ za \"{name}\" ({id}). Nisu napravljene nikakve promjene.",
-      "oauthHint": "OAuth veza — pokrenite: omniroute oauth {provider}",
+      "oauthHint": "OAuth veza — pokrenite: freeroute oauth {provider}",
       "envVarEmpty": "Varijabla okoline {var} nije postavljena ili je prazna.",
       "success": "Ključ je rotiran za \"{name}\". Pokrenite `providers test {id}` za provjeru.",
       "testPassed": "Test nakon rotacije je prošao.",
@@ -82,7 +82,7 @@
       "providerOpt": "Filtriraj prema nazivu pružatelja usluga",
       "header": "ID         Pružatelj      Naziv                    Status isteka  Status testa  Hlađenje do",
       "noData": "Nema dostupnih podataka o vezama s pružateljima usluga.",
-      "requiresServer": "providers status zahtijeva da OmniRoute poslužitelj bude pokrenut."
+      "requiresServer": "providers status zahtijeva da FreeRoute poslužitelj bude pokrenut."
     }
   },
   "keys": {
@@ -90,8 +90,8 @@
     "addDescription": "Dodaj ili ažuriraj API ključ za pružatelja usluga",
     "listDescription": "Prikaži sve konfigurirane API ključeve",
     "removeDescription": "Ukloni API ključ za pružatelja usluga",
-    "regenerateDescription": "Regeneriraj OmniRoute API ključ",
-    "revokeDescription": "Opozovi OmniRoute API ključ",
+    "regenerateDescription": "Regeneriraj FreeRoute API ključ",
+    "revokeDescription": "Opozovi FreeRoute API ključ",
     "revealDescription": "Otkrij nemaskiranu vrijednost API ključa",
     "usageDescription": "Prikaži nedavnu upotrebu za API ključ",
     "usageLimitOpt": "Broj nedavnih zahtjeva",
@@ -142,7 +142,7 @@
     "warning": "⚠ Ovo ispisuje/zapisuje DEŠIFRIRANE API ključeve i OAuth tokene u čistom tekstu. Pobrinite se da vaš zaslon, povijest ljuske i sve izlazne datoteke ostanu privatni.",
     "confirmHeading": "⚠ UPOZORENJE: ovo izvozi DEŠIFRIRANE vjerodajnice pružatelja usluge u čistom tekstu",
     "confirmBody": "Ova naredba dešifrira i ispisuje/zapisuje apiKey, accessToken, refreshToken i\nidToken za odabrane veze. Prema izlazu postupajte kao prema tajni.",
-    "confirmFooter": "Za potvrdu, pokrenite:\n  omniroute auth export --force",
+    "confirmFooter": "Za potvrdu, pokrenite:\n  freeroute auth export --force",
     "missingKey": "STORAGE_ENCRYPTION_KEY je obavezan za izvoz vjerodajnica.",
     "notFound": "Veza nije pronađena: {id}",
     "invalidFormat": "Nevažeći format: {format}. Koristite json ili env."
@@ -220,10 +220,10 @@
     "reasoning": "Razina napora zaključivanja (low|medium|high)",
     "thinking": "Proračun tokena za prošireno razmišljanje",
     "explain": "Ispiši stablo zamjene i raspon troškova na stderr",
-    "noCombo": "Nije pronađen odgovarajući combo. Konfigurirajte ga s: omniroute combo create"
+    "noCombo": "Nije pronađen odgovarajući combo. Konfigurirajte ga s: freeroute combo create"
   },
   "chat": {
-    "description": "Pošalji jednokratni chat upit u OmniRoute",
+    "description": "Pošalji jednokratni chat upit u FreeRoute",
     "file": "Pročitaj upit iz datoteke",
     "stdin": "Pročitaj upit sa stdin-a",
     "system": "Sistemski upit",
@@ -242,8 +242,8 @@
     }
   },
   "serve": {
-    "description": "Pokreni OmniRoute poslužitelj (zadana radnja)",
-    "starting": "Pokretanje OmniRoute poslužitelja na portu {port}...",
+    "description": "Pokreni FreeRoute poslužitelj (zadana radnja)",
+    "starting": "Pokretanje FreeRoute poslužitelja na portu {port}...",
     "ready": "Spreman na http://localhost:{port}",
     "stopping": "Zaustavljanje poslužitelja (PID {pid})...",
     "stopped": "Poslužitelj je zaustavljen.",
@@ -262,7 +262,7 @@
   },
   "backup": {
     "title": "Sigurnosna kopija",
-    "description": "Izrada sigurnosne kopije podataka OmniRoute",
+    "description": "Izrada sigurnosne kopije podataka FreeRoute",
     "creating": "Izrada sigurnosne kopije...",
     "done": "Sigurnosna kopija spremljena u {path}",
     "noFiles": "Nema datoteka za sigurnosno kopiranje (baza podataka nije inicijalizirana)",
@@ -274,7 +274,7 @@
     "noBackups": "Nije pronađena nijedna sigurnosna kopija.",
     "notFound": "Sigurnosna kopija nije pronađena: {name}",
     "confirmRestore": "Prepisati trenutne podatke sigurnosnom kopijom od {ts}?",
-    "createDescription": "Izrada sigurnosne kopije podataka OmniRoute",
+    "createDescription": "Izrada sigurnosne kopije podataka FreeRoute",
     "nameOpt": "Prilagođeni naziv sigurnosne kopije",
     "cloudOpt": "Učitaj sigurnosnu kopiju u pohranu u oblaku",
     "encryptOpt": "Šifriranje sigurnosne kopije algoritmom AES-256-GCM",
@@ -292,14 +292,14 @@
       "statusDescription": "Prikaži trenutni status rasporeda sigurnosnog kopiranja",
       "cronOpt": "Cron izraz za raspored (zadano: svaki dan u 3 ujutro)",
       "enabled": "Automatsko sigurnosno kopiranje omogućeno (cron: {cron}).",
-      "hint": "Raspored čita omniroute serve pri pokretanju.",
+      "hint": "Raspored čita freeroute serve pri pokretanju.",
       "disabled": "Automatsko sigurnosno kopiranje onemogućeno.",
       "notConfigured": "Nije konfiguriran nijedan raspored sigurnosnog kopiranja."
     }
   },
   "health": {
     "description": "Provjera zdravlja poslužitelja i statusa komponenti",
-    "noServer": "Poslužitelj nije pokrenut. Pokrenite s: omniroute serve",
+    "noServer": "Poslužitelj nije pokrenut. Pokrenite s: freeroute serve",
     "title": "Zdravlje",
     "status": "Status: {status}",
     "uptime": "Vrijeme rada: {uptime}",
@@ -308,21 +308,21 @@
   },
   "quota": {
     "description": "Prikaži korištenje kvote davatelja usluge",
-    "noServer": "Poslužitelj nije pokrenut. Pokrenite s: omniroute serve",
+    "noServer": "Poslužitelj nije pokrenut. Pokrenite s: freeroute serve",
     "noData": "Nema dostupnih informacija o kvoti."
   },
   "cache": {
     "description": "Upravljaj predmemorijom odgovora",
-    "noServer": "Poslužitelj nije pokrenut. Pokrenite s: omniroute serve",
+    "noServer": "Poslužitelj nije pokrenut. Pokrenite s: freeroute serve",
     "cleared": "Predmemorija je očišćena.",
     "clearFailed": "Čišćenje predmemorije nije uspjelo."
   },
   "redis": {
-    "description": "Pokrenite lokalni Redis spremnik jednim klikom (Podman ili Docker) za predmemoriranje i praćenje kvota u OmniRoute"
+    "description": "Pokrenite lokalni Redis spremnik jednim klikom (Podman ili Docker) za predmemoriranje i praćenje kvota u FreeRoute"
   },
   "test": {
     "description": "Testiraj vezu s davateljem usluge",
-    "noServer": "Poslužitelj nije pokrenut. Pokrenite s: omniroute serve",
+    "noServer": "Poslužitelj nije pokrenut. Pokrenite s: freeroute serve",
     "testing": "Testiranje {provider} / {model}...",
     "passed": "Veza uspješno uspostavljena!",
     "failed": "Veza nije uspjela: {error}",
@@ -334,7 +334,7 @@
     "saved": "Rezultati spremljeni u {path}",
     "compareTitle": "Usporedba modela",
     "compareMinTwo": "Za --compare potrebna su najmanje dva modela (odvojena zarezom)",
-    "noProviders": "Nema konfiguriranih davatelja usluge. Dodajte jednog s: omniroute keys add"
+    "noProviders": "Nema konfiguriranih davatelja usluge. Dodajte jednog s: freeroute keys add"
   },
   "update": {
     "checking": "Provjera ažuriranja...",
@@ -348,7 +348,7 @@
     "running": "MCP poslužitelj je pokrenut ({transport})",
     "stopped": "MCP poslužitelj je zaustavljen.",
     "restarted": "MCP poslužitelj je ponovo pokrenut.",
-    "stoppedHint": "Pokrenite `omniroute mcp enable` da biste ga uključili.",
+    "stoppedHint": "Pokrenite `freeroute mcp enable` da biste ga uključili.",
     "enabled": "MCP poslužitelj omogućen.",
     "disabled": "MCP poslužitelj onemogućen.",
     "enable": {
@@ -416,7 +416,7 @@
     }
   },
   "policy": {
-    "description": "Upravljanje OmniRoute politikama autorizacije",
+    "description": "Upravljanje FreeRoute politikama autorizacije",
     "list": {
       "description": "Prikaz politika",
       "kind": "Filtriraj po vrsti (allow|deny|rate-limit|cost-cap)",
@@ -453,7 +453,7 @@
     }
   },
   "compression": {
-    "description": "Konfigurirajte i pregledajte OmniRoute cjevovod komprimiranja",
+    "description": "Konfigurirajte i pregledajte FreeRoute cjevovod komprimiranja",
     "status": {
       "description": "Prikaz trenutnog statusa i postavki komprimiranja"
     },
@@ -507,18 +507,18 @@
     "confirmRotate": "Rotirati tunel {type}? (bit će generiran novi URL)"
   },
   "stop": {
-    "description": "Zaustavi OmniRoute server",
+    "description": "Zaustavi FreeRoute server",
     "stopping": "Zaustavljanje servera (PID {pid})...",
     "stopped": "Server zaustavljen.",
     "notRunning": "Nijedan server nije aktivan.",
     "portFallback": "Nije pronađena PID datoteka, pokušava se zaustavljanje putem porta..."
   },
   "restart": {
-    "description": "Ponovno pokreni OmniRoute server",
-    "restarting": "Ponovno pokretanje OmniRoute servera..."
+    "description": "Ponovno pokreni FreeRoute server",
+    "restarting": "Ponovno pokretanje FreeRoute servera..."
   },
   "dashboard": {
-    "description": "Otvori OmniRoute nadzornu ploču u pregledniku",
+    "description": "Otvori FreeRoute nadzornu ploču u pregledniku",
     "opening": "Otvaranje nadzorne ploče na {url}",
     "urlOnly": "Ispiši URL nadzorne ploče bez otvaranja preglednika",
     "tui": "Otvori interaktivnu TUI nadzornu ploču (terminalsko sučelje, 7 kartica)"
@@ -526,7 +526,7 @@
   "models": {
     "description": "Prikaži dostupne modele (potreban je server)",
     "search": "Filtriraj modele po ID-u, nazivu, pružatelju usluge ili opisu",
-    "noServer": "Server nije pokrenut. Pokrenite s: omniroute serve",
+    "noServer": "Server nije pokrenut. Pokrenite s: freeroute serve",
     "noModels": "Nema pronađenih modela."
   },
   "audit": {
@@ -558,7 +558,7 @@
     }
   },
   "skills": {
-    "description": "Upravljanje OmniRoute vještinama (sandbox, ugrađene, prilagođene, hibridne, skillssh)",
+    "description": "Upravljanje FreeRoute vještinama (sandbox, ugrađene, prilagođene, hibridne, skillssh)",
     "list": {
       "description": "Prikaži instalirane vještine",
       "type": "Filtriraj po vrsti (sandbox|custom|builtin|hybrid|skillssh)",
@@ -631,7 +631,7 @@
     }
   },
   "memory": {
-    "description": "Upravljanje konverzacijskom memorijom OmniRoute (FTS5 + vektor)",
+    "description": "Upravljanje konverzacijskom memorijom FreeRoute (FTS5 + vektor)",
     "search": {
       "description": "Pretraži unose memorije prema semantičkom upitu",
       "type": "Filtriraj po tipu memorije (user|feedback|project|reference)",
@@ -789,7 +789,7 @@
     }
   },
   "webhooks": {
-    "description": "Upravljaj OmniRoute webhookovima",
+    "description": "Upravljaj FreeRoute webhookovima",
     "events": {
       "description": "Prikaži popis svih dostupnih vrsta webhook događaja"
     },
@@ -821,14 +821,14 @@
     }
   },
   "program": {
-    "description": "OmniRoute — Pametni AI Router s automatskim prebacivanjem",
+    "description": "FreeRoute — Pametni AI Router s automatskim prebacivanjem",
     "version": "Ispiši verziju i izađi",
     "output": "Format izlaza (table, json, jsonl, csv)",
     "quiet": "Prikaži samo nužni izlaz",
     "no_color": "Isključi obojeni izlaz",
     "timeout": "Vrijeme čekanja HTTP zahtjeva u milisekundama",
-    "api_key": "API ključ za OmniRoute server",
-    "base_url": "Osnovni URL OmniRoute servera",
+    "api_key": "API ključ za FreeRoute server",
+    "base_url": "Osnovni URL FreeRoute servera",
     "context": "Kontekst/profil servera za korištenje u ovoj naredbi",
     "lang": "Postavi jezik prikaza CLI-a (nadjačava OMNIROUTE_LANG)"
   },
@@ -1079,7 +1079,7 @@
     }
   },
   "openapi": {
-    "description": "Pristup i testiranje OmniRoute OpenAPI specifikacije",
+    "description": "Pristup i testiranje FreeRoute OpenAPI specifikacije",
     "dump": {
       "description": "Izvezi OpenAPI specifikaciju u stdout ili datoteku",
       "format": "Izlazni format: yaml|json (zadano: yaml)",
@@ -1149,7 +1149,7 @@
     }
   },
   "open": {
-    "description": "Otvori određenu stranicu OmniRoute nadzorne ploče u pregledniku",
+    "description": "Otvori određenu stranicu FreeRoute nadzorne ploče u pregledniku",
     "url": "Ispiši samo URL, ne otvaraj preglednik"
   },
   "telemetry": {
@@ -1166,7 +1166,7 @@
     }
   },
   "sync": {
-    "description": "Sinkroniziraj konfiguraciju između instanci OmniRoute",
+    "description": "Sinkroniziraj konfiguraciju između instanci FreeRoute",
     "push": {
       "description": "Pošalji konfiguraciju u oblak ili udaljenu instancu",
       "target": "Cilj (cloud ili context:name)",
@@ -1222,8 +1222,8 @@
       "listTitle": "Dostupni jezici",
       "current": "Jezik: {code} ({name})",
       "saved": "Jezik postavljen na {code} ({name}).",
-      "noCode": "Potreban je kod jezika. Pokrenite 'omniroute config lang list' za popis dostupnih kodova.",
-      "unknown": "Nepoznat kod jezika: {code}. Pokrenite 'omniroute config lang list' za popis dostupnih kodova.",
+      "noCode": "Potreban je kod jezika. Pokrenite 'freeroute config lang list' za popis dostupnih kodova.",
+      "unknown": "Nepoznat kod jezika: {code}. Pokrenite 'freeroute config lang list' za popis dostupnih kodova.",
       "alreadySet": "Jezik je već postavljen na {code}.",
       "envHint": "Savjet: možete i postaviti OMNIROUTE_LANG={code} u svom okruženju."
     }
@@ -1242,7 +1242,7 @@
     "filter": "Filtriraj po razini (error,warn,info) — odvojeno zarezom",
     "lines": "Broj redaka za preuzimanje",
     "timeout": "Vremensko ograničenje veze u ms",
-    "baseUrl": "Osnovni URL OmniRoute API-ja",
+    "baseUrl": "Osnovni URL FreeRoute API-ja",
     "requestId": "Filtriraj po ID-u zahtjeva",
     "apiKey": "Filtriraj po API ključu",
     "combo": "Filtriraj po nazivu kombinacije",
@@ -1258,10 +1258,10 @@
     "description": "Upravljanje ikonom u sistemskoj traci",
     "show": "Prikaži ikonu u sistemskoj traci (ako je poslužitelj pokrenut s --tray)",
     "hide": "Skrij ikonu u sistemskoj traci",
-    "quit": "Zatvori OmniRoute putem sistemske trake"
+    "quit": "Zatvori FreeRoute putem sistemske trake"
   },
   "autostart": {
-    "description": "Upravljanje automatskim pokretanjem OmniRoutea kod podizanja sustava (Linux: systemd korisnička usluga)",
+    "description": "Upravljanje automatskim pokretanjem FreeRoutea kod podizanja sustava (Linux: systemd korisnička usluga)",
     "enable": "Omogući automatsko pokretanje kod podizanja sustava",
     "disable": "Onemogući automatsko pokretanje kod podizanja sustava",
     "toggle": "Uklj./isklj. automatsko pokretanje kod podizanja sustava",
@@ -1293,19 +1293,19 @@
     "scaffold": "Izradi predložak novog dodatka"
   },
   "launch": {
-    "description": "Pokreni Claude Code usmjeren na OmniRoute (lokalno ili udaljeno, s --profile)",
+    "description": "Pokreni Claude Code usmjeren na FreeRoute (lokalno ili udaljeno, s --profile)",
     "token": "Token koji bi Claude klijent trebao slati (ANTHROPIC_AUTH_TOKEN)",
-    "notRunning": "OmniRoute nije dostupan na {port}. Pokrenite ga naredbom 'omniroute serve'.",
+    "notRunning": "FreeRoute nije dostupan na {port}. Pokrenite ga naredbom 'freeroute serve'.",
     "notFound": "CLI alat 'claude' nije pronađen u PATH-u."
   },
   "run": {
-    "description": "Pokreni podržani CLI cilj kroz OmniRoute"
+    "description": "Pokreni podržani CLI cilj kroz FreeRoute"
   },
   "setupClaude": {
-    "description": "Generiraj profile za Claude Code u ~/.claude/profiles iz kataloga modela OmniRoute"
+    "description": "Generiraj profile za Claude Code u ~/.claude/profiles iz kataloga modela FreeRoute"
   },
   "connect": {
-    "description": "Poveži se s udaljenim OmniRoute serverom i uđi u udaljeni način rada"
+    "description": "Poveži se s udaljenim FreeRoute serverom i uđi u udaljeni način rada"
   },
   "tokens": {
     "description": "Upravljaj ograničenim CLI pristupnim tokenima (udaljeni način rada)"
@@ -1314,10 +1314,10 @@
     "description": "Odaberi pružatelja usluge i model s aktivnog servera i konfiguriraj podržani lokalni CLI"
   },
   "launchCodex": {
-    "description": "Pokreni Codex CLI usmjeren na OmniRoute (lokalno ili udaljeni VPS)"
+    "description": "Pokreni Codex CLI usmjeren na FreeRoute (lokalno ili udaljeni VPS)"
   },
   "setupCodex": {
-    "description": "Generiraj datoteke profila u ~/.codex iz uživo kataloga modela OmniRoute"
+    "description": "Generiraj datoteke profila u ~/.codex iz uživo kataloga modela FreeRoute"
   },
   "packs": {
     "description": "Upravljaj neobaveznim runtime paketima (ML / automatizacija preglednika)",
@@ -1330,7 +1330,7 @@
     "errUnknown": "nepoznat paket: {name}",
     "errNoIndex": "indeks paketa nije pronađen; proslijedite --source <dir> koji sadrži sadržaj paketa (desktop paketi ga isporučuju uz aplikaciju)",
     "installed": "paket \"{name}\" instaliran i provjeren u {dir}",
-    "restartHint": "ponovno pokrenite OmniRoute server (ili desktop aplikaciju) da bi runtime prepoznao paket",
+    "restartHint": "ponovno pokrenite FreeRoute server (ili desktop aplikaciju) da bi runtime prepoznao paket",
     "removed": "paket \"{name}\" uklonjen",
     "notInstalled": "paket \"{name}\" nije bio instaliran",
     "verifyOk": "svi instalirani paketi su provjereni",

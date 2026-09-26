@@ -16,7 +16,7 @@ export function parseSeqParam(raw: string | null): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
-// Every OmniRoute conversation is a single straight line (see
+// Every FreeRoute conversation is a single straight line (see
 // conversationTracker.ts's 2026-08-06 redesign — an edited/duplicated turn
 // mints its own independent conversation instead of forking this one), so
 // this always returns a flat, chronological page — never a tree — capped

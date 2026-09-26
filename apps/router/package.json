@@ -1,11 +1,11 @@
 {
-  "name": "omniroute",
+  "name": "@netie/freeroute",
   "version": "3.8.51",
-  "description": "Unified AI router with 358 providers, RTK+Caveman compression, auto fallback, MCP/A2A, desktop, PWA, and OpenAI-compatible APIs.",
+  "description": "FreeRoute — Netie's free AI gateway. Routes API-key traffic to real providers; no consumer-account pooling, no browser-session relay.",
   "type": "module",
   "bin": {
-    "omniroute": "bin/omniroute.mjs",
-    "omniroute-reset-password": "bin/reset-password.mjs"
+    "freeroute": "bin/omniroute.mjs",
+    "freeroute-reset-password": "bin/reset-password.mjs"
   },
   "files": [
     "bin/",
@@ -70,25 +70,25 @@
   "keywords": [
     "ai",
     "router",
+    "gateway",
     "proxy",
     "openai",
-    "claude",
     "anthropic",
     "gemini",
     "fallback",
-    "cursor",
-    "cline",
-    "codex",
     "llm",
-    "auto-fallback"
+    "auto-fallback",
+    "freeroute",
+    "netie",
+    "openvault"
   ],
   "license": "MIT",
-  "author": "diegosouzapw",
+  "author": "Netie AI",
   "repository": {
     "type": "git",
-    "url": "https://github.com/diegosouzapw/OmniRoute"
+    "url": "https://github.com/Netie-AI/Netie"
   },
-  "homepage": "https://omniroute.online",
+  "homepage": "https://github.com/Netie-AI/Netie",
   "scripts": {
     "dev": "node --max-old-space-size=8192 scripts/dev/run-next.mjs dev",
     "prebuild:docs": "node scripts/docs/gen-openapi-module.mjs",
@@ -128,7 +128,10 @@
     "electron:build:mac": "npm run build && cd electron && npm run build:mac",
     "electron:build:linux": "npm run build && cd electron && npm run build:linux",
     "electron:smoke:packaged": "node scripts/dev/smoke-electron-packaged.mjs",
-    "test": "cross-env DISABLE_SQLITE_AUTO_BACKUP=true node --max-old-space-size=8192 --import tsx/esm --import ./open-sse/utils/setupPolyfill.ts --import ./tests/_setup/isolateDataDir.ts --test --test-force-exit --test-concurrency=4 tests/unit/*.test.ts \"tests/unit/{api,auth,authz,build,cli,cli-helper,combo,compression,correctness,cors,db,db-adapters,docs,gamification,guardrails,lib,mcp,memory,runtime,security,services,settings,shared,translator,ui,usage}/**/*.test.ts\" \"tests/unit/**/*.test.mjs\" && cross-env DISABLE_SQLITE_AUTO_BACKUP=true node --max-old-space-size=8192 --import tsx --import ./open-sse/utils/setupPolyfill.ts --import ./tests/_setup/isolateDataDir.ts --test --test-force-exit --test-concurrency=4 \"tests/unit/dashboard/**/*.test.ts\" && npm run test:unit:serial",
+    "test": "npm run test:policy && npm run test:smoke",
+    "test:policy": "node --import tsx --test open-sse/netie/__tests__/policy.test.mjs",
+    "test:smoke": "cross-env DISABLE_SQLITE_AUTO_BACKUP=true node --test netie/smoke.test.mjs",
+    "test:unit-upstream-not-imported": "cross-env DISABLE_SQLITE_AUTO_BACKUP=true node --max-old-space-size=8192 --import tsx/esm --import ./open-sse/utils/setupPolyfill.ts --import ./tests/_setup/isolateDataDir.ts --test --test-force-exit --test-concurrency=4 tests/unit/*.test.ts \"tests/unit/{api,auth,authz,build,cli,cli-helper,combo,compression,correctness,cors,db,db-adapters,docs,gamification,guardrails,lib,mcp,memory,runtime,security,services,settings,shared,translator,ui,usage}/**/*.test.ts\" \"tests/unit/**/*.test.mjs\" && cross-env DISABLE_SQLITE_AUTO_BACKUP=true node --max-old-space-size=8192 --import tsx --import ./open-sse/utils/setupPolyfill.ts --import ./tests/_setup/isolateDataDir.ts --test --test-force-exit --test-concurrency=4 \"tests/unit/dashboard/**/*.test.ts\" && npm run test:unit:serial",
     "test:unit": "cross-env DISABLE_SQLITE_AUTO_BACKUP=true node --max-old-space-size=8192 --import tsx/esm --import ./open-sse/utils/setupPolyfill.ts --import ./tests/_setup/isolateDataDir.ts --test --test-force-exit --test-concurrency=4 tests/unit/*.test.ts \"tests/unit/{api,auth,authz,build,cli,cli-helper,combo,compression,correctness,cors,db,db-adapters,docs,gamification,guardrails,lib,mcp,memory,runtime,security,services,settings,shared,translator,ui,usage}/**/*.test.ts\" \"tests/unit/**/*.test.mjs\" && cross-env DISABLE_SQLITE_AUTO_BACKUP=true node --max-old-space-size=8192 --import tsx --import ./open-sse/utils/setupPolyfill.ts --import ./tests/_setup/isolateDataDir.ts --test --test-force-exit --test-concurrency=4 \"tests/unit/dashboard/**/*.test.ts\" && npm run test:unit:serial",
     "test:unit:ci": "cross-env DISABLE_SQLITE_AUTO_BACKUP=true node --max-old-space-size=8192 --import tsx/esm --import ./open-sse/utils/setupPolyfill.ts --import ./tests/_setup/isolateDataDir.ts --test --test-force-exit --test-concurrency=4 tests/unit/*.test.ts \"tests/unit/{api,auth,authz,build,cli,cli-helper,combo,compression,correctness,cors,db,db-adapters,docs,gamification,guardrails,lib,mcp,memory,runtime,security,services,settings,shared,translator,ui,usage}/**/*.test.ts\" \"tests/unit/**/*.test.mjs\" && cross-env DISABLE_SQLITE_AUTO_BACKUP=true node --max-old-space-size=8192 --import tsx --import ./open-sse/utils/setupPolyfill.ts --import ./tests/_setup/isolateDataDir.ts --test --test-force-exit --test-concurrency=4 \"tests/unit/dashboard/**/*.test.ts\" && npm run test:unit:serial",
     "test:unit:ci:shard": "cross-env DISABLE_SQLITE_AUTO_BACKUP=true node --max-old-space-size=8192 --import tsx/esm --import ./open-sse/utils/setupPolyfill.ts --import ./tests/_setup/isolateDataDir.ts --test --test-force-exit --test-concurrency=4 --test-shard=$TEST_SHARD tests/unit/*.test.ts \"tests/unit/{api,auth,authz,build,cli,cli-helper,combo,compression,correctness,cors,db,db-adapters,docs,gamification,guardrails,lib,mcp,memory,runtime,security,services,settings,shared,translator,ui,usage}/**/*.test.ts\" \"tests/unit/**/*.test.mjs\" && cross-env DISABLE_SQLITE_AUTO_BACKUP=true node --max-old-space-size=8192 --import tsx --import ./open-sse/utils/setupPolyfill.ts --import ./tests/_setup/isolateDataDir.ts --test --test-force-exit --test-concurrency=4 --test-shard=$TEST_SHARD \"tests/unit/dashboard/**/*.test.ts\" && cross-env DISABLE_SQLITE_AUTO_BACKUP=true node --max-old-space-size=8192 --import tsx/esm --import ./open-sse/utils/setupPolyfill.ts --import ./tests/_setup/isolateDataDir.ts --test --test-force-exit --test-concurrency=1 --test-shard=$TEST_SHARD \"tests/unit/serial/**/*.test.ts\"",
@@ -389,8 +392,7 @@
     "js-tiktoken": "^1.0.20",
     "keytar": "^7.9.0",
     "onnxruntime-node": "1.30.0",
-    "sqlite-vec": "^0.1.9",
-    "wreq-js": "3.2.0"
+    "sqlite-vec": "^0.1.9"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",

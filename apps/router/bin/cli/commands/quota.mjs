@@ -15,7 +15,7 @@ export function registerQuota(program) {
 
   quota
     .command("status")
-    .description("Show truthful OmniRoute gateway, quota, pool, and circuit state")
+    .description("Show truthful FreeRoute gateway, quota, pool, and circuit state")
     .action(async (opts, cmd) => runBoundedJson("/api/omniroute/status", cmd.optsWithGlobals()));
 
   quota

@@ -1,8 +1,8 @@
 {
   "common": {
     "error": "Chyba: {message}",
-    "serverOffline": "Server OmniRoute je offline. Spustite: omniroute serve",
-    "authRequired": "Vyžaduje sa overenie. Nastavte OMNIROUTE_API_KEY alebo spustite: omniroute setup",
+    "serverOffline": "Server FreeRoute je offline. Spustite: freeroute serve",
+    "authRequired": "Vyžaduje sa overenie. Nastavte OMNIROUTE_API_KEY alebo spustite: freeroute setup",
     "rateLimited": "Prekročený limit požiadaviek. Skúste za {seconds}s.",
     "timeout": "Požiadavka vypršala po {ms}ms.",
     "success": "Hotovo.",
@@ -15,7 +15,7 @@
     "yesOpt": "Preskočiť potvrdenie"
   },
   "setup": {
-    "title": "Nastavenie OmniRoute",
+    "title": "Nastavenie FreeRoute",
     "passwordPrompt": "Heslo správcu",
     "providerPrompt": "Predvolený poskytovateľ (ak chcete preskočiť, nechajte prázdne)",
     "done": "Nastavenie dokončené",
@@ -30,19 +30,19 @@
     "opencode": "Nainštalovať a nakonfigurovať pribalený doplnok @omniroute/opencode-plugin pre OpenCode"
   },
   "doctor": {
-    "title": "Diagnostika OmniRoute",
+    "title": "Diagnostika FreeRoute",
     "dbOk": "Databáza: OK ({path})",
-    "dbMissing": "Databáza: nie je inicializovaná — spustite `omniroute setup`",
+    "dbMissing": "Databáza: nie je inicializovaná — spustite `freeroute setup`",
     "portOk": "Port {port}: dostupný",
     "portConflict": "Port {port}: používa ho iný proces",
     "encryptionOk": "Šifrovací kľúč: nakonfigurovaný",
-    "encryptionMissing": "Chýba šifrovací kľúč — spustite `omniroute setup`",
+    "encryptionMissing": "Chýba šifrovací kľúč — spustite `freeroute setup`",
     "allGood": "Všetky kontroly prešli úspešne.",
     "warnings": "Počet upozornení: {count} — pozrite vyššie."
   },
   "providers": {
     "title": "Poskytovatelia",
-    "noProviders": "Nie sú nakonfigurovaní žiadni poskytovatelia. Spustite: omniroute setup",
+    "noProviders": "Nie sú nakonfigurovaní žiadni poskytovatelia. Spustite: freeroute setup",
     "testing": "Testuje sa {name}...",
     "available": "Počet dostupných poskytovateľov: {count}",
     "connected": "Pripojené",
@@ -71,7 +71,7 @@
       "dryRunOpt": "Zobraziť, čo by sa zmenilo, bez vykonania zápisu",
       "confirmPrompt": "Nahradiť API kľúč pre pripojenie „{name}“ ({id})? [y/N]",
       "dryRunResult": "[dry-run] Kľúč pre „{name}“ ({id}) by sa rotoval. Neboli vykonané žiadne zmeny.",
-      "oauthHint": "Pripojenie OAuth — spustite: omniroute oauth {provider}",
+      "oauthHint": "Pripojenie OAuth — spustite: freeroute oauth {provider}",
       "envVarEmpty": "Premenná prostredia {var} nie je nastavená alebo je prázdna.",
       "success": "Kľúč pre „{name}“ bol rotovaný. Overte ho spustením príkazu `providers test {id}`.",
       "testPassed": "Test po rotácii bol úspešný.",
@@ -82,7 +82,7 @@
       "providerOpt": "Filtrovať podľa názvu poskytovateľa",
       "header": "ID         Poskytovateľ  Názov                    Stav platnosti  Stav testu  Pozastavené do",
       "noData": "Nie sú k dispozícii žiadne údaje o pripojeniach poskytovateľov.",
-      "requiresServer": "Príkaz providers status vyžaduje, aby bol server OmniRoute spustený."
+      "requiresServer": "Príkaz providers status vyžaduje, aby bol server FreeRoute spustený."
     }
   },
   "keys": {
@@ -90,8 +90,8 @@
     "addDescription": "Pridať alebo aktualizovať API kľúč pre poskytovateľa",
     "listDescription": "Zobraziť všetky nakonfigurované API kľúče",
     "removeDescription": "Odstrániť API kľúč poskytovateľa",
-    "regenerateDescription": "Opätovne vygenerovať API kľúč OmniRoute",
-    "revokeDescription": "Zrušiť API kľúč OmniRoute",
+    "regenerateDescription": "Opätovne vygenerovať API kľúč FreeRoute",
+    "revokeDescription": "Zrušiť API kľúč FreeRoute",
     "revealDescription": "Odkryť nezamaskovanú hodnotu API kľúča",
     "usageDescription": "Zobraziť nedávne použitie API kľúča",
     "usageLimitOpt": "Počet nedávnych požiadaviek",
@@ -142,7 +142,7 @@
     "warning": "⚠ Týmto sa vypíšu/zapíšu DEŠIFROVANÉ kľúče API a tokeny OAuth v obyčajnom texte. Uistite sa, že vaša obrazovka, história shellu a všetky výstupné súbory zostanú súkromné.",
     "confirmHeading": "⚠ VAROVANIE: týmto sa exportujú DEŠIFROVANÉ prihlasovacie údaje poskytovateľa v obyčajnom texte",
     "confirmBody": "Tento príkaz dešifruje a vypíše/zapíše apiKey, accessToken, refreshToken a\nidToken pre vybrané pripojenia. S výstupom zaobchádzajte ako s tajným údajom.",
-    "confirmFooter": "Na potvrdenie spustite:\n  omniroute auth export --force",
+    "confirmFooter": "Na potvrdenie spustite:\n  freeroute auth export --force",
     "missingKey": "Na export prihlasovacích údajov sa vyžaduje STORAGE_ENCRYPTION_KEY.",
     "notFound": "Pripojenie sa nenašlo: {id}",
     "invalidFormat": "Neplatný formát: {format}. Použite json alebo env."
@@ -220,10 +220,10 @@
     "reasoning": "Úroveň úsilia pri uvažovaní (low|medium|high)",
     "thinking": "Rozpočet tokenov na rozšírené uvažovanie",
     "explain": "Vypísať strom záložných možností a rozsah nákladov do stderr",
-    "noCombo": "Nenašla sa žiadna zodpovedajúca kombinácia. Nakonfigurujte ju pomocou: omniroute combo create"
+    "noCombo": "Nenašla sa žiadna zodpovedajúca kombinácia. Nakonfigurujte ju pomocou: freeroute combo create"
   },
   "chat": {
-    "description": "Odoslať jednorazovú chatovú výzvu do OmniRoute",
+    "description": "Odoslať jednorazovú chatovú výzvu do FreeRoute",
     "file": "Načítať výzvu zo súboru",
     "stdin": "Načítať výzvu zo štandardného vstupu",
     "system": "Systémová výzva",
@@ -242,8 +242,8 @@
     }
   },
   "serve": {
-    "description": "Spustiť server OmniRoute (predvolená akcia)",
-    "starting": "Spúšťa sa server OmniRoute na porte {port}...",
+    "description": "Spustiť server FreeRoute (predvolená akcia)",
+    "starting": "Spúšťa sa server FreeRoute na porte {port}...",
     "ready": "Pripravené na http://localhost:{port}",
     "stopping": "Zastavuje sa server (PID {pid})...",
     "stopped": "Server bol zastavený.",
@@ -262,7 +262,7 @@
   },
   "backup": {
     "title": "Záloha",
-    "description": "Vytvoriť zálohu údajov OmniRoute",
+    "description": "Vytvoriť zálohu údajov FreeRoute",
     "creating": "Vytvára sa záloha...",
     "done": "Záloha bola uložená do {path}",
     "noFiles": "Žiadne súbory na zálohovanie (databáza nebola inicializovaná)",
@@ -274,7 +274,7 @@
     "noBackups": "Nenašli sa žiadne zálohy.",
     "notFound": "Záloha sa nenašla: {name}",
     "confirmRestore": "Prepísať aktuálne údaje zálohou z {ts}?",
-    "createDescription": "Vytvoriť zálohu údajov OmniRoute",
+    "createDescription": "Vytvoriť zálohu údajov FreeRoute",
     "nameOpt": "Vlastný názov zálohy",
     "cloudOpt": "Nahrať zálohu do cloudového úložiska",
     "encryptOpt": "Zašifrovať zálohu pomocou AES-256-GCM",
@@ -292,14 +292,14 @@
       "statusDescription": "Zobraziť aktuálny stav plánu zálohovania",
       "cronOpt": "Výraz cron pre plán (predvolene: denne o 3:00)",
       "enabled": "Automatické zálohovanie je povolené (cron: {cron}).",
-      "hint": "Plán načíta omniroute serve pri spustení.",
+      "hint": "Plán načíta freeroute serve pri spustení.",
       "disabled": "Automatické zálohovanie je zakázané.",
       "notConfigured": "Nie je nakonfigurovaný žiadny plán zálohovania."
     }
   },
   "health": {
     "description": "Skontrolovať stav servera a komponentov",
-    "noServer": "Server nie je spustený. Spustite ho pomocou: omniroute serve",
+    "noServer": "Server nie je spustený. Spustite ho pomocou: freeroute serve",
     "title": "Stav",
     "status": "Stav: {status}",
     "uptime": "Doba prevádzky: {uptime}",
@@ -308,21 +308,21 @@
   },
   "quota": {
     "description": "Zobraziť využitie kvót poskytovateľov",
-    "noServer": "Server nie je spustený. Spustite ho pomocou: omniroute serve",
+    "noServer": "Server nie je spustený. Spustite ho pomocou: freeroute serve",
     "noData": "Nie sú k dispozícii žiadne informácie o kvótach."
   },
   "cache": {
     "description": "Spravovať vyrovnávaciu pamäť odpovedí",
-    "noServer": "Server nie je spustený. Spustite ho pomocou: omniroute serve",
+    "noServer": "Server nie je spustený. Spustite ho pomocou: freeroute serve",
     "cleared": "Vyrovnávacia pamäť bola vymazaná.",
     "clearFailed": "Vymazanie vyrovnávacej pamäte zlyhalo."
   },
   "redis": {
-    "description": "Spustiť miestny kontajner Redis jedným kliknutím (Podman alebo Docker) na ukladanie do vyrovnávacej pamäte a sledovanie kvót OmniRoute"
+    "description": "Spustiť miestny kontajner Redis jedným kliknutím (Podman alebo Docker) na ukladanie do vyrovnávacej pamäte a sledovanie kvót FreeRoute"
   },
   "test": {
     "description": "Otestovať pripojenie k poskytovateľovi",
-    "noServer": "Server nie je spustený. Spustite ho pomocou: omniroute serve",
+    "noServer": "Server nie je spustený. Spustite ho pomocou: freeroute serve",
     "testing": "Testuje sa {provider} / {model}...",
     "passed": "Pripojenie bolo úspešné!",
     "failed": "Pripojenie zlyhalo: {error}",
@@ -334,7 +334,7 @@
     "saved": "Výsledky boli uložené do {path}",
     "compareTitle": "Porovnanie modelov",
     "compareMinTwo": "Pre --compare sú potrebné aspoň dva modely (oddelené čiarkami)",
-    "noProviders": "Nie sú nakonfigurovaní žiadni poskytovatelia. Pridajte jedného pomocou: omniroute keys add"
+    "noProviders": "Nie sú nakonfigurovaní žiadni poskytovatelia. Pridajte jedného pomocou: freeroute keys add"
   },
   "update": {
     "checking": "Kontrolujú sa aktualizácie...",
@@ -348,7 +348,7 @@
     "running": "Server MCP je spustený ({transport})",
     "stopped": "Server MCP bol zastavený.",
     "restarted": "Server MCP bol reštartovaný.",
-    "stoppedHint": "Zapnite ho spustením príkazu `omniroute mcp enable`.",
+    "stoppedHint": "Zapnite ho spustením príkazu `freeroute mcp enable`.",
     "enabled": "Server MCP bol povolený.",
     "disabled": "Server MCP bol zakázaný.",
     "enable": {
@@ -416,7 +416,7 @@
     }
   },
   "policy": {
-    "description": "Spravovať autorizačné politiky OmniRoute",
+    "description": "Spravovať autorizačné politiky FreeRoute",
     "list": {
       "description": "Zobraziť zoznam politík",
       "kind": "Filtrovať podľa typu (allow|deny|rate-limit|cost-cap)",
@@ -453,7 +453,7 @@
     }
   },
   "compression": {
-    "description": "Konfigurovať a kontrolovať kompresný proces OmniRoute",
+    "description": "Konfigurovať a kontrolovať kompresný proces FreeRoute",
     "status": {
       "description": "Zobraziť aktuálny stav a nastavenia kompresie"
     },
@@ -507,18 +507,18 @@
     "confirmRotate": "Zmeniť adresu URL tunela {type}? (vygeneruje sa nová adresa URL)"
   },
   "stop": {
-    "description": "Zastaviť server OmniRoute",
+    "description": "Zastaviť server FreeRoute",
     "stopping": "Server sa zastavuje (PID {pid})...",
     "stopped": "Server bol zastavený.",
     "notRunning": "Nie je spustený žiadny server.",
     "portFallback": "Nenašiel sa žiadny súbor PID, skúša sa zastavenie podľa portu..."
   },
   "restart": {
-    "description": "Reštartovať server OmniRoute",
-    "restarting": "Server OmniRoute sa reštartuje..."
+    "description": "Reštartovať server FreeRoute",
+    "restarting": "Server FreeRoute sa reštartuje..."
   },
   "dashboard": {
-    "description": "Otvoriť ovládací panel OmniRoute v prehliadači",
+    "description": "Otvoriť ovládací panel FreeRoute v prehliadači",
     "opening": "Otvára sa ovládací panel na adrese {url}",
     "urlOnly": "Vypísať adresu URL ovládacieho panela bez otvorenia prehliadača",
     "tui": "Otvoriť interaktívny ovládací panel TUI (terminálové používateľské rozhranie, 7 kariet)"
@@ -526,7 +526,7 @@
   "models": {
     "description": "Zobraziť dostupné modely (vyžaduje server)",
     "search": "Filtrovať modely podľa ID, názvu, poskytovateľa alebo opisu",
-    "noServer": "Server nie je spustený. Spustite ho pomocou: omniroute serve",
+    "noServer": "Server nie je spustený. Spustite ho pomocou: freeroute serve",
     "noModels": "Nenašli sa žiadne modely."
   },
   "audit": {
@@ -558,7 +558,7 @@
     }
   },
   "skills": {
-    "description": "Spravovať zručnosti OmniRoute (sandbox, builtin, custom, hybrid, skillssh)",
+    "description": "Spravovať zručnosti FreeRoute (sandbox, builtin, custom, hybrid, skillssh)",
     "list": {
       "description": "Zobraziť zoznam nainštalovaných zručností",
       "type": "Filtrovať podľa typu (sandbox|custom|builtin|hybrid|skillssh)",
@@ -631,7 +631,7 @@
     }
   },
   "memory": {
-    "description": "Spravovať konverzačnú pamäť OmniRoute (FTS5 + vector)",
+    "description": "Spravovať konverzačnú pamäť FreeRoute (FTS5 + vector)",
     "search": {
       "description": "Vyhľadávať záznamy v pamäti pomocou sémantického dopytu",
       "type": "Filtrovať podľa typu pamäte (user|feedback|project|reference)",
@@ -789,7 +789,7 @@
     }
   },
   "webhooks": {
-    "description": "Spravovať webhooky OmniRoute",
+    "description": "Spravovať webhooky FreeRoute",
     "events": {
       "description": "Zobraziť zoznam všetkých dostupných typov udalostí webhookov"
     },
@@ -821,14 +821,14 @@
     }
   },
   "program": {
-    "description": "OmniRoute — Inteligentný AI router s automatickým prepínaním",
+    "description": "FreeRoute — Inteligentný AI router s automatickým prepínaním",
     "version": "Vypísať verziu a skončiť",
     "output": "Formát výstupu (table, json, jsonl, csv)",
     "quiet": "Potlačiť nepodstatný výstup",
     "no_color": "Zakázať farebný výstup",
     "timeout": "Časový limit HTTP požiadaviek v milisekundách",
-    "api_key": "API kľúč pre server OmniRoute",
-    "base_url": "Základná URL servera OmniRoute",
+    "api_key": "API kľúč pre server FreeRoute",
+    "base_url": "Základná URL servera FreeRoute",
     "context": "Kontext/profil servera pre tento príkaz",
     "lang": "Nastaviť jazyk zobrazenia CLI (prepíše OMNIROUTE_LANG)"
   },
@@ -1079,7 +1079,7 @@
     }
   },
   "openapi": {
-    "description": "Prístup k špecifikácii OmniRoute OpenAPI a jej testovanie",
+    "description": "Prístup k špecifikácii FreeRoute OpenAPI a jej testovanie",
     "dump": {
       "description": "Vypísať špecifikáciu OpenAPI na štandardný výstup alebo do súboru",
       "format": "Výstupný formát: yaml|json (predvolené: yaml)",
@@ -1149,7 +1149,7 @@
     }
   },
   "open": {
-    "description": "Otvoriť konkrétnu stránku ovládacieho panela OmniRoute v prehliadači",
+    "description": "Otvoriť konkrétnu stránku ovládacieho panela FreeRoute v prehliadači",
     "url": "Vypísať iba URL, neotvárať prehliadač"
   },
   "telemetry": {
@@ -1166,7 +1166,7 @@
     }
   },
   "sync": {
-    "description": "Synchronizovať konfiguráciu medzi inštanciami OmniRoute",
+    "description": "Synchronizovať konfiguráciu medzi inštanciami FreeRoute",
     "push": {
       "description": "Odoslať konfiguráciu do cloudu alebo vzdialenej inštancie",
       "target": "Cieľ (cloud alebo context:name)",
@@ -1222,8 +1222,8 @@
       "listTitle": "Dostupné jazyky",
       "current": "Jazyk: {code} ({name})",
       "saved": "Jazyk bol nastavený na {code} ({name}).",
-      "noCode": "Vyžaduje sa kód jazyka. Dostupné kódy zobrazíte spustením príkazu 'omniroute config lang list'.",
-      "unknown": "Neznámy kód jazyka: {code}. Dostupné kódy zobrazíte spustením príkazu 'omniroute config lang list'.",
+      "noCode": "Vyžaduje sa kód jazyka. Dostupné kódy zobrazíte spustením príkazu 'freeroute config lang list'.",
+      "unknown": "Neznámy kód jazyka: {code}. Dostupné kódy zobrazíte spustením príkazu 'freeroute config lang list'.",
       "alreadySet": "Jazyk je už nastavený na {code}.",
       "envHint": "Tip: vo svojom prostredí môžete nastaviť aj OMNIROUTE_LANG={code}."
     }
@@ -1242,7 +1242,7 @@
     "filter": "Filtrovať podľa úrovne (error,warn,info) — hodnoty oddelené čiarkami",
     "lines": "Počet riadkov na načítanie",
     "timeout": "Časový limit pripojenia v ms",
-    "baseUrl": "Základná URL adresa API OmniRoute",
+    "baseUrl": "Základná URL adresa API FreeRoute",
     "requestId": "Filtrovať podľa ID požiadavky",
     "apiKey": "Filtrovať podľa kľúča API",
     "combo": "Filtrovať podľa názvu kombinácie",
@@ -1258,10 +1258,10 @@
     "description": "Ovládať ikonu v systémovej lište",
     "show": "Zobraziť ikonu v systémovej lište (ak je server spustený s --tray)",
     "hide": "Skryť ikonu v systémovej lište",
-    "quit": "Ukončiť OmniRoute prostredníctvom systémovej lišty"
+    "quit": "Ukončiť FreeRoute prostredníctvom systémovej lišty"
   },
   "autostart": {
-    "description": "Spravovať automatické spustenie OmniRoute pri štarte systému (Linux: používateľská služba systemd)",
+    "description": "Spravovať automatické spustenie FreeRoute pri štarte systému (Linux: používateľská služba systemd)",
     "enable": "Povoliť automatické spustenie pri štarte systému",
     "disable": "Zakázať automatické spustenie pri štarte systému",
     "toggle": "Prepnúť automatické spustenie pri štarte systému",
@@ -1293,19 +1293,19 @@
     "scaffold": "Vytvoriť základnú štruktúru nového doplnku"
   },
   "launch": {
-    "description": "Spustiť Claude Code nasmerovaný na OmniRoute (lokálne alebo vzdialene, s --profile)",
+    "description": "Spustiť Claude Code nasmerovaný na FreeRoute (lokálne alebo vzdialene, s --profile)",
     "token": "Token, ktorý má klient Claude odosielať (ANTHROPIC_AUTH_TOKEN)",
-    "notRunning": "OmniRoute nie je dostupný na porte {port}. Spustite ho pomocou príkazu 'omniroute serve'.",
+    "notRunning": "FreeRoute nie je dostupný na porte {port}. Spustite ho pomocou príkazu 'freeroute serve'.",
     "notFound": "CLI 'claude' sa nenašlo v PATH."
   },
   "run": {
-    "description": "Spustiť podporovaný cieľ CLI prostredníctvom OmniRoute"
+    "description": "Spustiť podporovaný cieľ CLI prostredníctvom FreeRoute"
   },
   "setupClaude": {
-    "description": "Vygenerovať profily Claude Code v ~/.claude/profiles z katalógu modelov OmniRoute"
+    "description": "Vygenerovať profily Claude Code v ~/.claude/profiles z katalógu modelov FreeRoute"
   },
   "connect": {
-    "description": "Pripojiť sa k vzdialenému serveru OmniRoute a prejsť do vzdialeného režimu"
+    "description": "Pripojiť sa k vzdialenému serveru FreeRoute a prejsť do vzdialeného režimu"
   },
   "tokens": {
     "description": "Spravovať tokeny prístupu CLI s obmedzeným rozsahom (vzdialený režim)"
@@ -1314,10 +1314,10 @@
     "description": "Vybrať poskytovateľa a model z aktívneho servera a nakonfigurovať podporované lokálne CLI"
   },
   "launchCodex": {
-    "description": "Spustiť Codex CLI nasmerovaný na OmniRoute (lokálne alebo na vzdialenom VPS)"
+    "description": "Spustiť Codex CLI nasmerovaný na FreeRoute (lokálne alebo na vzdialenom VPS)"
   },
   "setupCodex": {
-    "description": "Vygenerovať súbory profilov v ~/.codex zo živého katalógu modelov OmniRoute"
+    "description": "Vygenerovať súbory profilov v ~/.codex zo živého katalógu modelov FreeRoute"
   },
   "packs": {
     "description": "Spravovať voliteľné balíky behového prostredia (ML / automatizácia prehliadača)",
@@ -1330,7 +1330,7 @@
     "errUnknown": "neznámy balík: {name}",
     "errNoIndex": "index balíkov sa nenašiel; zadajte --source <dir> odkazujúci na adresár s dátami balíka (balíky pre desktop ho obsahujú vedľa aplikácie)",
     "installed": "balík „{name}“ bol nainštalovaný a overený v adresári {dir}",
-    "restartHint": "reštartujte server OmniRoute (alebo desktopovú aplikáciu), aby modul runtime načítal balík",
+    "restartHint": "reštartujte server FreeRoute (alebo desktopovú aplikáciu), aby modul runtime načítal balík",
     "removed": "balík „{name}“ bol odstránený",
     "notInstalled": "balík „{name}“ nebol nainštalovaný",
     "verifyOk": "všetky nainštalované balíky boli overené",

@@ -352,7 +352,7 @@ export default function CodexToolCard({
   const getManualConfigs = () => {
     const keyToUse = !cloudEnabled ? "sk_omniroute" : "<YOUR_OMNIROUTE_API_KEY>";
 
-    let configContent = `# OmniRoute Configuration for Codex CLI
+    let configContent = `# FreeRoute Configuration for Codex CLI
 model = "${selectedModel || CODEX_DEFAULT_MODELS[0]}"`;
 
     if (reasoningEffort && reasoningEffort !== "none") {
@@ -364,7 +364,7 @@ model = "${selectedModel || CODEX_DEFAULT_MODELS[0]}"`;
 model_provider = "omniroute"
 
 [model_providers.omniroute]
-name = "OmniRoute"
+name = "FreeRoute"
 base_url = "${getEffectiveBaseUrl()}"
 wire_api = "responses"
 env_key = "OPENAI_API_KEY"
@@ -372,7 +372,7 @@ env_key = "OPENAI_API_KEY"
     } else {
       configContent += `
 
-# Utilize the built-in OpenAI provider pointed to OmniRoute
+# Utilize the built-in OpenAI provider pointed to FreeRoute
 openai_base_url = "${getEffectiveBaseUrl()}"
 `;
     }

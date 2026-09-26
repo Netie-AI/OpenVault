@@ -79,7 +79,7 @@ export function resolveSqlJsWasmPath(): string {
   const candidatePaths: string[] = [
     // Standard standalone layout (<bundle>/node_modules/sql.js/...)
     path.join(process.cwd(), "node_modules", "sql.js", "dist", "sql-wasm.wasm"),
-    // Global CLI install (#12960): `omniroute serve` child process sets cwd
+    // Global CLI install (#12960): `freeroute serve` child process sets cwd
     // to <packageRoot>/dist, while npm installs dependencies at <packageRoot>/node_modules
     path.join(process.cwd(), "..", "node_modules", "sql.js", "dist", "sql-wasm.wasm"),
     // Direct source / legacy standalone layouts

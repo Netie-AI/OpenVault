@@ -65,7 +65,7 @@ async function readTextIfPresent(filePath: string): Promise<string> {
 }
 
 function upsertHermesApiKey(existing: string, value: string): string {
-  if (/[\r\n]/.test(value)) throw new Error("Invalid OmniRoute API key");
+  if (/[\r\n]/.test(value)) throw new Error("Invalid FreeRoute API key");
   const replacement = `${HERMES_API_KEY_ENV}=${value}`;
   const next: string[] = [];
   let replaced = false;
@@ -210,7 +210,7 @@ export async function POST(request: Request) {
   const hasExistingApiKey = hasUsableHermesApiKey(existingEnv);
   if (!resolvedApiKey && !hasExistingApiKey) {
     return NextResponse.json(
-      { error: "The selected OmniRoute API key could not be resolved" },
+      { error: "The selected FreeRoute API key could not be resolved" },
       { status: 400 }
     );
   }
@@ -220,7 +220,7 @@ export async function POST(request: Request) {
   }
   await writeAtomic(configPath, result.yaml, 0o600);
 
-  // Record first setup time if this is the first save via OmniRoute
+  // Record first setup time if this is the first save via FreeRoute
   const metaPath = getMetadataPath(configPath);
   try {
     await fs.access(metaPath);

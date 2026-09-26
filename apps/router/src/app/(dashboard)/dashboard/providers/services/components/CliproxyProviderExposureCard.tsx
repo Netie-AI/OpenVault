@@ -1,7 +1,7 @@
 /**
  * Provider Exposure toggle for CLIProxyAPI.
  * Persists the `providerExpose` field via POST /api/services/cliproxy/provider-expose.
- * When enabled, CLIProxyAPI models appear as `cliproxyapi/...` in OmniRoute's model selection.
+ * When enabled, CLIProxyAPI models appear as `cliproxyapi/...` in FreeRoute's model selection.
  */
 "use client";
 

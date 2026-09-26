@@ -24,14 +24,14 @@ const getForgeConfigPath = (): string =>
 const getForgeDir = () => path.dirname(getForgeConfigPath());
 
 /**
- * Render the OmniRoute provider block in Forge TOML format.
+ * Render the FreeRoute provider block in Forge TOML format.
  * Forge uses a TOML config at ~/.forge/config.toml with an [openai] section.
  * Reference: https://github.com/antinomyhq/forge
  */
 function renderForgeConfig(baseUrl: string, apiKey: string, model: string): string {
   const normalizedBaseUrl = baseUrl.endsWith("/v1") ? baseUrl : `${baseUrl}/v1`;
   return [
-    "# Forge config — managed by OmniRoute (plan 14)",
+    "# Forge config — managed by FreeRoute (plan 14)",
     "",
     "[openai]",
     `api_key = "${apiKey}"`,
@@ -42,12 +42,12 @@ function renderForgeConfig(baseUrl: string, apiKey: string, model: string): stri
 }
 
 /**
- * Check if the config file contains OmniRoute settings.
- * Looks for the managed-by-OmniRoute marker comment.
+ * Check if the config file contains FreeRoute settings.
+ * Looks for the managed-by-FreeRoute marker comment.
  */
 const hasOmniRouteConfig = (content: string | null): boolean => {
   if (!content) return false;
-  return content.includes("managed by OmniRoute");
+  return content.includes("managed by FreeRoute");
 };
 
 // Read current config.toml
@@ -105,7 +105,7 @@ export async function GET(request: Request) {
   }
 }
 
-// POST — write OmniRoute settings to Forge config.toml
+// POST — write FreeRoute settings to Forge config.toml
 export async function POST(request: Request) {
   const authError = await requireCliToolsAuth(request);
   if (authError) return authError;
@@ -169,7 +169,7 @@ export async function POST(request: Request) {
   }
 }
 
-// DELETE — remove Forge OmniRoute config
+// DELETE — remove Forge FreeRoute config
 export async function DELETE(request: Request) {
   const authError = await requireCliToolsAuth(request);
   if (authError) return authError;

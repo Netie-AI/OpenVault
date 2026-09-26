@@ -1,8 +1,8 @@
 {
   "common": {
     "error": "Lỗi: {message}",
-    "serverOffline": "Máy chủ OmniRoute đang offline. Khởi động với: omniroute serve",
-    "authRequired": "Cần xác thực. Đặt OMNIROUTE_API_KEY hoặc chạy: omniroute setup",
+    "serverOffline": "Máy chủ FreeRoute đang offline. Khởi động với: freeroute serve",
+    "authRequired": "Cần xác thực. Đặt OMNIROUTE_API_KEY hoặc chạy: freeroute setup",
     "rateLimited": "Đã vượt giới hạn yêu cầu. Thử lại sau {seconds}s.",
     "timeout": "Yêu cầu hết thời gian sau {ms}ms.",
     "success": "Xong.",
@@ -15,7 +15,7 @@
     "yesOpt": "Bỏ qua xác nhận"
   },
   "setup": {
-    "title": "Thiết lập OmniRoute",
+    "title": "Thiết lập FreeRoute",
     "passwordPrompt": "Mật khẩu quản trị viên",
     "providerPrompt": "Nhà cung cấp mặc định (để trống để bỏ qua)",
     "done": "Thiết lập hoàn tất",
@@ -30,19 +30,19 @@
     "opencode": "Cài đặt và cấu hình @omniroute/opencode-plugin đi kèm cho OpenCode"
   },
   "doctor": {
-    "title": "Chẩn đoán OmniRoute",
+    "title": "Chẩn đoán FreeRoute",
     "dbOk": "Cơ sở dữ liệu: OK ({path})",
-    "dbMissing": "Cơ sở dữ liệu: chưa được khởi tạo — hãy chạy `omniroute setup`",
+    "dbMissing": "Cơ sở dữ liệu: chưa được khởi tạo — hãy chạy `freeroute setup`",
     "portOk": "Cổng {port}: khả dụng",
     "portConflict": "Cổng {port}: đang được một tiến trình khác sử dụng",
     "encryptionOk": "Khóa mã hóa: đã cấu hình",
-    "encryptionMissing": "Thiếu khóa mã hóa — hãy chạy `omniroute setup`",
+    "encryptionMissing": "Thiếu khóa mã hóa — hãy chạy `freeroute setup`",
     "allGood": "Tất cả các bước kiểm tra đều đạt.",
     "warnings": "{count} cảnh báo — xem ở trên."
   },
   "providers": {
     "title": "Nhà cung cấp",
-    "noProviders": "Chưa cấu hình nhà cung cấp nào. Chạy: omniroute setup",
+    "noProviders": "Chưa cấu hình nhà cung cấp nào. Chạy: freeroute setup",
     "testing": "Đang kiểm tra {name}...",
     "available": "Có {count} nhà cung cấp khả dụng",
     "connected": "Đã kết nối",
@@ -71,7 +71,7 @@
       "dryRunOpt": "Hiển thị những thay đổi dự kiến mà không ghi",
       "confirmPrompt": "Thay thế khóa API cho kết nối \"{name}\" ({id})? [y/N]",
       "dryRunResult": "[dry-run] Sẽ xoay vòng khóa cho \"{name}\" ({id}). Không có thay đổi nào được thực hiện.",
-      "oauthHint": "Kết nối OAuth — chạy: omniroute oauth {provider}",
+      "oauthHint": "Kết nối OAuth — chạy: freeroute oauth {provider}",
       "envVarEmpty": "Biến môi trường {var} chưa được đặt hoặc đang trống.",
       "success": "Đã xoay vòng khóa cho \"{name}\". Chạy `providers test {id}` để xác minh.",
       "testPassed": "Kiểm tra sau khi xoay vòng đã thành công.",
@@ -82,7 +82,7 @@
       "providerOpt": "Lọc theo tên nhà cung cấp",
       "header": "ID         Nhà cung cấp  Tên                      Trạng thái hết hạn  Trạng thái kiểm tra  Chờ đến",
       "noData": "Không có dữ liệu kết nối nhà cung cấp.",
-      "requiresServer": "providers status yêu cầu máy chủ OmniRoute đang chạy."
+      "requiresServer": "providers status yêu cầu máy chủ FreeRoute đang chạy."
     }
   },
   "keys": {
@@ -90,8 +90,8 @@
     "addDescription": "Thêm hoặc cập nhật khóa API cho một nhà cung cấp",
     "listDescription": "Liệt kê tất cả khóa API đã cấu hình",
     "removeDescription": "Xóa khóa API của một nhà cung cấp",
-    "regenerateDescription": "Tạo lại khóa API OmniRoute",
-    "revokeDescription": "Thu hồi khóa API OmniRoute",
+    "regenerateDescription": "Tạo lại khóa API FreeRoute",
+    "revokeDescription": "Thu hồi khóa API FreeRoute",
     "revealDescription": "Hiển thị giá trị khóa API không bị che",
     "usageDescription": "Hiển thị hoạt động sử dụng gần đây của một khóa API",
     "usageLimitOpt": "Số lượng yêu cầu gần đây",
@@ -142,7 +142,7 @@
     "warning": "⚠ Thao tác này sẽ in/ghi các khóa API và token OAuth ĐÃ GIẢI MÃ dưới dạng văn bản thuần. Hãy đảm bảo màn hình, lịch sử shell và mọi tệp đầu ra của bạn đều được giữ riêng tư.",
     "confirmHeading": "⚠ CẢNH BÁO: thao tác này xuất thông tin xác thực nhà cung cấp ĐÃ GIẢI MÃ dưới dạng văn bản thuần",
     "confirmBody": "Lệnh này giải mã và in/ghi apiKey, accessToken, refreshToken và\nidToken cho (các) kết nối đã chọn. Hãy coi đầu ra là thông tin bí mật.",
-    "confirmFooter": "Để xác nhận, hãy chạy:\n  omniroute auth export --force",
+    "confirmFooter": "Để xác nhận, hãy chạy:\n  freeroute auth export --force",
     "missingKey": "Cần có STORAGE_ENCRYPTION_KEY để xuất thông tin xác thực.",
     "notFound": "Không tìm thấy kết nối: {id}",
     "invalidFormat": "Định dạng không hợp lệ: {format}. Hãy sử dụng json hoặc env."
@@ -220,10 +220,10 @@
     "reasoning": "Mức độ nỗ lực suy luận (low|medium|high)",
     "thinking": "Ngân sách token cho quá trình suy nghĩ mở rộng",
     "explain": "In cây dự phòng và khoảng chi phí lên stderr",
-    "noCombo": "Không tìm thấy combo phù hợp. Hãy cấu hình một combo bằng lệnh: omniroute combo create"
+    "noCombo": "Không tìm thấy combo phù hợp. Hãy cấu hình một combo bằng lệnh: freeroute combo create"
   },
   "chat": {
-    "description": "Gửi một lời nhắc trò chuyện dùng một lần đến OmniRoute",
+    "description": "Gửi một lời nhắc trò chuyện dùng một lần đến FreeRoute",
     "file": "Đọc lời nhắc từ tệp",
     "stdin": "Đọc lời nhắc từ stdin",
     "system": "Lời nhắc hệ thống",
@@ -242,8 +242,8 @@
     }
   },
   "serve": {
-    "description": "Khởi động máy chủ OmniRoute (hành động mặc định)",
-    "starting": "Đang khởi động máy chủ OmniRoute trên cổng {port}...",
+    "description": "Khởi động máy chủ FreeRoute (hành động mặc định)",
+    "starting": "Đang khởi động máy chủ FreeRoute trên cổng {port}...",
     "ready": "Sẵn sàng tại http://localhost:{port}",
     "stopping": "Đang dừng máy chủ (PID {pid})...",
     "stopped": "Máy chủ đã dừng.",
@@ -262,7 +262,7 @@
   },
   "backup": {
     "title": "Sao lưu",
-    "description": "Tạo bản sao lưu dữ liệu OmniRoute",
+    "description": "Tạo bản sao lưu dữ liệu FreeRoute",
     "creating": "Đang tạo bản sao lưu...",
     "done": "Bản sao lưu đã được lưu vào {path}",
     "noFiles": "Không có tệp nào để sao lưu (cơ sở dữ liệu chưa được khởi tạo)",
@@ -274,7 +274,7 @@
     "noBackups": "Không tìm thấy bản sao lưu nào.",
     "notFound": "Không tìm thấy bản sao lưu: {name}",
     "confirmRestore": "Ghi đè dữ liệu hiện tại bằng bản sao lưu từ {ts}?",
-    "createDescription": "Tạo bản sao lưu dữ liệu OmniRoute",
+    "createDescription": "Tạo bản sao lưu dữ liệu FreeRoute",
     "nameOpt": "Tên bản sao lưu tùy chỉnh",
     "cloudOpt": "Tải bản sao lưu lên bộ nhớ đám mây",
     "encryptOpt": "Mã hóa bản sao lưu bằng AES-256-GCM",
@@ -292,14 +292,14 @@
       "statusDescription": "Hiển thị trạng thái lịch sao lưu hiện tại",
       "cronOpt": "Biểu thức cron cho lịch (mặc định: hằng ngày lúc 3 giờ sáng)",
       "enabled": "Đã bật sao lưu tự động (cron: {cron}).",
-      "hint": "Lịch được omniroute serve đọc khi khởi động.",
+      "hint": "Lịch được freeroute serve đọc khi khởi động.",
       "disabled": "Đã tắt sao lưu tự động.",
       "notConfigured": "Chưa cấu hình lịch sao lưu."
     }
   },
   "health": {
     "description": "Kiểm tra tình trạng máy chủ và trạng thái các thành phần",
-    "noServer": "Máy chủ không chạy. Khởi động bằng: omniroute serve",
+    "noServer": "Máy chủ không chạy. Khởi động bằng: freeroute serve",
     "title": "Tình trạng",
     "status": "Trạng thái: {status}",
     "uptime": "Thời gian hoạt động: {uptime}",
@@ -308,21 +308,21 @@
   },
   "quota": {
     "description": "Hiển thị mức sử dụng hạn ngạch của nhà cung cấp",
-    "noServer": "Máy chủ không chạy. Khởi động bằng: omniroute serve",
+    "noServer": "Máy chủ không chạy. Khởi động bằng: freeroute serve",
     "noData": "Không có thông tin về hạn ngạch."
   },
   "cache": {
     "description": "Quản lý bộ nhớ đệm phản hồi",
-    "noServer": "Máy chủ không chạy. Khởi động bằng: omniroute serve",
+    "noServer": "Máy chủ không chạy. Khởi động bằng: freeroute serve",
     "cleared": "Đã xóa bộ nhớ đệm.",
     "clearFailed": "Không thể xóa bộ nhớ đệm."
   },
   "redis": {
-    "description": "Khởi chạy bộ chứa Redis cục bộ bằng một cú nhấp chuột (Podman hoặc Docker) để lưu bộ đệm và theo dõi hạn ngạch của OmniRoute"
+    "description": "Khởi chạy bộ chứa Redis cục bộ bằng một cú nhấp chuột (Podman hoặc Docker) để lưu bộ đệm và theo dõi hạn ngạch của FreeRoute"
   },
   "test": {
     "description": "Kiểm tra kết nối với nhà cung cấp",
-    "noServer": "Máy chủ chưa chạy. Khởi động bằng: omniroute serve",
+    "noServer": "Máy chủ chưa chạy. Khởi động bằng: freeroute serve",
     "testing": "Đang kiểm tra {provider} / {model}...",
     "passed": "Kết nối thành công!",
     "failed": "Kết nối thất bại: {error}",
@@ -334,7 +334,7 @@
     "saved": "Đã lưu kết quả vào {path}",
     "compareTitle": "So sánh mô hình",
     "compareMinTwo": "Cần ít nhất hai mô hình cho --compare (phân tách bằng dấu phẩy)",
-    "noProviders": "Chưa cấu hình nhà cung cấp nào. Thêm một nhà cung cấp bằng: omniroute keys add"
+    "noProviders": "Chưa cấu hình nhà cung cấp nào. Thêm một nhà cung cấp bằng: freeroute keys add"
   },
   "update": {
     "checking": "Đang kiểm tra bản cập nhật...",
@@ -348,7 +348,7 @@
     "running": "Máy chủ MCP đang chạy ({transport})",
     "stopped": "Máy chủ MCP đã dừng.",
     "restarted": "Máy chủ MCP đã khởi động lại.",
-    "stoppedHint": "Chạy `omniroute mcp enable` để bật.",
+    "stoppedHint": "Chạy `freeroute mcp enable` để bật.",
     "enabled": "Đã bật máy chủ MCP.",
     "disabled": "Đã tắt máy chủ MCP.",
     "enable": {
@@ -416,7 +416,7 @@
     }
   },
   "policy": {
-    "description": "Quản lý các chính sách ủy quyền của OmniRoute",
+    "description": "Quản lý các chính sách ủy quyền của FreeRoute",
     "list": {
       "description": "Liệt kê các chính sách",
       "kind": "Lọc theo loại (allow|deny|rate-limit|cost-cap)",
@@ -453,7 +453,7 @@
     }
   },
   "compression": {
-    "description": "Cấu hình và kiểm tra quy trình nén của OmniRoute",
+    "description": "Cấu hình và kiểm tra quy trình nén của FreeRoute",
     "status": {
       "description": "Hiển thị trạng thái và cài đặt nén hiện tại"
     },
@@ -507,18 +507,18 @@
     "confirmRotate": "Thay đổi URL của đường hầm {type}? (một URL mới sẽ được tạo)"
   },
   "stop": {
-    "description": "Dừng máy chủ OmniRoute",
+    "description": "Dừng máy chủ FreeRoute",
     "stopping": "Đang dừng máy chủ (PID {pid})...",
     "stopped": "Đã dừng máy chủ.",
     "notRunning": "Không có máy chủ nào đang chạy.",
     "portFallback": "Không tìm thấy tệp PID, đang thử dừng dựa trên cổng..."
   },
   "restart": {
-    "description": "Khởi động lại máy chủ OmniRoute",
-    "restarting": "Đang khởi động lại máy chủ OmniRoute..."
+    "description": "Khởi động lại máy chủ FreeRoute",
+    "restarting": "Đang khởi động lại máy chủ FreeRoute..."
   },
   "dashboard": {
-    "description": "Mở bảng điều khiển OmniRoute trong trình duyệt",
+    "description": "Mở bảng điều khiển FreeRoute trong trình duyệt",
     "opening": "Đang mở bảng điều khiển tại {url}",
     "urlOnly": "In URL của bảng điều khiển mà không mở trình duyệt",
     "tui": "Mở bảng điều khiển TUI tương tác (giao diện đầu cuối, 7 thẻ)"
@@ -526,7 +526,7 @@
   "models": {
     "description": "Liệt kê các mô hình có sẵn (yêu cầu máy chủ)",
     "search": "Lọc mô hình theo id, tên, nhà cung cấp hoặc mô tả",
-    "noServer": "Máy chủ chưa chạy. Khởi động bằng: omniroute serve",
+    "noServer": "Máy chủ chưa chạy. Khởi động bằng: freeroute serve",
     "noModels": "Không tìm thấy mô hình nào."
   },
   "audit": {
@@ -558,7 +558,7 @@
     }
   },
   "skills": {
-    "description": "Quản lý các skill của OmniRoute (sandbox, builtin, custom, hybrid, skillssh)",
+    "description": "Quản lý các skill của FreeRoute (sandbox, builtin, custom, hybrid, skillssh)",
     "list": {
       "description": "Liệt kê các skill đã cài đặt",
       "type": "Lọc theo loại (sandbox|custom|builtin|hybrid|skillssh)",
@@ -631,7 +631,7 @@
     }
   },
   "memory": {
-    "description": "Quản lý bộ nhớ hội thoại của OmniRoute (FTS5 + vector)",
+    "description": "Quản lý bộ nhớ hội thoại của FreeRoute (FTS5 + vector)",
     "search": {
       "description": "Tìm kiếm các mục bộ nhớ bằng truy vấn ngữ nghĩa",
       "type": "Lọc theo loại bộ nhớ (user|feedback|project|reference)",
@@ -789,7 +789,7 @@
     }
   },
   "webhooks": {
-    "description": "Quản lý webhook của OmniRoute",
+    "description": "Quản lý webhook của FreeRoute",
     "events": {
       "description": "Liệt kê tất cả các loại sự kiện webhook hiện có"
     },
@@ -821,14 +821,14 @@
     }
   },
   "program": {
-    "description": "OmniRoute — Bộ định tuyến AI thông minh với tự động chuyển đổi dự phòng",
+    "description": "FreeRoute — Bộ định tuyến AI thông minh với tự động chuyển đổi dự phòng",
     "version": "In phiên bản và thoát",
     "output": "Định dạng đầu ra (table, json, jsonl, csv)",
     "quiet": "Ẩn đầu ra không cần thiết",
     "no_color": "Tắt đầu ra màu sắc",
     "timeout": "Thời gian chờ yêu cầu HTTP tính bằng mili giây",
-    "api_key": "Khóa API cho máy chủ OmniRoute",
-    "base_url": "URL cơ sở của máy chủ OmniRoute",
+    "api_key": "Khóa API cho máy chủ FreeRoute",
+    "base_url": "URL cơ sở của máy chủ FreeRoute",
     "context": "Bối cảnh/hồ sơ máy chủ cho lệnh này",
     "lang": "Đặt ngôn ngữ hiển thị CLI (ghi đè OMNIROUTE_LANG)"
   },
@@ -1079,7 +1079,7 @@
     }
   },
   "openapi": {
-    "description": "Truy cập và kiểm thử đặc tả OpenAPI của OmniRoute",
+    "description": "Truy cập và kiểm thử đặc tả OpenAPI của FreeRoute",
     "dump": {
       "description": "Xuất đặc tả OpenAPI ra stdout hoặc tệp",
       "format": "Định dạng đầu ra: yaml|json (mặc định: yaml)",
@@ -1149,7 +1149,7 @@
     }
   },
   "open": {
-    "description": "Mở một trang bảng điều khiển OmniRoute cụ thể trong trình duyệt",
+    "description": "Mở một trang bảng điều khiển FreeRoute cụ thể trong trình duyệt",
     "url": "Chỉ in URL, không mở trình duyệt"
   },
   "telemetry": {
@@ -1166,7 +1166,7 @@
     }
   },
   "sync": {
-    "description": "Đồng bộ cấu hình giữa các phiên bản OmniRoute",
+    "description": "Đồng bộ cấu hình giữa các phiên bản FreeRoute",
     "push": {
       "description": "Đẩy cấu hình lên đám mây hoặc phiên bản từ xa",
       "target": "Đích (cloud hoặc context:name)",
@@ -1222,8 +1222,8 @@
       "listTitle": "Ngôn ngữ có sẵn",
       "current": "Ngôn ngữ: {code} ({name})",
       "saved": "Đã đặt ngôn ngữ thành {code} ({name}).",
-      "noCode": "Bắt buộc phải có mã ngôn ngữ. Chạy 'omniroute config lang list' để xem các mã có sẵn.",
-      "unknown": "Mã ngôn ngữ không xác định: {code}. Chạy 'omniroute config lang list' để xem các mã có sẵn.",
+      "noCode": "Bắt buộc phải có mã ngôn ngữ. Chạy 'freeroute config lang list' để xem các mã có sẵn.",
+      "unknown": "Mã ngôn ngữ không xác định: {code}. Chạy 'freeroute config lang list' để xem các mã có sẵn.",
       "alreadySet": "Ngôn ngữ đã được đặt thành {code}.",
       "envHint": "Mẹo: bạn cũng có thể đặt OMNIROUTE_LANG={code} trong môi trường của mình."
     }
@@ -1242,7 +1242,7 @@
     "filter": "Lọc theo cấp độ (error,warn,info) — phân tách bằng dấu phẩy",
     "lines": "Số dòng cần lấy",
     "timeout": "Thời gian chờ kết nối tính bằng ms",
-    "baseUrl": "URL cơ sở của API OmniRoute",
+    "baseUrl": "URL cơ sở của API FreeRoute",
     "requestId": "Lọc theo ID yêu cầu",
     "apiKey": "Lọc theo khóa API",
     "combo": "Lọc theo tên tổ hợp",
@@ -1258,10 +1258,10 @@
     "description": "Điều khiển biểu tượng khay hệ thống",
     "show": "Hiển thị biểu tượng khay (nếu máy chủ đang chạy với --tray)",
     "hide": "Ẩn biểu tượng khay",
-    "quit": "Thoát OmniRoute qua khay hệ thống"
+    "quit": "Thoát FreeRoute qua khay hệ thống"
   },
   "autostart": {
-    "description": "Quản lý tính năng tự động khởi động OmniRoute khi khởi động hệ thống (Linux: dịch vụ người dùng systemd)",
+    "description": "Quản lý tính năng tự động khởi động FreeRoute khi khởi động hệ thống (Linux: dịch vụ người dùng systemd)",
     "enable": "Bật tự động khởi động khi khởi động hệ thống",
     "disable": "Tắt tự động khởi động khi khởi động hệ thống",
     "toggle": "Chuyển đổi trạng thái tự động khởi động khi khởi động hệ thống",
@@ -1293,19 +1293,19 @@
     "scaffold": "Tạo khung mã mẫu cho plugin mới"
   },
   "launch": {
-    "description": "Khởi chạy Claude Code trỏ đến OmniRoute (cục bộ hoặc từ xa, với --profile)",
+    "description": "Khởi chạy Claude Code trỏ đến FreeRoute (cục bộ hoặc từ xa, với --profile)",
     "token": "Token mà ứng dụng Claude cần gửi (ANTHROPIC_AUTH_TOKEN)",
-    "notRunning": "Không thể truy cập OmniRoute tại {port}. Hãy khởi động bằng 'omniroute serve'.",
+    "notRunning": "Không thể truy cập FreeRoute tại {port}. Hãy khởi động bằng 'freeroute serve'.",
     "notFound": "Không tìm thấy CLI 'claude' trong PATH."
   },
   "run": {
-    "description": "Khởi chạy một CLI được hỗ trợ thông qua OmniRoute"
+    "description": "Khởi chạy một CLI được hỗ trợ thông qua FreeRoute"
   },
   "setupClaude": {
-    "description": "Tạo các hồ sơ Claude Code trong ~/.claude/profiles từ danh mục mô hình OmniRoute"
+    "description": "Tạo các hồ sơ Claude Code trong ~/.claude/profiles từ danh mục mô hình FreeRoute"
   },
   "connect": {
-    "description": "Kết nối với máy chủ OmniRoute từ xa và vào chế độ từ xa"
+    "description": "Kết nối với máy chủ FreeRoute từ xa và vào chế độ từ xa"
   },
   "tokens": {
     "description": "Quản lý token truy cập CLI theo phạm vi (chế độ từ xa)"
@@ -1314,10 +1314,10 @@
     "description": "Chọn nhà cung cấp+mô hình từ máy chủ đang hoạt động và cấu hình một CLI cục bộ được hỗ trợ"
   },
   "launchCodex": {
-    "description": "Khởi chạy Codex CLI trỏ đến OmniRoute (cục bộ hoặc VPS từ xa)"
+    "description": "Khởi chạy Codex CLI trỏ đến FreeRoute (cục bộ hoặc VPS từ xa)"
   },
   "setupCodex": {
-    "description": "Tạo các tệp hồ sơ ~/.codex từ danh mục mô hình trực tiếp của OmniRoute"
+    "description": "Tạo các tệp hồ sơ ~/.codex từ danh mục mô hình trực tiếp của FreeRoute"
   },
   "packs": {
     "description": "Quản lý các gói runtime tùy chọn (ML / tự động hóa trình duyệt)",
@@ -1330,7 +1330,7 @@
     "errUnknown": "gói không xác định: {name}",
     "errNoIndex": "không tìm thấy chỉ mục gói; hãy truyền --source <dir> trỏ đến thư mục chứa nội dung gói (các gói ứng dụng máy tính để bàn đặt tệp đó bên cạnh ứng dụng)",
     "installed": "gói \"{name}\" đã được cài đặt và xác minh tại {dir}",
-    "restartHint": "khởi động lại máy chủ OmniRoute (hoặc ứng dụng máy tính) để môi trường chạy nhận gói",
+    "restartHint": "khởi động lại máy chủ FreeRoute (hoặc ứng dụng máy tính) để môi trường chạy nhận gói",
     "removed": "đã gỡ gói \"{name}\"",
     "notInstalled": "gói \"{name}\" chưa được cài đặt",
     "verifyOk": "đã xác minh tất cả các gói đã cài đặt",

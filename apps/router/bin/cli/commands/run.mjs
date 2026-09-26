@@ -250,7 +250,7 @@ function genericEnv(baseEnv, kind, baseUrl, authToken, model) {
       provider: {
         omniroute: {
           npm: "@ai-sdk/openai-compatible",
-          name: "OmniRoute",
+          name: "FreeRoute",
           options: {
             baseURL: ensureV1BaseUrl(baseUrl),
             apiKey: "{env:OMNIROUTE_API_KEY}",
@@ -264,7 +264,7 @@ function genericEnv(baseEnv, kind, baseUrl, authToken, model) {
   } else if (kind === "gemini") {
     // Verified against @google/gemini-cli 0.50.0: the SDK appends
     // /v1beta/models/<model>:generateContent to this base URL, which is
-    // OmniRoute's native Gemini surface. Auth is the API-key path; the
+    // FreeRoute's native Gemini surface. Auth is the API-key path; the
     // isolated GEMINI_CLI_HOME (set at spawn time) keeps any stored OAuth
     // session from overriding it.
     env.GOOGLE_GEMINI_BASE_URL = baseUrl;
@@ -285,7 +285,7 @@ function modelArgsForTarget(target, model) {
 
 function buildGeminiSettings() {
   // Force API-key auth in the isolated home so the operator's stored OAuth
-  // session (Code Assist) never leaks into an OmniRoute-directed launch.
+  // session (Code Assist) never leaks into an FreeRoute-directed launch.
   return JSON.stringify({ security: { auth: { selectedType: "gemini-api-key" } } }, null, 2);
 }
 
@@ -297,7 +297,7 @@ function buildQwenSettings(baseUrl, model) {
         openai: [
           {
             id: model,
-            name: `${model} (OmniRoute)`,
+            name: `${model} (FreeRoute)`,
             envKey: "OMNIROUTE_API_KEY",
             baseUrl: qwenBaseUrl,
           },
@@ -319,7 +319,7 @@ async function buildGenericPlan(target, rawOpts, args = []) {
   const commandSpec = resolveGenericSpawn(target);
   const model = resolveModelFromTargetOptions(rawOpts);
   if (manifestRequiresModel(target) && !model) {
-    throw new Error("Qwen Code requires --model in non-interactive OmniRoute launches");
+    throw new Error("Qwen Code requires --model in non-interactive FreeRoute launches");
   }
   const modelArgs = modelArgsForTarget(target, model);
   const fullArgs = [...modelArgs, ...args];
@@ -364,13 +364,13 @@ async function runGenericTarget(target, rawOpts, args) {
     apiKey: resolveAuthTokenOption(rawOpts),
   });
   if (!(await healthCheckForRun(baseUrl))) {
-    console.error(`OmniRoute is not reachable at ${baseUrl}. Start it or check --remote.`);
+    console.error(`FreeRoute is not reachable at ${baseUrl}. Start it or check --remote.`);
     return 1;
   }
 
   const model = resolveModelFromTargetOptions(rawOpts);
   if (manifestRequiresModel(target) && !model) {
-    console.error("Qwen Code requires --model in non-interactive OmniRoute launches.");
+    console.error("Qwen Code requires --model in non-interactive FreeRoute launches.");
     return 2;
   }
   const modelArgs = modelArgsForTarget(target, model);
@@ -574,17 +574,17 @@ export async function runCliTarget(target, opts = {}, args = []) {
 export function registerRun(program) {
   program
     .command("run <target>")
-    .description(t("run.description") || "Run a supported CLI target through OmniRoute")
+    .description(t("run.description") || "Run a supported CLI target through FreeRoute")
     .option(
       "--port <port>",
-      "Local OmniRoute port (ignored when --remote or --base-url is set)",
+      "Local FreeRoute port (ignored when --remote or --base-url is set)",
       "20128"
     )
     .option(
       "--remote <url>",
-      "Remote OmniRoute base URL (overrides --port, --base-url, and the active context)"
+      "Remote FreeRoute base URL (overrides --port, --base-url, and the active context)"
     )
-    .option("--base-url <url>", "OmniRoute base URL (alias for --remote)")
+    .option("--base-url <url>", "FreeRoute base URL (alias for --remote)")
     .option("--context <name>", "Named local/remote context to use for URL and credentials")
     .option("--provider <id>", "Provider id for shorthand model composition")
     .option("--model <id>", "Model id to inject in the launched target where supported")

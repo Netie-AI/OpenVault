@@ -1499,6 +1499,18 @@ export default function ApiManagerPageClient() {
         }}
       >
         <div ref={createKeyFormRef} className="flex flex-col gap-4">
+          <a
+            href="http://127.0.0.1:3010/keys"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/20"
+          >
+            <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+              open_in_new
+            </span>
+            FreeRoute client API keys are issued by OpenVault. Create or rotate one at
+            127.0.0.1:3010/keys.
+          </a>
           <div ref={createKeyNameFieldRef}>
             <label className="text-sm font-medium text-text-main mb-1.5 block">
               {t("keyName")}

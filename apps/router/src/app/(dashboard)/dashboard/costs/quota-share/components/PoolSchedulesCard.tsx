@@ -62,11 +62,11 @@ function newDraft(): DraftSchedule {
  * backed by GET/PUT /api/quota/pools/[id]/schedules.
  *
  * Each row answers two separate questions, and either half can be left empty:
- *   · WHEN may OmniRoute use these accounts (days + hours + allow/block)
+ *   · WHEN may FreeRoute use these accounts (days + hours + allow/block)
  *   · HOW MUCH may it take once it is inside the window —
  *       "reserve" = how much upstream quota must be LEFT (counts everyone's
- *       usage, so a colleague on the same account pushes OmniRoute out first);
- *       "budget"  = how much OmniRoute itself may spend (counts only its own
+ *       usage, so a colleague on the same account pushes FreeRoute out first);
+ *       "budget"  = how much FreeRoute itself may spend (counts only its own
  *       traffic, so somebody else's usage neither eats nor inflates it).
  *
  * Fail-soft like its UsageLogCard sibling: a failed load or save shows an inline
@@ -380,7 +380,7 @@ export default function PoolSchedulesCard({ poolId }: PoolSchedulesCardProps) {
                     </div>
                   )}
 
-                  {/* Row 2b — how much OmniRoute itself may spend */}
+                  {/* Row 2b — how much FreeRoute itself may spend */}
                   {row.mode === "allow" && (
                     <div className="flex flex-wrap items-center gap-1.5">
                       <label

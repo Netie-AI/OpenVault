@@ -1,8 +1,8 @@
 {
   "common": {
     "error": "Սխալ՝ {message}",
-    "serverOffline": "OmniRoute սերվերն անցանց է։ Գործարկեք այն հետևյալ հրամանով՝ omniroute serve",
-    "authRequired": "Պահանջվում է նույնականացում։ Սահմանեք OMNIROUTE_API_KEY-ը կամ գործարկեք՝ omniroute setup",
+    "serverOffline": "FreeRoute սերվերն անցանց է։ Գործարկեք այն հետևյալ հրամանով՝ freeroute serve",
+    "authRequired": "Պահանջվում է նույնականացում։ Սահմանեք OMNIROUTE_API_KEY-ը կամ գործարկեք՝ freeroute setup",
     "rateLimited": "Հարցումների հաճախականության սահմանաչափը գերազանցվել է։ Կրկին փորձեք {seconds} վրկ անց։",
     "timeout": "Հարցման սպասման ժամանակը սպառվեց {ms} մվ անց։",
     "success": "Պատրաստ է։",
@@ -15,7 +15,7 @@
     "yesOpt": "Բաց թողնել հաստատման հարցումը"
   },
   "setup": {
-    "title": "OmniRoute-ի կարգավորում",
+    "title": "FreeRoute-ի կարգավորում",
     "passwordPrompt": "Ադմինիստրատորի գաղտնաբառ",
     "providerPrompt": "Լռելյայն մատակարար (բաց թողնելու համար դատարկ թողեք)",
     "done": "Կարգավորումն ավարտված է",
@@ -30,19 +30,19 @@
     "opencode": "Տեղադրել և կարգավորել փաթեթում ներառված @omniroute/opencode-plugin-ը OpenCode-ի համար"
   },
   "doctor": {
-    "title": "OmniRoute Doctor",
+    "title": "FreeRoute Doctor",
     "dbOk": "Տվյալների բազա՝ OK ({path})",
-    "dbMissing": "Տվյալների բազան սկզբնավորված չէ — գործարկեք `omniroute setup`",
+    "dbMissing": "Տվյալների բազան սկզբնավորված չէ — գործարկեք `freeroute setup`",
     "portOk": "Պորտ {port}՝ հասանելի է",
     "portConflict": "Պորտ {port}՝ օգտագործվում է մեկ այլ գործընթացի կողմից",
     "encryptionOk": "Գաղտնագրման բանալի՝ կարգավորված է",
-    "encryptionMissing": "Գաղտնագրման բանալին բացակայում է — գործարկեք `omniroute setup`",
+    "encryptionMissing": "Գաղտնագրման բանալին բացակայում է — գործարկեք `freeroute setup`",
     "allGood": "Բոլոր ստուգումները հաջողությամբ անցել են։",
     "warnings": "{count} նախազգուշացում — տե՛ս վերևում։"
   },
   "providers": {
     "title": "Մատակարարներ",
-    "noProviders": "Մատակարարներ կարգավորված չեն։ Գործարկեք՝ omniroute setup",
+    "noProviders": "Մատակարարներ կարգավորված չեն։ Գործարկեք՝ freeroute setup",
     "testing": "Ստուգվում է {name}-ը...",
     "available": "Հասանելի մատակարարների քանակը՝ {count}",
     "connected": "Կապը հաստատված է",
@@ -71,7 +71,7 @@
       "dryRunOpt": "Առանց գրանցելու ցուցադրել, թե ինչ կփոխվի",
       "confirmPrompt": "Փոխարինե՞լ «{name}» ({id}) կապի API բանալին։ [y/N]",
       "dryRunResult": "[dry-run] «{name}» ({id}) կապի բանալին կփոխարինվեր։ Փոփոխություններ չեն կատարվել։",
-      "oauthHint": "OAuth կապ — գործարկեք՝ omniroute oauth {provider}",
+      "oauthHint": "OAuth կապ — գործարկեք՝ freeroute oauth {provider}",
       "envVarEmpty": "{var} միջավայրի փոփոխականը սահմանված չէ կամ դատարկ է։",
       "success": "«{name}» կապի բանալին փոխարինվեց։ Ստուգելու համար գործարկեք `providers test {id}`։",
       "testPassed": "Փոխարինումից հետո ստուգումը հաջողվեց։",
@@ -82,7 +82,7 @@
       "providerOpt": "Զտել ըստ մատակարարի անվան",
       "header": "ID         Մատակարար     Անուն                     Ժամկետ  Կարգավիճակ  Ստուգման կարգավիճակ  Սպասման ավարտը",
       "noData": "Մատակարարի կապի տվյալներ չկան։",
-      "requiresServer": "providers status հրամանի համար OmniRoute սերվերը պետք է աշխատի։"
+      "requiresServer": "providers status հրամանի համար FreeRoute սերվերը պետք է աշխատի։"
     }
   },
   "keys": {
@@ -90,8 +90,8 @@
     "addDescription": "Ավելացնել կամ թարմացնել մատակարարի API բանալին",
     "listDescription": "Ցուցակել բոլոր կարգավորված API բանալիները",
     "removeDescription": "Հեռացնել մատակարարի API բանալին",
-    "regenerateDescription": "Վերաստեղծել OmniRoute API բանալին",
-    "revokeDescription": "Չեղարկել OmniRoute API բանալին",
+    "regenerateDescription": "Վերաստեղծել FreeRoute API բանալին",
+    "revokeDescription": "Չեղարկել FreeRoute API բանալին",
     "revealDescription": "Ցուցադրել չքողարկված API բանալու արժեքը",
     "usageDescription": "Ցուցադրել API բանալու վերջին օգտագործումը",
     "usageLimitOpt": "Վերջին հարցումների քանակը",
@@ -142,7 +142,7 @@
     "warning": "⚠ Սա ցուցադրում/գրում է ԱՊԱԳԱՂՏՆԱԳՐՎԱԾ API բանալիները և OAuth թոքենները բաց տեքստով։ Համոզվեք, որ ձեր էկրանը, հրամանային տողի պատմությունը և ցանկացած ելքային ֆայլ գաղտնի են մնում։",
     "confirmHeading": "⚠ ԶԳՈՒՇԱՑՈՒՄ․ սա ԱՊԱԳԱՂՏՆԱԳՐՎԱԾ պրովայդերի մուտքանունային տվյալներն արտահանում է բաց տեքստով",
     "confirmBody": "Այս հրամանն ապագաղտնագրում և ցուցադրում/գրում է ընտրված կապի կամ կապերի apiKey, accessToken, refreshToken և\nidToken արժեքները։ Ելքային տվյալները պահեք որպես գաղտնիք։",
-    "confirmFooter": "Հաստատելու համար գործարկեք՝\n  omniroute auth export --force",
+    "confirmFooter": "Հաստատելու համար գործարկեք՝\n  freeroute auth export --force",
     "missingKey": "Հավատարմագրերն արտահանելու համար պահանջվում է STORAGE_ENCRYPTION_KEY։",
     "notFound": "Կապը չի գտնվել՝ {id}",
     "invalidFormat": "Անվավեր ձևաչափ՝ {format}։ Օգտագործեք json կամ env։"
@@ -220,10 +220,10 @@
     "reasoning": "Դատողության ջանքի մակարդակը (low|medium|high)",
     "thinking": "Ընդլայնված մտածողության թոքենների բյուջեն",
     "explain": "Արտածել պահուստային անցումների ծառը և արժեքի միջակայքը stderr-ում",
-    "noCombo": "Համապատասխան համակցություն չի գտնվել։ Կարգավորեք այն հետևյալ հրամանով՝ omniroute combo create"
+    "noCombo": "Համապատասխան համակցություն չի գտնվել։ Կարգավորեք այն հետևյալ հրամանով՝ freeroute combo create"
   },
   "chat": {
-    "description": "Ուղարկել մեկանգամյա զրույցի հարցում OmniRoute-ին",
+    "description": "Ուղարկել մեկանգամյա զրույցի հարցում FreeRoute-ին",
     "file": "Կարդալ հարցումը ֆայլից",
     "stdin": "Կարդալ հարցումը stdin-ից",
     "system": "Համակարգային հարցում",
@@ -242,8 +242,8 @@
     }
   },
   "serve": {
-    "description": "Գործարկել OmniRoute սերվերը (լռելյայն գործողություն)",
-    "starting": "OmniRoute սերվերը գործարկվում է {port} պորտում...",
+    "description": "Գործարկել FreeRoute սերվերը (լռելյայն գործողություն)",
+    "starting": "FreeRoute սերվերը գործարկվում է {port} պորտում...",
     "ready": "Հասանելի է http://localhost:{port} հասցեով",
     "stopping": "Սերվերը կանգնեցվում է (PID {pid})...",
     "stopped": "Սերվերը կանգնեցված է։",
@@ -262,7 +262,7 @@
   },
   "backup": {
     "title": "Պահուստավորում",
-    "description": "Ստեղծել OmniRoute-ի տվյալների պահուստային պատճենը",
+    "description": "Ստեղծել FreeRoute-ի տվյալների պահուստային պատճենը",
     "creating": "Պահուստային պատճենը ստեղծվում է...",
     "done": "Պահուստային պատճենը պահպանվել է {path} ուղում",
     "noFiles": "Պահուստավորման ենթակա ֆայլեր չկան (տվյալների բազան նախաստեղծված չէ)",
@@ -274,7 +274,7 @@
     "noBackups": "Պահուստային պատճեններ չեն գտնվել։",
     "notFound": "Պահուստային պատճենը չի գտնվել՝ {name}",
     "confirmRestore": "Վերագրե՞լ ընթացիկ տվյալները {ts}-ի պահուստային պատճենով։",
-    "createDescription": "Ստեղծել OmniRoute-ի տվյալների պահուստային պատճենը",
+    "createDescription": "Ստեղծել FreeRoute-ի տվյալների պահուստային պատճենը",
     "nameOpt": "Պահուստային պատճենի հատուկ անուն",
     "cloudOpt": "Վերբեռնել պահուստային պատճենը ամպային պահոց",
     "encryptOpt": "Գաղտնագրել պահուստային պատճենը AES-256-GCM-ով",
@@ -292,14 +292,14 @@
       "statusDescription": "Ցուցադրել պահուստավորման ընթացիկ ժամանակացույցի կարգավիճակը",
       "cronOpt": "Ժամանակացույցի Cron արտահայտությունը (լռելյայն՝ ամեն օր, ժամը 3-ին)",
       "enabled": "Ավտոմատ պահուստավորումը միացված է (cron՝ {cron})։",
-      "hint": "Ժամանակացույցը գործարկման պահին ընթերցվում է omniroute serve-ի կողմից։",
+      "hint": "Ժամանակացույցը գործարկման պահին ընթերցվում է freeroute serve-ի կողմից։",
       "disabled": "Ավտոմատ պահուստավորումն անջատված է։",
       "notConfigured": "Պահուստավորման ժամանակացույց կազմաձևված չէ։"
     }
   },
   "health": {
     "description": "Ստուգել սերվերի աշխատանքային վիճակը և բաղադրիչների կարգավիճակը",
-    "noServer": "Սերվերը չի աշխատում։ Գործարկեք հետևյալ հրամանով՝ omniroute serve",
+    "noServer": "Սերվերը չի աշխատում։ Գործարկեք հետևյալ հրամանով՝ freeroute serve",
     "title": "Աշխատանքային վիճակ",
     "status": "Կարգավիճակ՝ {status}",
     "uptime": "Անխափան աշխատանքի տևողություն՝ {uptime}",
@@ -308,21 +308,21 @@
   },
   "quota": {
     "description": "Ցուցադրել մատակարարի քվոտայի օգտագործումը",
-    "noServer": "Սերվերը գործարկված չէ։ Գործարկեք հետևյալով՝ omniroute serve",
+    "noServer": "Սերվերը գործարկված չէ։ Գործարկեք հետևյալով՝ freeroute serve",
     "noData": "Քվոտայի մասին տեղեկություններ չկան։"
   },
   "cache": {
     "description": "Կառավարել պատասխանների քեշը",
-    "noServer": "Սերվերը գործարկված չէ։ Գործարկեք հետևյալով՝ omniroute serve",
+    "noServer": "Սերվերը գործարկված չէ։ Գործարկեք հետևյալով՝ freeroute serve",
     "cleared": "Քեշը մաքրվեց։",
     "clearFailed": "Չհաջողվեց մաքրել քեշը։"
   },
   "redis": {
-    "description": "Մեկ սեղմումով գործարկել տեղային Redis կոնտեյներ (Podman կամ Docker)՝ OmniRoute-ի քեշավորման և քվոտայի հետևման համար"
+    "description": "Մեկ սեղմումով գործարկել տեղային Redis կոնտեյներ (Podman կամ Docker)՝ FreeRoute-ի քեշավորման և քվոտայի հետևման համար"
   },
   "test": {
     "description": "Ստուգել մատակարարի կապը",
-    "noServer": "Սերվերը գործարկված չէ։ Գործարկեք հետևյալով՝ omniroute serve",
+    "noServer": "Սերվերը գործարկված չէ։ Գործարկեք հետևյալով՝ freeroute serve",
     "testing": "Ստուգվում է {provider} / {model}...",
     "passed": "Կապը հաջողությամբ հաստատվեց։",
     "failed": "Կապը ձախողվեց՝ {error}",
@@ -334,7 +334,7 @@
     "saved": "Արդյունքները պահպանվել են {path}-ում",
     "compareTitle": "Մոդելների համեմատություն",
     "compareMinTwo": "--compare-ի համար պահանջվում է առնվազն երկու մոդել (ստորակետերով բաժանված)",
-    "noProviders": "Ոչ մի մատակարար կազմաձևված չէ։ Ավելացրեք մեկը հետևյալով՝ omniroute keys add"
+    "noProviders": "Ոչ մի մատակարար կազմաձևված չէ։ Ավելացրեք մեկը հետևյալով՝ freeroute keys add"
   },
   "update": {
     "checking": "Թարմացումների ստուգում...",
@@ -348,7 +348,7 @@
     "running": "MCP սերվերը գործարկված է ({transport})",
     "stopped": "MCP սերվերը կանգնեցվել է։",
     "restarted": "MCP սերվերը վերագործարկվել է։",
-    "stoppedHint": "Այն միացնելու համար գործարկեք `omniroute mcp enable` հրամանը։",
+    "stoppedHint": "Այն միացնելու համար գործարկեք `freeroute mcp enable` հրամանը։",
     "enabled": "MCP սերվերը միացված է։",
     "disabled": "MCP սերվերն անջատված է։",
     "enable": {
@@ -416,7 +416,7 @@
     }
   },
   "policy": {
-    "description": "Կառավարել OmniRoute-ի լիազորման քաղաքականությունները",
+    "description": "Կառավարել FreeRoute-ի լիազորման քաղաքականությունները",
     "list": {
       "description": "Ցուցադրել քաղաքականությունները",
       "kind": "Զտել ըստ տեսակի (allow|deny|rate-limit|cost-cap)",
@@ -453,7 +453,7 @@
     }
   },
   "compression": {
-    "description": "Կարգավորել և ստուգել OmniRoute-ի սեղմման մշակաշարը",
+    "description": "Կարգավորել և ստուգել FreeRoute-ի սեղմման մշակաշարը",
     "status": {
       "description": "Ցուցադրել սեղմման ընթացիկ կարգավիճակը և կարգավորումները"
     },
@@ -507,18 +507,18 @@
     "confirmRotate": "Փոխե՞լ {type} թունելի URL-ը։ (կստեղծվի նոր URL)"
   },
   "stop": {
-    "description": "Կանգնեցնել OmniRoute սերվերը",
+    "description": "Կանգնեցնել FreeRoute սերվերը",
     "stopping": "Սերվերը կանգնեցվում է (PID {pid})...",
     "stopped": "Սերվերը կանգնեցվել է։",
     "notRunning": "Գործող սերվեր չկա։",
     "portFallback": "PID ֆայլ չի գտնվել, փորձ է արվում կանգնեցնել ըստ պորտի..."
   },
   "restart": {
-    "description": "Վերագործարկել OmniRoute սերվերը",
-    "restarting": "OmniRoute սերվերը վերագործարկվում է..."
+    "description": "Վերագործարկել FreeRoute սերվերը",
+    "restarting": "FreeRoute սերվերը վերագործարկվում է..."
   },
   "dashboard": {
-    "description": "Բացել OmniRoute-ի կառավարման վահանակը դիտարկիչում",
+    "description": "Բացել FreeRoute-ի կառավարման վահանակը դիտարկիչում",
     "opening": "Կառավարման վահանակը բացվում է՝ {url}",
     "urlOnly": "Տպել միայն կառավարման վահանակի URL-ը՝ առանց դիտարկիչը բացելու",
     "tui": "Բացել ինտերակտիվ TUI կառավարման վահանակը (տերմինալային միջերես, 7 ներդիր)"
@@ -526,7 +526,7 @@
   "models": {
     "description": "Ցուցադրել հասանելի մոդելները (պահանջվում է գործարկված սերվեր)",
     "search": "Զտել մոդելներն ըստ ID-ի, անվան, մատակարարի կամ նկարագրության",
-    "noServer": "Սերվերը չի աշխատում։ Գործարկեք՝ omniroute serve",
+    "noServer": "Սերվերը չի աշխատում։ Գործարկեք՝ freeroute serve",
     "noModels": "Մոդելներ չեն գտնվել։"
   },
   "audit": {
@@ -558,7 +558,7 @@
     }
   },
   "skills": {
-    "description": "Կառավարել OmniRoute-ի հմտությունները (sandbox, builtin, custom, hybrid, skillssh)",
+    "description": "Կառավարել FreeRoute-ի հմտությունները (sandbox, builtin, custom, hybrid, skillssh)",
     "list": {
       "description": "Ցուցադրել տեղադրված հմտությունները",
       "type": "Զտել ըստ տեսակի (sandbox|custom|builtin|hybrid|skillssh)",
@@ -631,7 +631,7 @@
     }
   },
   "memory": {
-    "description": "Կառավարել OmniRoute-ի խոսակցական հիշողությունը (FTS5 + vector)",
+    "description": "Կառավարել FreeRoute-ի խոսակցական հիշողությունը (FTS5 + vector)",
     "search": {
       "description": "Որոնել հիշողության գրառումները իմաստային հարցմամբ",
       "type": "Զտել ըստ հիշողության տեսակի (user|feedback|project|reference)",
@@ -789,7 +789,7 @@
     }
   },
   "webhooks": {
-    "description": "Կառավարել OmniRoute վեբհուքերը",
+    "description": "Կառավարել FreeRoute վեբհուքերը",
     "events": {
       "description": "Ցուցակել վեբհուքերի իրադարձությունների բոլոր հասանելի տեսակները"
     },
@@ -821,14 +821,14 @@
     }
   },
   "program": {
-    "description": "OmniRoute — խելացի AI երթուղիչ՝ ավտոմատ պահուստային անցմամբ",
+    "description": "FreeRoute — խելացի AI երթուղիչ՝ ավտոմատ պահուստային անցմամբ",
     "version": "Տպել տարբերակը և դուրս գալ",
     "output": "Ելքի ձևաչափը (table, json, jsonl, csv)",
     "quiet": "Թաքցնել ոչ էական ելքային տվյալները",
     "no_color": "Անջատել գունավոր ելքը",
     "timeout": "HTTP հարցման սպասման առավելագույն ժամանակը՝ միլիվայրկյաններով",
-    "api_key": "OmniRoute սերվերի API բանալի",
-    "base_url": "OmniRoute սերվերի բազային URL",
+    "api_key": "FreeRoute սերվերի API բանալի",
+    "base_url": "FreeRoute սերվերի բազային URL",
     "context": "Այս հրամանի համար օգտագործվող սերվերի համատեքստը/պրոֆիլը",
     "lang": "Սահմանել CLI-ի ցուցադրման լեզուն (գերակայում է OMNIROUTE_LANG-ին)"
   },
@@ -1079,7 +1079,7 @@
     }
   },
   "openapi": {
-    "description": "Մուտք գործել և փորձարկել OmniRoute OpenAPI բնութագիրը",
+    "description": "Մուտք գործել և փորձարկել FreeRoute OpenAPI բնութագիրը",
     "dump": {
       "description": "Արտածել OpenAPI բնութագիրը stdout կամ ֆայլ",
       "format": "Ելքային ձևաչափը՝ yaml|json (լռելյայն՝ yaml)",
@@ -1149,7 +1149,7 @@
     }
   },
   "open": {
-    "description": "Դիտարկիչում բացել OmniRoute-ի վահանակի որոշակի էջ",
+    "description": "Դիտարկիչում բացել FreeRoute-ի վահանակի որոշակի էջ",
     "url": "Միայն տպել URL-ը՝ առանց դիտարկիչը բացելու"
   },
   "telemetry": {
@@ -1166,7 +1166,7 @@
     }
   },
   "sync": {
-    "description": "Համաժամացնել կազմաձևումը OmniRoute-ի օրինակների միջև",
+    "description": "Համաժամացնել կազմաձևումը FreeRoute-ի օրինակների միջև",
     "push": {
       "description": "Ուղարկել կազմաձևումը ամպային կամ հեռակա օրինակին",
       "target": "Թիրախը (cloud կամ context:name)",
@@ -1222,8 +1222,8 @@
       "listTitle": "Հասանելի լեզուներ",
       "current": "Լեզու՝ {code} ({name})",
       "saved": "Լեզուն սահմանվել է որպես {code} ({name})։",
-      "noCode": "Լեզվի կոդը պարտադիր է։ Հասանելի կոդերը տեսնելու համար գործարկեք 'omniroute config lang list'։",
-      "unknown": "Անհայտ լեզվի կոդ՝ {code}։ Հասանելի կոդերը տեսնելու համար գործարկեք 'omniroute config lang list'։",
+      "noCode": "Լեզվի կոդը պարտադիր է։ Հասանելի կոդերը տեսնելու համար գործարկեք 'freeroute config lang list'։",
+      "unknown": "Անհայտ լեզվի կոդ՝ {code}։ Հասանելի կոդերը տեսնելու համար գործարկեք 'freeroute config lang list'։",
       "alreadySet": "Լեզուն արդեն սահմանված է որպես {code}։",
       "envHint": "Հուշում․ կարող եք նաև ձեր միջավայրում սահմանել OMNIROUTE_LANG={code}։"
     }
@@ -1242,7 +1242,7 @@
     "filter": "Զտել ըստ մակարդակի (error,warn,info)՝ ստորակետերով բաժանված",
     "lines": "Ստացվող տողերի քանակը",
     "timeout": "Կապի սպասման առավելագույն ժամանակը՝ մվ-ով",
-    "baseUrl": "OmniRoute API-ի բազային URL-ը",
+    "baseUrl": "FreeRoute API-ի բազային URL-ը",
     "requestId": "Զտել ըստ հարցման ID-ի",
     "apiKey": "Զտել ըստ API բանալու",
     "combo": "Զտել ըստ կոմբոյի անվան",
@@ -1258,10 +1258,10 @@
     "description": "Կառավարել համակարգային վահանակի պատկերակը",
     "show": "Ցուցադրել համակարգային վահանակի պատկերակը (եթե սերվերն աշխատում է --tray-ով)",
     "hide": "Թաքցնել համակարգային վահանակի պատկերակը",
-    "quit": "Դուրս գալ OmniRoute-ից համակարգային վահանակի միջոցով"
+    "quit": "Դուրս գալ FreeRoute-ից համակարգային վահանակի միջոցով"
   },
   "autostart": {
-    "description": "Կառավարել OmniRoute-ի ինքնամեկնարկը համակարգի բեռնման ժամանակ (Linux: systemd օգտատիրոջ ծառայություն)",
+    "description": "Կառավարել FreeRoute-ի ինքնամեկնարկը համակարգի բեռնման ժամանակ (Linux: systemd օգտատիրոջ ծառայություն)",
     "enable": "Միացնել ինքնամեկնարկը համակարգի բեռնման ժամանակ",
     "disable": "Անջատել ինքնամեկնարկը համակարգի բեռնման ժամանակ",
     "toggle": "Փոխարկել ինքնամեկնարկը համակարգի բեռնման ժամանակ",
@@ -1293,19 +1293,19 @@
     "scaffold": "Ստեղծել նոր փլագինի սկզբնական ձևանմուշ"
   },
   "launch": {
-    "description": "Գործարկել Claude Code-ը՝ ուղղված OmniRoute-ին (տեղային կամ հեռակա՝ --profile-ով)",
+    "description": "Գործարկել Claude Code-ը՝ ուղղված FreeRoute-ին (տեղային կամ հեռակա՝ --profile-ով)",
     "token": "Թոքենը, որը Claude հաճախորդը պետք է ուղարկի (ANTHROPIC_AUTH_TOKEN)",
-    "notRunning": "OmniRoute-ը հասանելի չէ {port} պորտում։ Գործարկեք այն 'omniroute serve' հրամանով։",
+    "notRunning": "FreeRoute-ը հասանելի չէ {port} պորտում։ Գործարկեք այն 'freeroute serve' հրամանով։",
     "notFound": "'claude' CLI-ն չի գտնվել PATH-ում։"
   },
   "run": {
-    "description": "Գործարկել աջակցվող CLI թիրախը OmniRoute-ի միջոցով"
+    "description": "Գործարկել աջակցվող CLI թիրախը FreeRoute-ի միջոցով"
   },
   "setupClaude": {
-    "description": "OmniRoute-ի մոդելների կատալոգից ստեղծել ~/.claude/profiles Claude Code պրոֆիլներ"
+    "description": "FreeRoute-ի մոդելների կատալոգից ստեղծել ~/.claude/profiles Claude Code պրոֆիլներ"
   },
   "connect": {
-    "description": "Միանալ հեռակա OmniRoute սերվերին և անցնել հեռակա ռեժիմի"
+    "description": "Միանալ հեռակա FreeRoute սերվերին և անցնել հեռակա ռեժիմի"
   },
   "tokens": {
     "description": "Կառավարել սահմանափակ շրջանակով CLI մուտքի թոքենները (հեռակա ռեժիմ)"
@@ -1314,10 +1314,10 @@
     "description": "Ակտիվ սերվերից ընտրել մատակարար+մոդել և կազմաձևել աջակցվող տեղային CLI"
   },
   "launchCodex": {
-    "description": "Գործարկել Codex CLI՝ ուղղված OmniRoute-ին (տեղային կամ հեռակա VPS)"
+    "description": "Գործարկել Codex CLI՝ ուղղված FreeRoute-ին (տեղային կամ հեռակա VPS)"
   },
   "setupCodex": {
-    "description": "OmniRoute-ի գործող մոդելների կատալոգից ստեղծել ~/.codex պրոֆիլի ֆայլեր"
+    "description": "FreeRoute-ի գործող մոդելների կատալոգից ստեղծել ~/.codex պրոֆիլի ֆայլեր"
   },
   "packs": {
     "description": "Կառավարել գործարկման միջավայրի ընտրովի փաթեթները (ML / դիտարկչի ավտոմատացում)",
@@ -1330,7 +1330,7 @@
     "errUnknown": "անհայտ փաթեթ՝ {name}",
     "errNoIndex": "փաթեթների ինդեքսը չի գտնվել. փոխանցեք փաթեթի բովանդակությունը պարունակող --source <dir> (աշխատասեղանի փաթեթներում այն գտնվում է հավելվածի կողքին)",
     "installed": "«{name}» փաթեթը տեղադրվել և ստուգվել է {dir}-ում",
-    "restartHint": "վերագործարկեք OmniRoute սերվերը (կամ աշխատասեղանի հավելվածը), որպեսզի գործարկման միջավայրը ճանաչի փաթեթը",
+    "restartHint": "վերագործարկեք FreeRoute սերվերը (կամ աշխատասեղանի հավելվածը), որպեսզի գործարկման միջավայրը ճանաչի փաթեթը",
     "removed": "«{name}» փաթեթը հեռացվել է",
     "notInstalled": "«{name}» փաթեթը տեղադրված չէր",
     "verifyOk": "բոլոր տեղադրված փաթեթները ստուգվել են",

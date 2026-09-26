@@ -9,7 +9,7 @@
  * Voice (guaranteed cycle, PRD RF4): push-to-talk → MediaRecorder →
  * POST /api/v1/audio/transcriptions (multipart) → text → /ask → response →
  * POST /api/v1/audio/speech → play the returned audio blob. STT/TTS models are
- * operator-configurable (provider/model of THIS OmniRoute install), persisted
+ * operator-configurable (provider/model of THIS FreeRoute install), persisted
  * in localStorage.
  */
 

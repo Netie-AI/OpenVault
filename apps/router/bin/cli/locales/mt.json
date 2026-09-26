@@ -1,8 +1,8 @@
 {
   "common": {
     "error": "Żball: {message}",
-    "serverOffline": "is-servizz OmniRoute huwa offline. Bda' b: omniroute serve",
-    "authRequired": "Jintalab awtentikazzjoni. Agħżel OMNIROUTE_API_KEY jew skurri: omniroute setup",
+    "serverOffline": "is-servizz FreeRoute huwa offline. Bda' b: freeroute serve",
+    "authRequired": "Jintalab awtentikazzjoni. Agħżel OMNIROUTE_API_KEY jew skurri: freeroute setup",
     "rateLimited": "Limitt tar-rata taqbiel. Retry wara {seconds}s.",
     "timeout": "It-talba ħarqet wara {ms}ms.",
     "success": "Intemm.",
@@ -15,7 +15,7 @@
     "yesOpt": "Qabżu l-prompt ta' konferma"
   },
   "setup": {
-    "title": "Twaqqif ta' OmniRoute",
+    "title": "Twaqqif ta' FreeRoute",
     "passwordPrompt": "Password tal-amministrazzjoni",
     "providerPrompt": "Fornitur standard (ħalli vojt biex tbatti)",
     "done": "Twaqqif komplet",
@@ -30,19 +30,19 @@
     "opencode": "Installa u kkonfigura l-plugin inkluż @omniroute/opencode-plugin għal OpenCode"
   },
   "doctor": {
-    "title": "Tabib OmniRoute",
+    "title": "Tabib FreeRoute",
     "dbOk": "Databank: OK ({path})",
-    "dbMissing": "Databank: mhux inizjalizzat — skurri `omniroute setup`",
+    "dbMissing": "Databank: mhux inizjalizzat — skurri `freeroute setup`",
     "portOk": "Port {port}: disponibbli",
     "portConflict": "Port {port}: qed jintuża minn proċess ieħor",
     "encryptionOk": "Ċavetta tal-encrypting: kkonfigurata",
-    "encryptionMissing": "Ċavetta tal-encrypting nieqsa — skurri `omniroute setup`",
+    "encryptionMissing": "Ċavetta tal-encrypting nieqsa — skurri `freeroute setup`",
     "allGood": "It-tarka kollha għaddew.",
     "warnings": "{count} twissija(t) — ara t'fuq."
   },
   "providers": {
     "title": "Fornituri",
-    "noProviders": "Ebda fornituri kkonfigurati. Skurri: omniroute setup",
+    "noProviders": "Ebda fornituri kkonfigurati. Skurri: freeroute setup",
     "testing": "Ttestjar {name}...",
     "available": "{count} fornitur(i) disponibbli",
     "connected": "Konness",
@@ -71,7 +71,7 @@
       "dryRunOpt": "Stampa x'jinbidel mingħajr ma tikteb",
       "confirmPrompt": "Tissostitwixxi ċ-ċavetta API għall-konnessjoni \"{name}\" ({id})? [y/N]",
       "dryRunResult": "[dry-run] Kienet iddawwar iċ-ċavetta għal \"{name}\" ({id}). L-ebda tibdil ma sar.",
-      "oauthHint": "Konnessjoni OAuth — mexxi: omniroute oauth {provider}",
+      "oauthHint": "Konnessjoni OAuth — mexxi: freeroute oauth {provider}",
       "envVarEmpty": "Il-varjabbli tal-ambjent {var} mhux issettjat jew huwa vojt.",
       "success": "Iċ-ċavetta ddawret għal \"{name}\". Mexxi `providers test {id}` biex tivverifika.",
       "testPassed": "It-test wara r-rotazzjoni għadda.",
@@ -82,7 +82,7 @@
       "providerOpt": "Iffiltra bl-isem tal-fornitur",
       "header": "ID         Fornitur       Isem                     Skadenza Status  Test Status  Cooldown Sa",
       "noData": "L-ebda dejta tal-konnessjoni tal-fornitur disponibbli.",
-      "requiresServer": "providers status jeħtieġ li s-server OmniRoute ikun qed jaħdem."
+      "requiresServer": "providers status jeħtieġ li s-server FreeRoute ikun qed jaħdem."
     }
   },
   "keys": {
@@ -90,8 +90,8 @@
     "addDescription": "Żid jew aġġorna ċavetta API għal fornitur",
     "listDescription": "Lista taċ-ċwievet API kollha kkonfigurati",
     "removeDescription": "Neħħi ċavetta API għal fornitur",
-    "regenerateDescription": "Irriġenera ċavetta API OmniRoute",
-    "revokeDescription": "Irrevoka ċavetta API OmniRoute",
+    "regenerateDescription": "Irriġenera ċavetta API FreeRoute",
+    "revokeDescription": "Irrevoka ċavetta API FreeRoute",
     "revealDescription": "Uri l-valur taċ-ċavetta API mhux immaskrat",
     "usageDescription": "Uri l-użu reċenti għal ċavetta API",
     "usageLimitOpt": "Numru ta' talbiet reċenti",
@@ -142,7 +142,7 @@
     "warning": "⚠ Dan jistampa/jikteb API keys u tokens OAuth DEKRIPTATI f'test ċar. Kun żgur li l-iskrin tiegħek, l-istorja tal-shell, u kwalunkwe fajl ta' output jibqgħu privati.",
     "confirmHeading": "⚠ TWISSIJA: dan jesporta l-kredenzjali tal-provider DEKRIPTATI f'test ċar",
     "confirmBody": "Dan il-kmand jiddeċifra u jistampa/jikteb apiKey, accessToken, refreshToken, u\nidToken għall-konnessjoni(jiet) magħżula. Ittratta l-output bħala sigriet.",
-    "confirmFooter": "Biex tikkonferma, użu:\n  omniroute auth export --force",
+    "confirmFooter": "Biex tikkonferma, użu:\n  freeroute auth export --force",
     "missingKey": "STORAGE_ENCRYPTION_KEY hija meħtieġa biex tivvjaġġa l-kredenzjali.",
     "notFound": "Konnessjoni ma nstabitx: {id}",
     "invalidFormat": "Formatu invalidu: {format}. Użu json jew env."
@@ -220,10 +220,10 @@
     "reasoning": "Livell ta' sforz ta' raġunament (low|medium|high)",
     "thinking": "Baġit ta' tokens ta' ħsieb estiż",
     "explain": "Istampa s-siġra tal-fallback u l-firxa tal-ispiża fuq stderr",
-    "noCombo": "Ma nstabet l-ebda combo li taqbel. Ikkonfigura waħda b': omniroute combo create"
+    "noCombo": "Ma nstabet l-ebda combo li taqbel. Ikkonfigura waħda b': freeroute combo create"
   },
   "chat": {
-    "description": "Ibgħat prompt ta' chat ta' darba waħda lil OmniRoute",
+    "description": "Ibgħat prompt ta' chat ta' darba waħda lil FreeRoute",
     "file": "Aqra l-prompt minn fajl",
     "stdin": "Aqra l-prompt minn stdin",
     "system": "Prompt tas-sistema",
@@ -242,8 +242,8 @@
     }
   },
   "serve": {
-    "description": "Ibda s-server ta' OmniRoute (azzjoni default)",
-    "starting": "Qed jibda s-server ta' OmniRoute fuq il-port {port}...",
+    "description": "Ibda s-server ta' FreeRoute (azzjoni default)",
+    "starting": "Qed jibda s-server ta' FreeRoute fuq il-port {port}...",
     "ready": "Lest fuq http://localhost:{port}",
     "stopping": "Qed jieqaf is-server (PID {pid})...",
     "stopped": "Is-server waqaf.",
@@ -262,7 +262,7 @@
   },
   "backup": {
     "title": "Reżerv",
-    "description": "Oħloq reżerv tal-data ta' OmniRoute",
+    "description": "Oħloq reżerv tal-data ta' FreeRoute",
     "creating": "Qed jinħoloq reżerv...",
     "done": "Reżerv salvagardjat fi {path}",
     "noFiles": "Ebda fajls x'jittella' reżerv (database mhux initjalizzat)",
@@ -274,7 +274,7 @@
     "noBackups": "Ebda reżervi ma nstabu.",
     "notFound": "Reżerv ma nstabx: {name}",
     "confirmRestore": "Tibdil id-data attwali b'reżerv minn {ts}?",
-    "createDescription": "Oħloq reżerv tal-data ta' OmniRoute",
+    "createDescription": "Oħloq reżerv tal-data ta' FreeRoute",
     "nameOpt": "Isem reżerv personalizzat",
     "cloudOpt": "Itella' reżerv għal storage tal-cloud",
     "encryptOpt": "Enkripta reżerv b'AES-256-GCM",
@@ -292,14 +292,14 @@
       "statusDescription": "Uri l-istatus attwali tal-iskeda ta' reżerv",
       "cronOpt": "Espressjoni Cron għall-iskeda (default: kuljum fil-3am)",
       "enabled": "Reżerv awtomatiku attivat (cron: {cron}).",
-      "hint": "L-iskeda tintqara minn omniroute serve meta tibda.",
+      "hint": "L-iskeda tintqara minn freeroute serve meta tibda.",
       "disabled": "Reżerv awtomatiku diżattivat.",
       "notConfigured": "Ebda skeda ta' reżerv konfigurata."
     }
   },
   "health": {
     "description": "Ittara s-saħħa tal-server u l-istatus tal-komponenti",
-    "noServer": "Server mhux qed jaħdem. Bda' b': omniroute serve",
+    "noServer": "Server mhux qed jaħdem. Bda' b': freeroute serve",
     "title": "Saħħa",
     "status": "Statu: {status}",
     "uptime": "Ħin ta' xogħol: {uptime}",
@@ -308,21 +308,21 @@
   },
   "quota": {
     "description": "Uri l-użu tal-kwota tal-fornitur",
-    "noServer": "Is-servier mhux qed jaħdem. Bda b': omniroute serve",
+    "noServer": "Is-servier mhux qed jaħdem. Bda b': freeroute serve",
     "noData": "L-ebda informazzjoni dwar il-kwota disponibbli."
   },
   "cache": {
     "description": "Immaniġġja cache tar-risposta",
-    "noServer": "Is-servier mhux qed jaħdem. Bda b': omniroute serve",
+    "noServer": "Is-servier mhux qed jaħdem. Bda b': freeroute serve",
     "cleared": "Cache ġieċċejjar.",
     "clearFailed": "Fallit li jnaddaf il-cache."
   },
   "redis": {
-    "description": "Lancia kontenitur lokali Redis b'buttuna waħda (Podman jew Docker) għall-cache u t-traċar tal-kwota ta' OmniRoute"
+    "description": "Lancia kontenitur lokali Redis b'buttuna waħda (Podman jew Docker) għall-cache u t-traċar tal-kwota ta' FreeRoute"
   },
   "test": {
     "description": "Ittestja konnessjoni tal-fornitur",
-    "noServer": "Is-servier mhux qed jaħdem. Bda b': omniroute serve",
+    "noServer": "Is-servier mhux qed jaħdem. Bda b': freeroute serve",
     "testing": "Qed ittestja {provider} / {model}...",
     "passed": "Konnessjoni reċevita!",
     "failed": "Konnessjoni fallit: {error}",
@@ -334,7 +334,7 @@
     "saved": "Rizultati ħliefa f'{path}'",
     "compareTitle": "Vvalutazzjoni tal-Mudelli",
     "compareMinTwo": "Mhux anqas żewġ mudelli meħtieġa għal --compare (separati b'virgola)",
-    "noProviders": "L-ebda fornituri mqabbdin. Żid wieħed b'permezz ta': omniroute keys add"
+    "noProviders": "L-ebda fornituri mqabbdin. Żid wieħed b'permezz ta': freeroute keys add"
   },
   "update": {
     "checking": "Qed jitfittex għat-tġdid...",
@@ -348,7 +348,7 @@
     "running": "Servier MCP qed jaħdem ({transport})",
     "stopped": "Servier MCP waqaf.",
     "restarted": "Servier MCP restartat.",
-    "stoppedHint": "Ħaddem `omniroute mcp enable` biex tattivah.",
+    "stoppedHint": "Ħaddem `freeroute mcp enable` biex tattivah.",
     "enabled": "Is-server MCP huwa attivat.",
     "disabled": "Is-server MCP huwa diżattivat.",
     "enable": {
@@ -416,7 +416,7 @@
     }
   },
   "policy": {
-    "description": "Immaniġġja l-politiki ta' awtorizzazzjoni OmniRoute",
+    "description": "Immaniġġja l-politiki ta' awtorizzazzjoni FreeRoute",
     "list": {
       "description": "Lista l-politiki",
       "kind": "Iffiltra bit-tip (allow|deny|rate-limit|cost-cap)",
@@ -453,7 +453,7 @@
     }
   },
   "compression": {
-    "description": "Ikkonfigura u spezjonja l-pipeline tal-kompressjoni tal-OmniRoute",
+    "description": "Ikkonfigura u spezjonja l-pipeline tal-kompressjoni tal-FreeRoute",
     "status": {
       "description": "Uri l-istat u l-iffissar attwali tal-kompressjoni"
     },
@@ -507,18 +507,18 @@
     "confirmRotate": "Roqba nisaq {type}? (URL ġdid se jiġi ġenerat)"
   },
   "stop": {
-    "description": "Waqqaf is-server tal-OmniRoute",
+    "description": "Waqqaf is-server tal-FreeRoute",
     "stopping": "Qed twaqqaf is-server (PID {pid})...",
     "stopped": "Is-server wieqaf.",
     "notRunning": "L-ebda server mhu qed jaħdem.",
     "portFallback": "Ebda fajl PID ma nstab, qed nipprova waqqaf ibbażat fuq il-port..."
   },
   "restart": {
-    "description": "Bedja mill-ġdid is-server tal-OmniRoute",
-    "restarting": "Qed nitella' is-server tal-OmniRoute..."
+    "description": "Bedja mill-ġdid is-server tal-FreeRoute",
+    "restarting": "Qed nitella' is-server tal-FreeRoute..."
   },
   "dashboard": {
-    "description": "Agħfas id-dashboard tal-OmniRoute fil-browser",
+    "description": "Agħfas id-dashboard tal-FreeRoute fil-browser",
     "opening": "Qed niftaħ id-dashboard fl-indirizz {url}",
     "urlOnly": "Ipprinta l-indirizz URL tal-dashboard bla ma tiftaħ il-browser",
     "tui": "Agħfas id-dashboard TUI interattiv (interfaċċ tal-terminal, 7 tabs)"
@@ -526,7 +526,7 @@
   "models": {
     "description": "Irrenda l-mudelli disponibbli (jeħtieġ server)",
     "search": "Filtrar mudelli skont id, isem, fornitur, jew deskrizzjoni",
-    "noServer": "Is-server mhux qed jaħdem. Beda b': omniroute serve",
+    "noServer": "Is-server mhux qed jaħdem. Beda b': freeroute serve",
     "noModels": "Ebda mudelli ma nstabu."
   },
   "audit": {
@@ -558,7 +558,7 @@
     }
   },
   "skills": {
-    "description": "Immaniġġja ħiliet tal-OmniRoute (sandbox, builtin, custom, hybrid, skillssh)",
+    "description": "Immaniġġja ħiliet tal-FreeRoute (sandbox, builtin, custom, hybrid, skillssh)",
     "list": {
       "description": "Irrenda ħiliet installati",
       "type": "Filtrar skont tip (sandbox|custom|builtin|hybrid|skillssh)",
@@ -631,7 +631,7 @@
     }
   },
   "memory": {
-    "description": "Ħaddem il-memorja konversazzjonali ta' OmniRoute (FTS5 + vector)",
+    "description": "Ħaddem il-memorja konversazzjonali ta' FreeRoute (FTS5 + vector)",
     "search": {
       "description": "Fittex il-memorji permezz ta' kweri semantika",
       "type": "Filtru bit-tip ta' memorja (user|feedback|project|reference)",
@@ -789,7 +789,7 @@
     }
   },
   "webhooks": {
-    "description": "Immaniġġja webhooks ta' OmniRoute",
+    "description": "Immaniġġja webhooks ta' FreeRoute",
     "events": {
       "description": "Lista tat-tipi kollha ta' avvenimenti webhook disponibbli"
     },
@@ -821,14 +821,14 @@
     }
   },
   "program": {
-    "description": "OmniRoute — Router AI Intelliġenti b'Fallback Awtomatiku",
+    "description": "FreeRoute — Router AI Intelliġenti b'Fallback Awtomatiku",
     "version": "Ipprintja l-verżjoni u oħroġ",
     "output": "Format tal-output (table, json, jsonl, csv)",
     "quiet": "Trażżan output mhux essenzjali",
     "no_color": "Iddiżattiva l-output ikkulurit",
     "timeout": "Timeout ta' talba HTTP f'millisekondi",
-    "api_key": "Ċavetta API għas-server OmniRoute",
-    "base_url": "URL bażi tas-server OmniRoute",
+    "api_key": "Ċavetta API għas-server FreeRoute",
+    "base_url": "URL bażi tas-server FreeRoute",
     "context": "Kuntest/profil tas-server biex jintuża għal din il-kmand",
     "lang": "Issettja l-lingwa tal-wiri tal-CLI (jissostitwixxi OMNIROUTE_LANG)"
   },
@@ -1079,7 +1079,7 @@
     }
   },
   "openapi": {
-    "description": "Aċċessa u ittestja l-ispeċifikazzjoni OpenAPI ta' OmniRoute",
+    "description": "Aċċessa u ittestja l-ispeċifikazzjoni OpenAPI ta' FreeRoute",
     "dump": {
       "description": "Neħħi l-ispeċifikazzjoni OpenAPI lejn stdout jew fajl",
       "format": "Format ta' output: yaml|json (default: yaml)",
@@ -1149,7 +1149,7 @@
     }
   },
   "open": {
-    "description": "Iftaħ paġna speċifika tad-dashboard ta' OmniRoute fil-browser",
+    "description": "Iftaħ paġna speċifika tad-dashboard ta' FreeRoute fil-browser",
     "url": "Stampa biss l-URL, tiftaħx il-browser"
   },
   "telemetry": {
@@ -1166,7 +1166,7 @@
     }
   },
   "sync": {
-    "description": "Sinkronizza l-konfigurazzjoni bejn l-istanzi ta' OmniRoute",
+    "description": "Sinkronizza l-konfigurazzjoni bejn l-istanzi ta' FreeRoute",
     "push": {
       "description": "Imbotta l-konfigurazzjoni lejn cloud jew istanza remota",
       "target": "Mira (cloud or context:name)",
@@ -1222,8 +1222,8 @@
       "listTitle": "Lingwi Disponibbli",
       "current": "Lingwa: {code} ({name})",
       "saved": "Lingwa ssettjata għal {code} ({name}).",
-      "noCode": "Il-kodiċi tal-lingwa huwa meħtieġ. Mexxi 'omniroute config lang list' biex tara l-kodiċijiet disponibbli.",
-      "unknown": "Kodiċi tal-lingwa mhux magħruf: {code}. Mexxi 'omniroute config lang list' biex tara l-kodiċijiet disponibbli.",
+      "noCode": "Il-kodiċi tal-lingwa huwa meħtieġ. Mexxi 'freeroute config lang list' biex tara l-kodiċijiet disponibbli.",
+      "unknown": "Kodiċi tal-lingwa mhux magħruf: {code}. Mexxi 'freeroute config lang list' biex tara l-kodiċijiet disponibbli.",
       "alreadySet": "Il-lingwa diġà hija ssettjata għal {code}.",
       "envHint": "Parir: tista' wkoll tissettja OMNIROUTE_LANG={code} fl-ambjent tiegħek."
     }
@@ -1242,7 +1242,7 @@
     "filter": "Iffiltra skont il-livell (error,warn,info) — separati b'virgola",
     "lines": "Numru ta' linji li jinkisbu",
     "timeout": "Timeout tal-konnessjoni f'ms",
-    "baseUrl": "URL bażi tal-API OmniRoute",
+    "baseUrl": "URL bażi tal-API FreeRoute",
     "requestId": "Iffiltra skont l-ID tat-talba",
     "apiKey": "Iffiltra skont iċ-ċavetta tal-API",
     "combo": "Iffiltra bl-isem tal-combo",
@@ -1258,10 +1258,10 @@
     "description": "Ikkontrolla l-ikona tas-system tray",
     "show": "Uri l-ikona tat-tray (jekk is-server qed jaħdem b'--tray)",
     "hide": "Aħbi l-ikona tat-tray",
-    "quit": "Oħroġ minn OmniRoute permezz tat-tray"
+    "quit": "Oħroġ minn FreeRoute permezz tat-tray"
   },
   "autostart": {
-    "description": "Immaniġġja l-awtostart ta' OmniRoute mal-boot (Linux: systemd user service)",
+    "description": "Immaniġġja l-awtostart ta' FreeRoute mal-boot (Linux: systemd user service)",
     "enable": "Ippermetti l-awtostart mal-boot",
     "disable": "Iddiżattiva l-awtostart mal-boot",
     "toggle": "Aqleb l-awtostart mal-boot",
@@ -1293,19 +1293,19 @@
     "scaffold": "Oħloq boilerplate ta' plugin ġdid"
   },
   "launch": {
-    "description": "Ibbda Claude Code indirizzat lejn OmniRoute (lokali jew remot, b'--profile)",
+    "description": "Ibbda Claude Code indirizzat lejn FreeRoute (lokali jew remot, b'--profile)",
     "token": "Token li l-klijent Claude għandu jibgħat (ANTHROPIC_AUTH_TOKEN)",
-    "notRunning": "OmniRoute mhux aċċessibbli fuq {port}. Ibda b''omniroute serve'.",
+    "notRunning": "FreeRoute mhux aċċessibbli fuq {port}. Ibda b''freeroute serve'.",
     "notFound": "Il-CLI 'claude' ma nstabx fil-PATH."
   },
   "run": {
-    "description": "Nniedi target tal-CLI appoġġat permezz ta' OmniRoute"
+    "description": "Nniedi target tal-CLI appoġġat permezz ta' FreeRoute"
   },
   "setupClaude": {
-    "description": "Ġġenera profili tal-Claude Code ~/.claude/profiles mill-katalog tal-mudelli tal-OmniRoute"
+    "description": "Ġġenera profili tal-Claude Code ~/.claude/profiles mill-katalog tal-mudelli tal-FreeRoute"
   },
   "connect": {
-    "description": "Connettiti għal server tal-OmniRoute remote u daħħal fil-modalità remote"
+    "description": "Connettiti għal server tal-FreeRoute remote u daħħal fil-modalità remote"
   },
   "tokens": {
     "description": "Immaniġġja tokens tal-aċċess tal-CLI skopati (modalità remote)"
@@ -1314,10 +1314,10 @@
     "description": "Agħżel providur+model mill-server attiv u configura CLI lokali appoġġat"
   },
   "launchCodex": {
-    "description": "Nniedi Codex CLI mmirat lejn OmniRoute (lokali jew VPS remote)"
+    "description": "Nniedi Codex CLI mmirat lejn FreeRoute (lokali jew VPS remote)"
   },
   "setupCodex": {
-    "description": "Ġġenera fajls tal-profil ~/.codex mill-katalog tal-mudelli ħaj tal-OmniRoute"
+    "description": "Ġġenera fajls tal-profil ~/.codex mill-katalog tal-mudelli ħaj tal-FreeRoute"
   },
   "packs": {
     "description": "Immaniġġja packs tal-ħin tax-xogħol opzjonali (ML / awtomazzjoni tal-browser)",
@@ -1330,7 +1330,7 @@
     "errUnknown": "pack mhux magħruf: {name}",
     "errNoIndex": "indiċi tal-pack ma nstabx; għaddi --source <dir> li fih il-payload tal-pack (desktop bundles jibagħthu ħdejn l-app)",
     "installed": "pack \"{name}\" installat u verifikat f'{dir}'",
-    "restartHint": "terġa' tibda l-server tal-OmniRoute (jew l-app desktop) sabiex il-ħin tax-xogħol jaħbad il-pack",
+    "restartHint": "terġa' tibda l-server tal-FreeRoute (jew l-app desktop) sabiex il-ħin tax-xogħol jaħbad il-pack",
     "removed": "pack \"{name}\" neħħa",
     "notInstalled": "pack \"{name}\" ma kienx installat",
     "verifyOk": "kollha tal-packs installati verifikati",

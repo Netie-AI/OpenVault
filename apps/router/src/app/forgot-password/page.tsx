@@ -131,7 +131,7 @@ export default function ForgotPasswordPage() {
                   <h2 className="text-lg font-semibold mb-1">{t("methodCliTitle")}</h2>
                   <p className="text-sm text-text-muted mb-3">{t("methodCliDescription")}</p>
                   <div className="bg-black/30 rounded-lg p-3 mb-3 font-mono text-sm text-green-400 border border-white/5">
-                    <code>npx omniroute reset-password</code>
+                    <code>npx freeroute reset-password</code>
                   </div>
                   <p className="text-xs text-text-muted">{t("methodCliHint")}</p>
                 </div>

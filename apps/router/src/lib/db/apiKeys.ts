@@ -1269,6 +1269,13 @@ export async function validateApiKey(key: string | null | undefined) {
 
   if (isConfiguredEnvApiKey(key)) return true;
 
+  // FreeRoute: an OpenVault-issued client token has no row in this table at
+  // all (same shape of problem as the env key above) — ask OpenVault whether
+  // it is currently valid. See src/lib/netie/keyvault.ts:verifyClientToken.
+  const { verifyClientToken } = await import("@/lib/netie/keyvault");
+  const openVaultVerification = await verifyClientToken(key);
+  if (openVaultVerification.valid) return true;
+
   const now = Date.now();
   const hashedKey = await hashKey(key);
   const cacheKey = hashedKey;
@@ -1434,6 +1441,61 @@ export async function getApiKeyMetadata(
       allowAutoCombos: true,
       catalogScope: "all",
     };
+  }
+
+  // FreeRoute: an OpenVault-issued client token has no row in `api_keys`
+  // either — synthesize the same shape of record the env key gets above, but
+  // with the DEFAULT_SELF_SERVICE_SCOPES a freshly self-service-minted key
+  // gets (never "manage") and no model restrictions. See
+  // src/lib/netie/keyvault.ts:verifyClientToken and
+  // src/shared/constants/selfServiceScopes.ts.
+  {
+    const { verifyClientToken } = await import("@/lib/netie/keyvault");
+    const verification = await verifyClientToken(key);
+    if (verification.valid) {
+      const { DEFAULT_SELF_SERVICE_SCOPES } = await import(
+        "@/shared/constants/selfServiceScopes"
+      );
+      return {
+        id: `openvault:${verification.keyId ?? "unknown"}`,
+        name: "OpenVault key",
+        machineId: "openvault",
+        modelAccessMode: "all",
+        allowedModels: [],
+        blockedModels: [],
+        allowedCombos: [ALL_COMBOS_ACCESS_RULE],
+        allowedConnections: [],
+        allowedQuotas: [],
+        noLog: false,
+        autoResolve: true,
+        isActive: true,
+        accessSchedule: null,
+        rateLimits: null,
+        maxRequestsPerDay: null,
+        maxRequestsPerMinute: null,
+        throttleDelayMs: null,
+        maxSessions: 0,
+        revokedAt: null,
+        expiresAt: null,
+        ipAllowlist: [],
+        isBanned: false,
+        keyHash: null,
+        scopes: [...DEFAULT_SELF_SERVICE_SCOPES],
+        proxyId: null,
+        allowedEndpoints: [],
+        streamDefaultMode: "legacy",
+        cacheDefaultMode: "legacy",
+        disableNonPublicModels: false,
+        allowUsageCommand: false,
+        usageLimitEnabled: false,
+        dailyUsageLimitUsd: null,
+        weeklyUsageLimitUsd: null,
+        chaosModeEnabled: false,
+        compressionEnabled: true,
+        allowAutoCombos: true,
+        catalogScope: "all",
+      };
+    }
   }
 
   // Check cache first

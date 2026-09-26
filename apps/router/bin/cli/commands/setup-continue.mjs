@@ -1,5 +1,5 @@
 /**
- * omniroute setup-continue — configure Continue (continue.dev) for OmniRoute.
+ * freeroute setup-continue — configure Continue (continue.dev) for FreeRoute.
  *
  * Continue uses a file-based, mergeable ~/.continue/config.yaml shared by the VS
  * Code / JetBrains extensions AND the `cn` CLI. Models use `provider: openai`
@@ -57,7 +57,7 @@ export function buildContinueModels(modelIds, apiBase) {
     const roles = ["chat", "edit", "apply"];
     if (cfg.effort === "low") roles.push("autocomplete"); // fast tier → autocomplete
     out.push({
-      name: `OmniRoute: ${id}`,
+      name: `FreeRoute: ${id}`,
       provider: "openai",
       model: id,
       apiBase,
@@ -69,7 +69,7 @@ export function buildContinueModels(modelIds, apiBase) {
 }
 
 /**
- * Merge OmniRoute models into an existing Continue config object: drop any prior
+ * Merge FreeRoute models into an existing Continue config object: drop any prior
  * models pointing at this apiBase, keep everything else, append the new set.
  */
 export function mergeContinueConfig(existing, newModels, apiBase) {
@@ -77,7 +77,7 @@ export function mergeContinueConfig(existing, newModels, apiBase) {
   const prior = Array.isArray(cfg.models) ? cfg.models : [];
   const kept = prior.filter((m) => !m || m.apiBase !== apiBase);
   cfg.models = [...kept, ...newModels];
-  if (!cfg.name) cfg.name = "OmniRoute Config";
+  if (!cfg.name) cfg.name = "FreeRoute Config";
   if (!cfg.version) cfg.version = "1.0";
   if (!cfg.schema) cfg.schema = "v1";
   return cfg;
@@ -114,13 +114,13 @@ export async function runSetupContinueCommand(opts = {}) {
 
   const guard = await guardHostConfigTarget(configPath, {
     toolLabel: "Continue",
-    hostCommand: "omniroute setup-continue",
+    hostCommand: "freeroute setup-continue",
     allowContainerWrite: Boolean(opts.allowContainerWrite ?? opts["allow-container-write"]),
     dryRun,
   });
   if (guard !== 0) return guard;
 
-  printHeading("OmniRoute → Continue (config.yaml)");
+  printHeading("FreeRoute → Continue (config.yaml)");
   printInfo(`apiBase: ${apiBase}`);
 
   let ids;
@@ -128,7 +128,7 @@ export async function runSetupContinueCommand(opts = {}) {
     ids = await fetchModelIds(apiBase, apiKey);
   } catch (e) {
     printError(e.message);
-    printInfo("Make sure OmniRoute is running and --remote/--api-key are correct.");
+    printInfo("Make sure FreeRoute is running and --remote/--api-key are correct.");
     return 1;
   }
   if (only) ids = ids.filter((id) => only.some((f) => id.includes(f)));
@@ -155,13 +155,13 @@ export async function runSetupContinueCommand(opts = {}) {
 
   if (dryRun) {
     console.log("\n" + (out.length > 3500 ? out.slice(0, 3500) + "\n… (truncated)" : out));
-    printInfo(`[dry-run] ${models.length} OmniRoute model(s) → ${configPath}`);
+    printInfo(`[dry-run] ${models.length} FreeRoute model(s) → ${configPath}`);
     return 0;
   }
 
   mkdirSync(join(configPath, ".."), { recursive: true });
   writeFileSync(configPath, out, "utf8");
-  printSuccess(`Wrote ${configPath} (${models.length} OmniRoute models)`);
+  printSuccess(`Wrote ${configPath} (${models.length} FreeRoute models)`);
   printInfo("\nProvide the key (config.yaml references it, not stores it):");
   printInfo("  cn CLI:  export OMNIROUTE_API_KEY=...   (read from your shell)");
   printInfo("  IDE:     echo 'OMNIROUTE_API_KEY=...' >> ~/.continue/.env");
@@ -173,11 +173,11 @@ export function registerSetupContinue(program) {
   program
     .command("setup-continue")
     .description(
-      "Generate ~/.continue/config.yaml (Continue / cn CLI) from the OmniRoute model catalog"
+      "Generate ~/.continue/config.yaml (Continue / cn CLI) from the FreeRoute model catalog"
     )
-    .option("--port <port>", "Local OmniRoute port (ignored when --remote is set)", "20128")
-    .option("--remote <url>", "Remote OmniRoute URL, e.g. http://192.168.0.15:20128")
-    .option("--api-key <key>", "OmniRoute API key (defaults to OMNIROUTE_API_KEY env var)")
+    .option("--port <port>", "Local FreeRoute port (ignored when --remote is set)", "20128")
+    .option("--remote <url>", "Remote FreeRoute URL, e.g. http://192.168.0.15:20128")
+    .option("--api-key <key>", "FreeRoute API key (defaults to OMNIROUTE_API_KEY env var)")
     .option("--only <patterns>", "Comma-separated substrings — keep only matching model IDs")
     .option("--config-path <path>", "config.yaml path (default: ~/.continue/config.yaml)")
     .option("--dry-run", "Print what would be written without touching the filesystem")

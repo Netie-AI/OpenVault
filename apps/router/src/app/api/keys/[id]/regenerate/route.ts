@@ -1,36 +1,17 @@
-import { NextResponse } from "next/server";
-import { regenerateApiKey } from "@/lib/db/apiKeys";
 import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
-import * as log from "@/sse/utils/logger";
+import { renderClientKeysManagedByOpenVault } from "@omniroute/open-sse/netie/policy.ts";
 
 /**
  * POST /api/keys/[id]/regenerate
  *
- * Regenerates the API key value for a given ID.
- * The old key is immediately invalidated.
+ * FreeRoute: router-side inbound-client keys are minted by OpenVault
+ * (POST http://127.0.0.1:5000/api/apikeys, surfaced at
+ * http://127.0.0.1:3010/keys) — see src/lib/netie/keyvault.ts. Regenerating
+ * one here would just create a second, locally-minted key OpenVault doesn't
+ * know about, so this always 501s instead of calling regenerateApiKey().
  */
-export async function POST(request, { params }) {
+export async function POST(request: Request) {
   const authError = await requireManagementAuth(request);
   if (authError) return authError;
-
-  try {
-    const { id } = await params;
-    if (!id) {
-      return NextResponse.json({ error: "Missing key ID" }, { status: 400 });
-    }
-
-    const result = await regenerateApiKey(id);
-    if (!result) {
-      return NextResponse.json({ error: "Key not found" }, { status: 404 });
-    }
-
-    return NextResponse.json({
-      message: "API key regenerated successfully",
-      key: result.key,
-      id: result.id,
-    });
-  } catch (error) {
-    log.error("keys", "Error regenerating key", error);
-    return NextResponse.json({ error: "Failed to regenerate key" }, { status: 500 });
-  }
+  return renderClientKeysManagedByOpenVault();
 }

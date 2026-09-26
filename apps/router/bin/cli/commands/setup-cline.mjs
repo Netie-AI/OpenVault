@@ -1,9 +1,9 @@
 /**
- * omniroute setup-cline — configure the Cline AI coding agent to use OmniRoute.
+ * freeroute setup-cline — configure the Cline AI coding agent to use FreeRoute.
  *
  * Cline's VS Code extension keeps its config in VS Code's opaque globalStorage
  * (not file-writable). Its CLI/standalone mode reads ~/.cline/data/. This command
- * writes the CLI-mode files (matching the OmniRoute dashboard) AND prints the
+ * writes the CLI-mode files (matching the FreeRoute dashboard) AND prints the
  * Base URL / model to paste into the VS Code extension UI.
  *
  * Cline uses the OpenAI-compatible provider: openAiBaseUrl is the ROOT URL
@@ -51,7 +51,7 @@ export function resolveClineTarget(opts = {}) {
   return { baseUrl, apiKey };
 }
 
-/** Merge OmniRoute openai-compatible settings into Cline's globalState (Plan + Act). */
+/** Merge FreeRoute openai-compatible settings into Cline's globalState (Plan + Act). */
 export function buildClineGlobalState(existing, { baseUrl, model }) {
   const gs = { ...(existing || {}) };
   gs.actModeApiProvider = "openai";
@@ -99,13 +99,13 @@ export async function runSetupClineCommand(opts = {}) {
 
   const guard = await guardHostConfigTarget(clineDir, {
     toolLabel: "Cline",
-    hostCommand: "omniroute setup-cline",
+    hostCommand: "freeroute setup-cline",
     allowContainerWrite: Boolean(opts.allowContainerWrite ?? opts["allow-container-write"]),
     dryRun,
   });
   if (guard !== 0) return guard;
 
-  printHeading("OmniRoute → Cline (OpenAI-compatible)");
+  printHeading("FreeRoute → Cline (OpenAI-compatible)");
   printInfo(`Server: ${baseUrl}`);
 
   // Resolve the model (Cline needs one explicit id — no auto-discovery).
@@ -169,11 +169,11 @@ export function registerSetupCline(program) {
   program
     .command("setup-cline")
     .description(
-      "Configure Cline for OmniRoute: write ~/.cline/data (CLI mode) + print VS Code extension settings"
+      "Configure Cline for FreeRoute: write ~/.cline/data (CLI mode) + print VS Code extension settings"
     )
-    .option("--port <port>", "Local OmniRoute port (ignored when --remote is set)", "20128")
-    .option("--remote <url>", "Remote OmniRoute URL, e.g. http://192.168.0.15:20128")
-    .option("--api-key <key>", "OmniRoute API key (defaults to OMNIROUTE_API_KEY env var)")
+    .option("--port <port>", "Local FreeRoute port (ignored when --remote is set)", "20128")
+    .option("--remote <url>", "Remote FreeRoute URL, e.g. http://192.168.0.15:20128")
+    .option("--api-key <key>", "FreeRoute API key (defaults to OMNIROUTE_API_KEY env var)")
     .option("--model <id>", "Model id for Cline (required unless picked interactively)")
     .option("--cline-dir <dir>", "Cline data dir (default: ~/.cline/data)")
     .option("--yes", "Non-interactive: do not prompt (requires --model)")

@@ -42,7 +42,7 @@ export async function getVertexUsage(connectionId: string, provider: string) {
     if (requests === 0) {
       return {
         plan: "Vertex AI",
-        message: "Vertex connected. No usage recorded through OmniRoute yet for this account.",
+        message: "Vertex connected. No usage recorded through FreeRoute yet for this account.",
         quotas: { spend },
       };
     }

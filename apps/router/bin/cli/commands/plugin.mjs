@@ -22,7 +22,7 @@ function runNpm(args) {
 const TEMPLATE_INDEX = `export const meta = {
   name: "PLUGIN_NAME",
   version: "0.1.0",
-  description: "OmniRoute plugin",
+  description: "FreeRoute plugin",
   omnirouteApi: ">=4.0.0",
 };
 
@@ -203,7 +203,7 @@ export function registerPlugin(program) {
             version: "0.1.0",
             type: "module",
             main: "index.mjs",
-            description: `OmniRoute CLI plugin: ${safeName}`,
+            description: `FreeRoute CLI plugin: ${safeName}`,
             engines: { omniroute: ">=4.0.0" },
             keywords: ["omniroute-plugin", "omniroute-cmd"],
           },
@@ -214,7 +214,7 @@ export function registerPlugin(program) {
       writeFileSync(join(dir, "index.mjs"), TEMPLATE_INDEX.replace(/PLUGIN_NAME/g, safeName));
       writeFileSync(
         join(dir, "README.md"),
-        `# omniroute-cmd-${safeName}\n\nAn OmniRoute CLI plugin.\n\n## Install\n\n\`\`\`bash\nomniroute plugin install ${safeName}\n\`\`\`\n`
+        `# omniroute-cmd-${safeName}\n\nAn FreeRoute CLI plugin.\n\n## Install\n\n\`\`\`bash\nomniroute plugin install ${safeName}\n\`\`\`\n`
       );
       process.stdout.write(`✓ Scaffolded: ${dir}\n`);
       process.stdout.write(`  Run: cd ${dir} && omniroute plugin install .\n`);

@@ -216,7 +216,7 @@ export async function omniRouteFetch(path: string, options: RequestInit = {}): P
 
   if (!response.ok) {
     const errorText = await response.text().catch(() => "Unknown error");
-    throw new Error(`OmniRoute API error [${response.status}]: ${errorText}`);
+    throw new Error(`FreeRoute API error [${response.status}]: ${errorText}`);
   }
 
   return response.json();
@@ -1541,10 +1541,10 @@ export async function startMcpStdio(): Promise<void> {
   process.once("SIGINT", stopHeartbeatOnce);
   process.once("SIGTERM", stopHeartbeatOnce);
 
-  console.error("[MCP] OmniRoute MCP Server starting (stdio transport)...");
+  console.error("[MCP] FreeRoute MCP Server starting (stdio transport)...");
   try {
     await server.connect(transport);
-    console.error("[MCP] OmniRoute MCP Server connected and ready.");
+    console.error("[MCP] FreeRoute MCP Server connected and ready.");
   } finally {
     if (closeAuditDb()) {
       console.error("[MCP] Audit database checkpointed and closed.");

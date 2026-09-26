@@ -51,7 +51,7 @@ export async function OPTIONS() {
  * Rewrite a bare ChatGPT-style model id to the codex/ prefix when the model
  * resolves to a codex provider. This fixes the Codex CLI WS→HTTP fallback path:
  * the CLI sends bare "gpt-5.5" over HTTP after WS closes (1008 Policy), and
- * without this rewrite OmniRoute routes it to openrouter instead of codex.
+ * without this rewrite FreeRoute routes it to openrouter instead of codex.
  *
  * Accepts an optional `preParsedBody` so the route-level admission and injection
  * checks can parse once and avoid re-cloning the request on the hot path.

@@ -88,7 +88,7 @@ export async function POST(
       return NextResponse.json({
         session: publicSession(session),
         note:
-          "The viewer is loopback-only. Open it on the OmniRoute host or forward its port over SSH, then harvest the session.",
+          "The viewer is loopback-only. Open it on the FreeRoute host or forward its port over SSH, then harvest the session.",
       });
     }
 

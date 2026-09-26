@@ -1,8 +1,8 @@
 {
   "common": {
     "error": "Hitilafu: {message}",
-    "serverOffline": "Seva ya OmniRoute haiko mtandaoni. Ianzishe kwa: omniroute serve",
-    "authRequired": "Uthibitishaji unahitajika. Weka OMNIROUTE_API_KEY au endesha: omniroute setup",
+    "serverOffline": "Seva ya FreeRoute haiko mtandaoni. Ianzishe kwa: freeroute serve",
+    "authRequired": "Uthibitishaji unahitajika. Weka OMNIROUTE_API_KEY au endesha: freeroute setup",
     "rateLimited": "Kikomo cha maombi kimezidi. Jaribu tena baada ya sekunde {seconds}.",
     "timeout": "Muda wa ombi uliisha baada ya ms {ms}.",
     "success": "Imekamilika.",
@@ -15,7 +15,7 @@
     "yesOpt": "Ruka kidokezo cha uthibitishaji"
   },
   "setup": {
-    "title": "Usanidi wa OmniRoute",
+    "title": "Usanidi wa FreeRoute",
     "passwordPrompt": "Nenosiri la msimamizi",
     "providerPrompt": "Mtoa huduma chaguo-msingi (acha wazi ili kuruka)",
     "done": "Usanidi umekamilika",
@@ -30,19 +30,19 @@
     "opencode": "Sakinisha na usanidi @omniroute/opencode-plugin iliyojumuishwa kwa OpenCode"
   },
   "doctor": {
-    "title": "Uchunguzi wa OmniRoute",
+    "title": "Uchunguzi wa FreeRoute",
     "dbOk": "Hifadhidata: SAWA ({path})",
-    "dbMissing": "Hifadhidata: haijaanzishwa — endesha `omniroute setup`",
+    "dbMissing": "Hifadhidata: haijaanzishwa — endesha `freeroute setup`",
     "portOk": "Mlango {port}: unapatikana",
     "portConflict": "Mlango {port}: unatumiwa na mchakato mwingine",
     "encryptionOk": "Ufunguo wa usimbaji fiche: umesanidiwa",
-    "encryptionMissing": "Ufunguo wa usimbaji fiche haupo — endesha `omniroute setup`",
+    "encryptionMissing": "Ufunguo wa usimbaji fiche haupo — endesha `freeroute setup`",
     "allGood": "Ukaguzi wote umefaulu.",
     "warnings": "Maonyo {count} — tazama hapo juu."
   },
   "providers": {
     "title": "Watoa huduma",
-    "noProviders": "Hakuna watoa huduma waliosanidiwa. Endesha: omniroute setup",
+    "noProviders": "Hakuna watoa huduma waliosanidiwa. Endesha: freeroute setup",
     "testing": "Inajaribu {name}...",
     "available": "Watoa huduma {count} wanapatikana",
     "connected": "Imeunganishwa",
@@ -71,7 +71,7 @@
       "dryRunOpt": "Chapisha kile ambacho kingebadilika bila kuandika",
       "confirmPrompt": "Ungependa kubadilisha ufunguo wa API wa muunganisho \"{name}\" ({id})? [y/N]",
       "dryRunResult": "[dry-run] Ufunguo wa \"{name}\" ({id}) ungebadilishwa. Hakuna mabadiliko yaliyofanywa.",
-      "oauthHint": "Muunganisho wa OAuth — endesha: omniroute oauth {provider}",
+      "oauthHint": "Muunganisho wa OAuth — endesha: freeroute oauth {provider}",
       "envVarEmpty": "Kigezo cha mazingira {var} hakijawekwa au ni tupu.",
       "success": "Ufunguo wa \"{name}\" umebadilishwa. Endesha `providers test {id}` ili kuthibitisha.",
       "testPassed": "Jaribio la baada ya kubadilisha ufunguo limefaulu.",
@@ -82,7 +82,7 @@
       "providerOpt": "Chuja kwa jina la mtoa huduma",
       "header": "ID         Mtoa huduma   Jina                     Hali ya Kuisha  Hali ya Jaribio  Kusubiri Hadi",
       "noData": "Hakuna data ya muunganisho wa mtoa huduma inayopatikana.",
-      "requiresServer": "providers status inahitaji seva ya OmniRoute iwe inaendeshwa."
+      "requiresServer": "providers status inahitaji seva ya FreeRoute iwe inaendeshwa."
     }
   },
   "keys": {
@@ -90,8 +90,8 @@
     "addDescription": "Ongeza au sasisha ufunguo wa API wa mtoa huduma",
     "listDescription": "Orodhesha funguo zote za API zilizosanidiwa",
     "removeDescription": "Ondoa ufunguo wa API wa mtoa huduma",
-    "regenerateDescription": "Zalisha upya ufunguo wa API wa OmniRoute",
-    "revokeDescription": "Batilisha ufunguo wa API wa OmniRoute",
+    "regenerateDescription": "Zalisha upya ufunguo wa API wa FreeRoute",
+    "revokeDescription": "Batilisha ufunguo wa API wa FreeRoute",
     "revealDescription": "Onyesha thamani kamili ya ufunguo wa API iliyofichwa",
     "usageDescription": "Onyesha matumizi ya hivi karibuni ya ufunguo wa API",
     "usageLimitOpt": "Idadi ya maombi ya hivi karibuni",
@@ -142,7 +142,7 @@
     "warning": "⚠ Hii huchapisha/huandika funguo za API na tokeni za OAuth ZILIZOSIMBULIWA kwa maandishi wazi. Hakikisha skrini yako, historia ya shell, na faili yoyote ya matokeo vinabaki vya faragha.",
     "confirmHeading": "⚠ ONYO: hii huhamisha vitambulisho vya mtoa huduma VILIVYOSIMBULIWA kwa maandishi wazi",
     "confirmBody": "Amri hii husimbua na kuchapisha/huandika apiKey, accessToken, refreshToken, na\nidToken kwa miunganisho iliyochaguliwa. Chukulia matokeo hayo kuwa siri.",
-    "confirmFooter": "Ili kuthibitisha, endesha:\n  omniroute auth export --force",
+    "confirmFooter": "Ili kuthibitisha, endesha:\n  freeroute auth export --force",
     "missingKey": "STORAGE_ENCRYPTION_KEY inahitajika ili kuhamisha vitambulisho.",
     "notFound": "Muunganisho haujapatikana: {id}",
     "invalidFormat": "Muundo si sahihi: {format}. Tumia json au env."
@@ -220,10 +220,10 @@
     "reasoning": "Kiwango cha juhudi za kufikiri (low|medium|high)",
     "thinking": "Bajeti ya tokeni za kufikiri kwa kina",
     "explain": "Chapisha mti wa chaguo mbadala na masafa ya gharama kwenye stderr",
-    "noCombo": "Hakuna combo inayolingana iliyopatikana. Sanidi moja kwa: omniroute combo create"
+    "noCombo": "Hakuna combo inayolingana iliyopatikana. Sanidi moja kwa: freeroute combo create"
   },
   "chat": {
-    "description": "Tuma kidokezo cha gumzo cha mara moja kwa OmniRoute",
+    "description": "Tuma kidokezo cha gumzo cha mara moja kwa FreeRoute",
     "file": "Soma kidokezo kutoka faili",
     "stdin": "Soma kidokezo kutoka stdin",
     "system": "Kidokezo cha mfumo",
@@ -242,8 +242,8 @@
     }
   },
   "serve": {
-    "description": "Anzisha seva ya OmniRoute (kitendo chaguo-msingi)",
-    "starting": "Inaanzisha seva ya OmniRoute kwenye porti {port}...",
+    "description": "Anzisha seva ya FreeRoute (kitendo chaguo-msingi)",
+    "starting": "Inaanzisha seva ya FreeRoute kwenye porti {port}...",
     "ready": "Tayari kwenye http://localhost:{port}",
     "stopping": "Inasimamisha seva (PID {pid})...",
     "stopped": "Seva imesimamishwa.",
@@ -262,7 +262,7 @@
   },
   "backup": {
     "title": "Nakala rudufu",
-    "description": "Unda nakala rudufu ya data ya OmniRoute",
+    "description": "Unda nakala rudufu ya data ya FreeRoute",
     "creating": "Inaunda nakala rudufu...",
     "done": "Nakala rudufu imehifadhiwa kwenye {path}",
     "noFiles": "Hakuna faili za kuhifadhi katika nakala rudufu (hifadhidata haijaanzishwa)",
@@ -274,7 +274,7 @@
     "noBackups": "Hakuna nakala rudufu zilizopatikana.",
     "notFound": "Nakala rudufu haijapatikana: {name}",
     "confirmRestore": "Ungependa kubatilisha data ya sasa kwa nakala rudufu ya {ts}?",
-    "createDescription": "Unda nakala rudufu ya data ya OmniRoute",
+    "createDescription": "Unda nakala rudufu ya data ya FreeRoute",
     "nameOpt": "Jina maalum la nakala rudufu",
     "cloudOpt": "Pakia nakala rudufu kwenye hifadhi ya wingu",
     "encryptOpt": "Simba nakala rudufu kwa AES-256-GCM",
@@ -292,14 +292,14 @@
       "statusDescription": "Onyesha hali ya sasa ya ratiba ya nakala rudufu",
       "cronOpt": "Kielezi cha Cron cha ratiba (chaguo-msingi: kila siku saa 9 alfajiri)",
       "enabled": "Nakala rudufu ya kiotomatiki imewashwa (cron: {cron}).",
-      "hint": "Ratiba husomwa na omniroute serve wakati wa kuanza.",
+      "hint": "Ratiba husomwa na freeroute serve wakati wa kuanza.",
       "disabled": "Nakala rudufu ya kiotomatiki imezimwa.",
       "notConfigured": "Hakuna ratiba ya nakala rudufu iliyosanidiwa."
     }
   },
   "health": {
     "description": "Kagua afya ya seva na hali ya vipengele",
-    "noServer": "Seva haifanyi kazi. Iwashe kwa: omniroute serve",
+    "noServer": "Seva haifanyi kazi. Iwashe kwa: freeroute serve",
     "title": "Afya",
     "status": "Hali: {status}",
     "uptime": "Muda wa kufanya kazi: {uptime}",
@@ -308,21 +308,21 @@
   },
   "quota": {
     "description": "Onyesha matumizi ya kiwango cha mtoa huduma",
-    "noServer": "Seva haifanyi kazi. Iwashe kwa: omniroute serve",
+    "noServer": "Seva haifanyi kazi. Iwashe kwa: freeroute serve",
     "noData": "Hakuna taarifa za kiwango zinazopatikana."
   },
   "cache": {
     "description": "Dhibiti akiba ya majibu",
-    "noServer": "Seva haifanyi kazi. Iwashe kwa: omniroute serve",
+    "noServer": "Seva haifanyi kazi. Iwashe kwa: freeroute serve",
     "cleared": "Akiba imefutwa.",
     "clearFailed": "Imeshindwa kufuta akiba."
   },
   "redis": {
-    "description": "Anzisha kontena la Redis la ndani kwa kubofya mara moja (Podman au Docker) kwa ajili ya kuhifadhi ya OmniRoute na ufuatiliaji wa mgao"
+    "description": "Anzisha kontena la Redis la ndani kwa kubofya mara moja (Podman au Docker) kwa ajili ya kuhifadhi ya FreeRoute na ufuatiliaji wa mgao"
   },
   "test": {
     "description": "Jaribu muunganisho wa mtoa huduma",
-    "noServer": "Seva haifanyi kazi. Iwashe kwa: omniroute serve",
+    "noServer": "Seva haifanyi kazi. Iwashe kwa: freeroute serve",
     "testing": "Inajaribu {provider} / {model}...",
     "passed": "Muunganisho umefanikiwa!",
     "failed": "Muunganisho umeshindwa: {error}",
@@ -334,7 +334,7 @@
     "saved": "Matokeo yamehifadhiwa kwenye {path}",
     "compareTitle": "Ulinganisho wa Miundo",
     "compareMinTwo": "Angalau miundo miwili inahitajika kwa --compare (iliyotenganishwa kwa koma)",
-    "noProviders": "Hakuna watoa huduma waliosanidiwa. Ongeza mmoja kwa: omniroute keys add"
+    "noProviders": "Hakuna watoa huduma waliosanidiwa. Ongeza mmoja kwa: freeroute keys add"
   },
   "update": {
     "checking": "Inatafuta masasisho...",
@@ -348,7 +348,7 @@
     "running": "Seva ya MCP inafanya kazi ({transport})",
     "stopped": "Seva ya MCP imesimamishwa.",
     "restarted": "Seva ya MCP imeanzishwa upya.",
-    "stoppedHint": "Endesha `omniroute mcp enable` ili kuiwasha.",
+    "stoppedHint": "Endesha `freeroute mcp enable` ili kuiwasha.",
     "enabled": "Seva ya MCP imewezeshwa.",
     "disabled": "Seva ya MCP imezimwa.",
     "enable": {
@@ -416,7 +416,7 @@
     }
   },
   "policy": {
-    "description": "Dhibiti sera za uidhinishaji za OmniRoute",
+    "description": "Dhibiti sera za uidhinishaji za FreeRoute",
     "list": {
       "description": "Orodhesha sera",
       "kind": "Chuja kwa aina (allow|deny|rate-limit|cost-cap)",
@@ -453,7 +453,7 @@
     }
   },
   "compression": {
-    "description": "Sanidi na ukague mchakato wa ubanaji wa OmniRoute",
+    "description": "Sanidi na ukague mchakato wa ubanaji wa FreeRoute",
     "status": {
       "description": "Onyesha hali na mipangilio ya sasa ya ubanaji"
     },
@@ -507,18 +507,18 @@
     "confirmRotate": "Badilisha URL ya kichuguu cha aina ya {type}? (URL mpya itazalishwa)"
   },
   "stop": {
-    "description": "Simamisha seva ya OmniRoute",
+    "description": "Simamisha seva ya FreeRoute",
     "stopping": "Inasimamisha seva (PID {pid})...",
     "stopped": "Seva imesimamishwa.",
     "notRunning": "Hakuna seva inayoendeshwa.",
     "portFallback": "Hakuna faili la PID lililopatikana, inajaribu kusimamisha kulingana na porti..."
   },
   "restart": {
-    "description": "Anzisha upya seva ya OmniRoute",
-    "restarting": "Inaanzisha upya seva ya OmniRoute..."
+    "description": "Anzisha upya seva ya FreeRoute",
+    "restarting": "Inaanzisha upya seva ya FreeRoute..."
   },
   "dashboard": {
-    "description": "Fungua dashibodi ya OmniRoute katika kivinjari",
+    "description": "Fungua dashibodi ya FreeRoute katika kivinjari",
     "opening": "Inafungua dashibodi kwenye {url}",
     "urlOnly": "Chapisha URL ya dashibodi bila kufungua kivinjari",
     "tui": "Fungua dashibodi shirikishi ya TUI (kiolesura cha terminali, vichupo 7)"
@@ -526,7 +526,7 @@
   "models": {
     "description": "Orodhesha modeli zinazopatikana (inahitaji seva)",
     "search": "Chuja modeli kwa kitambulisho, jina, mtoa huduma, au maelezo",
-    "noServer": "Seva haiendeshwi. Ianzishe kwa: omniroute serve",
+    "noServer": "Seva haiendeshwi. Ianzishe kwa: freeroute serve",
     "noModels": "Hakuna modeli zilizopatikana."
   },
   "audit": {
@@ -558,7 +558,7 @@
     }
   },
   "skills": {
-    "description": "Dhibiti ujuzi wa OmniRoute (sandbox, builtin, custom, hybrid, skillssh)",
+    "description": "Dhibiti ujuzi wa FreeRoute (sandbox, builtin, custom, hybrid, skillssh)",
     "list": {
       "description": "Orodhesha ujuzi uliosakinishwa",
       "type": "Chuja kwa aina (sandbox|custom|builtin|hybrid|skillssh)",
@@ -631,7 +631,7 @@
     }
   },
   "memory": {
-    "description": "Dhibiti kumbukumbu ya mazungumzo ya OmniRoute (FTS5 + vector)",
+    "description": "Dhibiti kumbukumbu ya mazungumzo ya FreeRoute (FTS5 + vector)",
     "search": {
       "description": "Tafuta maingizo ya kumbukumbu kwa hoja ya kisemantiki",
       "type": "Chuja kwa aina ya kumbukumbu (user|feedback|project|reference)",
@@ -789,7 +789,7 @@
     }
   },
   "webhooks": {
-    "description": "Dhibiti webhook za OmniRoute",
+    "description": "Dhibiti webhook za FreeRoute",
     "events": {
       "description": "Orodhesha aina zote za matukio ya webhook zinazopatikana"
     },
@@ -821,14 +821,14 @@
     }
   },
   "program": {
-    "description": "OmniRoute — Kipanga Njia Mahiri cha AI chenye Njia Mbadala ya Kiotomatiki",
+    "description": "FreeRoute — Kipanga Njia Mahiri cha AI chenye Njia Mbadala ya Kiotomatiki",
     "version": "Chapisha toleo na uondoke",
     "output": "Muundo wa matokeo (table, json, jsonl, csv)",
     "quiet": "Ficha matokeo yasiyo muhimu",
     "no_color": "Zima matokeo yenye rangi",
     "timeout": "Muda wa mwisho wa ombi la HTTP kwa milisekunde",
-    "api_key": "Ufunguo wa API wa seva ya OmniRoute",
-    "base_url": "URL msingi ya seva ya OmniRoute",
+    "api_key": "Ufunguo wa API wa seva ya FreeRoute",
+    "base_url": "URL msingi ya seva ya FreeRoute",
     "context": "Muktadha/wasifu wa seva wa kutumia kwa amri hii",
     "lang": "Weka lugha ya kuonyesha ya CLI (inabatilisha OMNIROUTE_LANG)"
   },
@@ -1079,7 +1079,7 @@
     }
   },
   "openapi": {
-    "description": "Fikia na ujaribu vipimo vya OmniRoute OpenAPI",
+    "description": "Fikia na ujaribu vipimo vya FreeRoute OpenAPI",
     "dump": {
       "description": "Toa vipimo vya OpenAPI kwenye stdout au faili",
       "format": "Muundo wa towe: yaml|json (chaguo-msingi: yaml)",
@@ -1149,7 +1149,7 @@
     }
   },
   "open": {
-    "description": "Fungua ukurasa mahususi wa dashibodi ya OmniRoute kwenye kivinjari",
+    "description": "Fungua ukurasa mahususi wa dashibodi ya FreeRoute kwenye kivinjari",
     "url": "Chapisha URL pekee, usifungue kivinjari"
   },
   "telemetry": {
@@ -1166,7 +1166,7 @@
     }
   },
   "sync": {
-    "description": "Sawazisha usanidi kati ya matukio ya OmniRoute",
+    "description": "Sawazisha usanidi kati ya matukio ya FreeRoute",
     "push": {
       "description": "Tuma usanidi kwenye wingu au tukio la mbali",
       "target": "Lengwa (cloud au context:name)",
@@ -1222,8 +1222,8 @@
       "listTitle": "Lugha Zinazopatikana",
       "current": "Lugha: {code} ({name})",
       "saved": "Lugha imewekwa kuwa {code} ({name}).",
-      "noCode": "Msimbo wa lugha unahitajika. Endesha 'omniroute config lang list' ili kuona misimbo inayopatikana.",
-      "unknown": "Msimbo wa lugha hautambuliki: {code}. Endesha 'omniroute config lang list' ili kuona misimbo inayopatikana.",
+      "noCode": "Msimbo wa lugha unahitajika. Endesha 'freeroute config lang list' ili kuona misimbo inayopatikana.",
+      "unknown": "Msimbo wa lugha hautambuliki: {code}. Endesha 'freeroute config lang list' ili kuona misimbo inayopatikana.",
       "alreadySet": "Lugha tayari imewekwa kuwa {code}.",
       "envHint": "Kidokezo: unaweza pia kuweka OMNIROUTE_LANG={code} katika mazingira yako."
     }
@@ -1242,7 +1242,7 @@
     "filter": "Chuja kwa kiwango (error,warn,info) — vilivyotenganishwa kwa koma",
     "lines": "Idadi ya mistari ya kuleta",
     "timeout": "Muda wa kuisha kwa muunganisho kwa ms",
-    "baseUrl": "URL msingi ya API ya OmniRoute",
+    "baseUrl": "URL msingi ya API ya FreeRoute",
     "requestId": "Chuja kwa kitambulisho cha ombi",
     "apiKey": "Chuja kwa ufunguo wa API",
     "combo": "Chuja kwa jina la mchanganyiko",
@@ -1258,10 +1258,10 @@
     "description": "Dhibiti ikoni ya trei ya mfumo",
     "show": "Onyesha ikoni ya trei (ikiwa seva inaendeshwa na --tray)",
     "hide": "Ficha ikoni ya trei",
-    "quit": "Funga OmniRoute kupitia trei"
+    "quit": "Funga FreeRoute kupitia trei"
   },
   "autostart": {
-    "description": "Dhibiti kuanza kiotomatiki kwa OmniRoute wakati wa kuwasha mfumo (Linux: huduma ya mtumiaji ya systemd)",
+    "description": "Dhibiti kuanza kiotomatiki kwa FreeRoute wakati wa kuwasha mfumo (Linux: huduma ya mtumiaji ya systemd)",
     "enable": "Washa kuanza kiotomatiki wakati wa kuwasha mfumo",
     "disable": "Zima kuanza kiotomatiki wakati wa kuwasha mfumo",
     "toggle": "Badilisha hali ya kuanza kiotomatiki wakati wa kuwasha mfumo",
@@ -1293,19 +1293,19 @@
     "scaffold": "Unda kiolezo cha msingi cha programu-jalizi mpya"
   },
   "launch": {
-    "description": "Zindua Claude Code ikielekezwa kwenye OmniRoute (ya ndani au ya mbali, kwa kutumia --profile)",
+    "description": "Zindua Claude Code ikielekezwa kwenye FreeRoute (ya ndani au ya mbali, kwa kutumia --profile)",
     "token": "Tokeni ambayo kiteja cha Claude kinapaswa kutuma (ANTHROPIC_AUTH_TOKEN)",
-    "notRunning": "OmniRoute haipatikani kwenye {port}. Iwashe kwa kutumia 'omniroute serve'.",
+    "notRunning": "FreeRoute haipatikani kwenye {port}. Iwashe kwa kutumia 'freeroute serve'.",
     "notFound": "CLI ya 'claude' haikupatikana katika PATH."
   },
   "run": {
-    "description": "Zindua lengwa la CLI linalotumika kupitia OmniRoute"
+    "description": "Zindua lengwa la CLI linalotumika kupitia FreeRoute"
   },
   "setupClaude": {
-    "description": "Zalisha wasifu wa Claude Code katika ~/.claude/profiles kutoka kwenye katalogi ya modeli za OmniRoute"
+    "description": "Zalisha wasifu wa Claude Code katika ~/.claude/profiles kutoka kwenye katalogi ya modeli za FreeRoute"
   },
   "connect": {
-    "description": "Unganisha kwenye seva ya mbali ya OmniRoute na uingie katika hali ya mbali"
+    "description": "Unganisha kwenye seva ya mbali ya FreeRoute na uingie katika hali ya mbali"
   },
   "tokens": {
     "description": "Dhibiti tokeni za ufikiaji wa CLI zenye mawanda (hali ya mbali)"
@@ -1314,10 +1314,10 @@
     "description": "Chagua mtoa huduma+modeli kutoka kwenye seva inayotumika na usanidi CLI ya ndani inayotumika"
   },
   "launchCodex": {
-    "description": "Zindua Codex CLI ikielekezwa kwenye OmniRoute (ya ndani au VPS ya mbali)"
+    "description": "Zindua Codex CLI ikielekezwa kwenye FreeRoute (ya ndani au VPS ya mbali)"
   },
   "setupCodex": {
-    "description": "Zalisha faili za wasifu za ~/.codex kutoka kwenye katalogi hai ya modeli za OmniRoute"
+    "description": "Zalisha faili za wasifu za ~/.codex kutoka kwenye katalogi hai ya modeli za FreeRoute"
   },
   "packs": {
     "description": "Dhibiti vifurushi vya hiari vya wakati wa utekelezaji (ML / uendeshaji otomatiki wa kivinjari)",
@@ -1330,7 +1330,7 @@
     "errUnknown": "kifurushi kisichojulikana: {name}",
     "errNoIndex": "faharasa ya vifurushi haikupatikana; pitisha --source <dir> iliyo na maudhui ya kifurushi (vifurushi vya desktop huiweka karibu na programu)",
     "installed": "kifurushi \"{name}\" kimesakinishwa na kuthibitishwa katika {dir}",
-    "restartHint": "anzisha upya seva ya OmniRoute (au programu ya desktop) ili mazingira ya utekelezaji yatambue kifurushi",
+    "restartHint": "anzisha upya seva ya FreeRoute (au programu ya desktop) ili mazingira ya utekelezaji yatambue kifurushi",
     "removed": "kifurushi \"{name}\" kimeondolewa",
     "notInstalled": "kifurushi \"{name}\" hakikuwa kimesakinishwa",
     "verifyOk": "vifurushi vyote vilivyosakinishwa vimethibitishwa",

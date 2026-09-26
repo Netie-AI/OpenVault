@@ -362,7 +362,7 @@ const ProviderCard = forwardRef<ProviderCardHandle, ProviderCardProps>(function 
       title={providerText(
         t,
         "kimiOfficialSupporterTooltip",
-        "Kimi (Moonshot AI) is OmniRoute's founding Open Source Friend"
+        "Kimi (Moonshot AI) is FreeRoute's founding Open Source Friend"
       )}
     >
       <span className="material-symbols-outlined text-[10px] leading-none">verified</span>
@@ -380,7 +380,7 @@ const ProviderCard = forwardRef<ProviderCardHandle, ProviderCardProps>(function 
       title={providerText(
         t,
         "cheaperInferenceSupporterTooltip",
-        "Cheaper Inference backs OmniRoute as an Open Source Friend"
+        "Cheaper Inference backs FreeRoute as an Open Source Friend"
       )}
     >
       <span className="material-symbols-outlined text-[10px] leading-none">verified</span>

@@ -89,7 +89,7 @@ export async function GET() {
     container = { exists, running, reachable };
   }
 
-  // Native Redis via REDIS_URL (the production path this instance uses). OmniRoute
+  // Native Redis via REDIS_URL (the production path this instance uses). FreeRoute
   // is "connected" whenever REDIS_URL is configured AND the server answers — even
   // when no Docker container is present.
   const redisUrl = process.env.REDIS_URL?.trim() || "";

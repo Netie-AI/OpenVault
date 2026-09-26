@@ -1,8 +1,8 @@
 {
   "common": {
     "error": "შეცდომა: {message}",
-    "serverOffline": "OmniRoute სერვერი გამორთულია. გაუშვით ბრძანებით: omniroute serve",
-    "authRequired": "საჭიროა ავთენტიფიკაცია. დააყენეთ OMNIROUTE_API_KEY ან გაუშვით: omniroute setup",
+    "serverOffline": "FreeRoute სერვერი გამორთულია. გაუშვით ბრძანებით: freeroute serve",
+    "authRequired": "საჭიროა ავთენტიფიკაცია. დააყენეთ OMNIROUTE_API_KEY ან გაუშვით: freeroute setup",
     "rateLimited": "მოთხოვნების სიხშირის ლიმიტი გადაჭარბებულია. ხელახლა სცადეთ {seconds} წმ-ის შემდეგ.",
     "timeout": "მოთხოვნის მოლოდინის დრო {ms} მწმ-ის შემდეგ ამოიწურა.",
     "success": "დასრულებულია.",
@@ -15,7 +15,7 @@
     "yesOpt": "დადასტურების მოთხოვნის გამოტოვება"
   },
   "setup": {
-    "title": "OmniRoute-ის დაყენება",
+    "title": "FreeRoute-ის დაყენება",
     "passwordPrompt": "ადმინისტრატორის პაროლი",
     "providerPrompt": "ნაგულისხმევი პროვაიდერი (გამოსატოვებლად დატოვეთ ცარიელი)",
     "done": "დაყენება დასრულებულია",
@@ -30,19 +30,19 @@
     "opencode": "OpenCode-ისთვის თანდართული @omniroute/opencode-plugin-ის ინსტალაცია და კონფიგურაცია"
   },
   "doctor": {
-    "title": "OmniRoute Doctor",
+    "title": "FreeRoute Doctor",
     "dbOk": "მონაცემთა ბაზა: გამართულია ({path})",
-    "dbMissing": "მონაცემთა ბაზა ინიციალიზებული არ არის — გაუშვით `omniroute setup`",
+    "dbMissing": "მონაცემთა ბაზა ინიციალიზებული არ არის — გაუშვით `freeroute setup`",
     "portOk": "პორტი {port}: ხელმისაწვდომია",
     "portConflict": "პორტი {port}: გამოიყენება სხვა პროცესის მიერ",
     "encryptionOk": "დაშიფვრის გასაღები: კონფიგურირებულია",
-    "encryptionMissing": "დაშიფვრის გასაღები არ არის — გაუშვით `omniroute setup`",
+    "encryptionMissing": "დაშიფვრის გასაღები არ არის — გაუშვით `freeroute setup`",
     "allGood": "ყველა შემოწმება წარმატებით დასრულდა.",
     "warnings": "გაფრთხილებების რაოდენობა: {count} — იხილეთ ზემოთ."
   },
   "providers": {
     "title": "პროვაიდერები",
-    "noProviders": "არცერთი პროვაიდერი არ არის კონფიგურირებული. გაუშვით: omniroute setup",
+    "noProviders": "არცერთი პროვაიდერი არ არის კონფიგურირებული. გაუშვით: freeroute setup",
     "testing": "მოწმდება {name}...",
     "available": "ხელმისაწვდომი პროვაიდერების რაოდენობა: {count}",
     "connected": "დაკავშირებულია",
@@ -71,7 +71,7 @@
       "dryRunOpt": "ცვლილებების ჩაწერის გარეშე ჩვენება",
       "confirmPrompt": "ჩანაცვლდეს API გასაღები კავშირისთვის „{name}“ ({id})? [y/N]",
       "dryRunResult": "[dry-run] მოხდებოდა გასაღების როტაცია კავშირისთვის „{name}“ ({id}). ცვლილებები არ განხორციელებულა.",
-      "oauthHint": "OAuth კავშირი — გაუშვით: omniroute oauth {provider}",
+      "oauthHint": "OAuth კავშირი — გაუშვით: freeroute oauth {provider}",
       "envVarEmpty": "გარემოს ცვლადი {var} არ არის დაყენებული ან ცარიელია.",
       "success": "გასაღები როტირებულია კავშირისთვის „{name}“. შესამოწმებლად გაუშვით `providers test {id}`.",
       "testPassed": "როტაციის შემდგომი ტესტი წარმატებით დასრულდა.",
@@ -82,7 +82,7 @@
       "providerOpt": "გაფილტვრა პროვაიდერის სახელით",
       "header": "ID         პროვაიდერი     სახელი                   ვადის სტატუსი  ტესტის სტატუსი  დაყოვნება დასრულდება",
       "noData": "პროვაიდერის კავშირის მონაცემები ხელმისაწვდომი არ არის.",
-      "requiresServer": "providers status მოითხოვს, რომ OmniRoute სერვერი გაშვებული იყოს."
+      "requiresServer": "providers status მოითხოვს, რომ FreeRoute სერვერი გაშვებული იყოს."
     }
   },
   "keys": {
@@ -90,8 +90,8 @@
     "addDescription": "პროვაიდერისთვის API გასაღების დამატება ან განახლება",
     "listDescription": "ყველა კონფიგურირებული API გასაღების ჩამონათვალი",
     "removeDescription": "პროვაიდერისთვის API გასაღების წაშლა",
-    "regenerateDescription": "OmniRoute API გასაღების ხელახლა გენერირება",
-    "revokeDescription": "OmniRoute API გასაღების გაუქმება",
+    "regenerateDescription": "FreeRoute API გასაღების ხელახლა გენერირება",
+    "revokeDescription": "FreeRoute API გასაღების გაუქმება",
     "revealDescription": "დაუფარავი API გასაღების მნიშვნელობის ჩვენება",
     "usageDescription": "API გასაღების ბოლო გამოყენების მონაცემების ჩვენება",
     "usageLimitOpt": "ბოლო მოთხოვნების რაოდენობა",
@@ -142,7 +142,7 @@
     "warning": "⚠ ეს მოქმედება გაშიფრულ API გასაღებებსა და OAuth ტოკენებს ღია ტექსტის სახით დაბეჭდავს/ჩაწერს. დარწმუნდით, რომ თქვენი ეკრანი, გარსის ისტორია და ნებისმიერი გამომავალი ფაილი კონფიდენციალური დარჩება.",
     "confirmHeading": "⚠ გაფრთხილება: ეს მოქმედება გაშიფრული პროვაიდერის ავტორიზაციის მონაცემებს ღია ტექსტის სახით გაიტანს",
     "confirmBody": "ეს ბრძანება შიფრავს და ბეჭდავს/წერს apiKey-ს, accessToken-ს, refreshToken-სა და\nidToken-ს არჩეული კავშირ(ებ)ისთვის. შედეგს მოეპყარით როგორც საიდუმლო მონაცემს.",
-    "confirmFooter": "დასადასტურებლად გაუშვით:\n  omniroute auth export --force",
+    "confirmFooter": "დასადასტურებლად გაუშვით:\n  freeroute auth export --force",
     "missingKey": "ავტორიზაციის მონაცემების ექსპორტისთვის საჭიროა STORAGE_ENCRYPTION_KEY.",
     "notFound": "კავშირი ვერ მოიძებნა: {id}",
     "invalidFormat": "არასწორი ფორმატი: {format}. გამოიყენეთ json ან env."
@@ -220,10 +220,10 @@
     "reasoning": "მსჯელობის ძალისხმევის დონე (low|medium|high)",
     "thinking": "გაფართოებული აზროვნების ტოკენების ბიუჯეტი",
     "explain": "სათადარიგო ვარიანტების ხისა და ღირებულების დიაპაზონის stderr-ში გამოტანა",
-    "noCombo": "შესატყვისი combo ვერ მოიძებნა. დააკონფიგურირეთ შემდეგი ბრძანებით: omniroute combo create"
+    "noCombo": "შესატყვისი combo ვერ მოიძებნა. დააკონფიგურირეთ შემდეგი ბრძანებით: freeroute combo create"
   },
   "chat": {
-    "description": "ერთჯერადი ჩატის მოთხოვნის OmniRoute-ში გაგზავნა",
+    "description": "ერთჯერადი ჩატის მოთხოვნის FreeRoute-ში გაგზავნა",
     "file": "მოთხოვნის ფაილიდან წაკითხვა",
     "stdin": "მოთხოვნის stdin-დან წაკითხვა",
     "system": "სისტემური მოთხოვნა",
@@ -242,8 +242,8 @@
     }
   },
   "serve": {
-    "description": "OmniRoute სერვერის გაშვება (ნაგულისხმევი მოქმედება)",
-    "starting": "OmniRoute სერვერი ეშვება {port} პორტზე...",
+    "description": "FreeRoute სერვერის გაშვება (ნაგულისხმევი მოქმედება)",
+    "starting": "FreeRoute სერვერი ეშვება {port} პორტზე...",
     "ready": "მზადაა მისამართზე http://localhost:{port}",
     "stopping": "სერვერი ჩერდება (PID {pid})...",
     "stopped": "სერვერი გაჩერდა.",
@@ -262,7 +262,7 @@
   },
   "backup": {
     "title": "სარეზერვო ასლი",
-    "description": "OmniRoute-ის მონაცემების სარეზერვო ასლის შექმნა",
+    "description": "FreeRoute-ის მონაცემების სარეზერვო ასლის შექმნა",
     "creating": "სარეზერვო ასლი იქმნება...",
     "done": "სარეზერვო ასლი შენახულია მისამართზე {path}",
     "noFiles": "სარეზერვო ასლისთვის ფაილები არ არის (მონაცემთა ბაზა არ არის ინიციალიზებული)",
@@ -274,7 +274,7 @@
     "noBackups": "სარეზერვო ასლები ვერ მოიძებნა.",
     "notFound": "სარეზერვო ასლი ვერ მოიძებნა: {name}",
     "confirmRestore": "გადაიწეროს მიმდინარე მონაცემები {ts}-ის სარეზერვო ასლით?",
-    "createDescription": "OmniRoute-ის მონაცემების სარეზერვო ასლის შექმნა",
+    "createDescription": "FreeRoute-ის მონაცემების სარეზერვო ასლის შექმნა",
     "nameOpt": "სარეზერვო ასლის მორგებული სახელი",
     "cloudOpt": "სარეზერვო ასლის ღრუბლოვან საცავში ატვირთვა",
     "encryptOpt": "სარეზერვო ასლის AES-256-GCM-ით დაშიფვრა",
@@ -292,14 +292,14 @@
       "statusDescription": "სარეზერვო ასლების მიმდინარე განრიგის სტატუსის ჩვენება",
       "cronOpt": "განრიგის Cron გამოსახულება (ნაგულისხმევი: ყოველდღე დილის 3 საათზე)",
       "enabled": "ავტომატური სარეზერვო ასლის შექმნა ჩართულია (cron: {cron}).",
-      "hint": "გაშვებისას განრიგს კითხულობს omniroute serve.",
+      "hint": "გაშვებისას განრიგს კითხულობს freeroute serve.",
       "disabled": "ავტომატური სარეზერვო ასლის შექმნა გამორთულია.",
       "notConfigured": "სარეზერვო ასლების განრიგი კონფიგურირებული არ არის."
     }
   },
   "health": {
     "description": "სერვერის ჯანმრთელობისა და კომპონენტების სტატუსის შემოწმება",
-    "noServer": "სერვერი არ მუშაობს. გაუშვით ბრძანებით: omniroute serve",
+    "noServer": "სერვერი არ მუშაობს. გაუშვით ბრძანებით: freeroute serve",
     "title": "ჯანმრთელობა",
     "status": "სტატუსი: {status}",
     "uptime": "მუშაობის დრო: {uptime}",
@@ -308,21 +308,21 @@
   },
   "quota": {
     "description": "პროვაიდერის კვოტის გამოყენების ჩვენება",
-    "noServer": "სერვერი არ მუშაობს. გაუშვით ბრძანებით: omniroute serve",
+    "noServer": "სერვერი არ მუშაობს. გაუშვით ბრძანებით: freeroute serve",
     "noData": "კვოტის შესახებ ინფორმაცია ხელმისაწვდომი არ არის."
   },
   "cache": {
     "description": "პასუხების ქეშის მართვა",
-    "noServer": "სერვერი არ მუშაობს. გაუშვით ბრძანებით: omniroute serve",
+    "noServer": "სერვერი არ მუშაობს. გაუშვით ბრძანებით: freeroute serve",
     "cleared": "ქეში გასუფთავდა.",
     "clearFailed": "ქეშის გასუფთავება ვერ მოხერხდა."
   },
   "redis": {
-    "description": "OmniRoute-ის ქეშირებისა და კვოტების აღრიცხვისთვის ადგილობრივი Redis კონტეინერის ერთი დაწკაპუნებით გაშვება (Podman ან Docker)"
+    "description": "FreeRoute-ის ქეშირებისა და კვოტების აღრიცხვისთვის ადგილობრივი Redis კონტეინერის ერთი დაწკაპუნებით გაშვება (Podman ან Docker)"
   },
   "test": {
     "description": "პროვაიდერთან კავშირის შემოწმება",
-    "noServer": "სერვერი არ მუშაობს. გაუშვით ბრძანებით: omniroute serve",
+    "noServer": "სერვერი არ მუშაობს. გაუშვით ბრძანებით: freeroute serve",
     "testing": "მიმდინარეობს {provider} / {model}-ის შემოწმება...",
     "passed": "კავშირი წარმატებით დამყარდა!",
     "failed": "კავშირი ვერ დამყარდა: {error}",
@@ -334,7 +334,7 @@
     "saved": "შედეგები შენახულია მისამართზე {path}",
     "compareTitle": "მოდელების შედარება",
     "compareMinTwo": "--compare-ისთვის საჭიროა სულ მცირე ორი მოდელი (მძიმით გამოყოფილი)",
-    "noProviders": "არცერთი პროვაიდერი არ არის კონფიგურირებული. დაამატეთ ბრძანებით: omniroute keys add"
+    "noProviders": "არცერთი პროვაიდერი არ არის კონფიგურირებული. დაამატეთ ბრძანებით: freeroute keys add"
   },
   "update": {
     "checking": "მიმდინარეობს განახლებების შემოწმება...",
@@ -348,7 +348,7 @@
     "running": "MCP სერვერი მუშაობს ({transport})",
     "stopped": "MCP სერვერი გაჩერდა.",
     "restarted": "MCP სერვერი გადაიტვირთა.",
-    "stoppedHint": "მის ჩასართავად გაუშვით `omniroute mcp enable`.",
+    "stoppedHint": "მის ჩასართავად გაუშვით `freeroute mcp enable`.",
     "enabled": "MCP სერვერი ჩართულია.",
     "disabled": "MCP სერვერი გამორთულია.",
     "enable": {
@@ -416,7 +416,7 @@
     }
   },
   "policy": {
-    "description": "OmniRoute-ის ავტორიზაციის პოლიტიკების მართვა",
+    "description": "FreeRoute-ის ავტორიზაციის პოლიტიკების მართვა",
     "list": {
       "description": "პოლიტიკების სიის ჩვენება",
       "kind": "ტიპის მიხედვით გაფილტვრა (allow|deny|rate-limit|cost-cap)",
@@ -453,7 +453,7 @@
     }
   },
   "compression": {
-    "description": "OmniRoute-ის შეკუმშვის კონვეიერის კონფიგურაცია და შემოწმება",
+    "description": "FreeRoute-ის შეკუმშვის კონვეიერის კონფიგურაცია და შემოწმება",
     "status": {
       "description": "შეკუმშვის მიმდინარე სტატუსისა და პარამეტრების ჩვენება"
     },
@@ -507,18 +507,18 @@
     "confirmRotate": "განახლდეს გვირაბი {type}? (ახალი URL გენერირდება)"
   },
   "stop": {
-    "description": "OmniRoute სერვერის შეჩერება",
+    "description": "FreeRoute სერვერის შეჩერება",
     "stopping": "სერვერი ჩერდება (PID {pid})...",
     "stopped": "სერვერი შეჩერდა.",
     "notRunning": "არცერთი სერვერი არ არის გაშვებული.",
     "portFallback": "PID ფაილი ვერ მოიძებნა, მიმდინარეობს პორტზე დაფუძნებული შეჩერების მცდელობა..."
   },
   "restart": {
-    "description": "OmniRoute სერვერის გადატვირთვა",
-    "restarting": "მიმდინარეობს OmniRoute სერვერის გადატვირთვა..."
+    "description": "FreeRoute სერვერის გადატვირთვა",
+    "restarting": "მიმდინარეობს FreeRoute სერვერის გადატვირთვა..."
   },
   "dashboard": {
-    "description": "გახსენით OmniRoute-ის მართვის პანელი ბრაუზერში",
+    "description": "გახსენით FreeRoute-ის მართვის პანელი ბრაუზერში",
     "opening": "იხსნება მართვის პანელი მისამართზე {url}",
     "urlOnly": "ბრაუზერის გახსნის გარეშე მხოლოდ მართვის პანელის URL-ის გამოტანა",
     "tui": "ინტერაქტიული TUI მართვის პანელის გახსნა (ტერმინალის ინტერფეისი, 7 ჩანართი)"
@@ -526,7 +526,7 @@
   "models": {
     "description": "ხელმისაწვდომი მოდელების სიის ჩვენება (საჭიროებს სერვერს)",
     "search": "მოდელების გაფილტვრა ID-ის, სახელის, პროვაიდერის ან აღწერის მიხედვით",
-    "noServer": "სერვერი არ არის გაშვებული. გაუშვით ბრძანებით: omniroute serve",
+    "noServer": "სერვერი არ არის გაშვებული. გაუშვით ბრძანებით: freeroute serve",
     "noModels": "მოდელები ვერ მოიძებნა."
   },
   "audit": {
@@ -558,7 +558,7 @@
     }
   },
   "skills": {
-    "description": "OmniRoute-ის უნარების მართვა (sandbox, builtin, custom, hybrid, skillssh)",
+    "description": "FreeRoute-ის უნარების მართვა (sandbox, builtin, custom, hybrid, skillssh)",
     "list": {
       "description": "დაინსტალირებული უნარების სიის ჩვენება",
       "type": "გაფილტვრა ტიპის მიხედვით (sandbox|custom|builtin|hybrid|skillssh)",
@@ -631,7 +631,7 @@
     }
   },
   "memory": {
-    "description": "OmniRoute-ის სასაუბრო მეხსიერების მართვა (FTS5 + vector)",
+    "description": "FreeRoute-ის სასაუბრო მეხსიერების მართვა (FTS5 + vector)",
     "search": {
       "description": "მეხსიერების ჩანაწერების ძიება სემანტიკური მოთხოვნით",
       "type": "მეხსიერების ტიპით გაფილტვრა (user|feedback|project|reference)",
@@ -789,7 +789,7 @@
     }
   },
   "webhooks": {
-    "description": "OmniRoute-ის ვებჰუკების მართვა",
+    "description": "FreeRoute-ის ვებჰუკების მართვა",
     "events": {
       "description": "ყველა ხელმისაწვდომი ვებჰუკ-მოვლენის ტიპის ჩამონათვალი"
     },
@@ -821,14 +821,14 @@
     }
   },
   "program": {
-    "description": "OmniRoute — ჭკვიანი AI-როუტერი ავტომატური სარეზერვო გადართვით",
+    "description": "FreeRoute — ჭკვიანი AI-როუტერი ავტომატური სარეზერვო გადართვით",
     "version": "ვერსიის ჩვენება და გამოსვლა",
     "output": "გამოტანის ფორმატი (table, json, jsonl, csv)",
     "quiet": "არაარსებითი გამოტანის დამალვა",
     "no_color": "ფერადი გამოტანის გამორთვა",
     "timeout": "HTTP მოთხოვნის დროის ლიმიტი მილიწამებში",
-    "api_key": "OmniRoute სერვერის API გასაღები",
-    "base_url": "OmniRoute სერვერის საბაზისო URL",
+    "api_key": "FreeRoute სერვერის API გასაღები",
+    "base_url": "FreeRoute სერვერის საბაზისო URL",
     "context": "ამ ბრძანებისთვის გამოსაყენებელი სერვერის კონტექსტი/პროფილი",
     "lang": "CLI-ის ჩვენების ენის დაყენება (გადაფარავს OMNIROUTE_LANG-ს)"
   },
@@ -1079,7 +1079,7 @@
     }
   },
   "openapi": {
-    "description": "OmniRoute OpenAPI სპეციფიკაციაზე წვდომა და მისი ტესტირება",
+    "description": "FreeRoute OpenAPI სპეციფიკაციაზე წვდომა და მისი ტესტირება",
     "dump": {
       "description": "OpenAPI სპეციფიკაციის stdout-ში ან ფაილში გამოტანა",
       "format": "გამოტანის ფორმატი: yaml|json (ნაგულისხმევი: yaml)",
@@ -1149,7 +1149,7 @@
     }
   },
   "open": {
-    "description": "ბრაუზერში OmniRoute-ის მართვის პანელის კონკრეტული გვერდის გახსნა",
+    "description": "ბრაუზერში FreeRoute-ის მართვის პანელის კონკრეტული გვერდის გახსნა",
     "url": "მხოლოდ URL-ის გამოტანა, ბრაუზერის გახსნის გარეშე"
   },
   "telemetry": {
@@ -1166,7 +1166,7 @@
     }
   },
   "sync": {
-    "description": "კონფიგურაციის სინქრონიზაცია OmniRoute-ის ეგზემპლარებს შორის",
+    "description": "კონფიგურაციის სინქრონიზაცია FreeRoute-ის ეგზემპლარებს შორის",
     "push": {
       "description": "კონფიგურაციის ღრუბელში ან დისტანციურ ეგზემპლარში გაგზავნა",
       "target": "სამიზნე (cloud ან context:name)",
@@ -1222,8 +1222,8 @@
       "listTitle": "ხელმისაწვდომი ენები",
       "current": "ენა: {code} ({name})",
       "saved": "ენა დაყენებულია: {code} ({name}).",
-      "noCode": "საჭიროა ენის კოდი. ხელმისაწვდომი კოდების სანახავად გაუშვით 'omniroute config lang list'.",
-      "unknown": "უცნობი ენის კოდი: {code}. ხელმისაწვდომი კოდების სანახავად გაუშვით 'omniroute config lang list'.",
+      "noCode": "საჭიროა ენის კოდი. ხელმისაწვდომი კოდების სანახავად გაუშვით 'freeroute config lang list'.",
+      "unknown": "უცნობი ენის კოდი: {code}. ხელმისაწვდომი კოდების სანახავად გაუშვით 'freeroute config lang list'.",
       "alreadySet": "ენა უკვე დაყენებულია: {code}.",
       "envHint": "მინიშნება: თქვენს გარემოში ასევე შეგიძლიათ დააყენოთ OMNIROUTE_LANG={code}."
     }
@@ -1242,7 +1242,7 @@
     "filter": "დონის მიხედვით გაფილტვრა (error,warn,info) — მძიმით გამოყოფილი",
     "lines": "ჩამოსატვირთი ხაზების რაოდენობა",
     "timeout": "კავშირის მოლოდინის ვადა მილიწამებში",
-    "baseUrl": "OmniRoute API-ის საბაზისო URL",
+    "baseUrl": "FreeRoute API-ის საბაზისო URL",
     "requestId": "მოთხოვნის ID-ის მიხედვით გაფილტვრა",
     "apiKey": "API გასაღების მიხედვით გაფილტვრა",
     "combo": "გაფილტვრა კომბოს სახელით",
@@ -1258,10 +1258,10 @@
     "description": "სისტემურ პანელში ხატულის მართვა",
     "show": "სისტემურ პანელში ხატულის ჩვენება (თუ სერვერი გაშვებულია --tray პარამეტრით)",
     "hide": "სისტემურ პანელში ხატულის დამალვა",
-    "quit": "OmniRoute-იდან გასვლა სისტემური პანელის მეშვეობით"
+    "quit": "FreeRoute-იდან გასვლა სისტემური პანელის მეშვეობით"
   },
   "autostart": {
-    "description": "OmniRoute-ის ავტომატური გაშვების მართვა სისტემის ჩატვირთვისას (Linux: systemd-ის მომხმარებლის სერვისი)",
+    "description": "FreeRoute-ის ავტომატური გაშვების მართვა სისტემის ჩატვირთვისას (Linux: systemd-ის მომხმარებლის სერვისი)",
     "enable": "სისტემის ჩატვირთვისას ავტომატური გაშვების ჩართვა",
     "disable": "სისტემის ჩატვირთვისას ავტომატური გაშვების გამორთვა",
     "toggle": "სისტემის ჩატვირთვისას ავტომატური გაშვების გადართვა",
@@ -1293,19 +1293,19 @@
     "scaffold": "ახალი პლაგინის საწყისი შაბლონის შექმნა"
   },
   "launch": {
-    "description": "Claude Code-ის გაშვება OmniRoute-ზე მითითებით (ლოკალურად ან დისტანციურად, --profile პარამეტრით)",
+    "description": "Claude Code-ის გაშვება FreeRoute-ზე მითითებით (ლოკალურად ან დისტანციურად, --profile პარამეტრით)",
     "token": "ტოკენი, რომელიც Claude-ის კლიენტმა უნდა გაგზავნოს (ANTHROPIC_AUTH_TOKEN)",
-    "notRunning": "OmniRoute მიუწვდომელია პორტზე {port}. გაუშვით ბრძანებით 'omniroute serve'.",
+    "notRunning": "FreeRoute მიუწვდომელია პორტზე {port}. გაუშვით ბრძანებით 'freeroute serve'.",
     "notFound": "'claude' CLI ვერ მოიძებნა PATH-ში."
   },
   "run": {
-    "description": "მხარდაჭერილი CLI სამიზნის გაშვება OmniRoute-ის მეშვეობით"
+    "description": "მხარდაჭერილი CLI სამიზნის გაშვება FreeRoute-ის მეშვეობით"
   },
   "setupClaude": {
-    "description": "OmniRoute-ის მოდელების კატალოგიდან ~/.claude/profiles Claude Code პროფილების გენერირება"
+    "description": "FreeRoute-ის მოდელების კატალოგიდან ~/.claude/profiles Claude Code პროფილების გენერირება"
   },
   "connect": {
-    "description": "დისტანციურ OmniRoute სერვერთან დაკავშირება და დისტანციურ რეჟიმში გადასვლა"
+    "description": "დისტანციურ FreeRoute სერვერთან დაკავშირება და დისტანციურ რეჟიმში გადასვლა"
   },
   "tokens": {
     "description": "შეზღუდული მოქმედების არეალის მქონე CLI წვდომის ტოკენების მართვა (დისტანციური რეჟიმი)"
@@ -1314,10 +1314,10 @@
     "description": "აქტიური სერვერიდან პროვაიდერისა და მოდელის არჩევა და მხარდაჭერილი ლოკალური CLI-ის კონფიგურაცია"
   },
   "launchCodex": {
-    "description": "OmniRoute-ზე მიმართული Codex CLI-ის გაშვება (ლოკალურად ან დისტანციურ VPS-ზე)"
+    "description": "FreeRoute-ზე მიმართული Codex CLI-ის გაშვება (ლოკალურად ან დისტანციურ VPS-ზე)"
   },
   "setupCodex": {
-    "description": "OmniRoute-ის ცოცხალი მოდელების კატალოგიდან ~/.codex პროფილის ფაილების გენერირება"
+    "description": "FreeRoute-ის ცოცხალი მოდელების კატალოგიდან ~/.codex პროფილის ფაილების გენერირება"
   },
   "packs": {
     "description": "არასავალდებულო გაშვების პაკეტების მართვა (ML / ბრაუზერის ავტომატიზაცია)",
@@ -1330,7 +1330,7 @@
     "errUnknown": "უცნობი პაკეტი: {name}",
     "errNoIndex": "პაკეტების ინდექსი ვერ მოიძებნა; მიუთითეთ --source <dir>, რომელიც შეიცავს პაკეტის მონაცემებს (დესკტოპის ნაკრებებს ის აპის გვერდით მოჰყვება)",
     "installed": "პაკეტი \"{name}\" დაინსტალირდა და შემოწმდა მისამართზე {dir}",
-    "restartHint": "გადატვირთეთ OmniRoute სერვერი (ან დესკტოპ აპი), რათა გაშვების გარემომ პაკეტი ამოიცნოს",
+    "restartHint": "გადატვირთეთ FreeRoute სერვერი (ან დესკტოპ აპი), რათა გაშვების გარემომ პაკეტი ამოიცნოს",
     "removed": "პაკეტი \"{name}\" წაიშალა",
     "notInstalled": "პაკეტი \"{name}\" არ იყო დაინსტალირებული",
     "verifyOk": "ყველა დაინსტალირებული პაკეტი შემოწმებულია",

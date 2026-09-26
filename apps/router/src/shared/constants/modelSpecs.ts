@@ -648,7 +648,7 @@ export const MODEL_SPECS: Record<string, ModelSpec> = {
   },
 
   // ── Z.AI GLM-5.3 (1M context mirrored from 5.2 — same base model; 128K max
-  // output; effort via reasoning_effort param, tiers are OmniRoute aliases) ──
+  // output; effort via reasoning_effort param, tiers are FreeRoute aliases) ──
   "glm-5.3-flash": {
     maxOutputTokens: 131072,
     contextWindow: 1000000,

@@ -244,7 +244,7 @@ export async function runAvailableCommand(opts = {}) {
   if (opts.json) {
     console.log(JSON.stringify({ count: providers.length, categories, providers }, null, 2));
   } else {
-    printHeading("OmniRoute Available Providers");
+    printHeading("FreeRoute Available Providers");
     printAvailableProviderTable(providers, categories);
   }
 
@@ -258,7 +258,7 @@ export async function runListCommand(opts = {}) {
     if (opts.json) {
       console.log(JSON.stringify({ providers: connections }, null, 2));
     } else {
-      printHeading("OmniRoute Providers");
+      printHeading("FreeRoute Providers");
       printProviderTable(connections);
     }
     return 0;
@@ -317,7 +317,7 @@ export async function runTestAllCommand(opts = {}) {
     if (opts.json) {
       console.log(JSON.stringify({ results }, null, 2));
     } else {
-      printHeading("OmniRoute Provider Tests");
+      printHeading("FreeRoute Provider Tests");
       for (const result of results) {
         const label = result.valid
           ? "\x1b[32mOK\x1b[0m"
@@ -343,7 +343,7 @@ export async function runValidateCommand(opts = {}) {
     if (opts.json) {
       console.log(JSON.stringify({ results }, null, 2));
     } else {
-      printHeading("OmniRoute Provider Validation");
+      printHeading("FreeRoute Provider Validation");
       if (results.length === 0) {
         console.log("No providers configured.");
       }
@@ -556,7 +556,7 @@ export function registerProviders(program) {
 
   providers
     .command("available")
-    .description("Show available providers in the OmniRoute catalog")
+    .description("Show available providers in the FreeRoute catalog")
     .option("--json", "Print machine-readable JSON")
     .option("--search <query>", "Filter by id, name, alias, or category")
     .option("-q, --q <query>", "Alias for --search")

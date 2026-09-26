@@ -5,13 +5,13 @@
  *
  * Usage:
  *   node bin/reset-password.mjs
- *   omniroute reset-password
+ *   freeroute reset-password
  *
  * Non-interactive / scripted usage (piped stdin, e.g. CI or Docker):
- *   printf 'NewPass123\nNewPass123\n' | omniroute reset-password
- *   printf 'NewPass123' | omniroute reset-password --password-stdin
+ *   printf 'NewPass123\nNewPass123\n' | freeroute reset-password
+ *   printf 'NewPass123' | freeroute reset-password --password-stdin
  *
- * Resets the admin password for OmniRoute.
+ * Resets the admin password for FreeRoute.
  * Prompts for a new password (interactive TTY) or reads it from stdin
  * (non-TTY) and updates the database directly.
  *
@@ -83,14 +83,14 @@ async function collectPassword() {
   }
 }
 
-console.log("\n🔑 OmniRoute — Password Reset\n");
+console.log("\n🔑 FreeRoute — Password Reset\n");
 
 async function main() {
   // Check if database exists
   const passwordState = await readManagementPasswordState(DB_PATH);
   if (!passwordState.exists) {
     console.error(`❌ Database not found at: ${DB_PATH}`);
-    console.error(`   Make sure OmniRoute has been started at least once.`);
+    console.error(`   Make sure FreeRoute has been started at least once.`);
     console.error(`   Or set DATA_DIR env var to your data directory.\n`);
     process.exit(1);
   }
@@ -116,13 +116,13 @@ async function main() {
   await resetManagementPassword(password, DB_PATH);
 
   console.log("\n✅ Password reset successfully!");
-  console.log("   Restart OmniRoute for changes to take effect.\n");
+  console.log("   Restart FreeRoute for changes to take effect.\n");
 }
 
 main()
   .then(() => {
     // Explicit exit(0) so a caller that imports this module (bin/omniroute.mjs
-    // routes `omniroute reset-password` here) terminates cleanly instead of
+    // routes `freeroute reset-password` here) terminates cleanly instead of
     // hanging / exiting with code 13 on an unsettled wrapper await. On POSIX,
     // console.log to a pipe is synchronous, so the success line is already
     // flushed by the time we exit.

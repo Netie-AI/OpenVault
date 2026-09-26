@@ -21,9 +21,9 @@ export async function generateMetadata() {
   const customFaviconUrl = settings.customFaviconUrl || settings.customFaviconBase64;
 
   return {
-    title: `${instanceName} — AI Gateway for Multi-Provider LLMs`,
+    title: `${instanceName} — Netie's free AI gateway`,
     description:
-      "OmniRoute is an AI gateway for multi-provider LLMs. One endpoint for all your AI providers.",
+      "FreeRoute routes API-key traffic to real AI providers through one endpoint. Part of OpenVault, by Netie AI.",
     manifest: "/manifest.webmanifest",
     applicationName: instanceName,
     appleWebApp: {

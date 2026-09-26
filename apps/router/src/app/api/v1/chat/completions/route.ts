@@ -39,6 +39,12 @@ import {
   isRuntimeProviderRetirementError,
 } from "@/shared/constants/providerRetirement";
 import {
+  assertModelProviderAllowed,
+  isNetieDisabledError,
+  disabledErrorBody,
+} from "@omniroute/open-sse/netie/policy.ts";
+import { OpenVaultUnreachableError } from "@/lib/netie/keyvault";
+import {
   assertCommonChatGptWebModelAvailable,
   isCommonChatGptWebRetirementError,
 } from "@/shared/constants/chatgptWebRetirement";
@@ -182,7 +188,7 @@ export async function POST(request) {
           // #14485: the divert must still run the same key-policy enforcement as
           // the normal cloud pipeline (enforceApiKeyPolicy, called deep inside
           // handleChat() on that path) — otherwise a disabled/rate-limited/
-          // schedule-restricted OmniRoute API key reaches the self-hosted upstream
+          // schedule-restricted FreeRoute API key reaches the self-hosted upstream
           // unchecked. Run it ONLY when the divert is configured (it then answers
           // every request): the cloud path already runs it once in handleChat(),
           // and a second run would consume the rate-limit window twice, apply
@@ -239,6 +245,25 @@ export async function POST(request) {
               errorResponse(error.status, error.message, {
                 type: "provider_error",
                 code: error.code,
+              })
+            );
+          }
+          throw error;
+        }
+
+        // FreeRoute: reject a chat completion targeting a hard-disabled
+        // consumer-subscription-pooling or browser-session-relay provider
+        // with the exact named 501 shape (see open-sse/netie/policy.ts),
+        // before any executor is resolved or credential is touched.
+        try {
+          assertModelProviderAllowed(parsedBody.model);
+        } catch (error) {
+          if (isNetieDisabledError(error)) {
+            admission.lease?.release();
+            return finishAdmission(
+              new Response(JSON.stringify(disabledErrorBody(error.code)), {
+                status: error.status,
+                headers: { ...CORS_HEADERS, "content-type": "application/json" },
               })
             );
           }
@@ -325,6 +350,12 @@ export async function POST(request) {
     );
   } catch (error) {
     admission.lease?.release();
+    if (error instanceof OpenVaultUnreachableError) {
+      return new Response(
+        JSON.stringify({ error: { code: error.code, message: error.message } }),
+        { status: error.status, headers: { ...CORS_HEADERS, "content-type": "application/json" } }
+      );
+    }
     throw error;
   }
 }

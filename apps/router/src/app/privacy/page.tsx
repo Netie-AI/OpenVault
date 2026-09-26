@@ -148,7 +148,7 @@ export default function PrivacyPage() {
           <p>
             {t("questionsVisit")}{" "}
             <a
-              href="https://github.com/diegosouzapw/OmniRoute"
+              href="https://github.com/Netie-AI/Netie"
               className="text-primary hover:underline"
               target="_blank"
               rel="noopener noreferrer"

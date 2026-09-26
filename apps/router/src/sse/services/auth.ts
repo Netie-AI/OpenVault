@@ -22,6 +22,8 @@ import {
 import { getDbInstance } from "@/lib/db/core";
 import { getRecentEgressIpForConnection, EGRESS_IP_LOOKUP_WINDOW_MS } from "@/lib/db/proxyLogs";
 import { validateApiKey } from "@/lib/db/apiKeys";
+import { resolveProviderApiKey } from "@/lib/netie/keyvault";
+import { getRegistryEntry } from "@omniroute/open-sse/config/providerRegistry.ts";
 import {
   getActiveExclusiveConnectionLease,
   hashLeaseOwnerId,
@@ -1078,8 +1080,22 @@ async function materializeConnection(
     options.reserveOAuthSession === true && connection.authType === "oauth" && options.sessionKey
       ? reserveOAuthSession(connection.id, options.sessionKey)
       : undefined;
+  // FreeRoute: provider API keys are never persisted locally (src/app/api/providers
+  // routes return `keys_managed_by_openvault` on save) — resolve the live secret
+  // from OpenVault's KeyVault instead of `connection.apiKey`. See
+  // src/lib/netie/keyvault.ts. Throws OpenVaultUnreachableError (503) rather than
+  // silently falling back to whatever (if anything) is stored locally.
+  const resolvedApiKey =
+    connection.authType === "apikey"
+      ? await resolveProviderApiKey(connection.provider, {
+          baseUrl:
+            (typeof providerSpecificData.baseUrl === "string" && providerSpecificData.baseUrl) ||
+            getRegistryEntry(connection.provider)?.baseUrl ||
+            null,
+        })
+      : connection.apiKey;
   return {
-    apiKey: connection.apiKey,
+    apiKey: resolvedApiKey,
     accessToken: connection.accessToken,
     refreshToken: connection.refreshToken,
     expiresAt: connection.tokenExpiresAt || connection.expiresAt || null,

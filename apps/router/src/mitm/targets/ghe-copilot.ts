@@ -20,12 +20,12 @@ export const GHE_COPILOT_TARGET: MitmTarget = {
   ],
   setupTutorial: {
     steps: [
-      "Configure your GHE Copilot endpoint URL in OmniRoute provider settings",
+      "Configure your GHE Copilot endpoint URL in FreeRoute provider settings",
       "Ensure your GHE instance has Copilot enabled",
       "Sign in to GitHub Enterprise with a Copilot-enabled account",
       "Enable DNS routing for this agent",
       "Restart your IDE (VS Code, JetBrains, etc.)",
-      "Done — GHE Copilot now routes via OmniRoute",
+      "Done — GHE Copilot now routes via FreeRoute",
     ],
     detection: { command: "code --list-extensions", platform: "all" },
   },

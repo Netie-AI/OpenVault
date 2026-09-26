@@ -2,11 +2,14 @@
  * GET /api/agent-skills/[id]/raw
  *
  * Returns the raw SKILL.md content for a given skill as text/markdown.
- * Resolution order: local filesystem → GitHub raw URL (1-hour cache).
+ * Resolution order: local filesystem → "not available in this edition"
+ * placeholder. FreeRoute never fetches this from the upstream OmniRoute repo
+ * (see src/lib/agentSkills/catalog.ts), so the GitHub-upstream-failure (502)
+ * branch below is unreachable in normal operation and kept only as a defensive
+ * fallback in case a future `fetchSkillMarkdown` throws that same message.
  *
  * Response: text/markdown; charset=utf-8
  * 404 if skill not found in catalog.
- * 502 if upstream GitHub fetch fails.
  */
 import { buildErrorBody } from "@omniroute/open-sse/utils/error.ts";
 import { getSkillById, fetchSkillMarkdown } from "@/lib/agentSkills/catalog";

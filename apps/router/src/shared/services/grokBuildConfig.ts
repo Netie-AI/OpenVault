@@ -47,7 +47,7 @@ export function resolveGrokBuildConfigPath(env: NodeJS.ProcessEnv, configHome: s
 
 const UNSET_SENTINEL = "__omniroute_unset__";
 const MANAGED_MARKER = '# omniroute-managed = "true"';
-const LEGACY_DESCRIPTION = "Routed via OmniRoute gateway";
+const LEGACY_DESCRIPTION = "Routed via FreeRoute gateway";
 const MODELS_SECTION = "models";
 const SUBAGENT_MODELS_SECTION = "subagents.models";
 
@@ -217,7 +217,7 @@ const isLegacyOwnedMainSection = (toml: string): boolean => {
     keys.every((key) => allowed.has(key)) &&
     section.model !== null &&
     section.base_url !== null &&
-    section.name === "OmniRoute" &&
+    section.name === "FreeRoute" &&
     section.api_backend === "chat_completions" &&
     getSectionString(toml, `model.${GROK_MAIN_MODEL_SLOT}`, "description") === LEGACY_DESCRIPTION
   );
@@ -231,12 +231,12 @@ const assertMainSlotOwnership = (toml: string): void => {
 
 export class GrokBuildConfigConflictError extends Error {
   constructor() {
-    super("The [model.omniroute] table exists and OmniRoute does not own it");
+    super("The [model.omniroute] table exists and FreeRoute does not own it");
     this.name = "GrokBuildConfigConflictError";
   }
 }
 
-/** Parse the Grok Build fields that OmniRoute manages. */
+/** Parse the Grok Build fields that FreeRoute manages. */
 export function parseGrokBuildConfig(toml: string): GrokBuildSettings {
   if (toml.trim()) parseToml(toml);
   const subagentModels = {} as Record<GrokSubagentType, GrokModelConfig | null>;
@@ -254,7 +254,7 @@ export function parseGrokBuildConfig(toml: string): GrokBuildSettings {
   };
 }
 
-/** Apply the OmniRoute model slots and preserve unrelated TOML text. */
+/** Apply the FreeRoute model slots and preserve unrelated TOML text. */
 export function applyGrokBuildConfig(toml: string, options: GrokBuildApplyOptions): string {
   if (toml.trim()) parseToml(toml);
   assertMainSlotOwnership(toml);
@@ -265,7 +265,7 @@ export function applyGrokBuildConfig(toml: string, options: GrokBuildApplyOption
     baseUrl: options.baseUrl,
     apiKey: options.apiKey,
     contextWindow: options.contextWindow,
-    name: "OmniRoute",
+    name: "FreeRoute",
   });
   next = setSectionString(next, MODELS_SECTION, "default", GROK_MAIN_MODEL_SLOT);
 
@@ -281,7 +281,7 @@ export function applyGrokBuildConfig(toml: string, options: GrokBuildApplyOption
           baseUrl: options.baseUrl,
           apiKey: options.apiKey,
           contextWindow: selected.contextWindow,
-          name: `OmniRoute ${type}`,
+          name: `FreeRoute ${type}`,
         });
         next = setSectionString(next, SUBAGENT_MODELS_SECTION, type, slot);
       } else {
@@ -293,7 +293,7 @@ export function applyGrokBuildConfig(toml: string, options: GrokBuildApplyOption
   return next;
 }
 
-/** Remove the OmniRoute model slots and restore values that users did not change. */
+/** Remove the FreeRoute model slots and restore values that users did not change. */
 export function resetGrokBuildConfig(toml: string): string {
   if (toml.trim()) parseToml(toml);
   let next = toml;

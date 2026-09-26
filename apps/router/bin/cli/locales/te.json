@@ -1,8 +1,8 @@
 {
   "common": {
     "error": "లోపం: {message}",
-    "serverOffline": "OmniRoute సర్వర్ ఆఫ్లైన్లో ఉంది. దీన్ని ఇలా ప్రారంభించండి: omniroute serve",
-    "authRequired": "ప్రమాణీకరణ అవసరం. OMNIROUTE_API_KEY సెట్ చేయండి లేదా దీన్ని అమలు చేయండి: omniroute setup",
+    "serverOffline": "FreeRoute సర్వర్ ఆఫ్లైన్లో ఉంది. దీన్ని ఇలా ప్రారంభించండి: freeroute serve",
+    "authRequired": "ప్రమాణీకరణ అవసరం. OMNIROUTE_API_KEY సెట్ చేయండి లేదా దీన్ని అమలు చేయండి: freeroute setup",
     "rateLimited": "రేట్ పరిమితి మించిపోయింది. {seconds}s తర్వాత మళ్లీ ప్రయత్నించండి.",
     "timeout": "అభ్యర్థన {ms}ms తర్వాత గడువు ముగిసింది.",
     "success": "పూర్తయింది.",
@@ -15,7 +15,7 @@
     "yesOpt": "నిర్ధారణ ప్రాంప్ట్ను దాటవేయండి"
   },
   "setup": {
-    "title": "OmniRoute సెటప్",
+    "title": "FreeRoute సెటప్",
     "passwordPrompt": "అడ్మిన్ పాస్వర్డ్",
     "providerPrompt": "డిఫాల్ట్ ప్రొవైడర్ (దాటవేయడానికి ఖాళీగా ఉంచండి)",
     "done": "సెటప్ పూర్తయింది",
@@ -30,19 +30,19 @@
     "opencode": "OpenCode కోసం బండిల్ చేసిన @omniroute/opencode-pluginను ఇన్స్టాల్ చేసి కాన్ఫిగర్ చేయండి"
   },
   "doctor": {
-    "title": "OmniRoute డాక్టర్",
+    "title": "FreeRoute డాక్టర్",
     "dbOk": "డేటాబేస్: సరే ({path})",
-    "dbMissing": "డేటాబేస్: ప్రారంభించబడలేదు — `omniroute setup` అమలు చేయండి",
+    "dbMissing": "డేటాబేస్: ప్రారంభించబడలేదు — `freeroute setup` అమలు చేయండి",
     "portOk": "పోర్ట్ {port}: అందుబాటులో ఉంది",
     "portConflict": "పోర్ట్ {port}: మరొక ప్రాసెస్ ఉపయోగిస్తోంది",
     "encryptionOk": "ఎన్క్రిప్షన్ కీ: కాన్ఫిగర్ చేయబడింది",
-    "encryptionMissing": "ఎన్క్రిప్షన్ కీ లేదు — `omniroute setup` అమలు చేయండి",
+    "encryptionMissing": "ఎన్క్రిప్షన్ కీ లేదు — `freeroute setup` అమలు చేయండి",
     "allGood": "అన్ని తనిఖీలు విజయవంతమయ్యాయి.",
     "warnings": "{count} హెచ్చరిక(లు) — పైన చూడండి."
   },
   "providers": {
     "title": "ప్రొవైడర్లు",
-    "noProviders": "ఏ ప్రొవైడర్లూ కాన్ఫిగర్ చేయబడలేదు. అమలు చేయండి: omniroute setup",
+    "noProviders": "ఏ ప్రొవైడర్లూ కాన్ఫిగర్ చేయబడలేదు. అమలు చేయండి: freeroute setup",
     "testing": "{name}ను పరీక్షిస్తోంది...",
     "available": "{count} ప్రొవైడర్(లు) అందుబాటులో ఉన్నాయి",
     "connected": "కనెక్ట్ చేయబడింది",
@@ -71,7 +71,7 @@
       "dryRunOpt": "వ్రాయకుండా ఏం మారుతుందో చూపించు",
       "confirmPrompt": "\"{name}\" ({id}) కనెక్షన్ కోసం API కీని భర్తీ చేయాలా? [y/N]",
       "dryRunResult": "[dry-run] \"{name}\" ({id}) కోసం కీని మార్చేది. ఎలాంటి మార్పులు చేయలేదు.",
-      "oauthHint": "OAuth కనెక్షన్ — అమలు చేయండి: omniroute oauth {provider}",
+      "oauthHint": "OAuth కనెక్షన్ — అమలు చేయండి: freeroute oauth {provider}",
       "envVarEmpty": "ఎన్విరాన్మెంట్ వేరియబుల్ {var} సెట్ చేయబడలేదు లేదా ఖాళీగా ఉంది.",
       "success": "\"{name}\" కోసం కీ మార్చబడింది. ధృవీకరించడానికి `providers test {id}` అమలు చేయండి.",
       "testPassed": "మార్పు తర్వాత పరీక్ష విజయవంతమైంది.",
@@ -82,7 +82,7 @@
       "providerOpt": "ప్రొవైడర్ పేరు ద్వారా ఫిల్టర్ చేయి",
       "header": "ID         ప్రొవైడర్       పేరు                     గడువు స్థితి  పరీక్ష స్థితి  కూల్డౌన్ ముగిసే సమయం",
       "noData": "ప్రొవైడర్ కనెక్షన్ డేటా అందుబాటులో లేదు.",
-      "requiresServer": "providers status కోసం OmniRoute సర్వర్ నడుస్తూ ఉండాలి."
+      "requiresServer": "providers status కోసం FreeRoute సర్వర్ నడుస్తూ ఉండాలి."
     }
   },
   "keys": {
@@ -90,8 +90,8 @@
     "addDescription": "ప్రొవైడర్ కోసం API కీని జోడించు లేదా నవీకరించు",
     "listDescription": "కాన్ఫిగర్ చేసిన అన్ని API కీలను జాబితా చేయి",
     "removeDescription": "ప్రొవైడర్ కోసం API కీని తొలగించు",
-    "regenerateDescription": "OmniRoute API కీని మళ్లీ రూపొందించు",
-    "revokeDescription": "OmniRoute API కీని రద్దు చేయి",
+    "regenerateDescription": "FreeRoute API కీని మళ్లీ రూపొందించు",
+    "revokeDescription": "FreeRoute API కీని రద్దు చేయి",
     "revealDescription": "మాస్క్ చేయని API కీ విలువను చూపించు",
     "usageDescription": "API కీ కోసం ఇటీవలి వినియోగాన్ని చూపించు",
     "usageLimitOpt": "ఇటీవలి అభ్యర్థనల సంఖ్య",
@@ -142,7 +142,7 @@
     "warning": "⚠ ఇది డీక్రిప్ట్ చేసిన ప్లెయిన్టెక్స్ట్ API కీలు మరియు OAuth టోకెన్లను ప్రింట్/వ్రాస్తుంది. మీ స్క్రీన్, షెల్ హిస్టరీ మరియు ఏదైనా అవుట్పుట్ ఫైల్ ప్రైవేట్గా ఉండేలా చూసుకోండి.",
     "confirmHeading": "⚠ హెచ్చరిక: ఇది డీక్రిప్ట్ చేసిన ప్రొవైడర్ క్రెడెన్షియల్లను ప్లెయిన్టెక్స్ట్లో ఎగుమతి చేస్తుంది",
     "confirmBody": "ఈ కమాండ్ ఎంచుకున్న కనెక్షన్(ల) కోసం apiKey, accessToken, refreshToken మరియు\nidTokenలను డీక్రిప్ట్ చేసి ప్రింట్/వ్రాస్తుంది. అవుట్పుట్ను రహస్యంగా పరిగణించండి.",
-    "confirmFooter": "నిర్ధారించడానికి, దీన్ని అమలు చేయండి:\n  omniroute auth export --force",
+    "confirmFooter": "నిర్ధారించడానికి, దీన్ని అమలు చేయండి:\n  freeroute auth export --force",
     "missingKey": "క్రెడెన్షియల్స్ను ఎగుమతి చేయడానికి STORAGE_ENCRYPTION_KEY అవసరం.",
     "notFound": "కనెక్షన్ కనుగొనబడలేదు: {id}",
     "invalidFormat": "చెల్లని ఫార్మాట్: {format}. json లేదా env ఉపయోగించండి."
@@ -220,10 +220,10 @@
     "reasoning": "రీజనింగ్ ప్రయత్న స్థాయి (low|medium|high)",
     "thinking": "విస్తృత ఆలోచన టోకెన్ బడ్జెట్",
     "explain": "ఫాల్బ్యాక్ ట్రీ మరియు ఖర్చు పరిధిని stderrకు ప్రింట్ చేయండి",
-    "noCombo": "సరిపోలే combo కనుగొనబడలేదు. దీనితో ఒకదాన్ని కాన్ఫిగర్ చేయండి: omniroute combo create"
+    "noCombo": "సరిపోలే combo కనుగొనబడలేదు. దీనితో ఒకదాన్ని కాన్ఫిగర్ చేయండి: freeroute combo create"
   },
   "chat": {
-    "description": "OmniRouteకు వన్-షాట్ చాట్ ప్రాంప్ట్ను పంపండి",
+    "description": "FreeRouteకు వన్-షాట్ చాట్ ప్రాంప్ట్ను పంపండి",
     "file": "ఫైల్ నుండి ప్రాంప్ట్ను చదవండి",
     "stdin": "stdin నుండి ప్రాంప్ట్ను చదవండి",
     "system": "సిస్టమ్ ప్రాంప్ట్",
@@ -242,8 +242,8 @@
     }
   },
   "serve": {
-    "description": "OmniRoute సర్వర్ను ప్రారంభించండి (డిఫాల్ట్ చర్య)",
-    "starting": "పోర్ట్ {port}లో OmniRoute సర్వర్ ప్రారంభమవుతోంది...",
+    "description": "FreeRoute సర్వర్ను ప్రారంభించండి (డిఫాల్ట్ చర్య)",
+    "starting": "పోర్ట్ {port}లో FreeRoute సర్వర్ ప్రారంభమవుతోంది...",
     "ready": "http://localhost:{port} వద్ద సిద్ధంగా ఉంది",
     "stopping": "సర్వర్ (PID {pid}) ఆపివేయబడుతోంది...",
     "stopped": "సర్వర్ ఆపివేయబడింది.",
@@ -262,7 +262,7 @@
   },
   "backup": {
     "title": "బ్యాకప్",
-    "description": "OmniRoute డేటా బ్యాకప్ను సృష్టించండి",
+    "description": "FreeRoute డేటా బ్యాకప్ను సృష్టించండి",
     "creating": "బ్యాకప్ సృష్టిస్తోంది...",
     "done": "బ్యాకప్ {path}కు సేవ్ చేయబడింది",
     "noFiles": "బ్యాకప్ చేయడానికి ఫైళ్లు లేవు (డేటాబేస్ ప్రారంభించబడలేదు)",
@@ -274,7 +274,7 @@
     "noBackups": "బ్యాకప్లు ఏవీ కనుగొనబడలేదు.",
     "notFound": "బ్యాకప్ కనుగొనబడలేదు: {name}",
     "confirmRestore": "{ts} నాటి బ్యాకప్తో ప్రస్తుత డేటాను ఓవర్రైట్ చేయాలా?",
-    "createDescription": "OmniRoute డేటా బ్యాకప్ను సృష్టించండి",
+    "createDescription": "FreeRoute డేటా బ్యాకప్ను సృష్టించండి",
     "nameOpt": "అనుకూల బ్యాకప్ పేరు",
     "cloudOpt": "బ్యాకప్ను క్లౌడ్ నిల్వకు అప్లోడ్ చేయండి",
     "encryptOpt": "AES-256-GCMతో బ్యాకప్ను ఎన్క్రిప్ట్ చేయండి",
@@ -292,14 +292,14 @@
       "statusDescription": "ప్రస్తుత బ్యాకప్ షెడ్యూల్ స్థితిని చూపండి",
       "cronOpt": "షెడ్యూల్ కోసం Cron ఎక్స్ప్రెషన్ (డిఫాల్ట్: ప్రతిరోజూ ఉదయం 3 గంటలకు)",
       "enabled": "ఆటోమేటిక్ బ్యాకప్ ప్రారంభించబడింది (cron: {cron}).",
-      "hint": "ప్రారంభ సమయంలో షెడ్యూల్ను omniroute serve చదువుతుంది.",
+      "hint": "ప్రారంభ సమయంలో షెడ్యూల్ను freeroute serve చదువుతుంది.",
       "disabled": "ఆటోమేటిక్ బ్యాకప్ నిలిపివేయబడింది.",
       "notConfigured": "బ్యాకప్ షెడ్యూల్ ఏదీ కాన్ఫిగర్ చేయబడలేదు."
     }
   },
   "health": {
     "description": "సర్వర్ ఆరోగ్యం మరియు కాంపోనెంట్ స్థితిని తనిఖీ చేయండి",
-    "noServer": "సర్వర్ అమలులో లేదు. దీనితో ప్రారంభించండి: omniroute serve",
+    "noServer": "సర్వర్ అమలులో లేదు. దీనితో ప్రారంభించండి: freeroute serve",
     "title": "ఆరోగ్యం",
     "status": "స్థితి: {status}",
     "uptime": "అప్టైమ్: {uptime}",
@@ -308,21 +308,21 @@
   },
   "quota": {
     "description": "ప్రొవైడర్ కోటా వినియోగాన్ని చూపించు",
-    "noServer": "సర్వర్ రన్ కావడం లేదు. దీనితో ప్రారంభించండి: omniroute serve",
+    "noServer": "సర్వర్ రన్ కావడం లేదు. దీనితో ప్రారంభించండి: freeroute serve",
     "noData": "కోటా సమాచారం అందుబాటులో లేదు."
   },
   "cache": {
     "description": "ప్రతిస్పందన క్యాష్ను నిర్వహించండి",
-    "noServer": "సర్వర్ రన్ కావడం లేదు. దీనితో ప్రారంభించండి: omniroute serve",
+    "noServer": "సర్వర్ రన్ కావడం లేదు. దీనితో ప్రారంభించండి: freeroute serve",
     "cleared": "క్యాష్ క్లియర్ చేయబడింది.",
     "clearFailed": "క్యాష్ను క్లియర్ చేయడం విఫలమైంది."
   },
   "redis": {
-    "description": "OmniRoute కాషింగ్ మరియు కోటా ట్రాకింగ్ కోసం ఒకే క్లిక్‌లో స్థానిక Redis కంటైనర్ (Podman లేదా Docker) ప్రారంభించండి"
+    "description": "FreeRoute కాషింగ్ మరియు కోటా ట్రాకింగ్ కోసం ఒకే క్లిక్‌లో స్థానిక Redis కంటైనర్ (Podman లేదా Docker) ప్రారంభించండి"
   },
   "test": {
     "description": "ప్రొవైడర్ కనెక్షన్ను పరీక్షించండి",
-    "noServer": "సర్వర్ రన్ కావడం లేదు. దీనితో ప్రారంభించండి: omniroute serve",
+    "noServer": "సర్వర్ రన్ కావడం లేదు. దీనితో ప్రారంభించండి: freeroute serve",
     "testing": "{provider} / {model}ను పరీక్షిస్తోంది...",
     "passed": "కనెక్షన్ విజయవంతమైంది!",
     "failed": "కనెక్షన్ విఫలమైంది: {error}",
@@ -334,7 +334,7 @@
     "saved": "ఫలితాలు {path}లో సేవ్ చేయబడ్డాయి",
     "compareTitle": "మోడల్ పోలిక",
     "compareMinTwo": "--compare కోసం కనీసం రెండు మోడళ్లు అవసరం (కామాలతో వేరు చేసినవి)",
-    "noProviders": "ప్రొవైడర్లు ఏవీ కాన్ఫిగర్ చేయబడలేదు. దీనితో ఒకదాన్ని జోడించండి: omniroute keys add"
+    "noProviders": "ప్రొవైడర్లు ఏవీ కాన్ఫిగర్ చేయబడలేదు. దీనితో ఒకదాన్ని జోడించండి: freeroute keys add"
   },
   "update": {
     "checking": "అప్డేట్ల కోసం తనిఖీ చేస్తోంది...",
@@ -348,7 +348,7 @@
     "running": "MCP సర్వర్ రన్ అవుతోంది ({transport})",
     "stopped": "MCP సర్వర్ ఆపివేయబడింది.",
     "restarted": "MCP సర్వర్ పునఃప్రారంభించబడింది.",
-    "stoppedHint": "దీన్ని ఆన్ చేయడానికి `omniroute mcp enable`ను అమలు చేయండి.",
+    "stoppedHint": "దీన్ని ఆన్ చేయడానికి `freeroute mcp enable`ను అమలు చేయండి.",
     "enabled": "MCP సర్వర్ ప్రారంభించబడింది.",
     "disabled": "MCP సర్వర్ నిలిపివేయబడింది.",
     "enable": {
@@ -416,7 +416,7 @@
     }
   },
   "policy": {
-    "description": "OmniRoute ఆథరైజేషన్ విధానాలను నిర్వహించండి",
+    "description": "FreeRoute ఆథరైజేషన్ విధానాలను నిర్వహించండి",
     "list": {
       "description": "విధానాలను జాబితా చేయండి",
       "kind": "రకం ఆధారంగా ఫిల్టర్ చేయండి (allow|deny|rate-limit|cost-cap)",
@@ -453,7 +453,7 @@
     }
   },
   "compression": {
-    "description": "OmniRoute కంప్రెషన్ పైప్లైన్ను కాన్ఫిగర్ చేసి పరిశీలించండి",
+    "description": "FreeRoute కంప్రెషన్ పైప్లైన్ను కాన్ఫిగర్ చేసి పరిశీలించండి",
     "status": {
       "description": "ప్రస్తుత కంప్రెషన్ స్థితి మరియు సెట్టింగ్లను చూపించండి"
     },
@@ -507,18 +507,18 @@
     "confirmRotate": "టన్నెల్ {type}ను మార్చాలా? (కొత్త URL రూపొందించబడుతుంది)"
   },
   "stop": {
-    "description": "OmniRoute సర్వర్ను ఆపండి",
+    "description": "FreeRoute సర్వర్ను ఆపండి",
     "stopping": "సర్వర్ను ఆపుతోంది (PID {pid})...",
     "stopped": "సర్వర్ ఆపబడింది.",
     "notRunning": "ఏ సర్వర్ అమలులో లేదు.",
     "portFallback": "PID ఫైల్ కనుగొనబడలేదు, పోర్ట్ ఆధారిత నిలిపివేతకు ప్రయత్నిస్తోంది..."
   },
   "restart": {
-    "description": "OmniRoute సర్వర్ను పునఃప్రారంభించండి",
-    "restarting": "OmniRoute సర్వర్ను పునఃప్రారంభిస్తోంది..."
+    "description": "FreeRoute సర్వర్ను పునఃప్రారంభించండి",
+    "restarting": "FreeRoute సర్వర్ను పునఃప్రారంభిస్తోంది..."
   },
   "dashboard": {
-    "description": "బ్రౌజర్లో OmniRoute డ్యాష్బోర్డ్ను తెరవండి",
+    "description": "బ్రౌజర్లో FreeRoute డ్యాష్బోర్డ్ను తెరవండి",
     "opening": "{url} వద్ద డ్యాష్బోర్డ్ను తెరుస్తోంది",
     "urlOnly": "బ్రౌజర్ను తెరవకుండా డ్యాష్బోర్డ్ URLను ముద్రించండి",
     "tui": "ఇంటరాక్టివ్ TUI డ్యాష్బోర్డ్ను తెరవండి (టెర్మినల్ UI, 7 ట్యాబ్లు)"
@@ -526,7 +526,7 @@
   "models": {
     "description": "అందుబాటులో ఉన్న మోడళ్లను జాబితా చేయండి (సర్వర్ అవసరం)",
     "search": "ID, పేరు, ప్రొవైడర్ లేదా వివరణ ఆధారంగా మోడళ్లను ఫిల్టర్ చేయండి",
-    "noServer": "సర్వర్ అమలులో లేదు. దీనితో ప్రారంభించండి: omniroute serve",
+    "noServer": "సర్వర్ అమలులో లేదు. దీనితో ప్రారంభించండి: freeroute serve",
     "noModels": "మోడళ్లు ఏవీ కనుగొనబడలేదు."
   },
   "audit": {
@@ -558,7 +558,7 @@
     }
   },
   "skills": {
-    "description": "OmniRoute స్కిల్స్ను నిర్వహించండి (sandbox, builtin, custom, hybrid, skillssh)",
+    "description": "FreeRoute స్కిల్స్ను నిర్వహించండి (sandbox, builtin, custom, hybrid, skillssh)",
     "list": {
       "description": "ఇన్స్టాల్ చేసిన స్కిల్స్ను జాబితా చేయండి",
       "type": "రకం ఆధారంగా ఫిల్టర్ చేయండి (sandbox|custom|builtin|hybrid|skillssh)",
@@ -631,7 +631,7 @@
     }
   },
   "memory": {
-    "description": "OmniRoute సంభాషణాత్మక మెమరీని నిర్వహించు (FTS5 + vector)",
+    "description": "FreeRoute సంభాషణాత్మక మెమరీని నిర్వహించు (FTS5 + vector)",
     "search": {
       "description": "సెమాంటిక్ క్వెరీ ద్వారా మెమరీ ఎంట్రీలను శోధించు",
       "type": "మెమరీ రకం ద్వారా ఫిల్టర్ చేయి (user|feedback|project|reference)",
@@ -789,7 +789,7 @@
     }
   },
   "webhooks": {
-    "description": "OmniRoute వెబ్హుక్లను నిర్వహించండి",
+    "description": "FreeRoute వెబ్హుక్లను నిర్వహించండి",
     "events": {
       "description": "అందుబాటులో ఉన్న అన్ని వెబ్హుక్ ఈవెంట్ రకాలను జాబితా చేయండి"
     },
@@ -821,14 +821,14 @@
     }
   },
   "program": {
-    "description": "OmniRoute — స్వయంచాలక ఫాల్బ్యాక్తో స్మార్ట్ AI రూటర్",
+    "description": "FreeRoute — స్వయంచాలక ఫాల్బ్యాక్తో స్మార్ట్ AI రూటర్",
     "version": "వెర్షన్ను ముద్రించి నిష్క్రమించండి",
     "output": "అవుట్పుట్ ఆకృతి (table, json, jsonl, csv)",
     "quiet": "అనవసరమైన అవుట్పుట్ను అణచివేయండి",
     "no_color": "రంగుల అవుట్పుట్ను నిలిపివేయండి",
     "timeout": "మిల్లీసెకన్లలో HTTP అభ్యర్థన గడువు",
-    "api_key": "OmniRoute సర్వర్ కోసం API కీ",
-    "base_url": "OmniRoute సర్వర్ బేస్ URL",
+    "api_key": "FreeRoute సర్వర్ కోసం API కీ",
+    "base_url": "FreeRoute సర్వర్ బేస్ URL",
     "context": "ఈ కమాండ్ కోసం ఉపయోగించాల్సిన సర్వర్ సందర్భం/ప్రొఫైల్",
     "lang": "CLI ప్రదర్శన భాషను సెట్ చేయండి (OMNIROUTE_LANGను అధిగమిస్తుంది)"
   },
@@ -1079,7 +1079,7 @@
     }
   },
   "openapi": {
-    "description": "OmniRoute OpenAPI స్పెక్ను యాక్సెస్ చేసి పరీక్షించండి",
+    "description": "FreeRoute OpenAPI స్పెక్ను యాక్సెస్ చేసి పరీక్షించండి",
     "dump": {
       "description": "OpenAPI స్పెక్ను stdout లేదా ఫైల్కు డంప్ చేయండి",
       "format": "అవుట్పుట్ ఫార్మాట్: yaml|json (డిఫాల్ట్: yaml)",
@@ -1149,7 +1149,7 @@
     }
   },
   "open": {
-    "description": "బ్రౌజర్లో నిర్దిష్ట OmniRoute డ్యాష్బోర్డ్ పేజీని తెరవండి",
+    "description": "బ్రౌజర్లో నిర్దిష్ట FreeRoute డ్యాష్బోర్డ్ పేజీని తెరవండి",
     "url": "URLను మాత్రమే ప్రింట్ చేయండి, బ్రౌజర్ను తెరవవద్దు"
   },
   "telemetry": {
@@ -1166,7 +1166,7 @@
     }
   },
   "sync": {
-    "description": "OmniRoute ఇన్స్టాన్స్ల మధ్య కాన్ఫిగరేషన్ను సింక్ చేయండి",
+    "description": "FreeRoute ఇన్స్టాన్స్ల మధ్య కాన్ఫిగరేషన్ను సింక్ చేయండి",
     "push": {
       "description": "కాన్ఫిగ్ను క్లౌడ్ లేదా రిమోట్ ఇన్స్టాన్స్కు పుష్ చేయండి",
       "target": "లక్ష్యం (cloud లేదా context:name)",
@@ -1222,8 +1222,8 @@
       "listTitle": "అందుబాటులో ఉన్న భాషలు",
       "current": "భాష: {code} ({name})",
       "saved": "భాష {code} ({name})కు సెట్ చేయబడింది.",
-      "noCode": "భాషా కోడ్ అవసరం. అందుబాటులో ఉన్న కోడ్లను చూడటానికి 'omniroute config lang list'ను అమలు చేయండి.",
-      "unknown": "తెలియని భాషా కోడ్: {code}. అందుబాటులో ఉన్న కోడ్లను చూడటానికి 'omniroute config lang list'ను అమలు చేయండి.",
+      "noCode": "భాషా కోడ్ అవసరం. అందుబాటులో ఉన్న కోడ్లను చూడటానికి 'freeroute config lang list'ను అమలు చేయండి.",
+      "unknown": "తెలియని భాషా కోడ్: {code}. అందుబాటులో ఉన్న కోడ్లను చూడటానికి 'freeroute config lang list'ను అమలు చేయండి.",
       "alreadySet": "భాష ఇప్పటికే {code}కు సెట్ చేయబడింది.",
       "envHint": "చిట్కా: మీరు మీ ఎన్విరాన్మెంట్లో OMNIROUTE_LANG={code}ను కూడా సెట్ చేయవచ్చు."
     }
@@ -1242,7 +1242,7 @@
     "filter": "స్థాయి ఆధారంగా ఫిల్టర్ చేయండి (error,warn,info) — కామాలతో వేరు చేసినవి",
     "lines": "తీసుకురావాల్సిన లైన్ల సంఖ్య",
     "timeout": "కనెక్షన్ టైమ్ఔట్ (msలో)",
-    "baseUrl": "OmniRoute API బేస్ URL",
+    "baseUrl": "FreeRoute API బేస్ URL",
     "requestId": "రిక్వెస్ట్ ID ఆధారంగా ఫిల్టర్ చేయండి",
     "apiKey": "API కీ ఆధారంగా ఫిల్టర్ చేయండి",
     "combo": "కాంబో పేరు ఆధారంగా ఫిల్టర్ చేయండి",
@@ -1258,10 +1258,10 @@
     "description": "సిస్టమ్ ట్రే ఐకాన్ను నియంత్రించండి",
     "show": "ట్రే ఐకాన్ను చూపండి (సర్వర్ --trayతో నడుస్తుంటే)",
     "hide": "ట్రే ఐకాన్ను దాచండి",
-    "quit": "ట్రే ద్వారా OmniRoute నుండి నిష్క్రమించండి"
+    "quit": "ట్రే ద్వారా FreeRoute నుండి నిష్క్రమించండి"
   },
   "autostart": {
-    "description": "బూట్ సమయంలో OmniRoute ఆటోస్టార్ట్ను నిర్వహించండి (Linux: systemd యూజర్ సర్వీస్)",
+    "description": "బూట్ సమయంలో FreeRoute ఆటోస్టార్ట్ను నిర్వహించండి (Linux: systemd యూజర్ సర్వీస్)",
     "enable": "బూట్ సమయంలో ఆటోస్టార్ట్ను ప్రారంభించండి",
     "disable": "బూట్ సమయంలో ఆటోస్టార్ట్ను నిలిపివేయండి",
     "toggle": "బూట్ సమయంలో ఆటోస్టార్ట్ను టాగుల్ చేయండి",
@@ -1293,19 +1293,19 @@
     "scaffold": "కొత్త ప్లగిన్ బాయిలర్ప్లేట్ను స్కాఫోల్డ్ చేయండి"
   },
   "launch": {
-    "description": "OmniRouteను లక్ష్యంగా చేసుకుని Claude Codeను ప్రారంభించండి (లోకల్ లేదా రిమోట్, --profileతో)",
+    "description": "FreeRouteను లక్ష్యంగా చేసుకుని Claude Codeను ప్రారంభించండి (లోకల్ లేదా రిమోట్, --profileతో)",
     "token": "Claude క్లయింట్ పంపాల్సిన టోకెన్ (ANTHROPIC_AUTH_TOKEN)",
-    "notRunning": "{port} వద్ద OmniRouteను చేరుకోలేకపోతున్నాము. 'omniroute serve'తో దాన్ని ప్రారంభించండి.",
+    "notRunning": "{port} వద్ద FreeRouteను చేరుకోలేకపోతున్నాము. 'freeroute serve'తో దాన్ని ప్రారంభించండి.",
     "notFound": "PATHలో 'claude' CLI కనుగొనబడలేదు."
   },
   "run": {
-    "description": "OmniRoute ద్వారా మద్దతున్న CLI లక్ష్యాన్ని ప్రారంభించండి"
+    "description": "FreeRoute ద్వారా మద్దతున్న CLI లక్ష్యాన్ని ప్రారంభించండి"
   },
   "setupClaude": {
-    "description": "OmniRoute మోడల్ కేటలాగ్ నుండి ~/.claude/profiles Claude Code ప్రొఫైల్లను రూపొందించండి"
+    "description": "FreeRoute మోడల్ కేటలాగ్ నుండి ~/.claude/profiles Claude Code ప్రొఫైల్లను రూపొందించండి"
   },
   "connect": {
-    "description": "రిమోట్ OmniRoute సర్వర్కు కనెక్ట్ అయి రిమోట్ మోడ్లోకి ప్రవేశించండి"
+    "description": "రిమోట్ FreeRoute సర్వర్కు కనెక్ట్ అయి రిమోట్ మోడ్లోకి ప్రవేశించండి"
   },
   "tokens": {
     "description": "స్కోప్ చేసిన CLI యాక్సెస్ టోకెన్లను నిర్వహించండి (రిమోట్ మోడ్)"
@@ -1314,10 +1314,10 @@
     "description": "సక్రియ సర్వర్ నుండి ప్రొవైడర్+మోడల్ను ఎంచుకుని, మద్దతున్న లోకల్ CLIని కాన్ఫిగర్ చేయండి"
   },
   "launchCodex": {
-    "description": "OmniRouteను లక్ష్యంగా చేసుకుని Codex CLIని ప్రారంభించండి (లోకల్ లేదా రిమోట్ VPS)"
+    "description": "FreeRouteను లక్ష్యంగా చేసుకుని Codex CLIని ప్రారంభించండి (లోకల్ లేదా రిమోట్ VPS)"
   },
   "setupCodex": {
-    "description": "OmniRoute లైవ్ మోడల్ కేటలాగ్ నుండి ~/.codex ప్రొఫైల్ ఫైల్లను రూపొందించండి"
+    "description": "FreeRoute లైవ్ మోడల్ కేటలాగ్ నుండి ~/.codex ప్రొఫైల్ ఫైల్లను రూపొందించండి"
   },
   "packs": {
     "description": "ఐచ్ఛిక రన్టైమ్ ప్యాక్లను నిర్వహించండి (ML / బ్రౌజర్ ఆటోమేషన్)",
@@ -1330,7 +1330,7 @@
     "errUnknown": "తెలియని ప్యాక్: {name}",
     "errNoIndex": "ప్యాక్ ఇండెక్స్ కనుగొనబడలేదు; ప్యాక్ పేలోడ్ ఉన్న --source <dir>ను అందించండి (డెస్క్టాప్ బండిళ్లలో ఇది యాప్ పక్కనే ఉంటుంది)",
     "installed": "ప్యాక్ \"{name}\" {dir} వద్ద ఇన్స్టాల్ చేయబడి ధృవీకరించబడింది",
-    "restartHint": "రన్టైమ్ ప్యాక్ను గుర్తించేలా OmniRoute సర్వర్ను (లేదా డెస్క్టాప్ యాప్ను) పునఃప్రారంభించండి",
+    "restartHint": "రన్టైమ్ ప్యాక్ను గుర్తించేలా FreeRoute సర్వర్ను (లేదా డెస్క్టాప్ యాప్ను) పునఃప్రారంభించండి",
     "removed": "ప్యాక్ \"{name}\" తొలగించబడింది",
     "notInstalled": "ప్యాక్ \"{name}\" ఇన్స్టాల్ చేయబడలేదు",
     "verifyOk": "ఇన్స్టాల్ చేసిన అన్ని ప్యాక్లు ధృవీకరించబడ్డాయి",

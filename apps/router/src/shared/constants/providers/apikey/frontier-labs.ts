@@ -23,9 +23,9 @@ export const APIKEY_PROVIDERS_FRONTIER = {
     textIcon: "RK",
     website: "https://docs.reka.ai/chat/overview",
     authHint:
-      "Use your Reka API key. OmniRoute supports the OpenAI-compatible base URL https://api.reka.ai/v1 and sends both Authorization and X-Api-Key headers for compatibility.",
+      "Use your Reka API key. FreeRoute supports the OpenAI-compatible base URL https://api.reka.ai/v1 and sends both Authorization and X-Api-Key headers for compatibility.",
     apiHint:
-      "Reka Chat is OpenAI-compatible on /v1. OmniRoute probes /v1/models and routes chat traffic to /v1/chat/completions.",
+      "Reka Chat is OpenAI-compatible on /v1. FreeRoute probes /v1/models and routes chat traffic to /v1/chat/completions.",
     hasFree: true,
     freeNote: "$10/month recurring free API credits",
   },
@@ -55,9 +55,9 @@ export const APIKEY_PROVIDERS_FRONTIER = {
     textIcon: "UD",
     website: "https://uncensored.com",
     authHint:
-      "Use your uncensored.com Developer API key (uai_sk_live_...). OmniRoute sends it as the X-api-key header to the OpenAI-compatible https://api.uncensored.com/api/v1 endpoint. The key never expires. This is the metered/credits surface; the un-metered subscription chat is the separate 'uc' provider.",
+      "Use your uncensored.com Developer API key (uai_sk_live_...). FreeRoute sends it as the X-api-key header to the OpenAI-compatible https://api.uncensored.com/api/v1 endpoint. The key never expires. This is the metered/credits surface; the un-metered subscription chat is the separate 'uc' provider.",
     apiHint:
-      "UC Direct is OpenAI-compatible on /api/v1. OmniRoute probes /api/v1/models (public) and routes chat traffic to /api/v1/chat/completions. Errors: 402 out of credits, 403 moderation/scope, 429 rate limit.",
+      "UC Direct is OpenAI-compatible on /api/v1. FreeRoute probes /api/v1/models (public) and routes chat traffic to /api/v1/chat/completions. Errors: 402 out of credits, 403 moderation/scope, 429 rate limit.",
     serviceKinds: ["llm"],
   },
   anthropic: {
@@ -162,7 +162,7 @@ export const APIKEY_PROVIDERS_FRONTIER = {
     textIcon: "PA",
     website: "https://www.perplexity.ai",
     authHint:
-      "Use your Perplexity API key. OmniRoute routes Agent API model IDs through Perplexity's Responses-compatible endpoint.",
+      "Use your Perplexity API key. FreeRoute routes Agent API model IDs through Perplexity's Responses-compatible endpoint.",
     apiHint:
       "Use Agent API model IDs with the pplx-agent/ prefix, for example pplx-agent/openai/gpt-5.6-sol or pplx-agent/anthropic/claude-opus-4-5.",
     passthroughModels: true,
@@ -279,7 +279,7 @@ export const APIKEY_PROVIDERS_FRONTIER = {
     textIcon: "NO",
     website: "https://portal.nousresearch.com/help",
     authHint:
-      "Use your Nous Portal API key. OmniRoute targets the official OpenAI-compatible inference endpoint at https://inference-api.nousresearch.com/v1.",
+      "Use your Nous Portal API key. FreeRoute targets the official OpenAI-compatible inference endpoint at https://inference-api.nousresearch.com/v1.",
     apiHint:
       "Nous exposes an OpenAI-compatible /v1 surface with a large remote /models catalog. The /chat/completions endpoint requires a valid API key for programmatic inference.",
     hasFree: true,

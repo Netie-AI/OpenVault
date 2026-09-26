@@ -1,7 +1,7 @@
 /**
  * ESM path-alias resolver for global installs.
  *
- * Problem (#7791): when OmniRoute is installed via `npm i -g omniroute`, the
+ * Problem (#7791): when FreeRoute is installed via `npm i -g omniroute`, the
  * package files live under `node_modules/omniroute/`. tsx's tsconfig-path
  * resolution does not apply there, so specifiers like `@/shared/utils/featureFlags`
  * (declared in tsconfig.json `paths` as `@/* → ./src/*`) or

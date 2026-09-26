@@ -1,5 +1,5 @@
 /**
- * Canonical executable manifest for the OmniRoute CLI command surfaces.
+ * Canonical executable manifest for the FreeRoute CLI command surfaces.
  *
  * One entry per canonical target id. `run.mjs`, `configure.mjs` and
  * `completion.mjs` derive their target lists, alias resolution and model-flag
@@ -63,7 +63,7 @@ export const CLI_TARGET_MANIFEST = Object.freeze({
   }),
   gemini: Object.freeze({
     // Launch contract verified against @google/gemini-cli 0.50.0:
-    // GOOGLE_GEMINI_BASE_URL points the SDK at OmniRoute's /v1beta surface,
+    // GOOGLE_GEMINI_BASE_URL points the SDK at FreeRoute's /v1beta surface,
     // GEMINI_API_KEY + isolated GEMINI_CLI_HOME (settings selectedType
     // "gemini-api-key") force API-key auth over any stored OAuth session.
     description: "Google Gemini CLI",

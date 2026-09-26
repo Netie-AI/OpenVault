@@ -107,8 +107,8 @@ export async function printPostApplyGuidance(latest, deps = { readPidFile, isPid
     printWarning(`Files updated to ${latest}, but the running server is still on the old version.`);
     printInfo("  Run `omniroute restart` now to apply this update.");
   } else {
-    printInfo(`No running OmniRoute server was detected via the CLI's PID file.`);
-    printInfo(`  Start it with \`omniroute serve\` (or restart your existing process) to run ${latest}.`);
+    printInfo(`No running FreeRoute server was detected via the CLI's PID file.`);
+    printInfo(`  Start it with \`freeroute serve\` (or restart your existing process) to run ${latest}.`);
   }
   printInfo("`omniroute --version` will keep reporting the old version until the process restarts.");
 }
@@ -169,7 +169,7 @@ export async function runUpdateCommand(opts = {}) {
     return 0;
   }
 
-  printHeading("OmniRoute Update");
+  printHeading("FreeRoute Update");
   console.log(`  Current version: ${current}`);
   console.log(`  Latest version:  ${latest}`);
 
@@ -218,7 +218,7 @@ export async function runUpdateCommand(opts = {}) {
     }
   }
 
-  printInfo("Updating OmniRoute...");
+  printInfo("Updating FreeRoute...");
   try {
     const { execSync } = await import("child_process");
     // --include=optional keeps the optionalDependencies (better-sqlite3, keytar,

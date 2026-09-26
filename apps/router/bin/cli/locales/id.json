@@ -1,8 +1,8 @@
 {
   "common": {
     "error": "Kesalahan: {message}",
-    "serverOffline": "Server OmniRoute sedang offline. Mulai dengan: omniroute serve",
-    "authRequired": "Autentikasi diperlukan. Setel OMNIROUTE_API_KEY atau jalankan: omniroute setup",
+    "serverOffline": "Server FreeRoute sedang offline. Mulai dengan: freeroute serve",
+    "authRequired": "Autentikasi diperlukan. Setel OMNIROUTE_API_KEY atau jalankan: freeroute setup",
     "rateLimited": "Batas permintaan terlampaui. Coba lagi dalam {seconds}d.",
     "timeout": "Permintaan habis waktu setelah {ms}ms.",
     "success": "Selesai.",
@@ -15,7 +15,7 @@
     "yesOpt": "Lewati konfirmasi"
   },
   "setup": {
-    "title": "Penyiapan OmniRoute",
+    "title": "Penyiapan FreeRoute",
     "passwordPrompt": "Kata sandi admin",
     "providerPrompt": "Penyedia default (biarkan kosong untuk melewati)",
     "done": "Penyiapan selesai",
@@ -30,19 +30,19 @@
     "opencode": "Instal dan konfigurasikan @omniroute/opencode-plugin bawaan untuk OpenCode"
   },
   "doctor": {
-    "title": "Diagnostik OmniRoute",
+    "title": "Diagnostik FreeRoute",
     "dbOk": "Basis data: OK ({path})",
-    "dbMissing": "Basis data: belum diinisialisasi — jalankan `omniroute setup`",
+    "dbMissing": "Basis data: belum diinisialisasi — jalankan `freeroute setup`",
     "portOk": "Port {port}: tersedia",
     "portConflict": "Port {port}: sedang digunakan oleh proses lain",
     "encryptionOk": "Kunci enkripsi: dikonfigurasi",
-    "encryptionMissing": "Kunci enkripsi tidak ditemukan — jalankan `omniroute setup`",
+    "encryptionMissing": "Kunci enkripsi tidak ditemukan — jalankan `freeroute setup`",
     "allGood": "Semua pemeriksaan berhasil.",
     "warnings": "{count} peringatan — lihat di atas."
   },
   "providers": {
     "title": "Penyedia",
-    "noProviders": "Belum ada penyedia yang dikonfigurasi. Jalankan: omniroute setup",
+    "noProviders": "Belum ada penyedia yang dikonfigurasi. Jalankan: freeroute setup",
     "testing": "Menguji {name}...",
     "available": "{count} penyedia tersedia",
     "connected": "Terhubung",
@@ -71,7 +71,7 @@
       "dryRunOpt": "Tampilkan perubahan yang akan dilakukan tanpa menyimpannya",
       "confirmPrompt": "Ganti kunci API untuk koneksi \"{name}\" ({id})? [y/N]",
       "dryRunResult": "[dry-run] Akan merotasi kunci untuk \"{name}\" ({id}). Tidak ada perubahan yang dilakukan.",
-      "oauthHint": "Koneksi OAuth — jalankan: omniroute oauth {provider}",
+      "oauthHint": "Koneksi OAuth — jalankan: freeroute oauth {provider}",
       "envVarEmpty": "Variabel lingkungan {var} tidak ditetapkan atau kosong.",
       "success": "Kunci untuk \"{name}\" telah dirotasi. Jalankan `providers test {id}` untuk memverifikasi.",
       "testPassed": "Pengujian setelah rotasi berhasil.",
@@ -82,7 +82,7 @@
       "providerOpt": "Filter berdasarkan nama penyedia",
       "header": "ID         Penyedia       Nama                     Status Kedaluwarsa  Status Pengujian  Masa Tunggu Hingga",
       "noData": "Tidak ada data koneksi penyedia yang tersedia.",
-      "requiresServer": "providers status mengharuskan server OmniRoute berjalan."
+      "requiresServer": "providers status mengharuskan server FreeRoute berjalan."
     }
   },
   "keys": {
@@ -90,8 +90,8 @@
     "addDescription": "Tambahkan atau perbarui kunci API untuk penyedia",
     "listDescription": "Cantumkan semua kunci API yang dikonfigurasi",
     "removeDescription": "Hapus kunci API untuk penyedia",
-    "regenerateDescription": "Buat ulang kunci API OmniRoute",
-    "revokeDescription": "Cabut kunci API OmniRoute",
+    "regenerateDescription": "Buat ulang kunci API FreeRoute",
+    "revokeDescription": "Cabut kunci API FreeRoute",
     "revealDescription": "Tampilkan nilai kunci API tanpa penyamaran",
     "usageDescription": "Tampilkan penggunaan terbaru untuk kunci API",
     "usageLimitOpt": "Jumlah permintaan terbaru",
@@ -142,7 +142,7 @@
     "warning": "⚠ Tindakan ini mencetak/menulis kunci API dan token OAuth yang TELAH DIDEKRIPSI dalam teks biasa. Pastikan layar, riwayat shell, dan file keluaran Anda tetap bersifat privat.",
     "confirmHeading": "⚠ PERINGATAN: tindakan ini mengekspor kredensial penyedia yang TELAH DIDEKRIPSI dalam teks biasa",
     "confirmBody": "Perintah ini mendekripsi dan mencetak/menulis apiKey, accessToken, refreshToken, dan\nidToken untuk koneksi yang dipilih. Perlakukan keluarannya sebagai rahasia.",
-    "confirmFooter": "Untuk mengonfirmasi, jalankan:\n  omniroute auth export --force",
+    "confirmFooter": "Untuk mengonfirmasi, jalankan:\n  freeroute auth export --force",
     "missingKey": "STORAGE_ENCRYPTION_KEY diperlukan untuk mengekspor kredensial.",
     "notFound": "Koneksi tidak ditemukan: {id}",
     "invalidFormat": "Format tidak valid: {format}. Gunakan json atau env."
@@ -220,10 +220,10 @@
     "reasoning": "Tingkat upaya penalaran (low|medium|high)",
     "thinking": "Anggaran token untuk extended thinking",
     "explain": "Cetak pohon fallback dan rentang biaya ke stderr",
-    "noCombo": "Tidak ditemukan combo yang cocok. Konfigurasikan dengan: omniroute combo create"
+    "noCombo": "Tidak ditemukan combo yang cocok. Konfigurasikan dengan: freeroute combo create"
   },
   "chat": {
-    "description": "Kirim prompt chat sekali jalan ke OmniRoute",
+    "description": "Kirim prompt chat sekali jalan ke FreeRoute",
     "file": "Baca prompt dari file",
     "stdin": "Baca prompt dari stdin",
     "system": "Prompt sistem",
@@ -242,8 +242,8 @@
     }
   },
   "serve": {
-    "description": "Mulai server OmniRoute (tindakan default)",
-    "starting": "Memulai server OmniRoute pada port {port}...",
+    "description": "Mulai server FreeRoute (tindakan default)",
+    "starting": "Memulai server FreeRoute pada port {port}...",
     "ready": "Siap di http://localhost:{port}",
     "stopping": "Menghentikan server (PID {pid})...",
     "stopped": "Server dihentikan.",
@@ -262,7 +262,7 @@
   },
   "backup": {
     "title": "Cadangan",
-    "description": "Buat cadangan data OmniRoute",
+    "description": "Buat cadangan data FreeRoute",
     "creating": "Membuat cadangan...",
     "done": "Cadangan disimpan ke {path}",
     "noFiles": "Tidak ada file untuk dicadangkan (basis data belum diinisialisasi)",
@@ -274,7 +274,7 @@
     "noBackups": "Tidak ditemukan cadangan.",
     "notFound": "Cadangan tidak ditemukan: {name}",
     "confirmRestore": "Timpa data saat ini dengan cadangan dari {ts}?",
-    "createDescription": "Buat cadangan data OmniRoute",
+    "createDescription": "Buat cadangan data FreeRoute",
     "nameOpt": "Nama cadangan khusus",
     "cloudOpt": "Unggah cadangan ke penyimpanan cloud",
     "encryptOpt": "Enkripsi cadangan dengan AES-256-GCM",
@@ -292,14 +292,14 @@
       "statusDescription": "Tampilkan status jadwal pencadangan saat ini",
       "cronOpt": "Ekspresi cron untuk jadwal (default: setiap hari pukul 03.00)",
       "enabled": "Pencadangan otomatis diaktifkan (cron: {cron}).",
-      "hint": "Jadwal dibaca oleh omniroute serve saat dimulai.",
+      "hint": "Jadwal dibaca oleh freeroute serve saat dimulai.",
       "disabled": "Pencadangan otomatis dinonaktifkan.",
       "notConfigured": "Tidak ada jadwal pencadangan yang dikonfigurasi."
     }
   },
   "health": {
     "description": "Periksa kesehatan server dan status komponen",
-    "noServer": "Server tidak berjalan. Mulai dengan: omniroute serve",
+    "noServer": "Server tidak berjalan. Mulai dengan: freeroute serve",
     "title": "Kesehatan",
     "status": "Status: {status}",
     "uptime": "Waktu aktif: {uptime}",
@@ -308,21 +308,21 @@
   },
   "quota": {
     "description": "Tampilkan penggunaan kuota penyedia",
-    "noServer": "Server tidak berjalan. Mulai dengan: omniroute serve",
+    "noServer": "Server tidak berjalan. Mulai dengan: freeroute serve",
     "noData": "Tidak ada informasi kuota yang tersedia."
   },
   "cache": {
     "description": "Kelola cache respons",
-    "noServer": "Server tidak berjalan. Mulai dengan: omniroute serve",
+    "noServer": "Server tidak berjalan. Mulai dengan: freeroute serve",
     "cleared": "Cache telah dibersihkan.",
     "clearFailed": "Gagal membersihkan cache."
   },
   "redis": {
-    "description": "Luncurkan kontainer Redis lokal dengan satu klik (Podman atau Docker) untuk caching dan pelacakan kuota OmniRoute"
+    "description": "Luncurkan kontainer Redis lokal dengan satu klik (Podman atau Docker) untuk caching dan pelacakan kuota FreeRoute"
   },
   "test": {
     "description": "Uji koneksi penyedia",
-    "noServer": "Server tidak berjalan. Mulai dengan: omniroute serve",
+    "noServer": "Server tidak berjalan. Mulai dengan: freeroute serve",
     "testing": "Menguji {provider} / {model}...",
     "passed": "Koneksi berhasil!",
     "failed": "Koneksi gagal: {error}",
@@ -334,7 +334,7 @@
     "saved": "Hasil disimpan ke {path}",
     "compareTitle": "Perbandingan Model",
     "compareMinTwo": "Setidaknya dua model diperlukan untuk --compare (dipisahkan koma)",
-    "noProviders": "Tidak ada penyedia yang dikonfigurasi. Tambahkan dengan: omniroute keys add"
+    "noProviders": "Tidak ada penyedia yang dikonfigurasi. Tambahkan dengan: freeroute keys add"
   },
   "update": {
     "checking": "Memeriksa pembaruan...",
@@ -348,7 +348,7 @@
     "running": "Server MCP berjalan ({transport})",
     "stopped": "Server MCP dihentikan.",
     "restarted": "Server MCP dimulai ulang.",
-    "stoppedHint": "Jalankan `omniroute mcp enable` untuk mengaktifkannya.",
+    "stoppedHint": "Jalankan `freeroute mcp enable` untuk mengaktifkannya.",
     "enabled": "Server MCP diaktifkan.",
     "disabled": "Server MCP dinonaktifkan.",
     "enable": {
@@ -416,7 +416,7 @@
     }
   },
   "policy": {
-    "description": "Kelola kebijakan otorisasi OmniRoute",
+    "description": "Kelola kebijakan otorisasi FreeRoute",
     "list": {
       "description": "Cantumkan kebijakan",
       "kind": "Filter berdasarkan jenis (allow|deny|rate-limit|cost-cap)",
@@ -453,7 +453,7 @@
     }
   },
   "compression": {
-    "description": "Konfigurasikan dan periksa pipeline kompresi OmniRoute",
+    "description": "Konfigurasikan dan periksa pipeline kompresi FreeRoute",
     "status": {
       "description": "Tampilkan status dan pengaturan kompresi saat ini"
     },
@@ -507,18 +507,18 @@
     "confirmRotate": "Rotasi terowongan {type}? (URL baru akan dibuat)"
   },
   "stop": {
-    "description": "Hentikan server OmniRoute",
+    "description": "Hentikan server FreeRoute",
     "stopping": "Menghentikan server (PID {pid})...",
     "stopped": "Server dihentikan.",
     "notRunning": "Tidak ada server yang berjalan.",
     "portFallback": "File PID tidak ditemukan, mencoba penghentian berbasis port..."
   },
   "restart": {
-    "description": "Mulai ulang server OmniRoute",
-    "restarting": "Memulai ulang server OmniRoute..."
+    "description": "Mulai ulang server FreeRoute",
+    "restarting": "Memulai ulang server FreeRoute..."
   },
   "dashboard": {
-    "description": "Buka dasbor OmniRoute di browser",
+    "description": "Buka dasbor FreeRoute di browser",
     "opening": "Membuka dasbor di {url}",
     "urlOnly": "Cetak URL dasbor tanpa membuka browser",
     "tui": "Buka dasbor TUI interaktif (UI terminal, 7 tab)"
@@ -526,7 +526,7 @@
   "models": {
     "description": "Cantumkan model yang tersedia (memerlukan server)",
     "search": "Filter model berdasarkan id, nama, penyedia, atau deskripsi",
-    "noServer": "Server tidak berjalan. Mulai dengan: omniroute serve",
+    "noServer": "Server tidak berjalan. Mulai dengan: freeroute serve",
     "noModels": "Tidak ada model yang ditemukan."
   },
   "audit": {
@@ -558,7 +558,7 @@
     }
   },
   "skills": {
-    "description": "Kelola skill OmniRoute (sandbox, builtin, custom, hybrid, skillssh)",
+    "description": "Kelola skill FreeRoute (sandbox, builtin, custom, hybrid, skillssh)",
     "list": {
       "description": "Cantumkan skill yang terinstal",
       "type": "Filter berdasarkan jenis (sandbox|custom|builtin|hybrid|skillssh)",
@@ -631,7 +631,7 @@
     }
   },
   "memory": {
-    "description": "Kelola memori percakapan OmniRoute (FTS5 + vector)",
+    "description": "Kelola memori percakapan FreeRoute (FTS5 + vector)",
     "search": {
       "description": "Cari entri memori berdasarkan kueri semantik",
       "type": "Filter berdasarkan jenis memori (user|feedback|project|reference)",
@@ -789,7 +789,7 @@
     }
   },
   "webhooks": {
-    "description": "Kelola webhook OmniRoute",
+    "description": "Kelola webhook FreeRoute",
     "events": {
       "description": "Cantumkan semua jenis peristiwa webhook yang tersedia"
     },
@@ -821,14 +821,14 @@
     }
   },
   "program": {
-    "description": "OmniRoute — Router AI Cerdas dengan Fallback Otomatis",
+    "description": "FreeRoute — Router AI Cerdas dengan Fallback Otomatis",
     "version": "Cetak versi dan keluar",
     "output": "Format keluaran (table, json, jsonl, csv)",
     "quiet": "Sembunyikan output yang tidak penting",
     "no_color": "Nonaktifkan output berwarna",
     "timeout": "Batas waktu permintaan HTTP dalam milidetik",
-    "api_key": "Kunci API untuk server OmniRoute",
-    "base_url": "URL dasar server OmniRoute",
+    "api_key": "Kunci API untuk server FreeRoute",
+    "base_url": "URL dasar server FreeRoute",
     "context": "Konteks/profil server untuk perintah ini",
     "lang": "Atur bahasa tampilan CLI (menggantikan OMNIROUTE_LANG)"
   },
@@ -1079,7 +1079,7 @@
     }
   },
   "openapi": {
-    "description": "Akses dan uji spesifikasi OpenAPI OmniRoute",
+    "description": "Akses dan uji spesifikasi OpenAPI FreeRoute",
     "dump": {
       "description": "Ekspor spesifikasi OpenAPI ke stdout atau file",
       "format": "Format keluaran: yaml|json (default: yaml)",
@@ -1149,7 +1149,7 @@
     }
   },
   "open": {
-    "description": "Buka halaman dasbor OmniRoute tertentu di browser",
+    "description": "Buka halaman dasbor FreeRoute tertentu di browser",
     "url": "Hanya cetak URL, jangan buka browser"
   },
   "telemetry": {
@@ -1166,7 +1166,7 @@
     }
   },
   "sync": {
-    "description": "Sinkronkan konfigurasi antarinstans OmniRoute",
+    "description": "Sinkronkan konfigurasi antarinstans FreeRoute",
     "push": {
       "description": "Kirim konfigurasi ke cloud atau instans jarak jauh",
       "target": "Target (cloud atau context:name)",
@@ -1222,8 +1222,8 @@
       "listTitle": "Bahasa yang Tersedia",
       "current": "Bahasa: {code} ({name})",
       "saved": "Bahasa diatur ke {code} ({name}).",
-      "noCode": "Kode bahasa diperlukan. Jalankan 'omniroute config lang list' untuk melihat kode yang tersedia.",
-      "unknown": "Kode bahasa tidak dikenal: {code}. Jalankan 'omniroute config lang list' untuk melihat kode yang tersedia.",
+      "noCode": "Kode bahasa diperlukan. Jalankan 'freeroute config lang list' untuk melihat kode yang tersedia.",
+      "unknown": "Kode bahasa tidak dikenal: {code}. Jalankan 'freeroute config lang list' untuk melihat kode yang tersedia.",
       "alreadySet": "Bahasa sudah diatur ke {code}.",
       "envHint": "Kiat: Anda juga dapat mengatur OMNIROUTE_LANG={code} di lingkungan Anda."
     }
@@ -1242,7 +1242,7 @@
     "filter": "Filter berdasarkan level (error,warn,info) — dipisahkan koma",
     "lines": "Jumlah baris yang akan diambil",
     "timeout": "Batas waktu koneksi dalam milidetik",
-    "baseUrl": "URL dasar API OmniRoute",
+    "baseUrl": "URL dasar API FreeRoute",
     "requestId": "Filter berdasarkan ID permintaan",
     "apiKey": "Filter berdasarkan kunci API",
     "combo": "Filter berdasarkan nama kombinasi",
@@ -1258,10 +1258,10 @@
     "description": "Kontrol ikon baki sistem",
     "show": "Tampilkan ikon baki (jika server berjalan dengan --tray)",
     "hide": "Sembunyikan ikon baki",
-    "quit": "Keluar dari OmniRoute melalui baki"
+    "quit": "Keluar dari FreeRoute melalui baki"
   },
   "autostart": {
-    "description": "Kelola mulai otomatis OmniRoute saat boot (Linux: layanan pengguna systemd)",
+    "description": "Kelola mulai otomatis FreeRoute saat boot (Linux: layanan pengguna systemd)",
     "enable": "Aktifkan mulai otomatis saat boot",
     "disable": "Nonaktifkan mulai otomatis saat boot",
     "toggle": "Alihkan mulai otomatis saat boot",
@@ -1293,19 +1293,19 @@
     "scaffold": "Buat kerangka boilerplate plugin baru"
   },
   "launch": {
-    "description": "Luncurkan Claude Code yang diarahkan ke OmniRoute (lokal atau jarak jauh, dengan --profile)",
+    "description": "Luncurkan Claude Code yang diarahkan ke FreeRoute (lokal atau jarak jauh, dengan --profile)",
     "token": "Token yang harus dikirim oleh klien Claude (ANTHROPIC_AUTH_TOKEN)",
-    "notRunning": "OmniRoute tidak dapat dijangkau di {port}. Jalankan dengan 'omniroute serve'.",
+    "notRunning": "FreeRoute tidak dapat dijangkau di {port}. Jalankan dengan 'freeroute serve'.",
     "notFound": "CLI 'claude' tidak ditemukan di PATH."
   },
   "run": {
-    "description": "Luncurkan target CLI yang didukung melalui OmniRoute"
+    "description": "Luncurkan target CLI yang didukung melalui FreeRoute"
   },
   "setupClaude": {
-    "description": "Buat profil Claude Code di ~/.claude/profiles dari katalog model OmniRoute"
+    "description": "Buat profil Claude Code di ~/.claude/profiles dari katalog model FreeRoute"
   },
   "connect": {
-    "description": "Hubungkan ke server OmniRoute jarak jauh dan masuk ke mode jarak jauh"
+    "description": "Hubungkan ke server FreeRoute jarak jauh dan masuk ke mode jarak jauh"
   },
   "tokens": {
     "description": "Kelola token akses CLI tercakup (mode jarak jauh)"
@@ -1314,10 +1314,10 @@
     "description": "Pilih penyedia+model dari server aktif dan konfigurasikan CLI lokal yang didukung"
   },
   "launchCodex": {
-    "description": "Luncurkan Codex CLI yang diarahkan ke OmniRoute (VPS lokal atau jarak jauh)"
+    "description": "Luncurkan Codex CLI yang diarahkan ke FreeRoute (VPS lokal atau jarak jauh)"
   },
   "setupCodex": {
-    "description": "Buat file profil ~/.codex dari katalog model langsung OmniRoute"
+    "description": "Buat file profil ~/.codex dari katalog model langsung FreeRoute"
   },
   "packs": {
     "description": "Kelola paket runtime opsional (ML / otomatisasi browser)",
@@ -1330,7 +1330,7 @@
     "errUnknown": "paket tidak dikenal: {name}",
     "errNoIndex": "indeks paket tidak ditemukan; berikan --source <dir> yang berisi payload paket (bundel desktop menyertakannya di samping aplikasi)",
     "installed": "paket \"{name}\" telah diinstal dan diverifikasi di {dir}",
-    "restartHint": "mulai ulang server OmniRoute (atau aplikasi desktop) agar runtime memuat paket tersebut",
+    "restartHint": "mulai ulang server FreeRoute (atau aplikasi desktop) agar runtime memuat paket tersebut",
     "removed": "paket \"{name}\" dihapus",
     "notInstalled": "paket \"{name}\" belum diinstal",
     "verifyOk": "semua paket yang diinstal telah diverifikasi",

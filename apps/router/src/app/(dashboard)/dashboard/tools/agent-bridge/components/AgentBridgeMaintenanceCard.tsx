@@ -22,7 +22,7 @@ interface AgentBridgeMaintenanceCardProps {
   hasCachedPassword: boolean;
   /** Server OS requires a sudo password and none is cached. */
   needsSudoPassword: boolean;
-  /** Whether the OmniRoute server is running on Windows. */
+  /** Whether the FreeRoute server is running on Windows. */
   isWin: boolean;
   /** Report a sanitized error to the page-level alert banner. */
   onError: (msg: string | null) => void;

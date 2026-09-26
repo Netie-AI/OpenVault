@@ -3,7 +3,7 @@
  *
  * Ported from upstream PR decolua/9router#618 (author Anurag Saxena) — multi-model
  * support for the Factory Droid CLI tool. Adapted to OmniRoute branding
- * (`custom:OmniRoute-<i>`) and extracted as a pure helper so the route-handler
+ * (`custom:FreeRoute-<i>`) and extracted as a pure helper so the route-handler
  * logic is unit-testable without touching the filesystem.
  */
 
@@ -90,7 +90,7 @@ export function buildDroidCustomModels(
 
   const entries: DroidCustomModelEntry[] = models.map((m, i) => ({
     model: m,
-    id: `custom:OmniRoute-${i}`,
+    id: `custom:FreeRoute-${i}`,
     index: i,
     baseUrl: opts.baseUrl,
     apiKey: opts.apiKey,
@@ -105,7 +105,7 @@ export function buildDroidCustomModels(
     entries.unshift({ ...defaultEntry, index: 0 });
     entries.forEach((e, i) => {
       e.index = i;
-      e.id = `custom:OmniRoute-${i}`;
+      e.id = `custom:FreeRoute-${i}`;
     });
   }
 
@@ -114,5 +114,5 @@ export function buildDroidCustomModels(
 
 /** True when a `customModels` entry was written by OmniRoute (any index). */
 export function isOmniRouteCustomModel(entry: { id?: unknown } | null | undefined): boolean {
-  return typeof entry?.id === "string" && entry.id.startsWith("custom:OmniRoute");
+  return typeof entry?.id === "string" && entry.id.startsWith("custom:FreeRoute");
 }

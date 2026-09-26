@@ -5,7 +5,7 @@
 export const APIKEY_PROVIDERS_GATEWAYS = {
   // 1min.ai (https://docs.1min.ai) — multi-model chat aggregator with its own
   // custom API (single `prompt` string + real SSE, not OpenAI-compatible).
-  // OmniRoute's oneminai executor translates both directions.
+  // FreeRoute's oneminai executor translates both directions.
   oneminai: {
     id: "oneminai",
     serviceKinds: ["llm"],
@@ -18,7 +18,7 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
     authHint:
       "Create an API key at https://docs.1min.ai/docs/api/create-api-key, then paste it here.",
     apiHint:
-      "1min.ai uses a proprietary chat API (single prompt string + SSE) instead of OpenAI chat/completions. OmniRoute flattens OpenAI messages into a labeled prompt and translates the SSE stream.",
+      "1min.ai uses a proprietary chat API (single prompt string + SSE) instead of OpenAI chat/completions. FreeRoute flattens OpenAI messages into a labeled prompt and translates the SSE stream.",
     passthroughModels: true,
   },
   // Cheaper Inference (https://cheaperinference.com) — OSS-sponsor gateway.
@@ -811,7 +811,7 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
     authHint:
       "Bake anonymous cake credits at g4f.dev/chat, or use a g4f.dev member key (create one at g4f.dev/members.html).",
     notice: {
-      text: "Remote third-party gateway: prompts and request metadata leave OmniRoute and are handled by g4f.space. Its Terms and Privacy links were unavailable when last verified on 2026-08-27.",
+      text: "Remote third-party gateway: prompts and request metadata leave FreeRoute and are handled by g4f.space. Its Terms and Privacy links were unavailable when last verified on 2026-08-27.",
       apiKeyUrl: "https://g4f.dev/members.html",
     },
   },
@@ -831,7 +831,7 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
     authHint:
       "Bake anonymous cake credits at g4f.dev/chat, or use a g4f.dev member key (create one at g4f.dev/members.html).",
     notice: {
-      text: "Remote third-party gateway: prompts and request metadata leave OmniRoute and are handled by g4f.space. Its Terms and Privacy links were unavailable when last verified on 2026-08-27.",
+      text: "Remote third-party gateway: prompts and request metadata leave FreeRoute and are handled by g4f.space. Its Terms and Privacy links were unavailable when last verified on 2026-08-27.",
       apiKeyUrl: "https://g4f.dev/members.html",
     },
   },
@@ -851,7 +851,7 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
     authHint:
       "Bake anonymous cake credits at g4f.dev/chat, or use a g4f.dev member key (create one at g4f.dev/members.html).",
     notice: {
-      text: "Remote third-party gateway: prompts and request metadata leave OmniRoute and are handled by g4f.space. Its Terms and Privacy links were unavailable when last verified on 2026-08-27.",
+      text: "Remote third-party gateway: prompts and request metadata leave FreeRoute and are handled by g4f.space. Its Terms and Privacy links were unavailable when last verified on 2026-08-27.",
       apiKeyUrl: "https://g4f.dev/members.html",
     },
   },
@@ -871,7 +871,7 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
     authHint:
       "Bake anonymous cake credits at g4f.dev/chat, or use a g4f.dev member key (create one at g4f.dev/members.html).",
     notice: {
-      text: "Remote third-party gateway: prompts and request metadata leave OmniRoute and are handled by g4f.space. Its Terms and Privacy links were unavailable when last verified on 2026-08-27.",
+      text: "Remote third-party gateway: prompts and request metadata leave FreeRoute and are handled by g4f.space. Its Terms and Privacy links were unavailable when last verified on 2026-08-27.",
       apiKeyUrl: "https://g4f.dev/members.html",
     },
   },
@@ -891,7 +891,7 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
     authHint:
       "Bake anonymous cake credits at g4f.dev/chat, or use a g4f.dev member key (create one at g4f.dev/members.html).",
     notice: {
-      text: "Remote third-party gateway: prompts and request metadata leave OmniRoute and are handled by g4f.space. Its Terms and Privacy links were unavailable when last verified on 2026-08-27.",
+      text: "Remote third-party gateway: prompts and request metadata leave FreeRoute and are handled by g4f.space. Its Terms and Privacy links were unavailable when last verified on 2026-08-27.",
       apiKeyUrl: "https://g4f.dev/members.html",
     },
   },
@@ -1189,7 +1189,7 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
     authHint:
       "Use your ZenMux API key in Authorization: Bearer <key>. ZenMux is fully OpenAI-compatible. Base URL: https://zenmux.ai/api/v1.",
     apiHint:
-      "ZenMux exposes an OpenAI-compatible chat completions endpoint at /api/v1/chat/completions, plus Anthropic Messages (/api/anthropic/v1/messages) and Google Gemini (/api/vertex-ai) protocol surfaces. OmniRoute uses the OpenAI protocol.",
+      "ZenMux exposes an OpenAI-compatible chat completions endpoint at /api/v1/chat/completions, plus Anthropic Messages (/api/anthropic/v1/messages) and Google Gemini (/api/vertex-ai) protocol surfaces. FreeRoute uses the OpenAI protocol.",
   },
   openadapter: {
     id: "openadapter",
@@ -1206,7 +1206,7 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
     authHint:
       "Use your OpenAdapter API key in Authorization: Bearer sk-cv-<key>. Fully OpenAI-compatible. API base URL: https://api.openadapter.in/v1.",
     apiHint:
-      "OpenAdapter exposes an OpenAI-compatible chat completions endpoint at https://api.openadapter.in/v1/chat/completions, aggregating 70+ open-source models (DeepSeek, Qwen, Kimi, MiniMax, GLM, Llama, Mistral, …). OmniRoute uses the OpenAI protocol.",
+      "OpenAdapter exposes an OpenAI-compatible chat completions endpoint at https://api.openadapter.in/v1/chat/completions, aggregating 70+ open-source models (DeepSeek, Qwen, Kimi, MiniMax, GLM, Llama, Mistral, …). FreeRoute uses the OpenAI protocol.",
   },
   dit: {
     id: "dit",
@@ -1220,7 +1220,7 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
     authHint:
       "Use your dit.ai API key in Authorization: Bearer <key>. Fully OpenAI-compatible — a drop-in replacement, just change the base URL to https://api.dit.ai/v1.",
     apiHint:
-      "dit.ai (Distributed Intelligence Trade) is an OpenAI-compatible router/gateway with dynamic per-request pricing, exposing /v1/chat/completions at https://api.dit.ai/v1. OmniRoute uses the OpenAI protocol; spend/savings analytics live in the dit.ai dashboard.",
+      "dit.ai (Distributed Intelligence Trade) is an OpenAI-compatible router/gateway with dynamic per-request pricing, exposing /v1/chat/completions at https://api.dit.ai/v1. FreeRoute uses the OpenAI protocol; spend/savings analytics live in the dit.ai dashboard.",
   },
   tokenrouter: {
     id: "tokenrouter",
@@ -1237,7 +1237,7 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
     authHint:
       "Use your TokenRouter API key in Authorization: Bearer <key>. Fully OpenAI-compatible. API base URL: https://api.tokenrouter.com/v1.",
     apiHint:
-      "TokenRouter exposes an OpenAI-compatible chat completions endpoint at https://api.tokenrouter.com/v1/chat/completions, plus a working /v1/models catalog. OmniRoute uses the OpenAI protocol.",
+      "TokenRouter exposes an OpenAI-compatible chat completions endpoint at https://api.tokenrouter.com/v1/chat/completions, plus a working /v1/models catalog. FreeRoute uses the OpenAI protocol.",
   },
   "token-kiosk": {
     id: "token-kiosk",
@@ -1266,7 +1266,7 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
     authHint:
       "Use your SumoPod API key (sk-...) in Authorization: Bearer <key>. Fully OpenAI-compatible. API base URL: https://ai.sumopod.com/v1.",
     apiHint:
-      "SumoPod exposes an OpenAI-compatible chat completions endpoint at https://ai.sumopod.com/v1/chat/completions, plus a live /v1/models catalog. OmniRoute uses the OpenAI protocol and lists models via passthrough.",
+      "SumoPod exposes an OpenAI-compatible chat completions endpoint at https://ai.sumopod.com/v1/chat/completions, plus a live /v1/models catalog. FreeRoute uses the OpenAI protocol and lists models via passthrough.",
   },
   x5lab: {
     id: "x5lab",
@@ -1281,7 +1281,7 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
     authHint:
       "Use your X5Lab API key (x5-...) in Authorization: Bearer <key>. Fully OpenAI-compatible. API base URL: https://api.x5lab.dev/v1.",
     apiHint:
-      "X5Lab exposes an OpenAI-compatible chat completions endpoint at https://api.x5lab.dev/v1/chat/completions, plus a live /v1/models catalog. OmniRoute uses the OpenAI protocol and lists models via passthrough.",
+      "X5Lab exposes an OpenAI-compatible chat completions endpoint at https://api.x5lab.dev/v1/chat/completions, plus a live /v1/models catalog. FreeRoute uses the OpenAI protocol and lists models via passthrough.",
   },
   chenzk: {
     id: "chenzk",
@@ -1310,7 +1310,7 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
     authHint:
       "Use your Kenari API key (kn-...) in Authorization: Bearer <key>. Fully OpenAI-compatible. API base URL: https://kenari.id/v1.",
     apiHint:
-      "Kenari exposes an OpenAI-compatible chat completions endpoint at https://kenari.id/v1/chat/completions, plus a live /v1/models catalog covering Claude, GPT, DeepSeek, GLM, Kimi and more. OmniRoute uses the OpenAI protocol and lists models via passthrough.",
+      "Kenari exposes an OpenAI-compatible chat completions endpoint at https://kenari.id/v1/chat/completions, plus a live /v1/models catalog covering Claude, GPT, DeepSeek, GLM, Kimi and more. FreeRoute uses the OpenAI protocol and lists models via passthrough.",
   },
   navy: {
     id: "navy",
@@ -1347,7 +1347,7 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
     authHint:
       "Create a free API key at ainative.studio (no card), then paste it here as a Bearer token.",
     apiHint:
-      "OpenAI-compatible endpoint at https://api.ainative.studio/api/v1 with a public /models catalog (84 models). OmniRoute lists models via passthrough.",
+      "OpenAI-compatible endpoint at https://api.ainative.studio/api/v1 with a public /models catalog (84 models). FreeRoute lists models via passthrough.",
   },
   aion: {
     id: "aion",
@@ -1536,7 +1536,7 @@ export const APIKEY_PROVIDERS_GATEWAYS = {
     website: "https://seekai.cc",
     hasFree: true,
     freeNote:
-      "Signup credit toward available models; amount and eligibility are set by SeekAi, not OmniRoute.",
+      "Signup credit toward available models; amount and eligibility are set by SeekAi, not FreeRoute.",
     authHint: "Create an API key at https://seekai.cc, then paste it here as a Bearer token.",
     apiHint:
       "Create an API key at https://seekai.cc, then paste it here as a Bearer token. OpenAI-compatible base URL: https://seekai.cc/v1.",

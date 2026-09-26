@@ -1,5 +1,5 @@
 // Kept in lockstep with the `@openai/codex@x.y.z` pin in the root Dockerfile
-// (the CLI installed in the OmniRoute image). When that image pin is bumped,
+// (the CLI installed in the FreeRoute image). When that image pin is bumped,
 // refresh this so the fingerprint OpenAI sees from the OAuth/Responses face
 // matches the real client version. Overridable per-deployment via
 // CODEX_CLIENT_VERSION.

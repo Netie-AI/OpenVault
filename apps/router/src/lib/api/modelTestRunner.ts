@@ -503,9 +503,9 @@ export async function runSingleModelTest(
   const testBody = isRerank
     ? {
         model: fullModelStr,
-        query: "What is OmniRoute?",
+        query: "What is FreeRoute?",
         documents: [
-          "OmniRoute routes AI requests across configured providers.",
+          "FreeRoute routes AI requests across configured providers.",
           "This document is unrelated to the test query.",
         ],
         top_n: 1,

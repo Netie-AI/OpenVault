@@ -136,7 +136,7 @@ async function setupProvider(db, opts, prompt, nonInteractive) {
 /**
  * Merge the `setup` subcommand options with the program-level ones.
  *
- * The program declares a global `--api-key` (the OmniRoute *server* key, see
+ * The program declares a global `--api-key` (the FreeRoute *server* key, see
  * bin/cli/program.mjs) and `setup` declares its own `--api-key` (the *provider*
  * key). Commander binds the value to the program-level option, so the
  * subcommand's `opts.apiKey` is always `undefined` and `--add-provider` failed
@@ -176,7 +176,7 @@ export function registerSetup(program) {
       if (exitCode !== 0) process.exit(exitCode);
     });
 
-  // Wire up `omniroute setup opencode` subcommand. Kept inside registerSetup
+  // Wire up `freeroute setup opencode` subcommand. Kept inside registerSetup
   // so it always travels with the parent command (avoids a separate register
   // call in the registry that would silently break if the parent renames).
   registerSetupOpenCode(program.commands.find((c) => c.name() === "setup"));
@@ -203,7 +203,7 @@ export async function runSetupCommand(opts = {}) {
   const prompt = createPrompt();
 
   try {
-    printHeading("OmniRoute Setup");
+    printHeading("FreeRoute Setup");
     const { db, dbPath } = await openOmniRouteDb();
     printInfo(`Database: ${dbPath}`);
 

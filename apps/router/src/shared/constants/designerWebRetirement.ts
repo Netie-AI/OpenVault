@@ -4,7 +4,7 @@ export const RETIRED_MICROSOFT_DESIGNER_WEB_PROVIDER_IDS: ReadonlySet<string> = 
 ]);
 
 export const MICROSOFT_DESIGNER_WEB_RETIRED_MESSAGE =
-  "Provider has been retired from OmniRoute runtime.";
+  "Provider has been retired from FreeRoute runtime.";
 
 function normalizeProviderId(providerId: unknown): string {
   return typeof providerId === "string" ? providerId.trim().toLowerCase() : "";

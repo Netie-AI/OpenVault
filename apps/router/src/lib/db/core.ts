@@ -1095,7 +1095,7 @@ export function getDbInstance(): SqliteDatabase {
     try {
       probe = openSqliteDatabase(sqliteFile, { readonly: true });
       // #9934: init asymmetry — bin/cli/sqlite.mjs::openOmniRouteDb (used by
-      // `omniroute setup`) creates storage.sqlite with only the partial inline
+      // `freeroute setup`) creates storage.sqlite with only the partial inline
       // schema (key_value + provider_connections) and never runs migrations.
       // Purely file-existence-based freshness made that file look like an
       // existing DB, so the first `serve` auto-seeded only the 001 marker and

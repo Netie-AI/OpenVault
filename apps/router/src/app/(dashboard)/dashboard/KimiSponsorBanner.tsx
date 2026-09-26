@@ -49,7 +49,7 @@ function getServerSnapshot() {
 }
 
 /**
- * Dismissable banner announcing the Kimi (Moonshot AI) official OmniRoute
+ * Dismissable banner announcing the Kimi (Moonshot AI) official FreeRoute
  * partnership on the dashboard home page. Self-contained: reads the app's own
  * version (APP_CONFIG.version) to decide whether it is still inside the
  * agreed display window (see kimiSponsorBannerGate.ts) and persists dismissal via

@@ -1,8 +1,8 @@
 {
   "common": {
     "error": "Njehie: {message}",
-    "serverOffline": "Sava OmniRoute anọghị n'ịntanetị. Jiri nke a malite ya: omniroute serve",
-    "authRequired": "Achọrọ njirimara. Tọọ OMNIROUTE_API_KEY ma ọ bụ mee: omniroute setup",
+    "serverOffline": "Sava FreeRoute anọghị n'ịntanetị. Jiri nke a malite ya: freeroute serve",
+    "authRequired": "Achọrọ njirimara. Tọọ OMNIROUTE_API_KEY ma ọ bụ mee: freeroute setup",
     "rateLimited": "Agafela oke arịrịọ. Nwaa ọzọ mgbe sekọnd {seconds} gachara.",
     "timeout": "Oge arịrịọ agwụla mgbe milisekọnd {ms} gachara.",
     "success": "Emechaala.",
@@ -15,7 +15,7 @@
     "yesOpt": "Mafee ajụjụ nkwenye"
   },
   "setup": {
-    "title": "Ntọala OmniRoute",
+    "title": "Ntọala FreeRoute",
     "passwordPrompt": "Okwuntughe onye nchịkwa",
     "providerPrompt": "Onye na-enye ọrụ ndabara (hapụ oghere ka ịwụfee)",
     "done": "Emechaala ntọala",
@@ -30,19 +30,19 @@
     "opencode": "Wụnye ma hazie @omniroute/opencode-plugin e jikọtara ọnụ maka OpenCode"
   },
   "doctor": {
-    "title": "Onye Nnyocha OmniRoute",
+    "title": "Onye Nnyocha FreeRoute",
     "dbOk": "Ebe nchekwa data: Ọ DỊ MMA ({path})",
-    "dbMissing": "Ebe nchekwa data: ebidobeghị ya — mee `omniroute setup`",
+    "dbMissing": "Ebe nchekwa data: ebidobeghị ya — mee `freeroute setup`",
     "portOk": "Ọdụ ụgbọ {port}: dị njikere",
     "portConflict": "Ọdụ ụgbọ {port}: usoro ọzọ na-eji ya",
     "encryptionOk": "Igodo izo ya ezo: ahazila",
-    "encryptionMissing": "Igodo izo ya ezo adịghị — mee `omniroute setup`",
+    "encryptionMissing": "Igodo izo ya ezo adịghị — mee `freeroute setup`",
     "allGood": "Nnyocha niile gara nke ọma.",
     "warnings": "Ịdọ aka ná ntị {count} — lee n'elu."
   },
   "providers": {
     "title": "Ndị na-enye ọrụ",
-    "noProviders": "Ọ dịghị onye na-enye ọrụ ahaziri. Mee: omniroute setup",
+    "noProviders": "Ọ dịghị onye na-enye ọrụ ahaziri. Mee: freeroute setup",
     "testing": "Na-anwale {name}...",
     "available": "Ndị na-enye ọrụ {count} dị",
     "connected": "Ejikọọla",
@@ -71,7 +71,7 @@
       "dryRunOpt": "Bipụta ihe ga-agbanwe n'edeghị ya",
       "confirmPrompt": "Dochie igodo API maka njikọ \"{name}\" ({id})? [y/N]",
       "dryRunResult": "[dry-run] A ga-agbanwe igodo maka \"{name}\" ({id}). O nweghị mgbanwe e mere.",
-      "oauthHint": "Njikọ OAuth — mee: omniroute oauth {provider}",
+      "oauthHint": "Njikọ OAuth — mee: freeroute oauth {provider}",
       "envVarEmpty": "Ahazighị mgbanwe gburugburu {var} ma ọ bụ na ọ tọgbọ chakoo.",
       "success": "Agbanweela igodo maka \"{name}\". Mee `providers test {id}` iji nyochaa ya.",
       "testPassed": "Ule e mere mgbe mgbanwe gasịrị gara nke ọma.",
@@ -82,7 +82,7 @@
       "providerOpt": "Jiri aha onye na-eweta nyochaa",
       "header": "ID         Onye na-eweta  Aha                      Ọnọdụ njedebe  Ọnọdụ ule  Oge nchere ruo",
       "noData": "Enweghị data njikọ onye na-eweta dị.",
-      "requiresServer": "providers status chọrọ ka sava OmniRoute na-arụ ọrụ."
+      "requiresServer": "providers status chọrọ ka sava FreeRoute na-arụ ọrụ."
     }
   },
   "keys": {
@@ -90,8 +90,8 @@
     "addDescription": "Tinye ma ọ bụ melite igodo API maka onye na-eweta",
     "listDescription": "Depụta igodo API niile ahaziri",
     "removeDescription": "Wepụ igodo API maka onye na-eweta",
-    "regenerateDescription": "Mepụta igodo API OmniRoute ọzọ",
-    "revokeDescription": "Kagbuo igodo API OmniRoute",
+    "regenerateDescription": "Mepụta igodo API FreeRoute ọzọ",
+    "revokeDescription": "Kagbuo igodo API FreeRoute",
     "revealDescription": "Gosi uru igodo API ezoghị ezo",
     "usageDescription": "Gosi ojiji API key n'oge na-adịbeghị anya",
     "usageLimitOpt": "Ọnụọgụ arịrịọ ndị e mere n'oge na-adịbeghị anya",
@@ -142,7 +142,7 @@
     "warning": "⚠ Nke a na-ebipụta/ede igodo API na token OAuth ndị EDOZILARỊ EZORO n'ederede nkịtị. Gbaa mbọ hụ na ihuenyo gị, akụkọ shell, na faịlụ nsonaazụ ọ bụla nọgide na nzuzo.",
     "confirmHeading": "⚠ ỊDỌ AKA NA NTỊ: nke a na-ebupụ nzere onye na-eweta ọrụ ndị EDOZILARỊ EZORO n'ederede nkịtị",
     "confirmBody": "Iwu a na-ewepụ izo ya ezo ma bipụta/dee apiKey, accessToken, refreshToken, na\nidToken maka njikọ ahọpụtara. Were nsonaazụ ahụ dịka ihe nzuzo.",
-    "confirmFooter": "Iji kwado, mee:\n  omniroute auth export --force",
+    "confirmFooter": "Iji kwado, mee:\n  freeroute auth export --force",
     "missingKey": "A chọrọ STORAGE_ENCRYPTION_KEY iji bupụ nzere.",
     "notFound": "Ahụghị njikọ: {id}",
     "invalidFormat": "Ụdị ezighi ezi: {format}. Jiri json ma ọ bụ env."
@@ -220,10 +220,10 @@
     "reasoning": "Ọkwa mbọ ntụgharị uche (low|medium|high)",
     "thinking": "Oke token maka ntụgharị uche agbatịkwuru",
     "explain": "Bipụta osisi fallback na oke ọnụahịa na stderr",
-    "noCombo": "Ahụghị combo dabara adaba. Hazie otu site na: omniroute combo create"
+    "noCombo": "Ahụghị combo dabara adaba. Hazie otu site na: freeroute combo create"
   },
   "chat": {
-    "description": "Ziga otu prompt nkata na OmniRoute",
+    "description": "Ziga otu prompt nkata na FreeRoute",
     "file": "Gụọ prompt site na faịlụ",
     "stdin": "Gụọ prompt site na stdin",
     "system": "Prompt sistemụ",
@@ -242,8 +242,8 @@
     }
   },
   "serve": {
-    "description": "Bido sava OmniRoute (omume ndabara)",
-    "starting": "Na-amalite sava OmniRoute na port {port}...",
+    "description": "Bido sava FreeRoute (omume ndabara)",
+    "starting": "Na-amalite sava FreeRoute na port {port}...",
     "ready": "Adịla njikere na http://localhost:{port}",
     "stopping": "Na-akwụsị sava (PID {pid})...",
     "stopped": "Akwụsịla sava.",
@@ -262,7 +262,7 @@
   },
   "backup": {
     "title": "Ndabere",
-    "description": "Mepụta ndabere nke data OmniRoute",
+    "description": "Mepụta ndabere nke data FreeRoute",
     "creating": "Na-emepụta ndabere...",
     "done": "Echekwara ndabere na {path}",
     "noFiles": "Enweghị faịlụ a ga-etinye na ndabere (ebidobeghị ọdụ data)",
@@ -274,7 +274,7 @@
     "noBackups": "Ahụghị ndabere ọ bụla.",
     "notFound": "Ahụghị ndabere: {name}",
     "confirmRestore": "Jiri ndabere sitere na {ts} dochie data dị ugbu a?",
-    "createDescription": "Mepụta ndabere nke data OmniRoute",
+    "createDescription": "Mepụta ndabere nke data FreeRoute",
     "nameOpt": "Aha ndabere ahaziri iche",
     "cloudOpt": "Bulite ndabere na nchekwa igwe ojii",
     "encryptOpt": "Jiri AES-256-GCM zoo ndabere",
@@ -292,14 +292,14 @@
       "statusDescription": "Gosi ọnọdụ nhazi oge ndabere ugbu a",
       "cronOpt": "Nkọwa cron maka nhazi oge (ndabara: kwa ụbọchị n'elekere atọ nke ụtụtụ)",
       "enabled": "Agbanyela ndabere akpaaka (cron: {cron}).",
-      "hint": "omniroute serve na-agụ nhazi oge a mgbe ọ na-amalite.",
+      "hint": "freeroute serve na-agụ nhazi oge a mgbe ọ na-amalite.",
       "disabled": "Agbanyụọla ndabere akpaaka.",
       "notConfigured": "Ahazibeghị oge ndabere ọ bụla."
     }
   },
   "health": {
     "description": "Lelee ahụike sava na ọnọdụ akụrụngwa ya",
-    "noServer": "Sava anaghị arụ ọrụ. Jiri nke a malite ya: omniroute serve",
+    "noServer": "Sava anaghị arụ ọrụ. Jiri nke a malite ya: freeroute serve",
     "title": "Ahụike",
     "status": "Ọnọdụ: {status}",
     "uptime": "Oge ọ na-arụ ọrụ: {uptime}",
@@ -308,21 +308,21 @@
   },
   "quota": {
     "description": "Gosi ojiji oke nke onye na-eweta ọrụ",
-    "noServer": "Sava anaghị arụ ọrụ. Malite ya na: omniroute serve",
+    "noServer": "Sava anaghị arụ ọrụ. Malite ya na: freeroute serve",
     "noData": "Enweghị ozi gbasara oke dị."
   },
   "cache": {
     "description": "Jikwaa cache nzaghachi",
-    "noServer": "Sava anaghị arụ ọrụ. Malite ya na: omniroute serve",
+    "noServer": "Sava anaghị arụ ọrụ. Malite ya na: freeroute serve",
     "cleared": "Ehichapụla cache.",
     "clearFailed": "Enweghị ike ihichapụ cache."
   },
   "redis": {
-    "description": "Jiri otu ọpịpị malite akpa Redis mpaghara (Podman ma ọ bụ Docker) maka nchekwa cache na nsuso oke nke OmniRoute"
+    "description": "Jiri otu ọpịpị malite akpa Redis mpaghara (Podman ma ọ bụ Docker) maka nchekwa cache na nsuso oke nke FreeRoute"
   },
   "test": {
     "description": "Nwalee njikọ onye na-eweta ọrụ",
-    "noServer": "Sava anaghị arụ ọrụ. Malite ya na: omniroute serve",
+    "noServer": "Sava anaghị arụ ọrụ. Malite ya na: freeroute serve",
     "testing": "Na-anwale {provider} / {model}...",
     "passed": "Njikọ gara nke ọma!",
     "failed": "Njikọ dara: {error}",
@@ -334,7 +334,7 @@
     "saved": "Echekwara nsonaazụ na {path}",
     "compareTitle": "Ntụnyere Ụdị",
     "compareMinTwo": "Achọrọ opekata mpe ụdị abụọ maka --compare (jiri rikoma kewaa ha)",
-    "noProviders": "Enweghị ndị na-eweta ọrụ ahaziri. Tinye otu na: omniroute keys add"
+    "noProviders": "Enweghị ndị na-eweta ọrụ ahaziri. Tinye otu na: freeroute keys add"
   },
   "update": {
     "checking": "Na-enyocha mmelite...",
@@ -348,7 +348,7 @@
     "running": "Sava MCP na-arụ ọrụ ({transport})",
     "stopped": "Sava MCP akwụsịla.",
     "restarted": "Amalitegharịrị sava MCP.",
-    "stoppedHint": "Gbaa `omniroute mcp enable` iji gbanye ya.",
+    "stoppedHint": "Gbaa `freeroute mcp enable` iji gbanye ya.",
     "enabled": "Agbanyela sava MCP.",
     "disabled": "Agbanyụọla sava MCP.",
     "enable": {
@@ -416,7 +416,7 @@
     }
   },
   "policy": {
-    "description": "Jikwaa iwu ikike OmniRoute",
+    "description": "Jikwaa iwu ikike FreeRoute",
     "list": {
       "description": "Depụta iwu",
       "kind": "Jiri ụdị nyochaa (allow|deny|rate-limit|cost-cap)",
@@ -453,7 +453,7 @@
     }
   },
   "compression": {
-    "description": "Hazie ma nyochaa usoro mkpakọ nke OmniRoute",
+    "description": "Hazie ma nyochaa usoro mkpakọ nke FreeRoute",
     "status": {
       "description": "Gosi ọnọdụ na ntọala mkpakọ dị ugbu a"
     },
@@ -507,18 +507,18 @@
     "confirmRotate": "Gbanwee ọwara {type}? (a ga-emepụta URL ọhụrụ)"
   },
   "stop": {
-    "description": "Kwụsị sava OmniRoute",
+    "description": "Kwụsị sava FreeRoute",
     "stopping": "Na-akwụsị sava (PID {pid})...",
     "stopped": "Akwụsịla sava.",
     "notRunning": "Ọ dịghị sava na-arụ ọrụ.",
     "portFallback": "Ahụghị faịlụ PID, na-anwa ịkwụsị site na port..."
   },
   "restart": {
-    "description": "Malitegharịa sava OmniRoute",
-    "restarting": "A na-amalitegharịa sava OmniRoute..."
+    "description": "Malitegharịa sava FreeRoute",
+    "restarting": "A na-amalitegharịa sava FreeRoute..."
   },
   "dashboard": {
-    "description": "Mepee dashboard OmniRoute na ihe nchọgharị",
+    "description": "Mepee dashboard FreeRoute na ihe nchọgharị",
     "opening": "A na-emepe dashboard na {url}",
     "urlOnly": "Bipụta naanị URL dashboard n'emepeghị ihe nchọgharị",
     "tui": "Mepee dashboard TUI mmekọrịta (UI ọdụ, taabụ 7)"
@@ -526,7 +526,7 @@
   "models": {
     "description": "Depụta ụdịdị dịnụ (sava ga-adị mkpa)",
     "search": "Nyochaa ụdịdị site na id, aha, provider, ma ọ bụ nkọwa",
-    "noServer": "Sava anaghị arụ ọrụ. Jiri nke a malite ya: omniroute serve",
+    "noServer": "Sava anaghị arụ ọrụ. Jiri nke a malite ya: freeroute serve",
     "noModels": "Ahụghị ụdịdị ọ bụla."
   },
   "audit": {
@@ -558,7 +558,7 @@
     }
   },
   "skills": {
-    "description": "Jikwaa nkà OmniRoute (sandbox, builtin, custom, hybrid, skillssh)",
+    "description": "Jikwaa nkà FreeRoute (sandbox, builtin, custom, hybrid, skillssh)",
     "list": {
       "description": "Depụta nkà arụnyere",
       "type": "Nyochaa site n'ụdị (sandbox|custom|builtin|hybrid|skillssh)",
@@ -631,7 +631,7 @@
     }
   },
   "memory": {
-    "description": "Jikwaa ebe nchekwa mkparịta ụka OmniRoute (FTS5 + vector)",
+    "description": "Jikwaa ebe nchekwa mkparịta ụka FreeRoute (FTS5 + vector)",
     "search": {
       "description": "Chọọ ndenye ebe nchekwa site na ajụjụ dabere na nghọta",
       "type": "Nyochaa site n'ụdị ebe nchekwa (user|feedback|project|reference)",
@@ -789,7 +789,7 @@
     }
   },
   "webhooks": {
-    "description": "Jikwaa webhook OmniRoute",
+    "description": "Jikwaa webhook FreeRoute",
     "events": {
       "description": "Depụta ụdị event webhook niile dị"
     },
@@ -821,14 +821,14 @@
     }
   },
   "program": {
-    "description": "OmniRoute — Onye Nhazi Ụzọ AI Nwere Ọgụgụ Isi nke nwere Ndaghachi Akpaka",
+    "description": "FreeRoute — Onye Nhazi Ụzọ AI Nwere Ọgụgụ Isi nke nwere Ndaghachi Akpaka",
     "version": "Bipụta ụdị ma pụọ",
     "output": "Ụdị mmepụta (table, json, jsonl, csv)",
     "quiet": "Gbochie mmepụta ndị na-adịghị mkpa",
     "no_color": "Gbanyụọ mmepụta nwere agba",
     "timeout": "Oge nchere arịrịọ HTTP na milisekọnd",
-    "api_key": "Igodo API maka sava OmniRoute",
-    "base_url": "URL ntọala sava OmniRoute",
+    "api_key": "Igodo API maka sava FreeRoute",
+    "base_url": "URL ntọala sava FreeRoute",
     "context": "Ọnọdụ/profaịlụ sava a ga-eji maka iwu a",
     "lang": "Tọọ asụsụ ngosipụta CLI (na-akagbu OMNIROUTE_LANG)"
   },
@@ -1079,7 +1079,7 @@
     }
   },
   "openapi": {
-    "description": "Nweta ma nwalee nkọwapụta OmniRoute OpenAPI",
+    "description": "Nweta ma nwalee nkọwapụta FreeRoute OpenAPI",
     "dump": {
       "description": "Wụpụ nkọwapụta OpenAPI na stdout ma ọ bụ faịlụ",
       "format": "Ụdị mmepụta: yaml|json (ndabara: yaml)",
@@ -1149,7 +1149,7 @@
     }
   },
   "open": {
-    "description": "Mepee otu ibe dashboard OmniRoute akọwapụtara na browser",
+    "description": "Mepee otu ibe dashboard FreeRoute akọwapụtara na browser",
     "url": "Bipụta naanị URL, emeghela browser"
   },
   "telemetry": {
@@ -1166,7 +1166,7 @@
     }
   },
   "sync": {
-    "description": "Mekọrịta nhazi n'etiti instance OmniRoute",
+    "description": "Mekọrịta nhazi n'etiti instance FreeRoute",
     "push": {
       "description": "Ziga nhazi na cloud ma ọ bụ instance dị anya",
       "target": "Ebe a na-eziga (cloud ma ọ bụ context:name)",
@@ -1222,8 +1222,8 @@
       "listTitle": "Asụsụ Ndị Dị",
       "current": "Asụsụ: {code} ({name})",
       "saved": "Atọọla asụsụ ka ọ bụrụ {code} ({name}).",
-      "noCode": "A chọrọ koodu asụsụ. Gbaa 'omniroute config lang list' iji hụ koodu ndị dị.",
-      "unknown": "Koodu asụsụ a maghị: {code}. Gbaa 'omniroute config lang list' iji hụ koodu ndị dị.",
+      "noCode": "A chọrọ koodu asụsụ. Gbaa 'freeroute config lang list' iji hụ koodu ndị dị.",
+      "unknown": "Koodu asụsụ a maghị: {code}. Gbaa 'freeroute config lang list' iji hụ koodu ndị dị.",
       "alreadySet": "Atọọlarị asụsụ ka ọ bụrụ {code}.",
       "envHint": "Ndụmọdụ: ị nwekwara ike ịtọ OMNIROUTE_LANG={code} na gburugburu gị."
     }
@@ -1242,7 +1242,7 @@
     "filter": "Họrọ site n'ọkwa (error,warn,info) — jiri rikọm kewaa ha",
     "lines": "Ọnụọgụ ahịrị a ga-eweta",
     "timeout": "Oge njikọ ga-akwụsị na ms",
-    "baseUrl": "URL ntọala OmniRoute API",
+    "baseUrl": "URL ntọala FreeRoute API",
     "requestId": "Họrọ site na ID arịrịọ",
     "apiKey": "Họrọ site na API key",
     "combo": "Jiri aha combo mee nzacha",
@@ -1258,10 +1258,10 @@
     "description": "Jikwaa akara ngosi dị na tray sistemụ",
     "show": "Gosi akara ngosi tray (ọ bụrụ na sava na-eji --tray arụ ọrụ)",
     "hide": "Zoo akara ngosi tray",
-    "quit": "Site na tray, kwụsị OmniRoute"
+    "quit": "Site na tray, kwụsị FreeRoute"
   },
   "autostart": {
-    "description": "Jikwaa mmalite akpaka nke OmniRoute mgbe sistemụ na-ebido (Linux: ọrụ onye ọrụ systemd)",
+    "description": "Jikwaa mmalite akpaka nke FreeRoute mgbe sistemụ na-ebido (Linux: ọrụ onye ọrụ systemd)",
     "enable": "Gbanye mmalite akpaka mgbe sistemụ na-ebido",
     "disable": "Gbanyụọ mmalite akpaka mgbe sistemụ na-ebido",
     "toggle": "Gbanwee ọnọdụ mmalite akpaka mgbe sistemụ na-ebido",
@@ -1293,19 +1293,19 @@
     "scaffold": "Mepụta usoro ntọala maka plugin ọhụrụ"
   },
   "launch": {
-    "description": "Bido Claude Code ka ọ rụtụ aka na OmniRoute (mpaghara ma ọ bụ ime, site na --profile)",
+    "description": "Bido Claude Code ka ọ rụtụ aka na FreeRoute (mpaghara ma ọ bụ ime, site na --profile)",
     "token": "Token onye ahịa Claude kwesịrị iziga (ANTHROPIC_AUTH_TOKEN)",
-    "notRunning": "Enweghị ike iru OmniRoute na {port}. Jiri 'omniroute serve' bido ya.",
+    "notRunning": "Enweghị ike iru FreeRoute na {port}. Jiri 'freeroute serve' bido ya.",
     "notFound": "Ahụghị CLI 'claude' na PATH."
   },
   "run": {
-    "description": "Jiri OmniRoute malite ebumnuche CLI a na-akwado"
+    "description": "Jiri FreeRoute malite ebumnuche CLI a na-akwado"
   },
   "setupClaude": {
-    "description": "Mepụta profaịlụ Claude Code na ~/.claude/profiles site na katalọgụ modelụ OmniRoute"
+    "description": "Mepụta profaịlụ Claude Code na ~/.claude/profiles site na katalọgụ modelụ FreeRoute"
   },
   "connect": {
-    "description": "Jikọọ na sava OmniRoute dị anya wee banye na ọnọdụ dị anya"
+    "description": "Jikọọ na sava FreeRoute dị anya wee banye na ọnọdụ dị anya"
   },
   "tokens": {
     "description": "Jikwaa token nnweta CLI nwere oke (ọnọdụ dị anya)"
@@ -1314,10 +1314,10 @@
     "description": "Họrọ provider+model site na sava na-arụ ọrụ ma hazie CLI mpaghara a na-akwado"
   },
   "launchCodex": {
-    "description": "Malite Codex CLI nke e duziri na OmniRoute (VPS mpaghara ma ọ bụ nke dị anya)"
+    "description": "Malite Codex CLI nke e duziri na FreeRoute (VPS mpaghara ma ọ bụ nke dị anya)"
   },
   "setupCodex": {
-    "description": "Mepụta faịlụ profaịlụ ~/.codex site na katalọgụ modelụ OmniRoute dị ndụ"
+    "description": "Mepụta faịlụ profaịlụ ~/.codex site na katalọgụ modelụ FreeRoute dị ndụ"
   },
   "packs": {
     "description": "Jikwaa ngwugwu runtime ndị nhọrọ (ML / akpaaka ihe nchọgharị)",
@@ -1330,7 +1330,7 @@
     "errUnknown": "ngwugwu amaghi: {name}",
     "errNoIndex": "ahụghị ndeksi ngwugwu; tinye --source <dir> nke nwere payload ngwugwu (ngwugwu desktop na-ebunye ya n'akụkụ app ahụ)",
     "installed": "arụnyere ma nyochaa ngwugwu \"{name}\" na {dir}",
-    "restartHint": "malitegharịa sava OmniRoute (ma ọ bụ app desktop) ka runtime wee mata ngwugwu ahụ",
+    "restartHint": "malitegharịa sava FreeRoute (ma ọ bụ app desktop) ka runtime wee mata ngwugwu ahụ",
     "removed": "ewepụla ngwugwu \"{name}\"",
     "notInstalled": "awụnyeghị ngwugwu \"{name}\"",
     "verifyOk": "a nyochachara ngwugwu niile arụnyere nke ọma",

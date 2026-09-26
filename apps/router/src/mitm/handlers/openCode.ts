@@ -3,7 +3,7 @@
  *
  * Host: `opencode.ai` (Zen endpoint family).
  * Format: OpenAI-compatible Chat Completions — `body.model` is rewritten to
- * the mapped target and the request is forwarded to the OmniRoute router.
+ * the mapped target and the request is forwarded to the FreeRoute router.
  */
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AgentId } from "../types";
@@ -30,7 +30,7 @@ export class OpenCodeHandler extends MitmHandlerBase {
 
       if (!upstream.ok) {
         const errText = await upstream.text().catch(() => "");
-        throw new Error(`OmniRoute ${upstream.status}: ${errText}`);
+        throw new Error(`FreeRoute ${upstream.status}: ${errText}`);
       }
 
       const sink = createBoundedCollector();

@@ -26,7 +26,7 @@ export function describeVolatileEnvWarning({ envPath, packageRoot, durableEnvPat
   if (!envPath.startsWith(packageRoot + sep)) return null;
 
   return (
-    `${envPath} lives inside the installed package: updating OmniRoute replaces it. ` +
+    `${envPath} lives inside the installed package: updating FreeRoute replaces it. ` +
     `Move the values you set to ${durableEnvPath}, which updates leave alone.`
   );
 }

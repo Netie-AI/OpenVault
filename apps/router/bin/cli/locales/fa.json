@@ -1,8 +1,8 @@
 {
   "common": {
     "error": "خطا: {message}",
-    "serverOffline": "سرور OmniRoute آفلاین است. با این دستور راه‌اندازی کنید: omniroute serve",
-    "authRequired": "احراز هویت لازم است. OMNIROUTE_API_KEY را تنظیم کنید یا اجرا کنید: omniroute setup",
+    "serverOffline": "سرور FreeRoute آفلاین است. با این دستور راه‌اندازی کنید: freeroute serve",
+    "authRequired": "احراز هویت لازم است. OMNIROUTE_API_KEY را تنظیم کنید یا اجرا کنید: freeroute setup",
     "rateLimited": "محدودیت درخواست رسیده است. پس از {seconds} ثانیه دوباره تلاش کنید.",
     "timeout": "درخواست پس از {ms}ms منقضی شد.",
     "success": "انجام شد.",
@@ -15,7 +15,7 @@
     "yesOpt": "رد کردن تأیید"
   },
   "setup": {
-    "title": "راهاندازی OmniRoute",
+    "title": "راهاندازی FreeRoute",
     "passwordPrompt": "رمز عبور مدیر",
     "providerPrompt": "ارائهدهنده پیشفرض (برای رد کردن خالی بگذارید)",
     "done": "راهاندازی کامل شد",
@@ -30,19 +30,19 @@
     "opencode": "نصب و پیکربندی @omniroute/opencode-plugin همراه برای OpenCode"
   },
   "doctor": {
-    "title": "عیبیاب OmniRoute",
+    "title": "عیبیاب FreeRoute",
     "dbOk": "پایگاه داده: سالم ({path})",
-    "dbMissing": "پایگاه داده: مقداردهی اولیه نشده است — `omniroute setup` را اجرا کنید",
+    "dbMissing": "پایگاه داده: مقداردهی اولیه نشده است — `freeroute setup` را اجرا کنید",
     "portOk": "درگاه {port}: در دسترس",
     "portConflict": "درگاه {port}: توسط فرایند دیگری در حال استفاده است",
     "encryptionOk": "کلید رمزنگاری: پیکربندی شده",
-    "encryptionMissing": "کلید رمزنگاری موجود نیست — `omniroute setup` را اجرا کنید",
+    "encryptionMissing": "کلید رمزنگاری موجود نیست — `freeroute setup` را اجرا کنید",
     "allGood": "همه بررسیها با موفقیت انجام شدند.",
     "warnings": "{count} هشدار — موارد بالا را ببینید."
   },
   "providers": {
     "title": "ارائهدهندگان",
-    "noProviders": "هیچ ارائهدهندهای پیکربندی نشده است. اجرا کنید: omniroute setup",
+    "noProviders": "هیچ ارائهدهندهای پیکربندی نشده است. اجرا کنید: freeroute setup",
     "testing": "در حال آزمایش {name}...",
     "available": "{count} ارائهدهنده در دسترس است",
     "connected": "متصل",
@@ -71,7 +71,7 @@
       "dryRunOpt": "بدون نوشتن تغییرات، آنچه تغییر میکند را نمایش دهید",
       "confirmPrompt": "کلید API اتصال «{name}» ({id}) جایگزین شود؟ [y/N]",
       "dryRunResult": "[dry-run] کلید اتصال «{name}» ({id}) چرخانده میشد. هیچ تغییری انجام نشد.",
-      "oauthHint": "اتصال OAuth — اجرا کنید: omniroute oauth {provider}",
+      "oauthHint": "اتصال OAuth — اجرا کنید: freeroute oauth {provider}",
       "envVarEmpty": "متغیر محیطی {var} تنظیم نشده یا خالی است.",
       "success": "کلید «{name}» چرخانده شد. برای تأیید، `providers test {id}` را اجرا کنید.",
       "testPassed": "آزمون پس از چرخش موفق بود.",
@@ -82,7 +82,7 @@
       "providerOpt": "فیلتر بر اساس نام ارائهدهنده",
       "header": "شناسه     ارائهدهنده    نام                      وضعیت انقضا  وضعیت آزمون  پایان دورهٔ انتظار",
       "noData": "هیچ دادهای برای اتصال ارائهدهنده موجود نیست.",
-      "requiresServer": "برای providers status، سرور OmniRoute باید در حال اجرا باشد."
+      "requiresServer": "برای providers status، سرور FreeRoute باید در حال اجرا باشد."
     }
   },
   "keys": {
@@ -90,8 +90,8 @@
     "addDescription": "افزودن یا بهروزرسانی یک کلید API برای ارائهدهنده",
     "listDescription": "فهرست همهٔ کلیدهای API پیکربندیشده",
     "removeDescription": "حذف کلید API یک ارائهدهنده",
-    "regenerateDescription": "تولید مجدد یک کلید API متعلق به OmniRoute",
-    "revokeDescription": "لغو یک کلید API متعلق به OmniRoute",
+    "regenerateDescription": "تولید مجدد یک کلید API متعلق به FreeRoute",
+    "revokeDescription": "لغو یک کلید API متعلق به FreeRoute",
     "revealDescription": "نمایش مقدار پنهاننشدهٔ کلید API",
     "usageDescription": "نمایش استفادههای اخیر از یک کلید API",
     "usageLimitOpt": "تعداد درخواستهای اخیر",
@@ -142,7 +142,7 @@
     "warning": "⚠ این کار کلیدهای API و توکنهای OAuth رمزگشاییشده را بهصورت متن ساده نمایش میدهد/مینویسد. مطمئن شوید صفحهنمایش، تاریخچه پوسته و هر فایل خروجی شما خصوصی باقی میماند.",
     "confirmHeading": "⚠ هشدار: این کار اطلاعات احراز هویت رمزگشاییشده ارائهدهنده را بهصورت متن ساده برونبری میکند",
     "confirmBody": "این فرمان apiKey، accessToken، refreshToken و\nidToken را برای اتصال(های) انتخابشده رمزگشایی کرده و نمایش میدهد/مینویسد. با خروجی مانند یک راز برخورد کنید.",
-    "confirmFooter": "برای تأیید، اجرا کنید:\n  omniroute auth export --force",
+    "confirmFooter": "برای تأیید، اجرا کنید:\n  freeroute auth export --force",
     "missingKey": "برای برونبری اطلاعات احراز هویت، STORAGE_ENCRYPTION_KEY الزامی است.",
     "notFound": "اتصال یافت نشد: {id}",
     "invalidFormat": "قالب نامعتبر: {format}. از json یا env استفاده کنید."
@@ -220,10 +220,10 @@
     "reasoning": "سطح تلاش برای استدلال (low|medium|high)",
     "thinking": "بودجه توکن برای تفکر توسعهیافته",
     "explain": "درخت جایگزینها و بازه هزینه را در stderr چاپ کن",
-    "noCombo": "هیچ ترکیب منطبقی پیدا نشد. یکی را با این دستور پیکربندی کن: omniroute combo create"
+    "noCombo": "هیچ ترکیب منطبقی پیدا نشد. یکی را با این دستور پیکربندی کن: freeroute combo create"
   },
   "chat": {
-    "description": "ارسال یک پرامپت گفتوگوی یکباره به OmniRoute",
+    "description": "ارسال یک پرامپت گفتوگوی یکباره به FreeRoute",
     "file": "خواندن پرامپت از فایل",
     "stdin": "خواندن پرامپت از stdin",
     "system": "پرامپت سیستم",
@@ -242,8 +242,8 @@
     }
   },
   "serve": {
-    "description": "راهاندازی سرور OmniRoute (عمل پیشفرض)",
-    "starting": "در حال راهاندازی سرور OmniRoute روی پورت {port}...",
+    "description": "راهاندازی سرور FreeRoute (عمل پیشفرض)",
+    "starting": "در حال راهاندازی سرور FreeRoute روی پورت {port}...",
     "ready": "در http://localhost:{port} آماده است",
     "stopping": "در حال توقف سرور (PID {pid})...",
     "stopped": "سرور متوقف شد.",
@@ -262,7 +262,7 @@
   },
   "backup": {
     "title": "پشتیبانگیری",
-    "description": "ایجاد نسخه پشتیبان از دادههای OmniRoute",
+    "description": "ایجاد نسخه پشتیبان از دادههای FreeRoute",
     "creating": "در حال ایجاد نسخه پشتیبان...",
     "done": "نسخه پشتیبان در {path} ذخیره شد",
     "noFiles": "فایلی برای پشتیبانگیری وجود ندارد (پایگاه داده راهاندازی نشده است)",
@@ -274,7 +274,7 @@
     "noBackups": "هیچ نسخهٔ پشتیبانی یافت نشد.",
     "notFound": "نسخهٔ پشتیبان یافت نشد: {name}",
     "confirmRestore": "دادههای فعلی با نسخهٔ پشتیبان مربوط به {ts} بازنویسی شوند؟",
-    "createDescription": "ایجاد نسخهٔ پشتیبان از دادههای OmniRoute",
+    "createDescription": "ایجاد نسخهٔ پشتیبان از دادههای FreeRoute",
     "nameOpt": "نام سفارشی نسخهٔ پشتیبان",
     "cloudOpt": "بارگذاری نسخهٔ پشتیبان در فضای ذخیرهسازی ابری",
     "encryptOpt": "رمزگذاری نسخهٔ پشتیبان با AES-256-GCM",
@@ -292,14 +292,14 @@
       "statusDescription": "نمایش وضعیت فعلی زمانبندی پشتیبانگیری",
       "cronOpt": "عبارت Cron برای زمانبندی (پیشفرض: هر روز ساعت ۳ صبح)",
       "enabled": "پشتیبانگیری خودکار فعال شد (cron: {cron}).",
-      "hint": "زمانبندی هنگام راهاندازی توسط omniroute serve خوانده میشود.",
+      "hint": "زمانبندی هنگام راهاندازی توسط freeroute serve خوانده میشود.",
       "disabled": "پشتیبانگیری خودکار غیرفعال شد.",
       "notConfigured": "هیچ زمانبندی پشتیبانگیری پیکربندی نشده است."
     }
   },
   "health": {
     "description": "بررسی سلامت سرور و وضعیت مؤلفهها",
-    "noServer": "سرور در حال اجرا نیست. با این دستور راهاندازی کنید: omniroute serve",
+    "noServer": "سرور در حال اجرا نیست. با این دستور راهاندازی کنید: freeroute serve",
     "title": "سلامت",
     "status": "وضعیت: {status}",
     "uptime": "مدت فعالیت: {uptime}",
@@ -308,21 +308,21 @@
   },
   "quota": {
     "description": "نمایش میزان استفاده از سهمیهٔ ارائهدهنده",
-    "noServer": "سرور در حال اجرا نیست. با این دستور راهاندازی کنید: omniroute serve",
+    "noServer": "سرور در حال اجرا نیست. با این دستور راهاندازی کنید: freeroute serve",
     "noData": "اطلاعاتی دربارهٔ سهمیه موجود نیست."
   },
   "cache": {
     "description": "مدیریت حافظهٔ نهان پاسخها",
-    "noServer": "سرور در حال اجرا نیست. با این دستور راهاندازی کنید: omniroute serve",
+    "noServer": "سرور در حال اجرا نیست. با این دستور راهاندازی کنید: freeroute serve",
     "cleared": "حافظهٔ نهان پاک شد.",
     "clearFailed": "پاکسازی حافظهٔ نهان ناموفق بود."
   },
   "redis": {
-    "description": "راه‌اندازی کانتینر Redis محلی با یک کلیک (Podman یا Docker) برای حافظه پنهان و ردیابی سهمیه OmniRoute"
+    "description": "راه‌اندازی کانتینر Redis محلی با یک کلیک (Podman یا Docker) برای حافظه پنهان و ردیابی سهمیه FreeRoute"
   },
   "test": {
     "description": "آزمایش اتصال به یک ارائهدهنده",
-    "noServer": "سرور در حال اجرا نیست. آن را با این دستور راهاندازی کنید: omniroute serve",
+    "noServer": "سرور در حال اجرا نیست. آن را با این دستور راهاندازی کنید: freeroute serve",
     "testing": "در حال آزمایش {provider} / {model}...",
     "passed": "اتصال با موفقیت برقرار شد!",
     "failed": "اتصال ناموفق بود: {error}",
@@ -334,7 +334,7 @@
     "saved": "نتایج در {path} ذخیره شدند",
     "compareTitle": "مقایسه مدلها",
     "compareMinTwo": "برای --compare حداقل دو مدل لازم است (جداشده با ویرگول)",
-    "noProviders": "هیچ ارائهدهندهای پیکربندی نشده است. یکی را با این دستور اضافه کنید: omniroute keys add"
+    "noProviders": "هیچ ارائهدهندهای پیکربندی نشده است. یکی را با این دستور اضافه کنید: freeroute keys add"
   },
   "update": {
     "checking": "در حال بررسی بهروزرسانیها...",
@@ -348,7 +348,7 @@
     "running": "سرور MCP در حال اجرا است ({transport})",
     "stopped": "سرور MCP متوقف شد.",
     "restarted": "سرور MCP مجدداً راهاندازی شد.",
-    "stoppedHint": "برای فعالکردن آن، `omniroute mcp enable` را اجرا کنید.",
+    "stoppedHint": "برای فعالکردن آن، `freeroute mcp enable` را اجرا کنید.",
     "enabled": "سرور MCP فعال شد.",
     "disabled": "سرور MCP غیرفعال شد.",
     "enable": {
@@ -416,7 +416,7 @@
     }
   },
   "policy": {
-    "description": "مدیریت سیاستهای مجوزدهی OmniRoute",
+    "description": "مدیریت سیاستهای مجوزدهی FreeRoute",
     "list": {
       "description": "فهرستکردن سیاستها",
       "kind": "فیلتر بر اساس نوع (allow|deny|rate-limit|cost-cap)",
@@ -453,7 +453,7 @@
     }
   },
   "compression": {
-    "description": "پیکربندی و بررسی خط لوله فشردهسازی OmniRoute",
+    "description": "پیکربندی و بررسی خط لوله فشردهسازی FreeRoute",
     "status": {
       "description": "نمایش وضعیت و تنظیمات فعلی فشردهسازی"
     },
@@ -507,18 +507,18 @@
     "confirmRotate": "URL تونل {type} تغییر کند؟ (یک URL جدید ایجاد خواهد شد)"
   },
   "stop": {
-    "description": "توقف سرور OmniRoute",
+    "description": "توقف سرور FreeRoute",
     "stopping": "در حال توقف سرور (PID {pid})...",
     "stopped": "سرور متوقف شد.",
     "notRunning": "هیچ سروری در حال اجرا نیست.",
     "portFallback": "هیچ فایل PID یافت نشد؛ تلاش برای توقف بر اساس پورت..."
   },
   "restart": {
-    "description": "راهاندازی مجدد سرور OmniRoute",
-    "restarting": "در حال راهاندازی مجدد سرور OmniRoute..."
+    "description": "راهاندازی مجدد سرور FreeRoute",
+    "restarting": "در حال راهاندازی مجدد سرور FreeRoute..."
   },
   "dashboard": {
-    "description": "باز کردن داشبورد OmniRoute در مرورگر",
+    "description": "باز کردن داشبورد FreeRoute در مرورگر",
     "opening": "در حال باز کردن داشبورد در {url}",
     "urlOnly": "چاپ URL داشبورد بدون باز کردن مرورگر",
     "tui": "باز کردن داشبورد تعاملی TUI (رابط کاربری ترمینال، ۷ زبانه)"
@@ -526,7 +526,7 @@
   "models": {
     "description": "فهرست مدلهای موجود (نیازمند سرور)",
     "search": "فیلتر کردن مدلها بر اساس شناسه، نام، ارائهدهنده یا توضیحات",
-    "noServer": "سرور در حال اجرا نیست. با این دستور راهاندازی کنید: omniroute serve",
+    "noServer": "سرور در حال اجرا نیست. با این دستور راهاندازی کنید: freeroute serve",
     "noModels": "هیچ مدلی یافت نشد."
   },
   "audit": {
@@ -558,7 +558,7 @@
     }
   },
   "skills": {
-    "description": "مدیریت مهارتهای OmniRoute (sandbox، builtin، custom، hybrid، skillssh)",
+    "description": "مدیریت مهارتهای FreeRoute (sandbox، builtin، custom، hybrid، skillssh)",
     "list": {
       "description": "فهرست مهارتهای نصبشده",
       "type": "فیلتر بر اساس نوع (sandbox|custom|builtin|hybrid|skillssh)",
@@ -631,7 +631,7 @@
     }
   },
   "memory": {
-    "description": "مدیریت حافظه مکالمهای OmniRoute ‏(FTS5 + vector)",
+    "description": "مدیریت حافظه مکالمهای FreeRoute ‏(FTS5 + vector)",
     "search": {
       "description": "جستوجوی ورودیهای حافظه با پرسوجوی معنایی",
       "type": "فیلتر بر اساس نوع حافظه (user|feedback|project|reference)",
@@ -789,7 +789,7 @@
     }
   },
   "webhooks": {
-    "description": "مدیریت وبهوکهای OmniRoute",
+    "description": "مدیریت وبهوکهای FreeRoute",
     "events": {
       "description": "فهرست همه انواع رویداد وبهوک موجود"
     },
@@ -821,14 +821,14 @@
     }
   },
   "program": {
-    "description": "OmniRoute — روتر هوشمند هوش مصنوعی با fallback خودکار",
+    "description": "FreeRoute — روتر هوشمند هوش مصنوعی با fallback خودکار",
     "version": "نمایش نسخه و خروج",
     "output": "فرمت خروجی (table, json, jsonl, csv)",
     "quiet": "حذف خروجی غیر ضروری",
     "no_color": "غیرفعال کردن خروجی رنگی",
     "timeout": "تایم‌اوت درخواست HTTP به میلی‌ثانیه",
-    "api_key": "کلید API برای سرور OmniRoute",
-    "base_url": "URL پایه سرور OmniRoute",
+    "api_key": "کلید API برای سرور FreeRoute",
+    "base_url": "URL پایه سرور FreeRoute",
     "context": "زمینه/پروفایل سرور برای این دستور",
     "lang": "تنظیم زبان نمایش CLI (OMNIROUTE_LANG را نادیده می‌گیرد)"
   },
@@ -1079,7 +1079,7 @@
     }
   },
   "openapi": {
-    "description": "دسترسی و آزمایش مشخصات OpenAPI مربوط به OmniRoute",
+    "description": "دسترسی و آزمایش مشخصات OpenAPI مربوط به FreeRoute",
     "dump": {
       "description": "تخلیه مشخصات OpenAPI در stdout یا فایل",
       "format": "قالب خروجی: yaml|json (پیشفرض: yaml)",
@@ -1149,7 +1149,7 @@
     }
   },
   "open": {
-    "description": "باز کردن یک صفحه مشخص از داشبورد OmniRoute در مرورگر",
+    "description": "باز کردن یک صفحه مشخص از داشبورد FreeRoute در مرورگر",
     "url": "فقط URL را نمایش بده، مرورگر را باز نکن"
   },
   "telemetry": {
@@ -1166,7 +1166,7 @@
     }
   },
   "sync": {
-    "description": "همگامسازی پیکربندی بین نمونههای OmniRoute",
+    "description": "همگامسازی پیکربندی بین نمونههای FreeRoute",
     "push": {
       "description": "ارسال پیکربندی به فضای ابری یا نمونه راهدور",
       "target": "مقصد (cloud یا context:name)",
@@ -1222,8 +1222,8 @@
       "listTitle": "زبانهای موجود",
       "current": "زبان: {code} ({name})",
       "saved": "زبان روی {code} ({name}) تنظیم شد.",
-      "noCode": "کد زبان الزامی است. برای مشاهده کدهای موجود، 'omniroute config lang list' را اجرا کنید.",
-      "unknown": "کد زبان ناشناخته است: {code}. برای مشاهده کدهای موجود، 'omniroute config lang list' را اجرا کنید.",
+      "noCode": "کد زبان الزامی است. برای مشاهده کدهای موجود، 'freeroute config lang list' را اجرا کنید.",
+      "unknown": "کد زبان ناشناخته است: {code}. برای مشاهده کدهای موجود، 'freeroute config lang list' را اجرا کنید.",
       "alreadySet": "زبان از قبل روی {code} تنظیم شده است.",
       "envHint": "نکته: همچنین میتوانید OMNIROUTE_LANG={code} را در محیط خود تنظیم کنید."
     }
@@ -1242,7 +1242,7 @@
     "filter": "فیلتر بر اساس سطح (error,warn,info) — با جداکننده ویرگول",
     "lines": "تعداد خطوط برای دریافت",
     "timeout": "مهلت اتصال برحسب میلیثانیه",
-    "baseUrl": "نشانی پایه API OmniRoute",
+    "baseUrl": "نشانی پایه API FreeRoute",
     "requestId": "فیلتر بر اساس شناسه درخواست",
     "apiKey": "فیلتر بر اساس کلید API",
     "combo": "فیلتر بر اساس نام ترکیب",
@@ -1258,10 +1258,10 @@
     "description": "کنترل نماد سینی سیستم",
     "show": "نمایش نماد سینی (اگر سرور با --tray در حال اجرا است)",
     "hide": "پنهان کردن نماد سینی",
-    "quit": "خروج از OmniRoute از طریق سینی"
+    "quit": "خروج از FreeRoute از طریق سینی"
   },
   "autostart": {
-    "description": "مدیریت اجرای خودکار OmniRoute هنگام راهاندازی سیستم (Linux: سرویس کاربر systemd)",
+    "description": "مدیریت اجرای خودکار FreeRoute هنگام راهاندازی سیستم (Linux: سرویس کاربر systemd)",
     "enable": "فعالسازی اجرای خودکار هنگام راهاندازی سیستم",
     "disable": "غیرفعالسازی اجرای خودکار هنگام راهاندازی سیستم",
     "toggle": "تغییر وضعیت اجرای خودکار هنگام راهاندازی سیستم",
@@ -1293,19 +1293,19 @@
     "scaffold": "ایجاد ساختار اولیه یک افزونه جدید"
   },
   "launch": {
-    "description": "اجرای Claude Code با اتصال به OmniRoute (محلی یا راه دور، با --profile)",
+    "description": "اجرای Claude Code با اتصال به FreeRoute (محلی یا راه دور، با --profile)",
     "token": "توکنی که کلاینت Claude باید ارسال کند (ANTHROPIC_AUTH_TOKEN)",
-    "notRunning": "OmniRoute در {port} در دسترس نیست. آن را با 'omniroute serve' راهاندازی کنید.",
+    "notRunning": "FreeRoute در {port} در دسترس نیست. آن را با 'freeroute serve' راهاندازی کنید.",
     "notFound": "CLI مربوط به 'claude' در PATH یافت نشد."
   },
   "run": {
-    "description": "اجرای یک مقصد CLI پشتیبانیشده از طریق OmniRoute"
+    "description": "اجرای یک مقصد CLI پشتیبانیشده از طریق FreeRoute"
   },
   "setupClaude": {
-    "description": "ایجاد پروفایلهای Claude Code در ~/.claude/profiles از کاتالوگ مدل OmniRoute"
+    "description": "ایجاد پروفایلهای Claude Code در ~/.claude/profiles از کاتالوگ مدل FreeRoute"
   },
   "connect": {
-    "description": "اتصال به یک سرور راه دور OmniRoute و ورود به حالت راه دور"
+    "description": "اتصال به یک سرور راه دور FreeRoute و ورود به حالت راه دور"
   },
   "tokens": {
     "description": "مدیریت توکنهای دسترسی CLI با دامنه مشخص (حالت راه دور)"
@@ -1314,10 +1314,10 @@
     "description": "انتخاب یک ارائهدهنده+مدل از سرور فعال و پیکربندی یک CLI محلی پشتیبانیشده"
   },
   "launchCodex": {
-    "description": "اجرای Codex CLI با اتصال به OmniRoute (محلی یا VPS راه دور)"
+    "description": "اجرای Codex CLI با اتصال به FreeRoute (محلی یا VPS راه دور)"
   },
   "setupCodex": {
-    "description": "ایجاد فایلهای پروفایل ~/.codex از کاتالوگ زنده مدل OmniRoute"
+    "description": "ایجاد فایلهای پروفایل ~/.codex از کاتالوگ زنده مدل FreeRoute"
   },
   "packs": {
     "description": "مدیریت بستههای اختیاری زمان اجرا (ML / خودکارسازی مرورگر)",
@@ -1330,7 +1330,7 @@
     "errUnknown": "بسته ناشناخته: {name}",
     "errNoIndex": "فهرست بستهها یافت نشد؛ --source <dir> را با پوشه حاوی محتوای بسته وارد کنید (بستههای دسکتاپ آن را در کنار برنامه شامل میشوند)",
     "installed": "بسته «{name}» در {dir} نصب و اعتبارسنجی شد",
-    "restartHint": "سرور OmniRoute (یا برنامه دسکتاپ) را دوباره راهاندازی کنید تا محیط اجرا بسته را شناسایی کند",
+    "restartHint": "سرور FreeRoute (یا برنامه دسکتاپ) را دوباره راهاندازی کنید تا محیط اجرا بسته را شناسایی کند",
     "removed": "بسته «{name}» حذف شد",
     "notInstalled": "بسته «{name}» نصب نشده بود",
     "verifyOk": "همه بستههای نصبشده تأیید شدند",

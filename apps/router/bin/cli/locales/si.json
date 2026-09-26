@@ -1,8 +1,8 @@
 {
   "common": {
     "error": "දෝෂය: {message}",
-    "serverOffline": "OmniRoute සේවාදායකය නොබැඳියි. එය ආරම්භ කිරීමට: omniroute serve",
-    "authRequired": "සත්යාපනය අවශ්යයි. OMNIROUTE_API_KEY සකසන්න හෝ මෙය ධාවනය කරන්න: omniroute setup",
+    "serverOffline": "FreeRoute සේවාදායකය නොබැඳියි. එය ආරම්භ කිරීමට: freeroute serve",
+    "authRequired": "සත්යාපනය අවශ්යයි. OMNIROUTE_API_KEY සකසන්න හෝ මෙය ධාවනය කරන්න: freeroute setup",
     "rateLimited": "ඉල්ලීම් සීමාව ඉක්මවා ඇත. තත්පර {seconds}කට පසු නැවත උත්සාහ කරන්න.",
     "timeout": "මිලි තත්පර {ms}කට පසු ඉල්ලීමේ කාලය ඉකුත් විය.",
     "success": "නිමයි.",
@@ -15,7 +15,7 @@
     "yesOpt": "තහවුරු කිරීමේ විමසුම මඟ හරින්න"
   },
   "setup": {
-    "title": "OmniRoute පිහිටුවීම",
+    "title": "FreeRoute පිහිටුවීම",
     "passwordPrompt": "පරිපාලක මුරපදය",
     "providerPrompt": "පෙරනිමි සැපයුම්කරු (මඟ හැරීමට හිස්ව තබන්න)",
     "done": "පිහිටුවීම සම්පූර්ණයි",
@@ -30,19 +30,19 @@
     "opencode": "OpenCode සඳහා ඇතුළත් කර ඇති @omniroute/opencode-plugin ස්ථාපනය කර වින්යාස කරන්න"
   },
   "doctor": {
-    "title": "OmniRoute පද්ධති පරීක්ෂාව",
+    "title": "FreeRoute පද්ධති පරීක්ෂාව",
     "dbOk": "දත්ත සමුදාය: හරි ({path})",
-    "dbMissing": "දත්ත සමුදාය ආරම්භ කර නැත — `omniroute setup` ධාවනය කරන්න",
+    "dbMissing": "දත්ත සමුදාය ආරම්භ කර නැත — `freeroute setup` ධාවනය කරන්න",
     "portOk": "තොට {port}: ලබා ගත හැකියි",
     "portConflict": "තොට {port}: වෙනත් ක්රියාවලියක් භාවිත කරයි",
     "encryptionOk": "සංකේතන යතුර: වින්යාස කර ඇත",
-    "encryptionMissing": "සංකේතන යතුර නොමැත — `omniroute setup` ධාවනය කරන්න",
+    "encryptionMissing": "සංකේතන යතුර නොමැත — `freeroute setup` ධාවනය කරන්න",
     "allGood": "සියලු පරීක්ෂණ සමත් විය.",
     "warnings": "අනතුරු ඇඟවීම් {count}ක් — ඉහළ බලන්න."
   },
   "providers": {
     "title": "සැපයුම්කරුවන්",
-    "noProviders": "කිසිදු සැපයුම්කරුවෙකු වින්යාස කර නැත. ධාවනය කරන්න: omniroute setup",
+    "noProviders": "කිසිදු සැපයුම්කරුවෙකු වින්යාස කර නැත. ධාවනය කරන්න: freeroute setup",
     "testing": "{name} පරීක්ෂා කරමින්...",
     "available": "සැපයුම්කරුවන් {count}ක් ලබා ගත හැකියි",
     "connected": "සම්බන්ධයි",
@@ -71,7 +71,7 @@
       "dryRunOpt": "ලිවීමකින් තොරව වෙනස් විය හැකි දේ මුද්රණය කරන්න",
       "confirmPrompt": "\"{name}\" ({id}) සම්බන්ධතාව සඳහා API යතුර ප්රතිස්ථාපනය කරන්නද? [y/N]",
       "dryRunResult": "[dry-run] \"{name}\" ({id}) සඳහා යතුර මාරු කරනු ඇත. කිසිදු වෙනසක් සිදු කර නැත.",
-      "oauthHint": "OAuth සම්බන්ධතාව — ධාවනය කරන්න: omniroute oauth {provider}",
+      "oauthHint": "OAuth සම්බන්ධතාව — ධාවනය කරන්න: freeroute oauth {provider}",
       "envVarEmpty": "{var} පරිසර විචල්යය සකසා නැත හෝ හිස්ය.",
       "success": "\"{name}\" සඳහා යතුර මාරු කරන ලදී. සත්යාපනය කිරීමට `providers test {id}` ධාවනය කරන්න.",
       "testPassed": "යතුර මාරු කිරීමෙන් පසු පරීක්ෂණය සාර්ථක විය.",
@@ -82,7 +82,7 @@
       "providerOpt": "සපයන්නාගේ නම අනුව පෙරහන් කරන්න",
       "header": "ID         සපයන්නා       නම                     කල් ඉකුත් වීමේ තත්ත්වය  පරීක්ෂණ තත්ත්වය  විරාමය අවසන් වන වේලාව",
       "noData": "සපයන්නාගේ සම්බන්ධතා දත්ත නොමැත.",
-      "requiresServer": "providers status සඳහා OmniRoute සේවාදායකය ක්රියාත්මක වෙමින් තිබිය යුතුය."
+      "requiresServer": "providers status සඳහා FreeRoute සේවාදායකය ක්රියාත්මක වෙමින් තිබිය යුතුය."
     }
   },
   "keys": {
@@ -90,8 +90,8 @@
     "addDescription": "සපයන්නෙකු සඳහා API යතුරක් එක් කරන්න හෝ යාවත්කාලීන කරන්න",
     "listDescription": "වින්යාස කර ඇති සියලුම API යතුරු ලැයිස්තුගත කරන්න",
     "removeDescription": "සපයන්නෙකු සඳහා API යතුරක් ඉවත් කරන්න",
-    "regenerateDescription": "OmniRoute API යතුරක් නැවත ජනනය කරන්න",
-    "revokeDescription": "OmniRoute API යතුරක් අවලංගු කරන්න",
+    "regenerateDescription": "FreeRoute API යතුරක් නැවත ජනනය කරන්න",
+    "revokeDescription": "FreeRoute API යතුරක් අවලංගු කරන්න",
     "revealDescription": "සැඟවීම ඉවත් කළ API යතුරු අගය හෙළි කරන්න",
     "usageDescription": "API යතුරක් සඳහා මෑත භාවිතය පෙන්වන්න",
     "usageLimitOpt": "මෑත ඉල්ලීම් ගණන",
@@ -142,7 +142,7 @@
     "warning": "⚠ මෙය විකේතනය කළ සරල පෙළ API යතුරු සහ OAuth ටෝකන මුද්රණය කරයි/ලියයි. ඔබගේ තිරය, shell ඉතිහාසය සහ ඕනෑම ප්රතිදාන ගොනුවක් පෞද්ගලිකව තබා ගැනීමට වග බලා ගන්න.",
     "confirmHeading": "⚠ අවවාදයයි: මෙය විකේතනය කළ සපයන්නාගේ අක්තපත්ර සරල පෙළ ලෙස අපනයනය කරයි",
     "confirmBody": "මෙම විධානය තෝරාගත් සම්බන්ධතා සඳහා apiKey, accessToken, refreshToken, සහ\nidToken විකේතනය කර මුද්රණය කරයි/ලියයි. ප්රතිදානය රහසක් ලෙස සලකන්න.",
-    "confirmFooter": "තහවුරු කිරීමට, මෙය ධාවනය කරන්න:\n  omniroute auth export --force",
+    "confirmFooter": "තහවුරු කිරීමට, මෙය ධාවනය කරන්න:\n  freeroute auth export --force",
     "missingKey": "අක්තපත්ර නිර්යාත කිරීමට STORAGE_ENCRYPTION_KEY අවශ්ය වේ.",
     "notFound": "සම්බන්ධතාව හමු නොවීය: {id}",
     "invalidFormat": "වලංගු නොවන ආකෘතියකි: {format}. json හෝ env භාවිත කරන්න."
@@ -220,10 +220,10 @@
     "reasoning": "තර්කන ප්රයත්න මට්ටම (low|medium|high)",
     "thinking": "විස්තීර්ණ චින්තන token අයවැය",
     "explain": "fallback ගස සහ පිරිවැය පරාසය stderr වෙත මුද්රණය කරන්න",
-    "noCombo": "ගැළපෙන combo එකක් හමු නොවීය. මෙය භාවිතයෙන් එකක් වින්යාස කරන්න: omniroute combo create"
+    "noCombo": "ගැළපෙන combo එකක් හමු නොවීය. මෙය භාවිතයෙන් එකක් වින්යාස කරන්න: freeroute combo create"
   },
   "chat": {
-    "description": "OmniRoute වෙත එක්වරක් පමණක් භාවිත වන කතාබස් prompt එකක් යවන්න",
+    "description": "FreeRoute වෙත එක්වරක් පමණක් භාවිත වන කතාබස් prompt එකක් යවන්න",
     "file": "ගොනුවෙන් prompt එක කියවන්න",
     "stdin": "stdin වෙතින් prompt එක කියවන්න",
     "system": "පද්ධති prompt එක",
@@ -242,8 +242,8 @@
     }
   },
   "serve": {
-    "description": "OmniRoute සේවාදායකය ආරම්භ කරන්න (පෙරනිමි ක්රියාව)",
-    "starting": "{port} පෝර්ට් එකේ OmniRoute සේවාදායකය ආරම්භ කරමින්...",
+    "description": "FreeRoute සේවාදායකය ආරම්භ කරන්න (පෙරනිමි ක්රියාව)",
+    "starting": "{port} පෝර්ට් එකේ FreeRoute සේවාදායකය ආරම්භ කරමින්...",
     "ready": "http://localhost:{port} හි සූදානම්",
     "stopping": "සේවාදායකය නවත්වමින් (PID {pid})...",
     "stopped": "සේවාදායකය නවත්වන ලදී.",
@@ -262,7 +262,7 @@
   },
   "backup": {
     "title": "උපස්ථ පිටපත",
-    "description": "OmniRoute දත්තවල උපස්ථ පිටපතක් සාදන්න",
+    "description": "FreeRoute දත්තවල උපස්ථ පිටපතක් සාදන්න",
     "creating": "උපස්ථ පිටපත සාදමින්...",
     "done": "උපස්ථ පිටපත {path} වෙත සුරකින ලදී",
     "noFiles": "උපස්ථ කිරීමට ගොනු නොමැත (දත්ත සමුදාය ආරම්භ කර නොමැත)",
@@ -274,7 +274,7 @@
     "noBackups": "උපස්ථ පිටපත් කිසිවක් හමු නොවීය.",
     "notFound": "උපස්ථ පිටපත හමු නොවීය: {name}",
     "confirmRestore": "{ts} දිනැති උපස්ථ පිටපතෙන් වත්මන් දත්ත උඩින් ලියන්නද?",
-    "createDescription": "OmniRoute දත්තවල උපස්ථ පිටපතක් සාදන්න",
+    "createDescription": "FreeRoute දත්තවල උපස්ථ පිටපතක් සාදන්න",
     "nameOpt": "අභිරුචි උපස්ථ නාමය",
     "cloudOpt": "උපස්ථ පිටපත ක්ලවුඩ් ආචයනයට උඩුගත කරන්න",
     "encryptOpt": "AES-256-GCM මඟින් උපස්ථ පිටපත සංකේතනය කරන්න",
@@ -292,14 +292,14 @@
       "statusDescription": "වත්මන් උපස්ථ කාලසටහනේ තත්ත්වය පෙන්වන්න",
       "cronOpt": "කාලසටහන සඳහා Cron ප්රකාශනය (පෙරනිමිය: දිනපතා පෙ.ව. 3ට)",
       "enabled": "ස්වයංක්රීය උපස්ථය සක්රිය කර ඇත (cron: {cron}).",
-      "hint": "ආරම්භයේදී omniroute serve විසින් කාලසටහන කියවනු ලැබේ.",
+      "hint": "ආරම්භයේදී freeroute serve විසින් කාලසටහන කියවනු ලැබේ.",
       "disabled": "ස්වයංක්රීය උපස්ථය අක්රිය කර ඇත.",
       "notConfigured": "උපස්ථ කාලසටහනක් වින්යාස කර නොමැත."
     }
   },
   "health": {
     "description": "සේවාදායකයේ සෞඛ්යය සහ සංරචක තත්ත්වය පරීක්ෂා කරන්න",
-    "noServer": "සේවාදායකය ක්රියාත්මක නොවේ. මෙය භාවිතයෙන් ආරම්භ කරන්න: omniroute serve",
+    "noServer": "සේවාදායකය ක්රියාත්මක නොවේ. මෙය භාවිතයෙන් ආරම්භ කරන්න: freeroute serve",
     "title": "සෞඛ්යය",
     "status": "තත්ත්වය: {status}",
     "uptime": "ක්රියාත්මක කාලය: {uptime}",
@@ -308,21 +308,21 @@
   },
   "quota": {
     "description": "සැපයුම්කරුගේ කෝටා භාවිතය පෙන්වන්න",
-    "noServer": "සේවාදායකය ක්රියාත්මක නොවේ. මෙය භාවිතයෙන් ආරම්භ කරන්න: omniroute serve",
+    "noServer": "සේවාදායකය ක්රියාත්මක නොවේ. මෙය භාවිතයෙන් ආරම්භ කරන්න: freeroute serve",
     "noData": "කෝටා තොරතුරු කිසිවක් නොමැත."
   },
   "cache": {
     "description": "ප්රතිචාර හැඹිලිය කළමනාකරණය කරන්න",
-    "noServer": "සේවාදායකය ක්රියාත්මක නොවේ. මෙය භාවිතයෙන් ආරම්භ කරන්න: omniroute serve",
+    "noServer": "සේවාදායකය ක්රියාත්මක නොවේ. මෙය භාවිතයෙන් ආරම්භ කරන්න: freeroute serve",
     "cleared": "හැඹිලිය හිස් කරන ලදී.",
     "clearFailed": "හැඹිලිය හිස් කිරීමට අසමත් විය."
   },
   "redis": {
-    "description": "OmniRoute හැඹිලිකරණය සහ කෝටා නිරීක්ෂණය සඳහා එක් ක්ලික් කිරීමකින් දේශීය Redis බහාලුමක් (Podman හෝ Docker) දියත් කරන්න"
+    "description": "FreeRoute හැඹිලිකරණය සහ කෝටා නිරීක්ෂණය සඳහා එක් ක්ලික් කිරීමකින් දේශීය Redis බහාලුමක් (Podman හෝ Docker) දියත් කරන්න"
   },
   "test": {
     "description": "සැපයුම්කරු සම්බන්ධතාවක් පරීක්ෂා කරන්න",
-    "noServer": "සේවාදායකය ක්රියාත්මක නොවේ. මෙය භාවිතයෙන් ආරම්භ කරන්න: omniroute serve",
+    "noServer": "සේවාදායකය ක්රියාත්මක නොවේ. මෙය භාවිතයෙන් ආරම්භ කරන්න: freeroute serve",
     "testing": "{provider} / {model} පරීක්ෂා කරමින්...",
     "passed": "සම්බන්ධතාව සාර්ථකයි!",
     "failed": "සම්බන්ධතාව අසාර්ථකයි: {error}",
@@ -334,7 +334,7 @@
     "saved": "ප්රතිඵල {path} වෙත සුරකින ලදී",
     "compareTitle": "මාදිලි සැසඳීම",
     "compareMinTwo": "--compare සඳහා අවම වශයෙන් මාදිලි දෙකක් අවශ්යයි (කොමා මඟින් වෙන් කළ)",
-    "noProviders": "කිසිදු සැපයුම්කරුවෙකු වින්යාස කර නොමැත. මෙය භාවිතයෙන් එක් කරන්න: omniroute keys add"
+    "noProviders": "කිසිදු සැපයුම්කරුවෙකු වින්යාස කර නොමැත. මෙය භාවිතයෙන් එක් කරන්න: freeroute keys add"
   },
   "update": {
     "checking": "යාවත්කාලීන සඳහා පරීක්ෂා කරමින්...",
@@ -348,7 +348,7 @@
     "running": "MCP සේවාදායකය ක්රියාත්මකයි ({transport})",
     "stopped": "MCP සේවාදායකය නවතා ඇත.",
     "restarted": "MCP සේවාදායකය නැවත ආරම්භ කරන ලදී.",
-    "stoppedHint": "එය සක්රීය කිරීමට `omniroute mcp enable` ධාවනය කරන්න.",
+    "stoppedHint": "එය සක්රීය කිරීමට `freeroute mcp enable` ධාවනය කරන්න.",
     "enabled": "MCP සේවාදායකය සක්රීය කර ඇත.",
     "disabled": "MCP සේවාදායකය අක්රීය කර ඇත.",
     "enable": {
@@ -416,7 +416,7 @@
     }
   },
   "policy": {
-    "description": "OmniRoute අවසර ප්රතිපත්ති කළමනාකරණය කරන්න",
+    "description": "FreeRoute අවසර ප්රතිපත්ති කළමනාකරණය කරන්න",
     "list": {
       "description": "ප්රතිපත්ති ලැයිස්තුගත කරන්න",
       "kind": "වර්ගය අනුව පෙරහන් කරන්න (allow|deny|rate-limit|cost-cap)",
@@ -453,7 +453,7 @@
     }
   },
   "compression": {
-    "description": "OmniRoute සම්පීඩන නලමාර්ගය වින්යාස කර පරීක්ෂා කරන්න",
+    "description": "FreeRoute සම්පීඩන නලමාර්ගය වින්යාස කර පරීක්ෂා කරන්න",
     "status": {
       "description": "වත්මන් සම්පීඩන තත්ත්වය සහ සැකසුම් පෙන්වන්න"
     },
@@ -507,18 +507,18 @@
     "confirmRotate": "{type} ටනලයේ URL එක මාරු කරන්නද? (නව URL එකක් ජනනය කෙරේ)"
   },
   "stop": {
-    "description": "OmniRoute සේවාදායකය නතර කරන්න",
+    "description": "FreeRoute සේවාදායකය නතර කරන්න",
     "stopping": "සේවාදායකය නතර කරමින් පවතී (PID {pid})...",
     "stopped": "සේවාදායකය නතර කරන ලදී.",
     "notRunning": "කිසිදු සේවාදායකයක් ක්රියාත්මක නොවේ.",
     "portFallback": "PID ගොනුවක් හමු නොවීය, පෝට් මත පදනම් වූ නැවැත්වීමක් උත්සාහ කරමින් පවතී..."
   },
   "restart": {
-    "description": "OmniRoute සේවාදායකය නැවත ආරම්භ කරන්න",
-    "restarting": "OmniRoute සේවාදායකය නැවත ආරම්භ කරමින්..."
+    "description": "FreeRoute සේවාදායකය නැවත ආරම්භ කරන්න",
+    "restarting": "FreeRoute සේවාදායකය නැවත ආරම්භ කරමින්..."
   },
   "dashboard": {
-    "description": "OmniRoute උපකරණ පුවරුව බ්රවුසරයක විවෘත කරන්න",
+    "description": "FreeRoute උපකරණ පුවරුව බ්රවුසරයක විවෘත කරන්න",
     "opening": "{url} හි උපකරණ පුවරුව විවෘත කරමින්",
     "urlOnly": "බ්රවුසරය විවෘත නොකර උපකරණ පුවරුවේ URL එක පමණක් මුද්රණය කරන්න",
     "tui": "අන්තර්ක්රියාකාරී TUI උපකරණ පුවරුව විවෘත කරන්න (ටර්මිනල් UI, ටැබ් 7ක්)"
@@ -526,7 +526,7 @@
   "models": {
     "description": "ලබා ගත හැකි ආකෘති ලැයිස්තුගත කරන්න (සේවාදායකය අවශ්යයි)",
     "search": "ID, නම, සැපයුම්කරු හෝ විස්තරය අනුව ආකෘති පෙරහන් කරන්න",
-    "noServer": "සේවාදායකය ක්රියාත්මක නොවේ. මෙය භාවිතයෙන් ආරම්භ කරන්න: omniroute serve",
+    "noServer": "සේවාදායකය ක්රියාත්මක නොවේ. මෙය භාවිතයෙන් ආරම්භ කරන්න: freeroute serve",
     "noModels": "ආකෘති කිසිවක් හමු නොවීය."
   },
   "audit": {
@@ -558,7 +558,7 @@
     }
   },
   "skills": {
-    "description": "OmniRoute කුසලතා කළමනාකරණය කරන්න (sandbox, builtin, custom, hybrid, skillssh)",
+    "description": "FreeRoute කුසලතා කළමනාකරණය කරන්න (sandbox, builtin, custom, hybrid, skillssh)",
     "list": {
       "description": "ස්ථාපිත කුසලතා ලැයිස්තුගත කරන්න",
       "type": "වර්ගය අනුව පෙරහන් කරන්න (sandbox|custom|builtin|hybrid|skillssh)",
@@ -631,7 +631,7 @@
     }
   },
   "memory": {
-    "description": "OmniRoute සංවාද මතකය කළමනාකරණය කරන්න (FTS5 + vector)",
+    "description": "FreeRoute සංවාද මතකය කළමනාකරණය කරන්න (FTS5 + vector)",
     "search": {
       "description": "අර්ථමය විමසුමක් මඟින් මතක ඇතුළත් කිරීම් සොයන්න",
       "type": "මතක වර්ගය අනුව පෙරහන් කරන්න (user|feedback|project|reference)",
@@ -789,7 +789,7 @@
     }
   },
   "webhooks": {
-    "description": "OmniRoute webhooks කළමනාකරණය කරන්න",
+    "description": "FreeRoute webhooks කළමනාකරණය කරන්න",
     "events": {
       "description": "ලබා ගත හැකි සියලුම webhook සිදුවීම් වර්ග ලැයිස්තුගත කරන්න"
     },
@@ -821,14 +821,14 @@
     }
   },
   "program": {
-    "description": "OmniRoute — ස්වයංක්රීය විකල්ප මාරුව සහිත බුද්ධිමත් AI රවුටරය",
+    "description": "FreeRoute — ස්වයංක්රීය විකල්ප මාරුව සහිත බුද්ධිමත් AI රවුටරය",
     "version": "අනුවාදය මුද්රණය කර පිටවන්න",
     "output": "ප්රතිදාන ආකෘතිය (table, json, jsonl, csv)",
     "quiet": "අත්යවශ්ය නොවන ප්රතිදානය යටපත් කරන්න",
     "no_color": "වර්ණවත් ප්රතිදානය අක්රිය කරන්න",
     "timeout": "HTTP ඉල්ලීමේ කල් ඉකුත් වීම මිලි තත්පරවලින්",
-    "api_key": "OmniRoute සේවාදායකය සඳහා API යතුර",
-    "base_url": "OmniRoute සේවාදායකයේ මූලික URL",
+    "api_key": "FreeRoute සේවාදායකය සඳහා API යතුර",
+    "base_url": "FreeRoute සේවාදායකයේ මූලික URL",
     "context": "මෙම විධානය සඳහා භාවිත කළ යුතු සේවාදායක සන්දර්භය/පැතිකඩ",
     "lang": "CLI සංදර්ශන භාෂාව සකසන්න (OMNIROUTE_LANG අභිබවා යයි)"
   },
@@ -1079,7 +1079,7 @@
     }
   },
   "openapi": {
-    "description": "OmniRoute OpenAPI පිරිවිතරට ප්රවේශ වී පරීක්ෂා කරන්න",
+    "description": "FreeRoute OpenAPI පිරිවිතරට ප්රවේශ වී පරීක්ෂා කරන්න",
     "dump": {
       "description": "OpenAPI පිරිවිතර stdout හෝ ගොනුවකට නිකුත් කරන්න",
       "format": "ප්රතිදාන ආකෘතිය: yaml|json (පෙරනිමිය: yaml)",
@@ -1149,7 +1149,7 @@
     }
   },
   "open": {
-    "description": "නිශ්චිත OmniRoute උපකරණ පුවරු පිටුවක් බ්රවුසරයේ විවෘත කරන්න",
+    "description": "නිශ්චිත FreeRoute උපකරණ පුවරු පිටුවක් බ්රවුසරයේ විවෘත කරන්න",
     "url": "URL පමණක් මුද්රණය කරන්න, බ්රවුසරය විවෘත නොකරන්න"
   },
   "telemetry": {
@@ -1166,7 +1166,7 @@
     }
   },
   "sync": {
-    "description": "OmniRoute අවස්ථා අතර වින්යාසය සමමුහුර්ත කරන්න",
+    "description": "FreeRoute අවස්ථා අතර වින්යාසය සමමුහුර්ත කරන්න",
     "push": {
       "description": "වින්යාසය ක්ලවුඩ් වෙත හෝ දුරස්ථ අවස්ථාවකට යවන්න",
       "target": "ඉලක්කය (cloud හෝ context:name)",
@@ -1222,8 +1222,8 @@
       "listTitle": "ලබා ගත හැකි භාෂා",
       "current": "භාෂාව: {code} ({name})",
       "saved": "භාෂාව {code} ({name}) ලෙස සකසා ඇත.",
-      "noCode": "භාෂා කේතයක් අවශ්යයි. ලබා ගත හැකි කේත බැලීමට 'omniroute config lang list' ධාවනය කරන්න.",
-      "unknown": "නොදන්නා භාෂා කේතය: {code}. ලබා ගත හැකි කේත බැලීමට 'omniroute config lang list' ධාවනය කරන්න.",
+      "noCode": "භාෂා කේතයක් අවශ්යයි. ලබා ගත හැකි කේත බැලීමට 'freeroute config lang list' ධාවනය කරන්න.",
+      "unknown": "නොදන්නා භාෂා කේතය: {code}. ලබා ගත හැකි කේත බැලීමට 'freeroute config lang list' ධාවනය කරන්න.",
       "alreadySet": "භාෂාව දැනටමත් {code} ලෙස සකසා ඇත.",
       "envHint": "ඉඟිය: ඔබගේ පරිසරය තුළ OMNIROUTE_LANG={code} ලෙසද සැකසිය හැක."
     }
@@ -1242,7 +1242,7 @@
     "filter": "මට්ටම අනුව පෙරහන් කරන්න (error,warn,info) — කොමා මඟින් වෙන් කළ",
     "lines": "ලබා ගත යුතු පේළි ගණන",
     "timeout": "සම්බන්ධතා කල් ඉකුත්වීම ms වලින්",
-    "baseUrl": "OmniRoute API මූලික URL",
+    "baseUrl": "FreeRoute API මූලික URL",
     "requestId": "ඉල්ලීම් ID අනුව පෙරහන් කරන්න",
     "apiKey": "API යතුර අනුව පෙරහන් කරන්න",
     "combo": "කොම්බෝ නාමය අනුව පෙරහන් කරන්න",
@@ -1258,10 +1258,10 @@
     "description": "පද්ධති ට්රේ නිරූපකය පාලනය කරන්න",
     "show": "ට්රේ නිරූපකය පෙන්වන්න (සේවාදායකය --tray සමඟ ක්රියාත්මක වන්නේ නම්)",
     "hide": "ට්රේ නිරූපකය සඟවන්න",
-    "quit": "ට්රේ හරහා OmniRoute වෙතින් ඉවත් වන්න"
+    "quit": "ට්රේ හරහා FreeRoute වෙතින් ඉවත් වන්න"
   },
   "autostart": {
-    "description": "පද්ධතිය ආරම්භ වන විට OmniRoute ස්වයංක්රීයව ආරම්භ වීම කළමනාකරණය කරන්න (Linux: systemd පරිශීලක සේවාව)",
+    "description": "පද්ධතිය ආරම්භ වන විට FreeRoute ස්වයංක්රීයව ආරම්භ වීම කළමනාකරණය කරන්න (Linux: systemd පරිශීලක සේවාව)",
     "enable": "පද්ධතිය ආරම්භ වන විට ස්වයංක්රීය ආරම්භය සක්රීය කරන්න",
     "disable": "පද්ධතිය ආරම්භ වන විට ස්වයංක්රීය ආරම්භය අක්රීය කරන්න",
     "toggle": "පද්ධතිය ආරම්භ වන විට ස්වයංක්රීය ආරම්භය මාරු කරන්න",
@@ -1293,19 +1293,19 @@
     "scaffold": "නව ප්ලගිනයක් සඳහා මූලික සැකිල්ලක් සාදන්න"
   },
   "launch": {
-    "description": "OmniRoute වෙත යොමු කළ Claude Code දියත් කරන්න (දේශීය හෝ දුරස්ථ, --profile සමඟ)",
+    "description": "FreeRoute වෙත යොමු කළ Claude Code දියත් කරන්න (දේශීය හෝ දුරස්ථ, --profile සමඟ)",
     "token": "Claude සේවාලාභියා යැවිය යුතු ටෝකනය (ANTHROPIC_AUTH_TOKEN)",
-    "notRunning": "{port} හි OmniRoute වෙත ළඟා විය නොහැක. එය 'omniroute serve' සමඟ ආරම්භ කරන්න.",
+    "notRunning": "{port} හි FreeRoute වෙත ළඟා විය නොහැක. එය 'freeroute serve' සමඟ ආරම්භ කරන්න.",
     "notFound": "PATH තුළ 'claude' CLI හමු නොවීය."
   },
   "run": {
-    "description": "OmniRoute හරහා සහාය දක්වන CLI ඉලක්කයක් දියත් කරන්න"
+    "description": "FreeRoute හරහා සහාය දක්වන CLI ඉලක්කයක් දියත් කරන්න"
   },
   "setupClaude": {
-    "description": "OmniRoute ආදර්ශ නාමාවලියෙන් ~/.claude/profiles Claude Code පැතිකඩ ජනනය කරන්න"
+    "description": "FreeRoute ආදර්ශ නාමාවලියෙන් ~/.claude/profiles Claude Code පැතිකඩ ජනනය කරන්න"
   },
   "connect": {
-    "description": "දුරස්ථ OmniRoute සේවාදායකයකට සම්බන්ධ වී දුරස්ථ ප්රකාරයට ඇතුළු වන්න"
+    "description": "දුරස්ථ FreeRoute සේවාදායකයකට සම්බන්ධ වී දුරස්ථ ප්රකාරයට ඇතුළු වන්න"
   },
   "tokens": {
     "description": "විෂය පථයට සීමා කළ CLI ප්රවේශ ටෝකන කළමනාකරණය කරන්න (දුරස්ථ ප්රකාරය)"
@@ -1314,10 +1314,10 @@
     "description": "සක්රිය සේවාදායකයෙන් සැපයුම්කරුවෙකු+ආදර්ශයක් තෝරා සහාය දක්වන දේශීය CLI එකක් වින්යාස කරන්න"
   },
   "launchCodex": {
-    "description": "OmniRoute වෙත යොමු කළ Codex CLI දියත් කරන්න (දේශීය හෝ දුරස්ථ VPS)"
+    "description": "FreeRoute වෙත යොමු කළ Codex CLI දියත් කරන්න (දේශීය හෝ දුරස්ථ VPS)"
   },
   "setupCodex": {
-    "description": "OmniRoute සජීවී ආදර්ශ නාමාවලියෙන් ~/.codex පැතිකඩ ගොනු ජනනය කරන්න"
+    "description": "FreeRoute සජීවී ආදර්ශ නාමාවලියෙන් ~/.codex පැතිකඩ ගොනු ජනනය කරන්න"
   },
   "packs": {
     "description": "විකල්ප ධාවනකාල පැකේජ කළමනාකරණය කරන්න (ML / බ්රවුසර ස්වයංක්රීයකරණය)",
@@ -1330,7 +1330,7 @@
     "errUnknown": "නොදන්නා පැකේජයකි: {name}",
     "errNoIndex": "පැකේජ දර්ශකය හමු නොවීය; පැකේජ දත්ත අඩංගු --source <dir> ලබා දෙන්න (desktop bundles එය යෙදුමට යාබදව නිකුත් කරයි)",
     "installed": "\"{name}\" පැකේජය {dir} හි ස්ථාපනය කර සත්යාපනය කරන ලදී",
-    "restartHint": "ධාවනකාලය පැකේජය හඳුනාගැනීම සඳහා OmniRoute සේවාදායකය (හෝ desktop app) නැවත ආරම්භ කරන්න",
+    "restartHint": "ධාවනකාලය පැකේජය හඳුනාගැනීම සඳහා FreeRoute සේවාදායකය (හෝ desktop app) නැවත ආරම්භ කරන්න",
     "removed": "\"{name}\" පැකේජය ඉවත් කරන ලදී",
     "notInstalled": "\"{name}\" පැකේජය ස්ථාපනය කර නොතිබුණි",
     "verifyOk": "ස්ථාපිත සියලුම පැකේජ සත්යාපනය කරන ලදී",

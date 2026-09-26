@@ -50,7 +50,7 @@ export async function POST(request: Request) {
     });
 
     const start = Date.now();
-    const result = await generator("OmniRoute semantic cache live probe test");
+    const result = await generator("FreeRoute semantic cache live probe test");
     const latencyMs = Date.now() - start;
 
     if (!result || !Array.isArray(result.embedding)) {

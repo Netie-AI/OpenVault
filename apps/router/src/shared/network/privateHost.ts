@@ -10,7 +10,7 @@
 // Two constraints this module MUST keep — both enforced by tests:
 //   1. No `node:*` import: it is bundled for the browser.
 //   2. No `@/`-aliased import: `./outboundUrlGuard.ts` re-exports from here and is loaded by the
-//      packaged CLI (`omniroute setup-opencode`), where no tsconfig resolves the alias (#7682).
+//      packaged CLI (`freeroute setup-opencode`), where no tsconfig resolves the alias (#7682).
 
 // Vendored from Node's own `lib/internal/net.js` so `ipVersion` stays verdict-for-verdict
 // identical to `isIP` — a NARROWER match would silently reclassify a private address as public

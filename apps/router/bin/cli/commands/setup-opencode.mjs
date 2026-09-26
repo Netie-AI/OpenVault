@@ -1,6 +1,6 @@
 /**
- * omniroute setup-opencode — Remote-aware OpenCode provider generator
- * (openai-compatible). Distinct from `omniroute setup opencode` (which wires the
+ * freeroute setup-opencode — Remote-aware OpenCode provider generator
+ * (openai-compatible). Distinct from `freeroute setup opencode` (which wires the
  * @omniroute/opencode-plugin). This writes the `omniroute` provider into
  * the active OpenCode JSON/JSONC config with every catalog model, so you can run
  * `opencode -m omniroute/<model>`.
@@ -60,7 +60,7 @@ export function resolveOpencodeTarget(opts = {}) {
  * Post-process the generator output: reference the API key by env var (keep the
  * secret off disk) and optionally keep only models whose id matches `only`.
  * Pure + testable. Returns the final JSONC string while preserving comments
- * outside the OmniRoute-managed fields.
+ * outside the FreeRoute-managed fields.
  *
  * @param {string} rawJson  output of generateOpencodeConfig
  * @param {{ only?: string[] }} [opts]
@@ -115,7 +115,7 @@ export async function runSetupOpencodeCommand(opts = {}) {
         .filter(Boolean)
     : null;
 
-  printHeading("OmniRoute → OpenCode provider (openai-compatible)");
+  printHeading("FreeRoute → OpenCode provider (openai-compatible)");
   printInfo(`Connecting to ${baseUrl} …`);
 
   // Deferred import: opencode.ts is TypeScript; tsx is registered by
@@ -131,7 +131,7 @@ export async function runSetupOpencodeCommand(opts = {}) {
 
     const guard = await guardHostConfigTarget(configPath, {
       toolLabel: "OpenCode",
-      hostCommand: "omniroute setup-opencode",
+      hostCommand: "freeroute setup-opencode",
       allowContainerWrite: Boolean(opts.allowContainerWrite ?? opts["allow-container-write"]),
       dryRun,
     });
@@ -146,7 +146,7 @@ export async function runSetupOpencodeCommand(opts = {}) {
     });
   } catch (err) {
     printError(`Failed to generate OpenCode config: ${err?.message || err}`);
-    printInfo("Make sure OmniRoute is running and --remote/--api-key are correct.");
+    printInfo("Make sure FreeRoute is running and --remote/--api-key are correct.");
     return 1;
   }
 
@@ -172,12 +172,12 @@ export function registerSetupOpencode(program) {
   program
     .command("setup-opencode")
     .description(
-      "Generate the OmniRoute openai-compatible provider in the active OpenCode config " +
+      "Generate the FreeRoute openai-compatible provider in the active OpenCode config " +
         "from the live model catalog (local or remote VPS)"
     )
-    .option("--port <port>", "Local OmniRoute port (ignored when --remote is set)", "20128")
-    .option("--remote <url>", "Remote OmniRoute URL, e.g. http://192.168.0.15:20128")
-    .option("--api-key <key>", "OmniRoute API key (defaults to OMNIROUTE_API_KEY env var)")
+    .option("--port <port>", "Local FreeRoute port (ignored when --remote is set)", "20128")
+    .option("--remote <url>", "Remote FreeRoute URL, e.g. http://192.168.0.15:20128")
+    .option("--api-key <key>", "FreeRoute API key (defaults to OMNIROUTE_API_KEY env var)")
     .option("--model <id>", "Set the default top-level model (omniroute/<id>)")
     .option("--only <patterns>", "Comma-separated substrings — keep only matching model IDs")
     .option("--dry-run", "Print what would be written without touching the filesystem")

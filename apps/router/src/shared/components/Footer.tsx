@@ -11,7 +11,7 @@ const footerLinks = {
     { key: "pricing", href: "#pricing" },
     {
       key: "changelog",
-      href: "https://github.com/diegosouzapw/OmniRoute/releases",
+      href: "https://github.com/Netie-AI/Netie/releases",
       external: true,
     },
   ],
@@ -20,16 +20,16 @@ const footerLinks = {
     { key: "apiReference", href: "/docs#api-reference" },
     {
       key: "helpCenter",
-      href: "https://github.com/diegosouzapw/OmniRoute/discussions",
+      href: "https://github.com/Netie-AI/Netie/discussions",
       external: true,
     },
   ],
   company: [
-    { key: "about", href: "https://github.com/diegosouzapw/OmniRoute", external: true },
-    { key: "blog", href: "https://github.com/diegosouzapw/OmniRoute/releases", external: true },
+    { key: "about", href: "https://github.com/Netie-AI/Netie", external: true },
+    { key: "blog", href: "https://github.com/Netie-AI/Netie/releases", external: true },
     {
       key: "contact",
-      href: "https://github.com/diegosouzapw/OmniRoute/issues/new/choose",
+      href: "https://github.com/Netie-AI/Netie/issues/new/choose",
       external: true,
     },
     { key: "terms", href: "/terms" },
@@ -81,7 +81,7 @@ export default function Footer() {
             {/* Social links */}
             <div className="flex gap-4">
               <a
-                href="https://github.com/diegosouzapw/OmniRoute/discussions"
+                href="https://github.com/Netie-AI/Netie/discussions"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-gray-400 hover:text-primary transition-colors"
@@ -92,7 +92,7 @@ export default function Footer() {
                 </svg>
               </a>
               <a
-                href="https://github.com/diegosouzapw/OmniRoute"
+                href="https://github.com/Netie-AI/Netie"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-gray-400 hover:text-primary transition-colors"
@@ -152,13 +152,16 @@ export default function Footer() {
               {t("privacy")}
             </Link>
             <a
-              href="https://github.com/diegosouzapw/OmniRoute/blob/main/LICENSE"
+              href="https://github.com/Netie-AI/Netie/blob/main/LICENSE"
               target="_blank"
               rel="noopener noreferrer"
               className="hover:text-primary transition-colors"
             >
               {t("license")}
             </a>
+            <Link href="/notices" className="hover:text-primary transition-colors">
+              Notices
+            </Link>
           </div>
         </div>
       </div>

@@ -1,8 +1,8 @@
 {
   "common": {
     "error": "အမှား: {message}",
-    "serverOffline": "OmniRoute ဆာဗာ အော့ဖ်လိုင်းဖြစ်နေသည်။ စတင်ရန်: omniroute serve",
-    "authRequired": "စစ်မှန်ကြောင်း အတည်ပြုရန် လိုအပ်သည်။ OMNIROUTE_API_KEY ကို သတ်မှတ်ပါ သို့မဟုတ် ဤအမိန့်ကို လုပ်ဆောင်ပါ: omniroute setup",
+    "serverOffline": "FreeRoute ဆာဗာ အော့ဖ်လိုင်းဖြစ်နေသည်။ စတင်ရန်: freeroute serve",
+    "authRequired": "စစ်မှန်ကြောင်း အတည်ပြုရန် လိုအပ်သည်။ OMNIROUTE_API_KEY ကို သတ်မှတ်ပါ သို့မဟုတ် ဤအမိန့်ကို လုပ်ဆောင်ပါ: freeroute setup",
     "rateLimited": "အသုံးပြုမှုနှုန်း ကန့်သတ်ချက် ကျော်လွန်သွားသည်။ {seconds}s ကြာပြီးနောက် ထပ်မံကြိုးစားပါ။",
     "timeout": "တောင်းဆိုမှုသည် {ms}ms ကြာပြီးနောက် အချိန်ကုန်သွားသည်။",
     "success": "ပြီးပါပြီ။",
@@ -15,7 +15,7 @@
     "yesOpt": "အတည်ပြုချက် တောင်းခံမှုကို ကျော်ရန်"
   },
   "setup": {
-    "title": "OmniRoute စနစ်ထည့်သွင်းခြင်း",
+    "title": "FreeRoute စနစ်ထည့်သွင်းခြင်း",
     "passwordPrompt": "စီမံခန့်ခွဲသူ စကားဝှက်",
     "providerPrompt": "မူလ provider (ကျော်ရန် အလွတ်ထားပါ)",
     "done": "စနစ်ထည့်သွင်းမှု ပြီးပါပြီ",
@@ -30,19 +30,19 @@
     "opencode": "OpenCode အတွက် တွဲဖက်ပါရှိသော @omniroute/opencode-plugin ကို ထည့်သွင်းပြီး စီစဉ်သတ်မှတ်ရန်"
   },
   "doctor": {
-    "title": "OmniRoute စနစ်စစ်ဆေးခြင်း",
+    "title": "FreeRoute စနစ်စစ်ဆေးခြင်း",
     "dbOk": "ဒေတာဘေ့စ်: ကောင်းမွန်သည် ({path})",
-    "dbMissing": "ဒေတာဘေ့စ်ကို စတင်သတ်မှတ်မထားပါ — `omniroute setup` ကို လုပ်ဆောင်ပါ",
+    "dbMissing": "ဒေတာဘေ့စ်ကို စတင်သတ်မှတ်မထားပါ — `freeroute setup` ကို လုပ်ဆောင်ပါ",
     "portOk": "Port {port}: အသုံးပြုနိုင်သည်",
     "portConflict": "Port {port}: အခြား process တစ်ခုက အသုံးပြုနေသည်",
     "encryptionOk": "စာဝှက်စနစ် key: စီစဉ်သတ်မှတ်ပြီး",
-    "encryptionMissing": "စာဝှက်စနစ် key မရှိပါ — `omniroute setup` ကို လုပ်ဆောင်ပါ",
+    "encryptionMissing": "စာဝှက်စနစ် key မရှိပါ — `freeroute setup` ကို လုပ်ဆောင်ပါ",
     "allGood": "စစ်ဆေးမှုအားလုံး အောင်မြင်သည်။",
     "warnings": "သတိပေးချက် {count} ခု — အပေါ်တွင် ကြည့်ပါ။"
   },
   "providers": {
     "title": "ပံ့ပိုးသူများ",
-    "noProviders": "မည်သည့် provider ကိုမျှ စီစဉ်သတ်မှတ်မထားပါ။ လုပ်ဆောင်ရန်: omniroute setup",
+    "noProviders": "မည်သည့် provider ကိုမျှ စီစဉ်သတ်မှတ်မထားပါ။ လုပ်ဆောင်ရန်: freeroute setup",
     "testing": "{name} ကို စမ်းသပ်နေသည်...",
     "available": "အသုံးပြုနိုင်သော provider {count} ခု",
     "connected": "ချိတ်ဆက်ပြီး",
@@ -71,7 +71,7 @@
       "dryRunOpt": "ရေးသားပြောင်းလဲခြင်းမပြုဘဲ ပြောင်းလဲမည့်အရာများကို ပရင့်ထုတ်ရန်",
       "confirmPrompt": "ချိတ်ဆက်မှု \"{name}\" ({id}) အတွက် API key ကို အစားထိုးမလား? [y/N]",
       "dryRunResult": "[dry-run] \"{name}\" ({id}) အတွက် key ကို ပြောင်းလဲပါမည်။ မည်သည့်ပြောင်းလဲမှုမျှ မပြုလုပ်ထားပါ။",
-      "oauthHint": "OAuth ချိတ်ဆက်မှု — လုပ်ဆောင်ရန်: omniroute oauth {provider}",
+      "oauthHint": "OAuth ချိတ်ဆက်မှု — လုပ်ဆောင်ရန်: freeroute oauth {provider}",
       "envVarEmpty": "ပတ်ဝန်းကျင် ကိန်းရှင် {var} ကို သတ်မှတ်မထားပါ သို့မဟုတ် တန်ဖိုးဗလာဖြစ်နေသည်။",
       "success": "\"{name}\" အတွက် key ကို ပြောင်းလဲပြီးပါပြီ။ အတည်ပြုရန် `providers test {id}` ကို လုပ်ဆောင်ပါ။",
       "testPassed": "ပြောင်းလဲပြီးနောက် စမ်းသပ်မှု အောင်မြင်ပါသည်။",
@@ -82,7 +82,7 @@
       "providerOpt": "ဝန်ဆောင်မှုပေးသူ အမည်ဖြင့် စစ်ထုတ်ရန်",
       "header": "ID         ဝန်ဆောင်မှုပေးသူ       အမည်                     သက်တမ်းကုန်ဆုံးမှု အခြေအနေ  စမ်းသပ်မှုအခြေအနေ  ခေတ္တရပ်နားမှု ပြီးဆုံးချိန်",
       "noData": "ဝန်ဆောင်မှုပေးသူ ချိတ်ဆက်မှုဒေတာ မရရှိနိုင်ပါ။",
-      "requiresServer": "providers status ကို အသုံးပြုရန် OmniRoute server လည်ပတ်နေရန် လိုအပ်သည်။"
+      "requiresServer": "providers status ကို အသုံးပြုရန် FreeRoute server လည်ပတ်နေရန် လိုအပ်သည်။"
     }
   },
   "keys": {
@@ -90,8 +90,8 @@
     "addDescription": "ဝန်ဆောင်မှုပေးသူတစ်ခုအတွက် API key ကို ထည့်ရန် သို့မဟုတ် အပ်ဒိတ်လုပ်ရန်",
     "listDescription": "ပြင်ဆင်သတ်မှတ်ထားသော API key အားလုံးကို စာရင်းပြုစုရန်",
     "removeDescription": "ဝန်ဆောင်မှုပေးသူတစ်ခုအတွက် API key ကို ဖယ်ရှားရန်",
-    "regenerateDescription": "OmniRoute API key ကို ပြန်လည်ထုတ်လုပ်ရန်",
-    "revokeDescription": "OmniRoute API key ကို ရုပ်သိမ်းရန်",
+    "regenerateDescription": "FreeRoute API key ကို ပြန်လည်ထုတ်လုပ်ရန်",
+    "revokeDescription": "FreeRoute API key ကို ရုပ်သိမ်းရန်",
     "revealDescription": "ဖုံးကွယ်ထားခြင်းမရှိသော API key တန်ဖိုးကို ဖော်ပြရန်",
     "usageDescription": "API key တစ်ခုအတွက် လတ်တလောအသုံးပြုမှုကို ပြသရန်",
     "usageLimitOpt": "လတ်တလော တောင်းဆိုမှုအရေအတွက်",
@@ -142,7 +142,7 @@
     "warning": "⚠ ဤလုပ်ဆောင်ချက်က စာဝှက်ဖြည်ထားသော plaintext API ကီးများနှင့် OAuth token များကို ပြသ/ရေးသားပါမည်။ သင့်မျက်နှာပြင်၊ shell history နှင့် output ဖိုင်အားလုံးကို လျှို့ဝှက်ထားကြောင်း သေချာပါစေ။",
     "confirmHeading": "⚠ သတိပေးချက်: ဤလုပ်ဆောင်ချက်က စာဝှက်ဖြည်ထားသော provider အထောက်အထားများကို plaintext ဖြင့် export လုပ်ပါမည်",
     "confirmBody": "ဤ command သည် ရွေးချယ်ထားသော connection များအတွက် apiKey၊ accessToken၊ refreshToken နှင့်\nidToken ကို စာဝှက်ဖြည်ပြီး ပြသ/ရေးသားပါမည်။ Output ကို လျှို့ဝှက်အချက်အလက်အဖြစ် သဘောထားပါ။",
-    "confirmFooter": "အတည်ပြုရန် အောက်ပါ command ကို run ပါ:\n  omniroute auth export --force",
+    "confirmFooter": "အတည်ပြုရန် အောက်ပါ command ကို run ပါ:\n  freeroute auth export --force",
     "missingKey": "အထောက်အထားများကို export လုပ်ရန် STORAGE_ENCRYPTION_KEY လိုအပ်သည်။",
     "notFound": "ချိတ်ဆက်မှုကို ရှာမတွေ့ပါ: {id}",
     "invalidFormat": "မမှန်ကန်သော format: {format}။ json သို့မဟုတ် env ကို အသုံးပြုပါ။"
@@ -220,10 +220,10 @@
     "reasoning": "ဆင်ခြင်သုံးသပ်မှု အဆင့် (low|medium|high)",
     "thinking": "တိုးချဲ့စဉ်းစားမှု token ပမာဏ",
     "explain": "fallback tree နှင့် ကုန်ကျစရိတ်အပိုင်းအခြားကို stderr သို့ ထုတ်ပြရန်",
-    "noCombo": "ကိုက်ညီသော combo ကို ရှာမတွေ့ပါ။ ဤ command ဖြင့် တစ်ခုဖန်တီးသတ်မှတ်ပါ: omniroute combo create"
+    "noCombo": "ကိုက်ညီသော combo ကို ရှာမတွေ့ပါ။ ဤ command ဖြင့် တစ်ခုဖန်တီးသတ်မှတ်ပါ: freeroute combo create"
   },
   "chat": {
-    "description": "OmniRoute သို့ တစ်ကြိမ်တည်းသုံး chat prompt ပို့ရန်",
+    "description": "FreeRoute သို့ တစ်ကြိမ်တည်းသုံး chat prompt ပို့ရန်",
     "file": "ဖိုင်မှ prompt ကို ဖတ်ရန်",
     "stdin": "stdin မှ prompt ကို ဖတ်ရန်",
     "system": "စနစ်ညွှန်ကြားချက်",
@@ -242,8 +242,8 @@
     }
   },
   "serve": {
-    "description": "OmniRoute server ကို စတင်ရန် (မူလလုပ်ဆောင်ချက်)",
-    "starting": "port {port} တွင် OmniRoute server ကို စတင်နေသည်...",
+    "description": "FreeRoute server ကို စတင်ရန် (မူလလုပ်ဆောင်ချက်)",
+    "starting": "port {port} တွင် FreeRoute server ကို စတင်နေသည်...",
     "ready": "http://localhost:{port} တွင် အသင့်ဖြစ်ပါပြီ",
     "stopping": "server (PID {pid}) ကို ရပ်တန့်နေသည်...",
     "stopped": "server ရပ်တန့်ပြီးပါပြီ။",
@@ -262,7 +262,7 @@
   },
   "backup": {
     "title": "အရန်သိမ်းခြင်း",
-    "description": "OmniRoute ဒေတာကို အရန်သိမ်းပါ",
+    "description": "FreeRoute ဒေတာကို အရန်သိမ်းပါ",
     "creating": "အရန်ဖိုင် ဖန်တီးနေသည်...",
     "done": "အရန်ဖိုင်ကို {path} တွင် သိမ်းဆည်းပြီးပါပြီ",
     "noFiles": "အရန်သိမ်းရန် ဖိုင်မရှိပါ (ဒေတာဘေ့စ်ကို စတင်သတ်မှတ်ရသေးပါ)",
@@ -274,7 +274,7 @@
     "noBackups": "အရန်ဖိုင်များ မတွေ့ပါ။",
     "notFound": "အရန်ဖိုင် မတွေ့ပါ: {name}",
     "confirmRestore": "လက်ရှိဒေတာကို {ts} မှ အရန်ဖိုင်ဖြင့် အစားထိုးမလား။",
-    "createDescription": "OmniRoute ဒေတာကို အရန်သိမ်းပါ",
+    "createDescription": "FreeRoute ဒေတာကို အရန်သိမ်းပါ",
     "nameOpt": "စိတ်ကြိုက် အရန်ဖိုင်အမည်",
     "cloudOpt": "အရန်ဖိုင်ကို cloud storage သို့ တင်ပါ",
     "encryptOpt": "အရန်ဖိုင်ကို AES-256-GCM ဖြင့် ကုဒ်ဝှက်ပါ",
@@ -292,14 +292,14 @@
       "statusDescription": "လက်ရှိ အရန်သိမ်းမည့် အချိန်ဇယားအခြေအနေကို ပြပါ",
       "cronOpt": "အချိန်ဇယားအတွက် Cron expression (မူလသတ်မှတ်ချက်: နေ့စဉ် နံနက် 3 နာရီ)",
       "enabled": "အလိုအလျောက် အရန်သိမ်းခြင်းကို ဖွင့်ထားသည် (cron: {cron})။",
-      "hint": "စတင်ချိန်တွင် omniroute serve က အချိန်ဇယားကို ဖတ်ယူသည်။",
+      "hint": "စတင်ချိန်တွင် freeroute serve က အချိန်ဇယားကို ဖတ်ယူသည်။",
       "disabled": "အလိုအလျောက် အရန်သိမ်းခြင်းကို ပိတ်ထားသည်။",
       "notConfigured": "အရန်သိမ်းမည့် အချိန်ဇယားကို မသတ်မှတ်ထားပါ။"
     }
   },
   "health": {
     "description": "ဆာဗာ၏ ကျန်းမာရေးနှင့် အစိတ်အပိုင်းများ၏ အခြေအနေကို စစ်ဆေးပါ",
-    "noServer": "ဆာဗာ အလုပ်မလုပ်ပါ။ ဤအမိန့်ဖြင့် စတင်ပါ: omniroute serve",
+    "noServer": "ဆာဗာ အလုပ်မလုပ်ပါ။ ဤအမိန့်ဖြင့် စတင်ပါ: freeroute serve",
     "title": "ကျန်းမာရေး",
     "status": "အခြေအနေ: {status}",
     "uptime": "လည်ပတ်နေချိန်: {uptime}",
@@ -308,21 +308,21 @@
   },
   "quota": {
     "description": "ဝန်ဆောင်မှုပေးသူ၏ ခွဲတမ်းအသုံးပြုမှုကို ပြရန်",
-    "noServer": "ဆာဗာ လည်ပတ်မနေပါ။ ဤအမိန့်ဖြင့် စတင်ပါ: omniroute serve",
+    "noServer": "ဆာဗာ လည်ပတ်မနေပါ။ ဤအမိန့်ဖြင့် စတင်ပါ: freeroute serve",
     "noData": "ခွဲတမ်းအချက်အလက် မရရှိနိုင်ပါ။"
   },
   "cache": {
     "description": "တုံ့ပြန်မှု ကက်ရှ်ကို စီမံရန်",
-    "noServer": "ဆာဗာ လည်ပတ်မနေပါ။ ဤအမိန့်ဖြင့် စတင်ပါ: omniroute serve",
+    "noServer": "ဆာဗာ လည်ပတ်မနေပါ။ ဤအမိန့်ဖြင့် စတင်ပါ: freeroute serve",
     "cleared": "ကက်ရှ်ကို ရှင်းလင်းပြီးပါပြီ။",
     "clearFailed": "ကက်ရှ်ကို ရှင်းလင်း၍ မရပါ။"
   },
   "redis": {
-    "description": "OmniRoute ၏ ကက်ရှ်သိမ်းဆည်းမှုနှင့် ခွဲတမ်းခြေရာခံမှုအတွက် စက်တွင်း Redis ကွန်တိန်နာတစ်ခုကို (Podman သို့မဟုတ် Docker ဖြင့်) တစ်ချက်နှိပ်၍ စတင်ရန်"
+    "description": "FreeRoute ၏ ကက်ရှ်သိမ်းဆည်းမှုနှင့် ခွဲတမ်းခြေရာခံမှုအတွက် စက်တွင်း Redis ကွန်တိန်နာတစ်ခုကို (Podman သို့မဟုတ် Docker ဖြင့်) တစ်ချက်နှိပ်၍ စတင်ရန်"
   },
   "test": {
     "description": "ဝန်ဆောင်မှုပေးသူ ချိတ်ဆက်မှုကို စမ်းသပ်ရန်",
-    "noServer": "ဆာဗာ လည်ပတ်မနေပါ။ ဤအမိန့်ဖြင့် စတင်ပါ: omniroute serve",
+    "noServer": "ဆာဗာ လည်ပတ်မနေပါ။ ဤအမိန့်ဖြင့် စတင်ပါ: freeroute serve",
     "testing": "{provider} / {model} ကို စမ်းသပ်နေသည်...",
     "passed": "ချိတ်ဆက်မှု အောင်မြင်ပါသည်!",
     "failed": "ချိတ်ဆက်မှု မအောင်မြင်ပါ: {error}",
@@ -334,7 +334,7 @@
     "saved": "ရလဒ်များကို {path} သို့ သိမ်းဆည်းပြီးပါပြီ",
     "compareTitle": "မော်ဒယ် နှိုင်းယှဉ်ချက်",
     "compareMinTwo": "--compare အတွက် အနည်းဆုံး မော်ဒယ်နှစ်ခု လိုအပ်ပါသည် (ကော်မာဖြင့် ခွဲထားရမည်)",
-    "noProviders": "ဝန်ဆောင်မှုပေးသူများကို ပြင်ဆင်သတ်မှတ်ထားခြင်း မရှိပါ။ ဤအမိန့်ဖြင့် တစ်ခုထည့်ပါ: omniroute keys add"
+    "noProviders": "ဝန်ဆောင်မှုပေးသူများကို ပြင်ဆင်သတ်မှတ်ထားခြင်း မရှိပါ။ ဤအမိန့်ဖြင့် တစ်ခုထည့်ပါ: freeroute keys add"
   },
   "update": {
     "checking": "အပ်ဒိတ်များကို စစ်ဆေးနေသည်...",
@@ -348,7 +348,7 @@
     "running": "MCP ဆာဗာ လည်ပတ်နေသည် ({transport})",
     "stopped": "MCP ဆာဗာ ရပ်တန့်သွားပါပြီ။",
     "restarted": "MCP ဆာဗာကို ပြန်လည်စတင်ပြီးပါပြီ။",
-    "stoppedHint": "၎င်းကို ဖွင့်ရန် `omniroute mcp enable` ကို လုပ်ဆောင်ပါ။",
+    "stoppedHint": "၎င်းကို ဖွင့်ရန် `freeroute mcp enable` ကို လုပ်ဆောင်ပါ။",
     "enabled": "MCP ဆာဗာကို ဖွင့်ထားသည်။",
     "disabled": "MCP ဆာဗာကို ပိတ်ထားသည်။",
     "enable": {
@@ -416,7 +416,7 @@
     }
   },
   "policy": {
-    "description": "OmniRoute ခွင့်ပြုချက်ဆိုင်ရာ မူဝါဒများကို စီမံပါ",
+    "description": "FreeRoute ခွင့်ပြုချက်ဆိုင်ရာ မူဝါဒများကို စီမံပါ",
     "list": {
       "description": "မူဝါဒများကို စာရင်းပြုစုပါ",
       "kind": "အမျိုးအစားအလိုက် စစ်ထုတ်ပါ (allow|deny|rate-limit|cost-cap)",
@@ -453,7 +453,7 @@
     }
   },
   "compression": {
-    "description": "OmniRoute ချုံ့သိပ်မှု ပိုက်လိုင်းကို စီစဉ်သတ်မှတ်ပြီး စစ်ဆေးပါ",
+    "description": "FreeRoute ချုံ့သိပ်မှု ပိုက်လိုင်းကို စီစဉ်သတ်မှတ်ပြီး စစ်ဆေးပါ",
     "status": {
       "description": "လက်ရှိ ချုံ့သိပ်မှု အခြေအနေနှင့် ဆက်တင်များကို ပြပါ"
     },
@@ -507,18 +507,18 @@
     "confirmRotate": "တန်နယ် {type} ၏ URL ကို အသစ်ပြောင်းမလား။ (URL အသစ်တစ်ခု ဖန်တီးပါမည်)"
   },
   "stop": {
-    "description": "OmniRoute ဆာဗာကို ရပ်တန့်ပါ",
+    "description": "FreeRoute ဆာဗာကို ရပ်တန့်ပါ",
     "stopping": "ဆာဗာကို ရပ်တန့်နေပါသည် (PID {pid})...",
     "stopped": "ဆာဗာကို ရပ်တန့်ပြီးပါပြီ။",
     "notRunning": "လည်ပတ်နေသော ဆာဗာမရှိပါ။",
     "portFallback": "PID ဖိုင်ကို မတွေ့ပါ၊ port အခြေပြု ရပ်တန့်မှုကို ကြိုးစားနေပါသည်..."
   },
   "restart": {
-    "description": "OmniRoute ဆာဗာကို ပြန်လည်စတင်ပါ",
-    "restarting": "OmniRoute ဆာဗာကို ပြန်လည်စတင်နေသည်..."
+    "description": "FreeRoute ဆာဗာကို ပြန်လည်စတင်ပါ",
+    "restarting": "FreeRoute ဆာဗာကို ပြန်လည်စတင်နေသည်..."
   },
   "dashboard": {
-    "description": "OmniRoute dashboard ကို browser တွင် ဖွင့်ပါ",
+    "description": "FreeRoute dashboard ကို browser တွင် ဖွင့်ပါ",
     "opening": "Dashboard ကို {url} တွင် ဖွင့်နေသည်",
     "urlOnly": "Browser မဖွင့်ဘဲ dashboard URL ကိုသာ ထုတ်ပြပါ",
     "tui": "အပြန်အလှန်တုံ့ပြန်နိုင်သော TUI dashboard ကို ဖွင့်ပါ (terminal UI၊ tab ၇ ခု)"
@@ -526,7 +526,7 @@
   "models": {
     "description": "ရရှိနိုင်သော model များကို စာရင်းပြုစုပါ (ဆာဗာလိုအပ်သည်)",
     "search": "Model များကို id၊ အမည်၊ provider သို့မဟုတ် ဖော်ပြချက်အလိုက် စစ်ထုတ်ပါ",
-    "noServer": "ဆာဗာ အလုပ်မလုပ်နေပါ။ ဤ command ဖြင့် စတင်ပါ: omniroute serve",
+    "noServer": "ဆာဗာ အလုပ်မလုပ်နေပါ။ ဤ command ဖြင့် စတင်ပါ: freeroute serve",
     "noModels": "မည်သည့် model ကိုမျှ မတွေ့ပါ။"
   },
   "audit": {
@@ -558,7 +558,7 @@
     }
   },
   "skills": {
-    "description": "OmniRoute skill များကို စီမံပါ (sandbox, builtin, custom, hybrid, skillssh)",
+    "description": "FreeRoute skill များကို စီမံပါ (sandbox, builtin, custom, hybrid, skillssh)",
     "list": {
       "description": "ထည့်သွင်းထားသော skill များကို စာရင်းပြုစုပါ",
       "type": "အမျိုးအစားအလိုက် စစ်ထုတ်ပါ (sandbox|custom|builtin|hybrid|skillssh)",
@@ -631,7 +631,7 @@
     }
   },
   "memory": {
-    "description": "OmniRoute စကားပြောဆိုမှု memory (FTS5 + vector) ကို စီမံရန်",
+    "description": "FreeRoute စကားပြောဆိုမှု memory (FTS5 + vector) ကို စီမံရန်",
     "search": {
       "description": "အဓိပ္ပာယ်ဆိုင်ရာ query ဖြင့် memory entry များကို ရှာဖွေရန်",
       "type": "memory အမျိုးအစားဖြင့် စစ်ထုတ်ရန် (user|feedback|project|reference)",
@@ -789,7 +789,7 @@
     }
   },
   "webhooks": {
-    "description": "OmniRoute webhooks များကို စီမံရန်",
+    "description": "FreeRoute webhooks များကို စီမံရန်",
     "events": {
       "description": "ရရှိနိုင်သည့် webhook ဖြစ်ရပ်အမျိုးအစားအားလုံးကို စာရင်းပြုစုရန်"
     },
@@ -821,14 +821,14 @@
     }
   },
   "program": {
-    "description": "OmniRoute — အလိုအလျောက် အရန်ပြောင်းစနစ်ပါဝင်သော စမတ် AI Router",
+    "description": "FreeRoute — အလိုအလျောက် အရန်ပြောင်းစနစ်ပါဝင်သော စမတ် AI Router",
     "version": "ဗားရှင်းကို ပြသပြီး ထွက်ရန်",
     "output": "အထွက်ပုံစံ (table, json, jsonl, csv)",
     "quiet": "မလိုအပ်သော အထွက်များကို ဖျောက်ရန်",
     "no_color": "အရောင်ပါသော အထွက်ကို ပိတ်ရန်",
     "timeout": "HTTP တောင်းဆိုမှု အချိန်ကုန်ဆုံးကာလကို မီလီစက္ကန့်ဖြင့် သတ်မှတ်ရန်",
-    "api_key": "OmniRoute ဆာဗာအတွက် API key",
-    "base_url": "OmniRoute ဆာဗာ၏ အခြေခံ URL",
+    "api_key": "FreeRoute ဆာဗာအတွက် API key",
+    "base_url": "FreeRoute ဆာဗာ၏ အခြေခံ URL",
     "context": "ဤ command အတွက် အသုံးပြုမည့် ဆာဗာ context/profile",
     "lang": "CLI ပြသဘာသာစကား သတ်မှတ်ရန် (OMNIROUTE_LANG ကို ထပ်ဆင့်အစားထိုးသည်)"
   },
@@ -1079,7 +1079,7 @@
     }
   },
   "openapi": {
-    "description": "OmniRoute OpenAPI spec ကို ရယူအသုံးပြုပြီး စမ်းသပ်ရန်",
+    "description": "FreeRoute OpenAPI spec ကို ရယူအသုံးပြုပြီး စမ်းသပ်ရန်",
     "dump": {
       "description": "OpenAPI spec ကို stdout သို့မဟုတ် ဖိုင်သို့ ထုတ်ပေးရန်",
       "format": "အထွက်ပုံစံ: yaml|json (မူလသတ်မှတ်ချက်: yaml)",
@@ -1149,7 +1149,7 @@
     }
   },
   "open": {
-    "description": "သီးခြား OmniRoute dashboard စာမျက်နှာကို browser တွင် ဖွင့်ပါ",
+    "description": "သီးခြား FreeRoute dashboard စာမျက်နှာကို browser တွင် ဖွင့်ပါ",
     "url": "URL ကိုသာ ထုတ်ပြပြီး browser ကို မဖွင့်ပါနှင့်"
   },
   "telemetry": {
@@ -1166,7 +1166,7 @@
     }
   },
   "sync": {
-    "description": "OmniRoute instance များအကြား config ကို ထပ်တူပြုပါ",
+    "description": "FreeRoute instance များအကြား config ကို ထပ်တူပြုပါ",
     "push": {
       "description": "Config ကို cloud သို့မဟုတ် အဝေးရှိ instance သို့ ပို့ပါ",
       "target": "ဦးတည်နေရာ (cloud သို့မဟုတ် context:name)",
@@ -1222,8 +1222,8 @@
       "listTitle": "ရရှိနိုင်သော ဘာသာစကားများ",
       "current": "ဘာသာစကား: {code} ({name})",
       "saved": "ဘာသာစကားကို {code} ({name}) အဖြစ် သတ်မှတ်ပြီးပါပြီ။",
-      "noCode": "ဘာသာစကားကုဒ် လိုအပ်ပါသည်။ ရရှိနိုင်သော ကုဒ်များကို ကြည့်ရန် 'omniroute config lang list' ကို လုပ်ဆောင်ပါ။",
-      "unknown": "မသိသော ဘာသာစကားကုဒ်: {code}။ ရရှိနိုင်သော ကုဒ်များကို ကြည့်ရန် 'omniroute config lang list' ကို လုပ်ဆောင်ပါ။",
+      "noCode": "ဘာသာစကားကုဒ် လိုအပ်ပါသည်။ ရရှိနိုင်သော ကုဒ်များကို ကြည့်ရန် 'freeroute config lang list' ကို လုပ်ဆောင်ပါ။",
+      "unknown": "မသိသော ဘာသာစကားကုဒ်: {code}။ ရရှိနိုင်သော ကုဒ်များကို ကြည့်ရန် 'freeroute config lang list' ကို လုပ်ဆောင်ပါ။",
       "alreadySet": "ဘာသာစကားကို {code} အဖြစ် သတ်မှတ်ထားပြီးဖြစ်သည်။",
       "envHint": "အကြံပြုချက်: သင့် environment တွင် OMNIROUTE_LANG={code} ဟုလည်း သတ်မှတ်နိုင်သည်။"
     }
@@ -1242,7 +1242,7 @@
     "filter": "အဆင့်အလိုက် စစ်ထုတ်ရန် (error,warn,info) — ကော်မာဖြင့် ခွဲခြားထားသည်",
     "lines": "ရယူမည့် စာကြောင်းအရေအတွက်",
     "timeout": "ချိတ်ဆက်မှု အချိန်ကုန်ဆုံးကာလ (ms)",
-    "baseUrl": "OmniRoute API အခြေခံ URL",
+    "baseUrl": "FreeRoute API အခြေခံ URL",
     "requestId": "တောင်းဆိုမှု ID ဖြင့် စစ်ထုတ်ရန်",
     "apiKey": "API key ဖြင့် စစ်ထုတ်ရန်",
     "combo": "Combo အမည်ဖြင့် စစ်ထုတ်ရန်",
@@ -1258,10 +1258,10 @@
     "description": "စနစ် tray အိုင်ကွန်ကို ထိန်းချုပ်ရန်",
     "show": "tray အိုင်ကွန်ကို ပြရန် (ဆာဗာသည် --tray ဖြင့် လုပ်ဆောင်နေပါက)",
     "hide": "tray အိုင်ကွန်ကို ဖျောက်ရန်",
-    "quit": "tray မှတစ်ဆင့် OmniRoute မှ ထွက်ရန်"
+    "quit": "tray မှတစ်ဆင့် FreeRoute မှ ထွက်ရန်"
   },
   "autostart": {
-    "description": "စနစ်စတင်ချိန်တွင် OmniRoute အလိုအလျောက်စတင်ခြင်းကို စီမံရန် (Linux: systemd user service)",
+    "description": "စနစ်စတင်ချိန်တွင် FreeRoute အလိုအလျောက်စတင်ခြင်းကို စီမံရန် (Linux: systemd user service)",
     "enable": "စနစ်စတင်ချိန်တွင် အလိုအလျောက်စတင်ခြင်းကို ဖွင့်ရန်",
     "disable": "စနစ်စတင်ချိန်တွင် အလိုအလျောက်စတင်ခြင်းကို ပိတ်ရန်",
     "toggle": "စနစ်စတင်ချိန်တွင် အလိုအလျောက်စတင်ခြင်းကို အဖွင့်အပိတ်လုပ်ရန်",
@@ -1293,19 +1293,19 @@
     "scaffold": "plugin boilerplate အသစ်တစ်ခုကို ဖန်တီးရန်"
   },
   "launch": {
-    "description": "OmniRoute သို့ ချိတ်ဆက်ထားသော Claude Code ကို စတင်ရန် (local သို့မဟုတ် remote၊ --profile ဖြင့်)",
+    "description": "FreeRoute သို့ ချိတ်ဆက်ထားသော Claude Code ကို စတင်ရန် (local သို့မဟုတ် remote၊ --profile ဖြင့်)",
     "token": "Claude client က ပေးပို့သင့်သည့် token (ANTHROPIC_AUTH_TOKEN)",
-    "notRunning": "{port} တွင် OmniRoute ကို ဆက်သွယ်၍မရပါ။ 'omniroute serve' ဖြင့် စတင်ပါ။",
+    "notRunning": "{port} တွင် FreeRoute ကို ဆက်သွယ်၍မရပါ။ 'freeroute serve' ဖြင့် စတင်ပါ။",
     "notFound": "PATH တွင် 'claude' CLI ကို ရှာမတွေ့ပါ။"
   },
   "run": {
-    "description": "OmniRoute မှတစ်ဆင့် ပံ့ပိုးထားသော CLI ပစ်မှတ်တစ်ခုကို စတင်ပါ"
+    "description": "FreeRoute မှတစ်ဆင့် ပံ့ပိုးထားသော CLI ပစ်မှတ်တစ်ခုကို စတင်ပါ"
   },
   "setupClaude": {
-    "description": "OmniRoute မော်ဒယ်ကတ်တလောက်မှ ~/.claude/profiles Claude Code ပရိုဖိုင်များကို ဖန်တီးပါ"
+    "description": "FreeRoute မော်ဒယ်ကတ်တလောက်မှ ~/.claude/profiles Claude Code ပရိုဖိုင်များကို ဖန်တီးပါ"
   },
   "connect": {
-    "description": "အဝေးရှိ OmniRoute ဆာဗာသို့ ချိတ်ဆက်ပြီး အဝေးထိန်းမုဒ်သို့ ဝင်ပါ"
+    "description": "အဝေးရှိ FreeRoute ဆာဗာသို့ ချိတ်ဆက်ပြီး အဝေးထိန်းမုဒ်သို့ ဝင်ပါ"
   },
   "tokens": {
     "description": "နယ်ပယ်ကန့်သတ်ထားသော CLI အသုံးပြုခွင့် တိုကင်များကို စီမံပါ (အဝေးထိန်းမုဒ်)"
@@ -1314,10 +1314,10 @@
     "description": "လက်ရှိအသုံးပြုနေသော ဆာဗာမှ ပံ့ပိုးသူ+မော်ဒယ်ကို ရွေးချယ်ပြီး ပံ့ပိုးထားသော စက်တွင်း CLI ကို စီစဉ်သတ်မှတ်ပါ"
   },
   "launchCodex": {
-    "description": "OmniRoute သို့ ညွှန်ထားသော Codex CLI ကို စတင်ပါ (စက်တွင်း သို့မဟုတ် အဝေးရှိ VPS)"
+    "description": "FreeRoute သို့ ညွှန်ထားသော Codex CLI ကို စတင်ပါ (စက်တွင်း သို့မဟုတ် အဝေးရှိ VPS)"
   },
   "setupCodex": {
-    "description": "OmniRoute တိုက်ရိုက်မော်ဒယ်ကတ်တလောက်မှ ~/.codex ပရိုဖိုင်ဖိုင်များကို ဖန်တီးပါ"
+    "description": "FreeRoute တိုက်ရိုက်မော်ဒယ်ကတ်တလောက်မှ ~/.codex ပရိုဖိုင်ဖိုင်များကို ဖန်တီးပါ"
   },
   "packs": {
     "description": "ထည့်သွင်းရွေးချယ်နိုင်သော runtime pack များကို စီမံပါ (ML / ဘရောက်ဇာ အလိုအလျောက်လုပ်ဆောင်မှု)",
@@ -1330,7 +1330,7 @@
     "errUnknown": "မသိသော pack: {name}",
     "errNoIndex": "pack အညွှန်းကို မတွေ့ပါ။ pack payload ပါရှိသော --source <dir> ကို ထည့်သွင်းပေးပါ (desktop bundle များတွင် ၎င်းကို app ဘေးတွင် ထည့်သွင်းပေးထားသည်)",
     "installed": "pack \"{name}\" ကို {dir} တွင် ထည့်သွင်းပြီး တိုက်ဆိုင်စစ်ဆေးပြီးပါပြီ",
-    "restartHint": "runtime က pack ကို အသုံးပြုနိုင်ရန် OmniRoute ဆာဗာ (သို့မဟုတ် desktop app) ကို ပြန်လည်စတင်ပါ",
+    "restartHint": "runtime က pack ကို အသုံးပြုနိုင်ရန် FreeRoute ဆာဗာ (သို့မဟုတ် desktop app) ကို ပြန်လည်စတင်ပါ",
     "removed": "pack \"{name}\" ကို ဖယ်ရှားပြီးပါပြီ",
     "notInstalled": "pack \"{name}\" ကို ထည့်သွင်းထားခြင်းမရှိပါ",
     "verifyOk": "ထည့်သွင်းထားသော pack အားလုံးကို အောင်မြင်စွာ တိုက်ဆိုင်စစ်ဆေးပြီးပါပြီ",

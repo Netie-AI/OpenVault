@@ -9,8 +9,8 @@ import ProviderIcon from "@/shared/components/ProviderIcon";
 
 const CLOUD_URL = process.env.NEXT_PUBLIC_CLOUD_URL;
 
-// (#618) Match any custom:OmniRoute-<i> entry (multi-model).
-const isOmniRouteEntry = (m) => typeof m?.id === "string" && m.id.startsWith("custom:OmniRoute");
+// (#618) Match any custom:FreeRoute-<i> entry (multi-model).
+const isOmniRouteEntry = (m) => typeof m?.id === "string" && m.id.startsWith("custom:FreeRoute");
 
 export default function DroidToolCard({
   tool,
@@ -102,7 +102,7 @@ export default function DroidToolCard({
       // setState runs synchronously inside an effect body).
       if (data?.installed && !hasInitializedModel.current) {
         hasInitializedModel.current = true;
-        // (#618) Pre-fill the multi-model list from every custom:OmniRoute-<i>
+        // (#618) Pre-fill the multi-model list from every custom:FreeRoute-<i>
         // entry, preserving the original index order.
         const existing = (data.settings?.customModels || [])
           .filter(isOmniRouteEntry)
@@ -278,7 +278,7 @@ export default function DroidToolCard({
     const settingsContent = {
       customModels: modelsForPreview.map((m, i) => ({
         model: m,
-        id: `custom:OmniRoute-${i}`,
+        id: `custom:FreeRoute-${i}`,
         index: i,
         baseUrl: getEffectiveBaseUrl(),
         apiKey: keyToDisplay,
@@ -363,7 +363,7 @@ export default function DroidToolCard({
           {!checkingDroid && cliReady && (
             <>
               <div className="flex flex-col gap-2">
-                {/* Current Base URL — first OmniRoute entry, any index (#618) */}
+                {/* Current Base URL — first FreeRoute entry, any index (#618) */}
                 {droidStatus?.settings?.customModels?.find(isOmniRouteEntry)?.baseUrl && (
                   <div className="flex items-center gap-2">
                     <span className="w-32 shrink-0 text-sm font-semibold text-text-main text-right">

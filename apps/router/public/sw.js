@@ -99,15 +99,15 @@ self.addEventListener("push", (event) => {
   try {
     data = event.data ? event.data.json() : {};
   } catch {
-    data = { title: "OmniRoute", body: event.data?.text() || "New notification" };
+    data = { title: "FreeRoute", body: event.data?.text() || "New notification" };
   }
 
-  const title = data.title || "OmniRoute";
+  const title = data.title || "FreeRoute";
   const options = {
     body: data.body || "",
     icon: data.icon || "/icon-512.png",
     badge: data.badge || "/icon-192.png",
-    tag: data.tag || "omniroute-default",
+    tag: data.tag || "freeroute-default",
     data: {
       url: data.url || "/dashboard",
       timestamp: Date.now(),

@@ -1,8 +1,8 @@
 {
   "common": {
     "error": "Virhe: {message}",
-    "serverOffline": "OmniRoute-palvelin on offline. Käynnistä komennolla: omniroute serve",
-    "authRequired": "Todennus vaaditaan. Aseta OMNIROUTE_API_KEY tai suorita: omniroute setup",
+    "serverOffline": "FreeRoute-palvelin on offline. Käynnistä komennolla: freeroute serve",
+    "authRequired": "Todennus vaaditaan. Aseta OMNIROUTE_API_KEY tai suorita: freeroute setup",
     "rateLimited": "Pyyntöraja ylitetty. Yritä uudelleen {seconds}s kuluttua.",
     "timeout": "Pyyntö aikakatkaistiin {ms}ms jälkeen.",
     "success": "Valmis.",
@@ -15,7 +15,7 @@
     "yesOpt": "Ohita vahvistuspyyntö"
   },
   "setup": {
-    "title": "OmniRoute-asennus",
+    "title": "FreeRoute-asennus",
     "passwordPrompt": "Ylläpitäjän salasana",
     "providerPrompt": "Oletuspalveluntarjoaja (jätä tyhjäksi ohittaaksesi)",
     "done": "Asennus valmis",
@@ -30,19 +30,19 @@
     "opencode": "Asenna ja määritä mukana toimitettu @omniroute/opencode-plugin OpenCodea varten"
   },
   "doctor": {
-    "title": "OmniRoute Doctor",
+    "title": "FreeRoute Doctor",
     "dbOk": "Tietokanta: OK ({path})",
-    "dbMissing": "Tietokantaa ei ole alustettu — suorita `omniroute setup`",
+    "dbMissing": "Tietokantaa ei ole alustettu — suorita `freeroute setup`",
     "portOk": "Portti {port}: käytettävissä",
     "portConflict": "Portti {port}: toisen prosessin käytössä",
     "encryptionOk": "Salausavain: määritetty",
-    "encryptionMissing": "Salausavain puuttuu — suorita `omniroute setup`",
+    "encryptionMissing": "Salausavain puuttuu — suorita `freeroute setup`",
     "allGood": "Kaikki tarkistukset läpäisty.",
     "warnings": "{count} varoitus(ta) — katso yllä."
   },
   "providers": {
     "title": "Palveluntarjoajat",
-    "noProviders": "Palveluntarjoajia ei ole määritetty. Suorita: omniroute setup",
+    "noProviders": "Palveluntarjoajia ei ole määritetty. Suorita: freeroute setup",
     "testing": "Testataan palveluntarjoajaa {name}...",
     "available": "{count} palveluntarjoaja(a) käytettävissä",
     "connected": "Yhdistetty",
@@ -71,7 +71,7 @@
       "dryRunOpt": "Näytä tehtävät muutokset tallentamatta niitä",
       "confirmPrompt": "Korvataanko yhteyden \"{name}\" ({id}) API-avain? [y/N]",
       "dryRunResult": "[dry-run] Yhteyden \"{name}\" ({id}) avain vaihdettaisiin. Muutoksia ei tehty.",
-      "oauthHint": "OAuth-yhteys — suorita: omniroute oauth {provider}",
+      "oauthHint": "OAuth-yhteys — suorita: freeroute oauth {provider}",
       "envVarEmpty": "Ympäristömuuttujaa {var} ei ole asetettu tai se on tyhjä.",
       "success": "Yhteyden \"{name}\" avain vaihdettu. Vahvista suorittamalla `providers test {id}`.",
       "testPassed": "Avaimen vaihdon jälkeinen testi onnistui.",
@@ -82,7 +82,7 @@
       "providerOpt": "Suodata palveluntarjoajan nimen mukaan",
       "header": "Tunnus     Palveluntarjoaja Nimi                     Vanhenemisen tila Testin tila   Jäähyaika päättyy",
       "noData": "Palveluntarjoajayhteyksien tietoja ei ole saatavilla.",
-      "requiresServer": "providers status edellyttää, että OmniRoute-palvelin on käynnissä."
+      "requiresServer": "providers status edellyttää, että FreeRoute-palvelin on käynnissä."
     }
   },
   "keys": {
@@ -90,8 +90,8 @@
     "addDescription": "Lisää tai päivitä palveluntarjoajan API-avain",
     "listDescription": "Luettele kaikki määritetyt API-avaimet",
     "removeDescription": "Poista palveluntarjoajan API-avain",
-    "regenerateDescription": "Luo OmniRoute-API-avain uudelleen",
-    "revokeDescription": "Kumoa OmniRoute-API-avain",
+    "regenerateDescription": "Luo FreeRoute-API-avain uudelleen",
+    "revokeDescription": "Kumoa FreeRoute-API-avain",
     "revealDescription": "Näytä peittämätön API-avaimen arvo",
     "usageDescription": "Näytä API-avaimen viimeaikainen käyttö",
     "usageLimitOpt": "Viimeisimpien pyyntöjen määrä",
@@ -142,7 +142,7 @@
     "warning": "⚠ Tämä tulostaa/kirjoittaa SALAAMATTOMAT API-avaimet ja OAuth-tunnukset selväkielisinä. Varmista, että näyttösi, komentotulkkisi historia ja mahdolliset tulostiedostot pysyvät yksityisinä.",
     "confirmHeading": "⚠ VAROITUS: tämä vie palveluntarjoajan SALAAMATTOMAT tunnistetiedot selväkielisinä",
     "confirmBody": "Tämä komento purkaa valittujen yhteyksien apiKey-, accessToken-, refreshToken- ja\nidToken-arvojen salauksen ja tulostaa/kirjoittaa ne. Käsittele tulostetta salaisuutena.",
-    "confirmFooter": "Vahvista suorittamalla:\n  omniroute auth export --force",
+    "confirmFooter": "Vahvista suorittamalla:\n  freeroute auth export --force",
     "missingKey": "STORAGE_ENCRYPTION_KEY vaaditaan tunnistetietojen vientiin.",
     "notFound": "Yhteyttä ei löytynyt: {id}",
     "invalidFormat": "Virheellinen muoto: {format}. Käytä muotoa json tai env."
@@ -220,10 +220,10 @@
     "reasoning": "Päättelyn vaativuustaso (low|medium|high)",
     "thinking": "Laajennetun päättelyn token-budjetti",
     "explain": "Tulosta varapolkujen puu ja kustannusväli stderr-virtaan",
-    "noCombo": "Vastaavaa yhdistelmää ei löytynyt. Määritä sellainen komennolla: omniroute combo create"
+    "noCombo": "Vastaavaa yhdistelmää ei löytynyt. Määritä sellainen komennolla: freeroute combo create"
   },
   "chat": {
-    "description": "Lähetä kertaluonteinen keskustelukehote OmniRoutelle",
+    "description": "Lähetä kertaluonteinen keskustelukehote FreeRoutelle",
     "file": "Lue kehote tiedostosta",
     "stdin": "Lue kehote vakiosyötteestä",
     "system": "Järjestelmäkehote",
@@ -242,8 +242,8 @@
     }
   },
   "serve": {
-    "description": "Käynnistä OmniRoute-palvelin (oletustoiminto)",
-    "starting": "Käynnistetään OmniRoute-palvelin portissa {port}...",
+    "description": "Käynnistä FreeRoute-palvelin (oletustoiminto)",
+    "starting": "Käynnistetään FreeRoute-palvelin portissa {port}...",
     "ready": "Valmis osoitteessa http://localhost:{port}",
     "stopping": "Pysäytetään palvelinta (PID {pid})...",
     "stopped": "Palvelin pysäytetty.",
@@ -262,7 +262,7 @@
   },
   "backup": {
     "title": "Varmuuskopiointi",
-    "description": "Luo OmniRoute-tiedoista varmuuskopio",
+    "description": "Luo FreeRoute-tiedoista varmuuskopio",
     "creating": "Luodaan varmuuskopiota...",
     "done": "Varmuuskopio tallennettu polkuun {path}",
     "noFiles": "Ei varmuuskopioitavia tiedostoja (tietokantaa ei ole alustettu)",
@@ -274,7 +274,7 @@
     "noBackups": "Varmuuskopioita ei löytynyt.",
     "notFound": "Varmuuskopiota ei löytynyt: {name}",
     "confirmRestore": "Korvataanko nykyiset tiedot varmuuskopiolla ajankohdalta {ts}?",
-    "createDescription": "Luo varmuuskopio OmniRoute-tiedoista",
+    "createDescription": "Luo varmuuskopio FreeRoute-tiedoista",
     "nameOpt": "Mukautettu varmuuskopion nimi",
     "cloudOpt": "Lataa varmuuskopio pilvitallennustilaan",
     "encryptOpt": "Salaa varmuuskopio AES-256-GCM-salauksella",
@@ -292,14 +292,14 @@
       "statusDescription": "Näytä varmuuskopiointiaikataulun nykyinen tila",
       "cronOpt": "Aikataulun cron-lauseke (oletus: päivittäin klo 3)",
       "enabled": "Automaattinen varmuuskopiointi käytössä (cron: {cron}).",
-      "hint": "omniroute serve lukee aikataulun käynnistyksen yhteydessä.",
+      "hint": "freeroute serve lukee aikataulun käynnistyksen yhteydessä.",
       "disabled": "Automaattinen varmuuskopiointi poistettu käytöstä.",
       "notConfigured": "Varmuuskopiointiaikataulua ei ole määritetty."
     }
   },
   "health": {
     "description": "Tarkista palvelimen kunto ja komponenttien tila",
-    "noServer": "Palvelin ei ole käynnissä. Käynnistä komennolla: omniroute serve",
+    "noServer": "Palvelin ei ole käynnissä. Käynnistä komennolla: freeroute serve",
     "title": "Kunto",
     "status": "Tila: {status}",
     "uptime": "Käyttöaika: {uptime}",
@@ -308,21 +308,21 @@
   },
   "quota": {
     "description": "Näytä palveluntarjoajan kiintiön käyttö",
-    "noServer": "Palvelin ei ole käynnissä. Käynnistä komennolla: omniroute serve",
+    "noServer": "Palvelin ei ole käynnissä. Käynnistä komennolla: freeroute serve",
     "noData": "Kiintiötietoja ei ole saatavilla."
   },
   "cache": {
     "description": "Hallitse vastausvälimuistia",
-    "noServer": "Palvelin ei ole käynnissä. Käynnistä komennolla: omniroute serve",
+    "noServer": "Palvelin ei ole käynnissä. Käynnistä komennolla: freeroute serve",
     "cleared": "Välimuisti tyhjennetty.",
     "clearFailed": "Välimuistin tyhjentäminen epäonnistui."
   },
   "redis": {
-    "description": "Käynnistä paikallinen Redis-säiliö yhdellä napsautuksella (Podman tai Docker) OmniRoute-välimuistia ja kiintiöiden seurantaa varten"
+    "description": "Käynnistä paikallinen Redis-säiliö yhdellä napsautuksella (Podman tai Docker) FreeRoute-välimuistia ja kiintiöiden seurantaa varten"
   },
   "test": {
     "description": "Testaa yhteys palveluntarjoajaan",
-    "noServer": "Palvelin ei ole käynnissä. Käynnistä komennolla: omniroute serve",
+    "noServer": "Palvelin ei ole käynnissä. Käynnistä komennolla: freeroute serve",
     "testing": "Testataan: {provider} / {model}...",
     "passed": "Yhteys onnistui!",
     "failed": "Yhteys epäonnistui: {error}",
@@ -334,7 +334,7 @@
     "saved": "Tulokset tallennettu polkuun {path}",
     "compareTitle": "Mallien vertailu",
     "compareMinTwo": "Valitsin --compare vaatii vähintään kaksi mallia (pilkuilla eroteltuina)",
-    "noProviders": "Palveluntarjoajia ei ole määritetty. Lisää palveluntarjoaja komennolla: omniroute keys add"
+    "noProviders": "Palveluntarjoajia ei ole määritetty. Lisää palveluntarjoaja komennolla: freeroute keys add"
   },
   "update": {
     "checking": "Tarkistetaan päivityksiä...",
@@ -348,7 +348,7 @@
     "running": "MCP-palvelin on käynnissä ({transport})",
     "stopped": "MCP-palvelin pysäytetty.",
     "restarted": "MCP-palvelin käynnistetty uudelleen.",
-    "stoppedHint": "Ota se käyttöön komennolla `omniroute mcp enable`.",
+    "stoppedHint": "Ota se käyttöön komennolla `freeroute mcp enable`.",
     "enabled": "MCP-palvelin otettu käyttöön.",
     "disabled": "MCP-palvelin poistettu käytöstä.",
     "enable": {
@@ -416,7 +416,7 @@
     }
   },
   "policy": {
-    "description": "Hallinnoi OmniRoute-valtuutuskäytäntöjä",
+    "description": "Hallinnoi FreeRoute-valtuutuskäytäntöjä",
     "list": {
       "description": "Luettele käytännöt",
       "kind": "Suodata tyypin mukaan (allow|deny|rate-limit|cost-cap)",
@@ -453,7 +453,7 @@
     }
   },
   "compression": {
-    "description": "Määritä OmniRoute-pakkausputken asetukset ja tarkastele sitä",
+    "description": "Määritä FreeRoute-pakkausputken asetukset ja tarkastele sitä",
     "status": {
       "description": "Näytä pakkauksen nykyinen tila ja asetukset"
     },
@@ -507,18 +507,18 @@
     "confirmRotate": "Vaihdetaanko tunnelin {type} URL-osoite? (uusi URL-osoite luodaan)"
   },
   "stop": {
-    "description": "Pysäytä OmniRoute-palvelin",
+    "description": "Pysäytä FreeRoute-palvelin",
     "stopping": "Pysäytetään palvelinta (PID {pid})...",
     "stopped": "Palvelin pysäytetty.",
     "notRunning": "Palvelin ei ole käynnissä.",
     "portFallback": "PID-tiedostoa ei löytynyt, yritetään pysäyttää portin perusteella..."
   },
   "restart": {
-    "description": "Käynnistä OmniRoute-palvelin uudelleen",
-    "restarting": "Käynnistetään OmniRoute-palvelinta uudelleen..."
+    "description": "Käynnistä FreeRoute-palvelin uudelleen",
+    "restarting": "Käynnistetään FreeRoute-palvelinta uudelleen..."
   },
   "dashboard": {
-    "description": "Avaa OmniRoute-hallintapaneeli selaimessa",
+    "description": "Avaa FreeRoute-hallintapaneeli selaimessa",
     "opening": "Avataan hallintapaneeli osoitteessa {url}",
     "urlOnly": "Tulosta hallintapaneelin URL-osoite avaamatta selainta",
     "tui": "Avaa interaktiivinen TUI-hallintapaneeli (päätelaitteen käyttöliittymä, 7 välilehteä)"
@@ -526,7 +526,7 @@
   "models": {
     "description": "Luettele saatavilla olevat mallit (vaatii palvelimen)",
     "search": "Suodata malleja tunnuksen, nimen, palveluntarjoajan tai kuvauksen perusteella",
-    "noServer": "Palvelin ei ole käynnissä. Käynnistä komennolla: omniroute serve",
+    "noServer": "Palvelin ei ole käynnissä. Käynnistä komennolla: freeroute serve",
     "noModels": "Malleja ei löytynyt."
   },
   "audit": {
@@ -558,7 +558,7 @@
     }
   },
   "skills": {
-    "description": "Hallinnoi OmniRoute-taitoja (sandbox, builtin, custom, hybrid, skillssh)",
+    "description": "Hallinnoi FreeRoute-taitoja (sandbox, builtin, custom, hybrid, skillssh)",
     "list": {
       "description": "Luettele asennetut taidot",
       "type": "Suodata tyypin perusteella (sandbox|custom|builtin|hybrid|skillssh)",
@@ -631,7 +631,7 @@
     }
   },
   "memory": {
-    "description": "Hallitse OmniRouten keskustelumuistia (FTS5 + vector)",
+    "description": "Hallitse FreeRouten keskustelumuistia (FTS5 + vector)",
     "search": {
       "description": "Hae muistimerkintöjä semanttisella kyselyllä",
       "type": "Suodata muistityypin mukaan (user|feedback|project|reference)",
@@ -789,7 +789,7 @@
     }
   },
   "webhooks": {
-    "description": "Hallitse OmniRoute-webhookeja",
+    "description": "Hallitse FreeRoute-webhookeja",
     "events": {
       "description": "Listaa kaikki käytettävissä olevat webhook-tapahtumatyypit"
     },
@@ -821,14 +821,14 @@
     }
   },
   "program": {
-    "description": "OmniRoute — Älykäs AI-reititin automaattisella fallbackilla",
+    "description": "FreeRoute — Älykäs AI-reititin automaattisella fallbackilla",
     "version": "Tulosta versio ja poistu",
     "output": "Tulostusmuoto (table, json, jsonl, csv)",
     "quiet": "Piilota epäolennaiset tulosteet",
     "no_color": "Poista väritulostus käytöstä",
     "timeout": "HTTP-pyyntöjen aikakatkaisu millisekunteina",
-    "api_key": "API-avain OmniRoute-palvelimelle",
-    "base_url": "OmniRoute-palvelimen perus-URL",
+    "api_key": "API-avain FreeRoute-palvelimelle",
+    "base_url": "FreeRoute-palvelimen perus-URL",
     "context": "Palvelimen konteksti/profiili tälle komennolle",
     "lang": "Aseta CLI-näyttökieli (ohittaa OMNIROUTE_LANG)"
   },
@@ -1079,7 +1079,7 @@
     }
   },
   "openapi": {
-    "description": "Käytä ja testaa OmniRoute OpenAPI -määritystä",
+    "description": "Käytä ja testaa FreeRoute OpenAPI -määritystä",
     "dump": {
       "description": "Tulosta OpenAPI-määritys vakiotulosteeseen tai tiedostoon",
       "format": "Tulostusmuoto: yaml|json (oletus: yaml)",
@@ -1149,7 +1149,7 @@
     }
   },
   "open": {
-    "description": "Avaa tietty OmniRoute-hallintapaneelin sivu selaimessa",
+    "description": "Avaa tietty FreeRoute-hallintapaneelin sivu selaimessa",
     "url": "Tulosta vain URL, älä avaa selainta"
   },
   "telemetry": {
@@ -1166,7 +1166,7 @@
     }
   },
   "sync": {
-    "description": "Synkronoi määritykset OmniRoute-instanssien välillä",
+    "description": "Synkronoi määritykset FreeRoute-instanssien välillä",
     "push": {
       "description": "Lähetä määritykset pilveen tai etäinstanssiin",
       "target": "Kohde (cloud tai context:name)",
@@ -1222,8 +1222,8 @@
       "listTitle": "Saatavilla olevat kielet",
       "current": "Kieli: {code} ({name})",
       "saved": "Kieleksi asetettiin {code} ({name}).",
-      "noCode": "Kielikoodi vaaditaan. Näet saatavilla olevat koodit suorittamalla komennon 'omniroute config lang list'.",
-      "unknown": "Tuntematon kielikoodi: {code}. Näet saatavilla olevat koodit suorittamalla komennon 'omniroute config lang list'.",
+      "noCode": "Kielikoodi vaaditaan. Näet saatavilla olevat koodit suorittamalla komennon 'freeroute config lang list'.",
+      "unknown": "Tuntematon kielikoodi: {code}. Näet saatavilla olevat koodit suorittamalla komennon 'freeroute config lang list'.",
       "alreadySet": "Kieleksi on jo asetettu {code}.",
       "envHint": "Vinkki: voit myös asettaa ympäristössäsi muuttujan OMNIROUTE_LANG={code}."
     }
@@ -1242,7 +1242,7 @@
     "filter": "Suodata tason mukaan (error,warn,info) — pilkuilla eroteltuina",
     "lines": "Haettavien rivien määrä",
     "timeout": "Yhteyden aikakatkaisu millisekunteina",
-    "baseUrl": "OmniRoute API:n perus-URL-osoite",
+    "baseUrl": "FreeRoute API:n perus-URL-osoite",
     "requestId": "Suodata pyynnön tunnuksen mukaan",
     "apiKey": "Suodata API-avaimen mukaan",
     "combo": "Suodata yhdistelmän nimen mukaan",
@@ -1258,10 +1258,10 @@
     "description": "Hallitse ilmaisinalueen kuvaketta",
     "show": "Näytä ilmaisinalueen kuvake (jos palvelin on käynnissä valitsimella --tray)",
     "hide": "Piilota ilmaisinalueen kuvake",
-    "quit": "Sulje OmniRoute ilmaisinalueen kautta"
+    "quit": "Sulje FreeRoute ilmaisinalueen kautta"
   },
   "autostart": {
-    "description": "Hallitse OmniRouten automaattista käynnistystä järjestelmän käynnistyessä (Linux: käyttäjän systemd-palvelu)",
+    "description": "Hallitse FreeRouten automaattista käynnistystä järjestelmän käynnistyessä (Linux: käyttäjän systemd-palvelu)",
     "enable": "Ota automaattinen käynnistys käyttöön järjestelmän käynnistyessä",
     "disable": "Poista automaattinen käynnistys käytöstä järjestelmän käynnistyessä",
     "toggle": "Vaihda automaattisen käynnistyksen tilaa järjestelmän käynnistyessä",
@@ -1293,19 +1293,19 @@
     "scaffold": "Luo uuden liitännäisen perusrakenne"
   },
   "launch": {
-    "description": "Käynnistä Claude Code OmniRouteen yhdistettynä (paikallinen tai etäyhteys, --profile-valinnalla)",
+    "description": "Käynnistä Claude Code FreeRouteen yhdistettynä (paikallinen tai etäyhteys, --profile-valinnalla)",
     "token": "Tunnus, joka Claude-asiakasohjelman tulee lähettää (ANTHROPIC_AUTH_TOKEN)",
-    "notRunning": "OmniRoute ei ole tavoitettavissa portissa {port}. Käynnistä se komennolla 'omniroute serve'.",
+    "notRunning": "FreeRoute ei ole tavoitettavissa portissa {port}. Käynnistä se komennolla 'freeroute serve'.",
     "notFound": "'claude'-CLI:tä ei löytynyt PATH-ympäristömuuttujasta."
   },
   "run": {
-    "description": "Käynnistä tuettu CLI-kohde OmniRouten kautta"
+    "description": "Käynnistä tuettu CLI-kohde FreeRouten kautta"
   },
   "setupClaude": {
-    "description": "Luo ~/.claude/profiles Claude Code -profiilit OmniRouten malliluettelosta"
+    "description": "Luo ~/.claude/profiles Claude Code -profiilit FreeRouten malliluettelosta"
   },
   "connect": {
-    "description": "Yhdistä OmniRoute-etäpalvelimeen ja siirry etätilaan"
+    "description": "Yhdistä FreeRoute-etäpalvelimeen ja siirry etätilaan"
   },
   "tokens": {
     "description": "Hallitse rajattuja CLI-käyttötunnuksia (etätila)"
@@ -1314,10 +1314,10 @@
     "description": "Valitse palveluntarjoaja ja malli aktiiviselta palvelimelta ja määritä tuettu paikallinen CLI"
   },
   "launchCodex": {
-    "description": "Käynnistä Codex CLI OmniRouteen yhdistettynä (paikallinen tai VPS-etäpalvelin)"
+    "description": "Käynnistä Codex CLI FreeRouteen yhdistettynä (paikallinen tai VPS-etäpalvelin)"
   },
   "setupCodex": {
-    "description": "Luo ~/.codex-profiilitiedostot OmniRouten reaaliaikaisesta malliluettelosta"
+    "description": "Luo ~/.codex-profiilitiedostot FreeRouten reaaliaikaisesta malliluettelosta"
   },
   "packs": {
     "description": "Hallitse valinnaisia ajonaikaisen ympäristön paketteja (ML / selainautomaatio)",
@@ -1330,7 +1330,7 @@
     "errUnknown": "tuntematon paketti: {name}",
     "errNoIndex": "paketti-indeksiä ei löytynyt; anna --source <dir>, joka sisältää paketin sisällön (työpöytäsovelluspaketit sisältävät sen sovelluksen vieressä)",
     "installed": "paketti \"{name}\" on asennettu ja tarkistettu hakemistossa {dir}",
-    "restartHint": "käynnistä OmniRoute-palvelin (tai työpöytäsovellus) uudelleen, jotta ajoympäristö ottaa paketin käyttöön",
+    "restartHint": "käynnistä FreeRoute-palvelin (tai työpöytäsovellus) uudelleen, jotta ajoympäristö ottaa paketin käyttöön",
     "removed": "paketti \"{name}\" poistettu",
     "notInstalled": "pakettia \"{name}\" ei ollut asennettu",
     "verifyOk": "kaikki asennetut paketit tarkistettu",

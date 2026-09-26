@@ -141,75 +141,21 @@ export default function HomePageClient({ machineId }: HomePageClientProps) {
   // unconditional live socket: the binding here was unused (ReferenceError in prod,
   // #4759/#4745) and the socket opened even when topology was hidden (#4596).
 
+  // FreeRoute: `versionInfo`/`updating` stay (handleUpdate below still
+  // references them) but are never populated from a real upstream-version
+  // fetch anymore — see fetchData() above. The Electron download-link
+  // builder (electronDownload, ex-upstream release asset URLs) had no
+  // remaining consumer once the update banner/overlay JSX was removed and
+  // has been deleted outright rather than left pointing at upstream OmniRoute
+  // release assets.
   const [versionInfo, setVersionInfo] = useState<VersionInfo | null>(null);
   const [updating, setUpdating] = useState(false);
 
-  // Platform detection and download links for Electron
-  const platform =
-    typeof globalThis.window === "undefined" ? undefined : globalThis.window.electronAPI?.platform;
-  // Destructured to locals: `versionInfo?.current` in a dependency array trips
-  // the lint heuristic that treats any `.current` access as a mutable ref read.
-  const installedVersion = versionInfo?.current || "";
-  const latestVersion = versionInfo?.latest || "";
-  const electronDownload = useMemo(() => {
-    const cleanLatest = latestVersion.replace(/^v/, "");
-    if (platform === "darwin") {
-      return {
-        label: t("downloadDmg"),
-        url: `https://github.com/diegosouzapw/OmniRoute/releases/download/v${cleanLatest}/OmniRoute-${cleanLatest}.dmg`,
-        desc: t("downloadDmgDescription", { version: installedVersion }),
-      };
-    }
-    if (platform === "win32") {
-      return {
-        label: t("downloadExe"),
-        url: `https://github.com/diegosouzapw/OmniRoute/releases/download/v${cleanLatest}/OmniRoute.Setup.${cleanLatest}.exe`,
-        desc: t("downloadExeDescription", { version: installedVersion }),
-      };
-    }
-    if (platform === "linux") {
-      return {
-        label: t("downloadAppImage"),
-        url: `https://github.com/diegosouzapw/OmniRoute/releases/download/v${cleanLatest}/OmniRoute-${cleanLatest}.AppImage`,
-        desc: t("downloadAppImageDescription", { version: installedVersion }),
-      };
-    }
-    return {
-      label: t("downloadUpdate"),
-      url: `https://github.com/diegosouzapw/OmniRoute/releases/tag/v${cleanLatest}`,
-      desc: t("downloadUpdateDescription", { version: installedVersion }),
-    };
-  }, [platform, t, latestVersion, installedVersion]);
-
-  // Electron internal auto-updater state and listeners
-  const [electronUpdateStatus, setElectronUpdateStatus] = useState<{
-    status:
-      "idle" | "checking" | "available" | "not-available" | "downloading" | "downloaded" | "error";
-    version?: string;
-    percent?: number;
-    message?: string;
-  }>({ status: "idle" });
-
-  useEffect(() => {
-    if (!isElectron || typeof globalThis.window === "undefined" || !globalThis.window.electronAPI)
-      return;
-
-    // Trigger initial check silently on mount
-    globalThis.window.electronAPI.checkForUpdates().catch((err: any) => {
-      console.error("[Electron] Check for updates failed:", err);
-    });
-
-    const dispose = globalThis.window.electronAPI.onUpdateStatus((data: any) => {
-      setElectronUpdateStatus({
-        status: data.status,
-        version: data.version,
-        percent: data.percent,
-        message: data.message,
-      });
-    });
-
-    return dispose;
-  }, [isElectron]);
+  // FreeRoute: the Electron auto-updater is disabled — it must not check
+  // upstream OmniRoute's release feed. No electron `checkForUpdates()` call
+  // and no update-status listener are wired up (compare upstream, which
+  // called `checkForUpdates()` unconditionally on mount here), and the
+  // update banner/overlay that consumed this status has been removed.
 
   const [updateSteps, setUpdateSteps] = useState<UpdateStep[]>([]);
   const [updatePhase, setUpdatePhase] = useState<"idle" | "running" | "done" | "failed">("idle");
@@ -251,10 +197,11 @@ export default function HomePageClient({ machineId }: HomePageClientProps) {
 
   const fetchData = useCallback(async () => {
     try {
-      const [provRes, modelsRes, versionRes] = await Promise.all([
+      // FreeRoute: no /api/system/version fetch here — that route is disabled
+      // (upstream_updates_disabled). See src/lib/system/versionCheck.ts.
+      const [provRes, modelsRes] = await Promise.all([
         fetch("/api/providers"),
         fetch("/api/models"),
-        fetch("/api/system/version"),
       ]);
       if (provRes.ok) {
         const provData = await provRes.json();
@@ -263,10 +210,6 @@ export default function HomePageClient({ machineId }: HomePageClientProps) {
       if (modelsRes.ok) {
         const modelsData = await modelsRes.json();
         setModels(modelsData.models || []);
-      }
-      if (versionRes.ok) {
-        const versionData = await versionRes.json();
-        setVersionInfo(versionData);
       }
     } catch (e) {
       console.log("Error fetching data:", e);
@@ -792,259 +735,6 @@ export default function HomePageClient({ machineId }: HomePageClientProps) {
 
   return (
     <div className="flex flex-col gap-8">
-      {/* Update Progress Overlay */}
-      {showUpdateOverlay && (
-        <div className="fixed inset-0 z-[999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-bg-main border border-border rounded-2xl shadow-2xl max-w-md w-full p-6">
-            <div className="flex items-center gap-3 mb-5">
-              <span className="material-symbols-outlined text-primary text-[28px] animate-spin">
-                progress_activity
-              </span>
-              <div>
-                <h3 className="text-lg font-bold">
-                  {updatePhase === "done"
-                    ? t("updateCompleteTitle")
-                    : updatePhase === "failed"
-                      ? t("updateFailedTitle")
-                      : t("updatingTitle")}
-                </h3>
-                <p className="text-xs text-text-muted mt-0.5">
-                  {updatePhase === "done"
-                    ? t("reloadNotice")
-                    : updatePhase === "failed"
-                      ? t("retryNotice")
-                      : t("restartNotice")}
-                </p>
-              </div>
-            </div>
-
-            {/* Step list */}
-            <div className="flex flex-col gap-2">
-              {updateSteps
-                .filter((s) => s.step !== "complete" && s.step !== "error")
-                .map((s) => (
-                  <div
-                    key={s.step}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border transition-all ${
-                      s.status === "running"
-                        ? "border-primary/40 bg-primary/5"
-                        : s.status === "done"
-                          ? "border-green-500/30 bg-green-500/5"
-                          : s.status === "failed"
-                            ? "border-red-500/30 bg-red-500/5"
-                            : "border-border bg-bg-subtle"
-                    }`}
-                  >
-                    {s.status === "running" ? (
-                      <span className="material-symbols-outlined text-primary text-[18px] animate-spin">
-                        progress_activity
-                      </span>
-                    ) : s.status === "done" ? (
-                      <span className="material-symbols-outlined text-green-500 text-[18px]">
-                        check_circle
-                      </span>
-                    ) : s.status === "failed" ? (
-                      <span className="material-symbols-outlined text-red-500 text-[18px]">
-                        error
-                      </span>
-                    ) : (
-                      <span className="material-symbols-outlined text-amber-500 text-[18px]">
-                        warning
-                      </span>
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium">{stepLabels[s.step] || s.step}</p>
-                      <p className="text-xs text-text-muted truncate">{s.message}</p>
-                    </div>
-                  </div>
-                ))}
-
-              {/* Error message */}
-              {updateSteps.find((s) => s.step === "error") && (
-                <div className="mt-1 px-3 py-2.5 rounded-lg border border-red-500/30 bg-red-500/5 text-red-500">
-                  <p className="text-xs font-mono break-all">
-                    {updateSteps.find((s) => s.step === "error")?.message}
-                  </p>
-                </div>
-              )}
-
-              {/* Completion message */}
-              {updatePhase === "done" && (
-                <div className="mt-1 px-3 py-2.5 rounded-lg border border-green-500/30 bg-green-500/5">
-                  <p className="text-sm font-semibold text-green-500 flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[18px]">check_circle</span>
-                    {updateSteps.find((s) => s.step === "complete")?.message || t("updateComplete")}
-                  </p>
-                  <p className="text-xs text-text-muted mt-1">{t("reloadingPageAutomatically")}</p>
-                </div>
-              )}
-            </div>
-
-            {/* Actions */}
-            {(updatePhase === "failed" || updatePhase === "done") && (
-              <div className="flex gap-2 mt-4">
-                <Button
-                  size="sm"
-                  fullWidth
-                  onClick={() => {
-                    setUpdating(false);
-                    setUpdatePhase("idle");
-                    setUpdateSteps([]);
-                    if (updatePhase === "done") globalThis.window.location.reload();
-                  }}
-                >
-                  {updatePhase === "done" ? t("reloadNow") : t("closeUpdate")}
-                </Button>
-                {updatePhase === "failed" && (
-                  <Button size="sm" variant="secondary" fullWidth onClick={handleUpdate}>
-                    {t("retryUpdate")}
-                  </Button>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Update Notification Banner */}
-      {versionInfo?.updateAvailable && !showUpdateOverlay && (
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-3 rounded-lg border border-primary/20 bg-primary/10 px-5 py-4 text-primary">
-            <div className="flex min-h-[48px] items-center justify-between">
-              <div className="flex min-w-0 items-center gap-4">
-                <span className="material-symbols-outlined shrink-0 text-[24px]">
-                  {isElectron && electronUpdateStatus.status === "downloading"
-                    ? "downloading"
-                    : "system_update_alt"}
-                </span>
-                <div>
-                  <p className="font-semibold text-sm">
-                    {t("updateAvailableTitle", {
-                      version: versionInfo.latest,
-                      desktop: isElectron ? ` ${t("desktopAppLabel")}` : "",
-                    })}
-                  </p>
-                  <p className="text-xs opacity-80 mt-0.5">
-                    {isElectron ? (
-                      <>
-                        {electronUpdateStatus.status === "checking" && t("checkingForUpdates")}
-                        {electronUpdateStatus.status === "available" &&
-                          t("versionAvailableForDownload", { version: versionInfo.latest })}
-                        {electronUpdateStatus.status === "downloading" &&
-                          t("downloadingUpdate", { percent: electronUpdateStatus.percent || 0 })}
-                        {electronUpdateStatus.status === "downloaded" && t("updateDownloaded")}
-                        {electronUpdateStatus.status === "error" &&
-                          t("autoUpdateFailed", {
-                            reason: electronUpdateStatus.message || t("unknownUpdateError"),
-                          })}
-                        {(electronUpdateStatus.status === "idle" ||
-                          electronUpdateStatus.status === "not-available") &&
-                          t("versionAvailableDesktop", { version: versionInfo.latest })}
-                      </>
-                    ) : versionInfo.autoUpdateSupported ? (
-                      t("updateAvailableDesc")
-                    ) : (
-                      versionInfo.autoUpdateError || t("manualUpdateRequired")
-                    )}
-                  </p>
-                </div>
-              </div>
-
-              {isElectron ? (
-                <div className="flex gap-2 shrink-0 ml-4">
-                  {electronUpdateStatus.status === "available" && (
-                    <Button
-                      size="sm"
-                      onClick={() => globalThis.window.electronAPI?.downloadUpdate()}
-                      className="font-semibold"
-                    >
-                      {t("downloadUpdate")}
-                    </Button>
-                  )}
-                  {electronUpdateStatus.status === "downloading" && (
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/20">
-                      <span className="material-symbols-outlined text-primary text-[16px] animate-spin">
-                        progress_activity
-                      </span>
-                      <span className="text-xs font-semibold">
-                        {electronUpdateStatus.percent || 0}%
-                      </span>
-                    </div>
-                  )}
-                  {electronUpdateStatus.status === "downloaded" && (
-                    <Button
-                      size="sm"
-                      onClick={() => globalThis.window.electronAPI?.installUpdate()}
-                      className="font-semibold animate-pulse"
-                    >
-                      {t("restartAndInstall")}
-                    </Button>
-                  )}
-                  {(electronUpdateStatus.status === "error" ||
-                    electronUpdateStatus.status === "idle" ||
-                    electronUpdateStatus.status === "not-available") && (
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        setElectronUpdateStatus({ status: "checking" });
-                        globalThis.window.electronAPI?.checkForUpdates().catch((err: any) => {
-                          setElectronUpdateStatus({ status: "error", message: err.message });
-                        });
-                      }}
-                      className="font-semibold"
-                    >
-                      {t("checkForUpdate")}
-                    </Button>
-                  )}
-                </div>
-              ) : (
-                <Button
-                  size="sm"
-                  onClick={versionInfo.autoUpdateSupported ? handleUpdate : undefined}
-                  disabled={updating || !versionInfo.autoUpdateSupported}
-                  className="ml-4 shrink-0 font-semibold"
-                  title={versionInfo.autoUpdateError || ""}
-                >
-                  {versionInfo.autoUpdateSupported ? t("updateNow") : t("manualUpdate")}
-                </Button>
-              )}
-            </div>
-
-            {/* Direct download fallback links shown if in Electron and auto-updater has failed, is idle, or has completed check */}
-            {isElectron &&
-              (electronUpdateStatus.status === "error" ||
-                electronUpdateStatus.status === "idle" ||
-                electronUpdateStatus.status === "available" ||
-                electronUpdateStatus.status === "not-available") && (
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between border-t border-primary/20 mt-2 pt-3 gap-2">
-                  <p className="text-xs opacity-75">{t("directDownloadHint")}</p>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() =>
-                        openExternal(
-                          `https://github.com/diegosouzapw/OmniRoute/releases/tag/v${versionInfo.latest}`
-                        )
-                      }
-                      className="font-semibold text-xs py-1"
-                    >
-                      {t("releaseNotes")}
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={() => openExternal(electronDownload.url)}
-                      className="font-semibold text-xs py-1"
-                    >
-                      {electronDownload.label}
-                    </Button>
-                  </div>
-                </div>
-              )}
-          </div>
-        </div>
-      )}
-
       {/* Quick Start (controlled by Appearance setting, default on) */}
       {showQuickStartOnHome && (
         <Card>

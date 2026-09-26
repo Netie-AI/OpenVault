@@ -1,5 +1,5 @@
 /**
- * omniroute setup opencode — Wire the bundled @omniroute/opencode-plugin
+ * freeroute setup opencode — Wire the bundled @omniroute/opencode-plugin
  * into a local OpenCode install.
  *
  * Closes the gap where `npm install -g omniroute` ships the plugin
@@ -164,7 +164,7 @@ function registerPluginInOpenCodeConfig({
     } catch (err) {
       throw new Error(
         `Failed to parse existing ${configPath}: ${err.message}\n` +
-          `Fix or remove the file manually, then re-run \`omniroute setup opencode\`.`
+          `Fix or remove the file manually, then re-run \`freeroute setup opencode\`.`
       );
     }
   }
@@ -309,7 +309,7 @@ export async function runSetupOpenCodeCommand(opts = {}) {
   const wantsAuth = Boolean(opts.auth);
   const nonInteractive = Boolean(opts.nonInteractive);
 
-  printHeading("OmniRoute → OpenCode Plugin Setup");
+  printHeading("FreeRoute → OpenCode Plugin Setup");
 
   const resolvedDirs = resolveOpenCodeDirs();
   const opencodeConfigDir = opts.configDir || resolvedDirs.configDir;
@@ -319,7 +319,7 @@ export async function runSetupOpenCodeCommand(opts = {}) {
 
   const guard = await guardHostConfigTarget(opencodeConfigDir, {
     toolLabel: "OpenCode",
-    hostCommand: "omniroute setup opencode",
+    hostCommand: "freeroute setup opencode",
     allowContainerWrite: Boolean(opts.allowContainerWrite ?? opts["allow-container-write"]),
   });
   if (guard !== 0) return { exitCode: guard };
@@ -395,9 +395,9 @@ export async function runSetupOpenCodeCommand(opts = {}) {
 }
 
 /**
- * Register the `omniroute setup opencode` subcommand on the parent
+ * Register the `freeroute setup opencode` subcommand on the parent
  * `setup` command. Commander builds the doc/help from the chain, so
- * `omniroute setup --help` automatically shows the new subcommand.
+ * `freeroute setup --help` automatically shows the new subcommand.
  *
  * @param {import("commander").Command} setupCommand  the registered `setup` command
  */
@@ -415,11 +415,11 @@ export function registerSetupOpenCode(setupCommand) {
     )
     .option(
       "--base-url <url>",
-      "OmniRoute base URL the plugin should talk to (default: active context or http://localhost:20128)"
+      "FreeRoute base URL the plugin should talk to (default: active context or http://localhost:20128)"
     )
     .option(
       "--remote <url>",
-      "Remote OmniRoute URL, e.g. http://192.168.0.15:20128 (overrides --base-url and the context)"
+      "Remote FreeRoute URL, e.g. http://192.168.0.15:20128 (overrides --base-url and the context)"
     )
     .option("--display-name <name>", "Display name in the OpenCode UI (optional)")
     .option(

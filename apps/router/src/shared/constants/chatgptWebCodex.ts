@@ -1,4 +1,4 @@
-export const CHATGPT_WEB_CODEX_CONNECTOR_NAME = "OmniRoute Codex v2";
+export const CHATGPT_WEB_CODEX_CONNECTOR_NAME = "FreeRoute Codex v2";
 export const CHATGPT_WEB_CODEX_PROVIDER_ID = "chatgpt-web-codex";
 export const CHATGPT_WEB_CODEX_MODEL_PREFIX = `${CHATGPT_WEB_CODEX_PROVIDER_ID}/`;
 

@@ -1,9 +1,9 @@
 /**
  * GET/POST /api/services/dario/admin/import-from-omniroute
  *
- * Imports an existing OmniRoute `claude` provider connection's OAuth tokens
+ * Imports an existing FreeRoute `claude` provider connection's OAuth tokens
  * directly into Dario's account store, skipping the interactive browser OAuth
- * flow entirely. This works because OmniRoute's native `claude` provider and
+ * flow entirely. This works because FreeRoute's native `claude` provider and
  * Dario both authenticate against the identical public Claude Code OAuth
  * client (client_id 9d1c250a-e61b-44d9-88ed-5944d1962f5e,
  * platform.claude.com/v1/oauth/token) — a refresh token minted for that
@@ -18,13 +18,13 @@
  * src/accounts.ts: `{alias, accessToken, refreshToken, expiresAt, scopes,
  * deviceId, accountUuid}`, a plain unencrypted JSON file dario itself
  * round-trips via JSON.stringify/parse) — far lower-risk than reimplementing
- * PKCE/token-exchange ourselves, since OmniRoute's own decrypt() already
+ * PKCE/token-exchange ourselves, since FreeRoute's own decrypt() already
  * hands us a live, valid access+refresh token pair for this exact client_id.
  *
  * Dario has no live filesystem watch on ~/.dario/accounts (confirmed against
  * its source — the running proxy only re-reads that directory on its own
  * boot, or via an admin login-start+complete round trip). So after writing
- * the file we stop+start the OmniRoute-managed supervisor to force a clean
+ * the file we stop+start the FreeRoute-managed supervisor to force a clean
  * pickup, rather than relying on any undocumented hot-reload behavior.
  */
 

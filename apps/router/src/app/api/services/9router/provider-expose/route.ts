@@ -2,7 +2,7 @@
  * POST /api/services/9router/provider-expose
  *
  * Toggle provider exposure for the 9router embedded service.
- * When enabled, 9Router models are discoverable as `9router/...` in OmniRoute routing.
+ * When enabled, 9Router models are discoverable as `9router/...` in FreeRoute routing.
  *
  * Body: { enabled: boolean }
  * Response: 204 No Content on success.

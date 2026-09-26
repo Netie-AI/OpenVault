@@ -40,7 +40,7 @@ function getServerSnapshot() {
 }
 
 /**
- * Dismissable banner announcing the Cheaper Inference OmniRoute partnership on
+ * Dismissable banner announcing the Cheaper Inference FreeRoute partnership on
  * the dashboard home page — same size/shape as KimiSponsorBanner, no version
  * gate (durable partnership, not a time-boxed offer). The logomark reuses
  * <ProviderIcon providerId="cheaperinference" .../>.

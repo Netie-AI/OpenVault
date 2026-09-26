@@ -1,8 +1,8 @@
 {
   "common": {
     "error": "Błąd: {message}",
-    "serverOffline": "Serwer OmniRoute jest offline. Uruchom: omniroute serve",
-    "authRequired": "Wymagane uwierzytelnienie. Ustaw OMNIROUTE_API_KEY lub uruchom: omniroute setup",
+    "serverOffline": "Serwer FreeRoute jest offline. Uruchom: freeroute serve",
+    "authRequired": "Wymagane uwierzytelnienie. Ustaw OMNIROUTE_API_KEY lub uruchom: freeroute setup",
     "rateLimited": "Przekroczono limit żądań. Spróbuj ponownie za {seconds}s.",
     "timeout": "Żądanie przekroczyło czas po {ms}ms.",
     "success": "Gotowe.",
@@ -15,7 +15,7 @@
     "yesOpt": "Pomiń potwierdzenie"
   },
   "setup": {
-    "title": "Konfiguracja OmniRoute",
+    "title": "Konfiguracja FreeRoute",
     "passwordPrompt": "Hasło administratora",
     "providerPrompt": "Domyślny dostawca (pozostaw puste, aby pominąć)",
     "done": "Konfiguracja zakończona",
@@ -30,19 +30,19 @@
     "opencode": "Zainstaluj i skonfiguruj dołączoną wtyczkę @omniroute/opencode-plugin dla OpenCode"
   },
   "doctor": {
-    "title": "Diagnostyka OmniRoute",
+    "title": "Diagnostyka FreeRoute",
     "dbOk": "Baza danych: OK ({path})",
-    "dbMissing": "Baza danych: niezainicjowana — uruchom `omniroute setup`",
+    "dbMissing": "Baza danych: niezainicjowana — uruchom `freeroute setup`",
     "portOk": "Port {port}: dostępny",
     "portConflict": "Port {port}: używany przez inny proces",
     "encryptionOk": "Klucz szyfrowania: skonfigurowany",
-    "encryptionMissing": "Brak klucza szyfrowania — uruchom `omniroute setup`",
+    "encryptionMissing": "Brak klucza szyfrowania — uruchom `freeroute setup`",
     "allGood": "Wszystkie testy zakończone pomyślnie.",
     "warnings": "Liczba ostrzeżeń: {count} — zobacz powyżej."
   },
   "providers": {
     "title": "Dostawcy",
-    "noProviders": "Nie skonfigurowano żadnych dostawców. Uruchom: omniroute setup",
+    "noProviders": "Nie skonfigurowano żadnych dostawców. Uruchom: freeroute setup",
     "testing": "Testowanie dostawcy {name}...",
     "available": "Liczba dostępnych dostawców: {count}",
     "connected": "Połączono",
@@ -71,7 +71,7 @@
       "dryRunOpt": "Wyświetl, co zostałoby zmienione, bez zapisywania",
       "confirmPrompt": "Zastąpić klucz API dla połączenia „{name}” ({id})? [y/N]",
       "dryRunResult": "[dry-run] Klucz dla „{name}” ({id}) zostałby zrotowany. Nie wprowadzono żadnych zmian.",
-      "oauthHint": "Połączenie OAuth — uruchom: omniroute oauth {provider}",
+      "oauthHint": "Połączenie OAuth — uruchom: freeroute oauth {provider}",
       "envVarEmpty": "Zmienna środowiskowa {var} nie jest ustawiona lub jest pusta.",
       "success": "Zrotowano klucz dla „{name}”. Uruchom `providers test {id}`, aby go zweryfikować.",
       "testPassed": "Test po rotacji zakończył się pomyślnie.",
@@ -82,7 +82,7 @@
       "providerOpt": "Filtruj według nazwy dostawcy",
       "header": "ID         Dostawca      Nazwa                    Stan wygaśnięcia  Stan testu  Koniec okresu karencji",
       "noData": "Brak dostępnych danych o połączeniach z dostawcami.",
-      "requiresServer": "Polecenie providers status wymaga uruchomionego serwera OmniRoute."
+      "requiresServer": "Polecenie providers status wymaga uruchomionego serwera FreeRoute."
     }
   },
   "keys": {
@@ -90,8 +90,8 @@
     "addDescription": "Dodaj lub zaktualizuj klucz API dostawcy",
     "listDescription": "Wyświetl wszystkie skonfigurowane klucze API",
     "removeDescription": "Usuń klucz API dostawcy",
-    "regenerateDescription": "Wygeneruj ponownie klucz API OmniRoute",
-    "revokeDescription": "Unieważnij klucz API OmniRoute",
+    "regenerateDescription": "Wygeneruj ponownie klucz API FreeRoute",
+    "revokeDescription": "Unieważnij klucz API FreeRoute",
     "revealDescription": "Pokaż niezamaskowaną wartość klucza API",
     "usageDescription": "Pokaż ostatnie użycie klucza API",
     "usageLimitOpt": "Liczba ostatnich żądań",
@@ -142,7 +142,7 @@
     "warning": "⚠ Spowoduje to wyświetlenie lub zapisanie ODSZYFROWANYCH kluczy API i tokenów OAuth w postaci zwykłego tekstu. Upewnij się, że Twój ekran, historia powłoki i wszelkie pliki wyjściowe pozostają prywatne.",
     "confirmHeading": "⚠ OSTRZEŻENIE: spowoduje to wyeksportowanie ODSZYFROWANYCH danych uwierzytelniających dostawcy w postaci zwykłego tekstu",
     "confirmBody": "To polecenie odszyfrowuje i wyświetla lub zapisuje apiKey, accessToken, refreshToken oraz\nidToken dla wybranych połączeń. Traktuj dane wyjściowe jako sekret.",
-    "confirmFooter": "Aby potwierdzić, uruchom:\n  omniroute auth export --force",
+    "confirmFooter": "Aby potwierdzić, uruchom:\n  freeroute auth export --force",
     "missingKey": "STORAGE_ENCRYPTION_KEY jest wymagany do eksportowania danych uwierzytelniających.",
     "notFound": "Nie znaleziono połączenia: {id}",
     "invalidFormat": "Nieprawidłowy format: {format}. Użyj json lub env."
@@ -220,10 +220,10 @@
     "reasoning": "Poziom intensywności rozumowania (low|medium|high)",
     "thinking": "Budżet tokenów na rozszerzone rozumowanie",
     "explain": "Wyświetl drzewo mechanizmów zastępczych i zakres kosztów w stderr",
-    "noCombo": "Nie znaleziono pasującej kombinacji. Skonfiguruj ją za pomocą: omniroute combo create"
+    "noCombo": "Nie znaleziono pasującej kombinacji. Skonfiguruj ją za pomocą: freeroute combo create"
   },
   "chat": {
-    "description": "Wyślij jednorazowy prompt czatu do OmniRoute",
+    "description": "Wyślij jednorazowy prompt czatu do FreeRoute",
     "file": "Wczytaj prompt z pliku",
     "stdin": "Wczytaj prompt ze standardowego wejścia",
     "system": "Prompt systemowy",
@@ -242,8 +242,8 @@
     }
   },
   "serve": {
-    "description": "Uruchom serwer OmniRoute (działanie domyślne)",
-    "starting": "Uruchamianie serwera OmniRoute na porcie {port}...",
+    "description": "Uruchom serwer FreeRoute (działanie domyślne)",
+    "starting": "Uruchamianie serwera FreeRoute na porcie {port}...",
     "ready": "Dostępny pod adresem http://localhost:{port}",
     "stopping": "Zatrzymywanie serwera (PID {pid})...",
     "stopped": "Serwer został zatrzymany.",
@@ -262,7 +262,7 @@
   },
   "backup": {
     "title": "Kopia zapasowa",
-    "description": "Utwórz kopię zapasową danych OmniRoute",
+    "description": "Utwórz kopię zapasową danych FreeRoute",
     "creating": "Tworzenie kopii zapasowej...",
     "done": "Kopia zapasowa została zapisana w {path}",
     "noFiles": "Brak plików do utworzenia kopii zapasowej (baza danych nie została zainicjalizowana)",
@@ -274,7 +274,7 @@
     "noBackups": "Nie znaleziono kopii zapasowych.",
     "notFound": "Nie znaleziono kopii zapasowej: {name}",
     "confirmRestore": "Zastąpić bieżące dane kopią zapasową z {ts}?",
-    "createDescription": "Utwórz kopię zapasową danych OmniRoute",
+    "createDescription": "Utwórz kopię zapasową danych FreeRoute",
     "nameOpt": "Niestandardowa nazwa kopii zapasowej",
     "cloudOpt": "Prześlij kopię zapasową do magazynu w chmurze",
     "encryptOpt": "Zaszyfruj kopię zapasową za pomocą AES-256-GCM",
@@ -292,14 +292,14 @@
       "statusDescription": "Pokaż bieżący stan harmonogramu kopii zapasowych",
       "cronOpt": "Wyrażenie cron harmonogramu (domyślnie: codziennie o 3:00)",
       "enabled": "Automatyczne tworzenie kopii zapasowych jest włączone (cron: {cron}).",
-      "hint": "Harmonogram jest odczytywany przez omniroute serve podczas uruchamiania.",
+      "hint": "Harmonogram jest odczytywany przez freeroute serve podczas uruchamiania.",
       "disabled": "Automatyczne tworzenie kopii zapasowych jest wyłączone.",
       "notConfigured": "Nie skonfigurowano harmonogramu kopii zapasowych."
     }
   },
   "health": {
     "description": "Sprawdź kondycję serwera i stan komponentów",
-    "noServer": "Serwer nie jest uruchomiony. Uruchom go za pomocą: omniroute serve",
+    "noServer": "Serwer nie jest uruchomiony. Uruchom go za pomocą: freeroute serve",
     "title": "Kondycja",
     "status": "Stan: {status}",
     "uptime": "Czas działania: {uptime}",
@@ -308,21 +308,21 @@
   },
   "quota": {
     "description": "Pokaż wykorzystanie limitów dostawcy",
-    "noServer": "Serwer nie jest uruchomiony. Uruchom go za pomocą: omniroute serve",
+    "noServer": "Serwer nie jest uruchomiony. Uruchom go za pomocą: freeroute serve",
     "noData": "Brak informacji o limitach."
   },
   "cache": {
     "description": "Zarządzaj pamięcią podręczną odpowiedzi",
-    "noServer": "Serwer nie jest uruchomiony. Uruchom go za pomocą: omniroute serve",
+    "noServer": "Serwer nie jest uruchomiony. Uruchom go za pomocą: freeroute serve",
     "cleared": "Pamięć podręczna została wyczyszczona.",
     "clearFailed": "Nie udało się wyczyścić pamięci podręcznej."
   },
   "redis": {
-    "description": "Uruchom lokalny kontener Redis jednym kliknięciem (Podman lub Docker) do buforowania i śledzenia limitów OmniRoute"
+    "description": "Uruchom lokalny kontener Redis jednym kliknięciem (Podman lub Docker) do buforowania i śledzenia limitów FreeRoute"
   },
   "test": {
     "description": "Przetestuj połączenie z dostawcą",
-    "noServer": "Serwer nie działa. Uruchom go za pomocą: omniroute serve",
+    "noServer": "Serwer nie działa. Uruchom go za pomocą: freeroute serve",
     "testing": "Testowanie {provider} / {model}...",
     "passed": "Połączenie powiodło się!",
     "failed": "Połączenie nie powiodło się: {error}",
@@ -334,7 +334,7 @@
     "saved": "Wyniki zapisano w {path}",
     "compareTitle": "Porównanie modeli",
     "compareMinTwo": "Opcja --compare wymaga co najmniej dwóch modeli (rozdzielonych przecinkami)",
-    "noProviders": "Nie skonfigurowano żadnych dostawców. Dodaj dostawcę za pomocą: omniroute keys add"
+    "noProviders": "Nie skonfigurowano żadnych dostawców. Dodaj dostawcę za pomocą: freeroute keys add"
   },
   "update": {
     "checking": "Sprawdzanie dostępności aktualizacji...",
@@ -348,7 +348,7 @@
     "running": "Serwer MCP działa ({transport})",
     "stopped": "Serwer MCP został zatrzymany.",
     "restarted": "Serwer MCP został uruchomiony ponownie.",
-    "stoppedHint": "Uruchom `omniroute mcp enable`, aby go włączyć.",
+    "stoppedHint": "Uruchom `freeroute mcp enable`, aby go włączyć.",
     "enabled": "Serwer MCP został włączony.",
     "disabled": "Serwer MCP został wyłączony.",
     "enable": {
@@ -416,7 +416,7 @@
     }
   },
   "policy": {
-    "description": "Zarządzaj zasadami autoryzacji OmniRoute",
+    "description": "Zarządzaj zasadami autoryzacji FreeRoute",
     "list": {
       "description": "Wyświetl zasady",
       "kind": "Filtruj według rodzaju (allow|deny|rate-limit|cost-cap)",
@@ -453,7 +453,7 @@
     }
   },
   "compression": {
-    "description": "Skonfiguruj i sprawdź potok kompresji OmniRoute",
+    "description": "Skonfiguruj i sprawdź potok kompresji FreeRoute",
     "status": {
       "description": "Pokaż bieżący stan i ustawienia kompresji"
     },
@@ -507,18 +507,18 @@
     "confirmRotate": "Zmienić adres URL tunelu {type}? (zostanie wygenerowany nowy adres URL)"
   },
   "stop": {
-    "description": "Zatrzymaj serwer OmniRoute",
+    "description": "Zatrzymaj serwer FreeRoute",
     "stopping": "Zatrzymywanie serwera (PID {pid})...",
     "stopped": "Serwer zatrzymany.",
     "notRunning": "Żaden serwer nie jest uruchomiony.",
     "portFallback": "Nie znaleziono pliku PID, próba zatrzymania na podstawie portu..."
   },
   "restart": {
-    "description": "Uruchom ponownie serwer OmniRoute",
-    "restarting": "Ponowne uruchamianie serwera OmniRoute..."
+    "description": "Uruchom ponownie serwer FreeRoute",
+    "restarting": "Ponowne uruchamianie serwera FreeRoute..."
   },
   "dashboard": {
-    "description": "Otwórz panel OmniRoute w przeglądarce",
+    "description": "Otwórz panel FreeRoute w przeglądarce",
     "opening": "Otwieranie panelu pod adresem {url}",
     "urlOnly": "Wyświetl adres URL panelu bez otwierania przeglądarki",
     "tui": "Otwórz interaktywny panel TUI (terminalowy interfejs użytkownika, 7 kart)"
@@ -526,7 +526,7 @@
   "models": {
     "description": "Wyświetl dostępne modele (wymaga serwera)",
     "search": "Filtruj modele według identyfikatora, nazwy, dostawcy lub opisu",
-    "noServer": "Serwer nie działa. Uruchom go za pomocą: omniroute serve",
+    "noServer": "Serwer nie działa. Uruchom go za pomocą: freeroute serve",
     "noModels": "Nie znaleziono modeli."
   },
   "audit": {
@@ -558,7 +558,7 @@
     }
   },
   "skills": {
-    "description": "Zarządzaj umiejętnościami OmniRoute (sandbox, builtin, custom, hybrid, skillssh)",
+    "description": "Zarządzaj umiejętnościami FreeRoute (sandbox, builtin, custom, hybrid, skillssh)",
     "list": {
       "description": "Wyświetl zainstalowane umiejętności",
       "type": "Filtruj według typu (sandbox|custom|builtin|hybrid|skillssh)",
@@ -631,7 +631,7 @@
     }
   },
   "memory": {
-    "description": "Zarządzaj pamięcią konwersacyjną OmniRoute (FTS5 + wektorową)",
+    "description": "Zarządzaj pamięcią konwersacyjną FreeRoute (FTS5 + wektorową)",
     "search": {
       "description": "Przeszukuj wpisy pamięci za pomocą zapytania semantycznego",
       "type": "Filtruj według typu pamięci (user|feedback|project|reference)",
@@ -789,7 +789,7 @@
     }
   },
   "webhooks": {
-    "description": "Zarządzaj webhookami OmniRoute",
+    "description": "Zarządzaj webhookami FreeRoute",
     "events": {
       "description": "Wyświetl wszystkie dostępne typy zdarzeń webhooków"
     },
@@ -821,14 +821,14 @@
     }
   },
   "program": {
-    "description": "OmniRoute — Inteligentny router AI z automatycznym fallbackiem",
+    "description": "FreeRoute — Inteligentny router AI z automatycznym fallbackiem",
     "version": "Wydrukuj wersję i wyjdź",
     "output": "Format wyjścia (table, json, jsonl, csv)",
     "quiet": "Pomiń nieistotne wyjście",
     "no_color": "Wyłącz kolorowe wyjście",
     "timeout": "Limit czasu żądania HTTP w milisekundach",
-    "api_key": "Klucz API dla serwera OmniRoute",
-    "base_url": "Bazowy URL serwera OmniRoute",
+    "api_key": "Klucz API dla serwera FreeRoute",
+    "base_url": "Bazowy URL serwera FreeRoute",
     "context": "Kontekst/profil serwera dla tego polecenia",
     "lang": "Ustaw język wyświetlania CLI (nadpisuje OMNIROUTE_LANG)"
   },
@@ -1079,7 +1079,7 @@
     }
   },
   "openapi": {
-    "description": "Uzyskaj dostęp do specyfikacji OpenAPI OmniRoute i przetestuj ją",
+    "description": "Uzyskaj dostęp do specyfikacji OpenAPI FreeRoute i przetestuj ją",
     "dump": {
       "description": "Wyślij specyfikację OpenAPI na standardowe wyjście lub zapisz ją do pliku",
       "format": "Format wyjściowy: yaml|json (domyślnie: yaml)",
@@ -1149,7 +1149,7 @@
     }
   },
   "open": {
-    "description": "Otwórz określoną stronę panelu OmniRoute w przeglądarce",
+    "description": "Otwórz określoną stronę panelu FreeRoute w przeglądarce",
     "url": "Wyświetl tylko URL, nie otwieraj przeglądarki"
   },
   "telemetry": {
@@ -1166,7 +1166,7 @@
     }
   },
   "sync": {
-    "description": "Synchronizuj konfigurację między instancjami OmniRoute",
+    "description": "Synchronizuj konfigurację między instancjami FreeRoute",
     "push": {
       "description": "Wyślij konfigurację do chmury lub instancji zdalnej",
       "target": "Cel (cloud lub context:name)",
@@ -1222,8 +1222,8 @@
       "listTitle": "Dostępne języki",
       "current": "Język: {code} ({name})",
       "saved": "Ustawiono język na {code} ({name}).",
-      "noCode": "Wymagany jest kod języka. Uruchom „omniroute config lang list”, aby zobaczyć dostępne kody.",
-      "unknown": "Nieznany kod języka: {code}. Uruchom „omniroute config lang list”, aby zobaczyć dostępne kody.",
+      "noCode": "Wymagany jest kod języka. Uruchom „freeroute config lang list”, aby zobaczyć dostępne kody.",
+      "unknown": "Nieznany kod języka: {code}. Uruchom „freeroute config lang list”, aby zobaczyć dostępne kody.",
       "alreadySet": "Język jest już ustawiony na {code}.",
       "envHint": "Wskazówka: możesz również ustawić OMNIROUTE_LANG={code} w swoim środowisku."
     }
@@ -1242,7 +1242,7 @@
     "filter": "Filtruj według poziomu (error,warn,info) — wartości rozdzielone przecinkami",
     "lines": "Liczba wierszy do pobrania",
     "timeout": "Limit czasu połączenia w ms",
-    "baseUrl": "Bazowy adres URL API OmniRoute",
+    "baseUrl": "Bazowy adres URL API FreeRoute",
     "requestId": "Filtruj według identyfikatora żądania",
     "apiKey": "Filtruj według klucza API",
     "combo": "Filtruj według nazwy kombinacji",
@@ -1258,10 +1258,10 @@
     "description": "Steruj ikoną w zasobniku systemowym",
     "show": "Pokaż ikonę w zasobniku systemowym (jeśli serwer działa z opcją --tray)",
     "hide": "Ukryj ikonę w zasobniku systemowym",
-    "quit": "Zakończ OmniRoute za pomocą ikony w zasobniku systemowym"
+    "quit": "Zakończ FreeRoute za pomocą ikony w zasobniku systemowym"
   },
   "autostart": {
-    "description": "Zarządzaj automatycznym uruchamianiem OmniRoute podczas rozruchu (Linux: usługa użytkownika systemd)",
+    "description": "Zarządzaj automatycznym uruchamianiem FreeRoute podczas rozruchu (Linux: usługa użytkownika systemd)",
     "enable": "Włącz automatyczne uruchamianie podczas rozruchu",
     "disable": "Wyłącz automatyczne uruchamianie podczas rozruchu",
     "toggle": "Przełącz automatyczne uruchamianie podczas rozruchu",
@@ -1293,19 +1293,19 @@
     "scaffold": "Wygeneruj szablon nowej wtyczki"
   },
   "launch": {
-    "description": "Uruchom Claude Code skonfigurowany do pracy z OmniRoute (lokalnym lub zdalnym, z --profile)",
+    "description": "Uruchom Claude Code skonfigurowany do pracy z FreeRoute (lokalnym lub zdalnym, z --profile)",
     "token": "Token, który klient Claude powinien wysyłać (ANTHROPIC_AUTH_TOKEN)",
-    "notRunning": "OmniRoute jest nieosiągalny na porcie {port}. Uruchom go poleceniem 'omniroute serve'.",
+    "notRunning": "FreeRoute jest nieosiągalny na porcie {port}. Uruchom go poleceniem 'freeroute serve'.",
     "notFound": "Nie znaleziono CLI 'claude' w PATH."
   },
   "run": {
-    "description": "Uruchom obsługiwany docelowy interfejs CLI za pośrednictwem OmniRoute"
+    "description": "Uruchom obsługiwany docelowy interfejs CLI za pośrednictwem FreeRoute"
   },
   "setupClaude": {
-    "description": "Wygeneruj profile Claude Code w ~/.claude/profiles na podstawie katalogu modeli OmniRoute"
+    "description": "Wygeneruj profile Claude Code w ~/.claude/profiles na podstawie katalogu modeli FreeRoute"
   },
   "connect": {
-    "description": "Połącz się ze zdalnym serwerem OmniRoute i przejdź do trybu zdalnego"
+    "description": "Połącz się ze zdalnym serwerem FreeRoute i przejdź do trybu zdalnego"
   },
   "tokens": {
     "description": "Zarządzaj tokenami dostępu CLI o ograniczonym zakresie (tryb zdalny)"
@@ -1314,10 +1314,10 @@
     "description": "Wybierz dostawcę i model z aktywnego serwera oraz skonfiguruj obsługiwany lokalny interfejs CLI"
   },
   "launchCodex": {
-    "description": "Uruchom Codex CLI skonfigurowany do pracy z OmniRoute (lokalnym lub na zdalnym VPS)"
+    "description": "Uruchom Codex CLI skonfigurowany do pracy z FreeRoute (lokalnym lub na zdalnym VPS)"
   },
   "setupCodex": {
-    "description": "Wygeneruj pliki profili w ~/.codex na podstawie aktualnego katalogu modeli OmniRoute"
+    "description": "Wygeneruj pliki profili w ~/.codex na podstawie aktualnego katalogu modeli FreeRoute"
   },
   "packs": {
     "description": "Zarządzaj opcjonalnymi pakietami środowiska uruchomieniowego (ML / automatyzacja przeglądarki)",
@@ -1330,7 +1330,7 @@
     "errUnknown": "nieznany pakiet: {name}",
     "errNoIndex": "nie znaleziono indeksu pakietów; przekaż --source <dir> wskazujące katalog zawierający dane pakietu (w pakietach aplikacji desktopowej znajduje się on obok aplikacji)",
     "installed": "pakiet \"{name}\" został zainstalowany i zweryfikowany w {dir}",
-    "restartHint": "uruchom ponownie serwer OmniRoute (lub aplikację komputerową), aby środowisko uruchomieniowe wykryło pakiet",
+    "restartHint": "uruchom ponownie serwer FreeRoute (lub aplikację komputerową), aby środowisko uruchomieniowe wykryło pakiet",
     "removed": "pakiet „{name}” został usunięty",
     "notInstalled": "pakiet „{name}” nie był zainstalowany",
     "verifyOk": "zweryfikowano wszystkie zainstalowane pakiety",

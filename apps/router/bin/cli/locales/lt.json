@@ -1,8 +1,8 @@
 {
   "common": {
     "error": "Klaida: {message}",
-    "serverOffline": "OmniRoute serveris nepasiekiamas. Paleiskite jį naudodami komandą: omniroute serve",
-    "authRequired": "Reikalingas autentifikavimas. Nustatykite OMNIROUTE_API_KEY arba vykdykite komandą: omniroute setup",
+    "serverOffline": "FreeRoute serveris nepasiekiamas. Paleiskite jį naudodami komandą: freeroute serve",
+    "authRequired": "Reikalingas autentifikavimas. Nustatykite OMNIROUTE_API_KEY arba vykdykite komandą: freeroute setup",
     "rateLimited": "Viršytas užklausų dažnio limitas. Bandykite dar kartą po {seconds} sek.",
     "timeout": "Baigėsi užklausai skirtas laikas po {ms} ms.",
     "success": "Atlikta.",
@@ -15,7 +15,7 @@
     "yesOpt": "Praleisti patvirtinimo užklausą"
   },
   "setup": {
-    "title": "OmniRoute sąranka",
+    "title": "FreeRoute sąranka",
     "passwordPrompt": "Administratoriaus slaptažodis",
     "providerPrompt": "Numatytasis teikėjas (palikite tuščią, kad praleistumėte)",
     "done": "Sąranka baigta",
@@ -30,19 +30,19 @@
     "opencode": "Įdiegti ir sukonfigūruoti pridėtą @omniroute/opencode-plugin, skirtą OpenCode"
   },
   "doctor": {
-    "title": "OmniRoute diagnostika",
+    "title": "FreeRoute diagnostika",
     "dbOk": "Duomenų bazė: veikia ({path})",
-    "dbMissing": "Duomenų bazė: neinicijuota — vykdykite `omniroute setup`",
+    "dbMissing": "Duomenų bazė: neinicijuota — vykdykite `freeroute setup`",
     "portOk": "Prievadas {port}: pasiekiamas",
     "portConflict": "Prievadas {port}: naudojamas kito proceso",
     "encryptionOk": "Šifravimo raktas: sukonfigūruotas",
-    "encryptionMissing": "Trūksta šifravimo rakto — vykdykite `omniroute setup`",
+    "encryptionMissing": "Trūksta šifravimo rakto — vykdykite `freeroute setup`",
     "allGood": "Visos patikros sėkmingos.",
     "warnings": "Įspėjimų: {count} — žr. aukščiau."
   },
   "providers": {
     "title": "Teikėjai",
-    "noProviders": "Nesukonfigūruotas nė vienas teikėjas. Vykdykite komandą: omniroute setup",
+    "noProviders": "Nesukonfigūruotas nė vienas teikėjas. Vykdykite komandą: freeroute setup",
     "testing": "Tikrinamas {name}...",
     "available": "Pasiekiamų teikėjų: {count}",
     "connected": "Prisijungta",
@@ -71,7 +71,7 @@
       "dryRunOpt": "Parodyti, kas būtų pakeista, neįrašant pakeitimų",
       "confirmPrompt": "Pakeisti ryšio „{name}“ ({id}) API raktą? [y/N]",
       "dryRunResult": "[dry-run] Būtų pakeistas ryšio „{name}“ ({id}) raktas. Jokių pakeitimų neatlikta.",
-      "oauthHint": "OAuth ryšys — vykdykite: omniroute oauth {provider}",
+      "oauthHint": "OAuth ryšys — vykdykite: freeroute oauth {provider}",
       "envVarEmpty": "Aplinkos kintamasis {var} nenustatytas arba yra tuščias.",
       "success": "Ryšio „{name}“ raktas pakeistas. Norėdami patikrinti, vykdykite `providers test {id}`.",
       "testPassed": "Patikra pakeitus raktą sėkminga.",
@@ -82,7 +82,7 @@
       "providerOpt": "Filtruoti pagal teikėjo pavadinimą",
       "header": "ID         Teikėjas       Pavadinimas              Galiojimo būsena  Testo būsena  Laukimas iki",
       "noData": "Nėra teikėjų ryšių duomenų.",
-      "requiresServer": "Norint naudoti providers status, turi veikti OmniRoute serveris."
+      "requiresServer": "Norint naudoti providers status, turi veikti FreeRoute serveris."
     }
   },
   "keys": {
@@ -90,8 +90,8 @@
     "addDescription": "Pridėti arba atnaujinti teikėjo API raktą",
     "listDescription": "Rodyti visus sukonfigūruotus API raktus",
     "removeDescription": "Pašalinti teikėjo API raktą",
-    "regenerateDescription": "Iš naujo sugeneruoti OmniRoute API raktą",
-    "revokeDescription": "Atšaukti OmniRoute API raktą",
+    "regenerateDescription": "Iš naujo sugeneruoti FreeRoute API raktą",
+    "revokeDescription": "Atšaukti FreeRoute API raktą",
     "revealDescription": "Parodyti neužmaskuotą API rakto reikšmę",
     "usageDescription": "Rodyti naujausią API rakto naudojimo statistiką",
     "usageLimitOpt": "Naujausių užklausų skaičius",
@@ -142,7 +142,7 @@
     "warning": "⚠ Bus išvesti arba įrašyti IŠŠIFRUOTI API raktai ir OAuth prieigos raktai atviruoju tekstu. Pasirūpinkite, kad jūsų ekranas, komandų apvalkalo istorija ir visi išvesties failai išliktų privatūs.",
     "confirmHeading": "⚠ ĮSPĖJIMAS: teikėjo IŠŠIFRUOTI prisijungimo duomenys bus eksportuoti atviruoju tekstu",
     "confirmBody": "Ši komanda iššifruoja ir išveda arba įrašo pasirinktų ryšių apiKey, accessToken, refreshToken ir\nidToken. Laikykite išvestį paslaptyje.",
-    "confirmFooter": "Norėdami patvirtinti, paleiskite:\n  omniroute auth export --force",
+    "confirmFooter": "Norėdami patvirtinti, paleiskite:\n  freeroute auth export --force",
     "missingKey": "Norint eksportuoti prisijungimo duomenis, būtinas STORAGE_ENCRYPTION_KEY.",
     "notFound": "Ryšys nerastas: {id}",
     "invalidFormat": "Netinkamas formatas: {format}. Naudokite json arba env."
@@ -220,10 +220,10 @@
     "reasoning": "Samprotavimo pastangų lygis (low|medium|high)",
     "thinking": "Išplėstinio mąstymo žetonų limitas",
     "explain": "Išvesti atsarginių parinkčių medį ir kainos intervalą į stderr",
-    "noCombo": "Atitinkamas derinys nerastas. Sukonfigūruokite jį naudodami: omniroute combo create"
+    "noCombo": "Atitinkamas derinys nerastas. Sukonfigūruokite jį naudodami: freeroute combo create"
   },
   "chat": {
-    "description": "Siųsti vienkartinę pokalbio užklausą į OmniRoute",
+    "description": "Siųsti vienkartinę pokalbio užklausą į FreeRoute",
     "file": "Skaityti užklausą iš failo",
     "stdin": "Skaityti užklausą iš stdin",
     "system": "Sistemos užklausa",
@@ -242,8 +242,8 @@
     }
   },
   "serve": {
-    "description": "Paleisti OmniRoute serverį (numatytasis veiksmas)",
-    "starting": "Paleidžiamas OmniRoute serveris per prievadą {port}...",
+    "description": "Paleisti FreeRoute serverį (numatytasis veiksmas)",
+    "starting": "Paleidžiamas FreeRoute serveris per prievadą {port}...",
     "ready": "Pasiekiama adresu http://localhost:{port}",
     "stopping": "Stabdomas serveris (PID {pid})...",
     "stopped": "Serveris sustabdytas.",
@@ -262,7 +262,7 @@
   },
   "backup": {
     "title": "Atsarginė kopija",
-    "description": "Sukurti OmniRoute duomenų atsarginę kopiją",
+    "description": "Sukurti FreeRoute duomenų atsarginę kopiją",
     "creating": "Kuriama atsarginė kopija...",
     "done": "Atsarginė kopija išsaugota adresu {path}",
     "noFiles": "Nėra failų, kurių atsarginę kopiją būtų galima sukurti (duomenų bazė neinicijuota)",
@@ -274,7 +274,7 @@
     "noBackups": "Atsarginių kopijų nerasta.",
     "notFound": "Atsarginė kopija nerasta: {name}",
     "confirmRestore": "Perrašyti dabartinius duomenis atsargine kopija, sukurta {ts}?",
-    "createDescription": "Sukurti OmniRoute duomenų atsarginę kopiją",
+    "createDescription": "Sukurti FreeRoute duomenų atsarginę kopiją",
     "nameOpt": "Pasirinktinis atsarginės kopijos pavadinimas",
     "cloudOpt": "Įkelti atsarginę kopiją į debesijos saugyklą",
     "encryptOpt": "Užšifruoti atsarginę kopiją naudojant AES-256-GCM",
@@ -292,14 +292,14 @@
       "statusDescription": "Rodyti dabartinę atsarginių kopijų kūrimo tvarkaraščio būseną",
       "cronOpt": "Tvarkaraščio Cron išraiška (numatytoji: kasdien 3 val. nakties)",
       "enabled": "Automatinis atsarginių kopijų kūrimas įjungtas (cron: {cron}).",
-      "hint": "Tvarkaraštį paleidimo metu nuskaito omniroute serve.",
+      "hint": "Tvarkaraštį paleidimo metu nuskaito freeroute serve.",
       "disabled": "Automatinis atsarginių kopijų kūrimas išjungtas.",
       "notConfigured": "Atsarginių kopijų kūrimo tvarkaraštis nesukonfigūruotas."
     }
   },
   "health": {
     "description": "Patikrinti serverio veikimą ir komponentų būseną",
-    "noServer": "Serveris neveikia. Paleiskite naudodami: omniroute serve",
+    "noServer": "Serveris neveikia. Paleiskite naudodami: freeroute serve",
     "title": "Veikimo būsena",
     "status": "Būsena: {status}",
     "uptime": "Veikimo laikas: {uptime}",
@@ -308,21 +308,21 @@
   },
   "quota": {
     "description": "Rodyti paslaugų teikėjo kvotos naudojimą",
-    "noServer": "Serveris neveikia. Paleiskite naudodami: omniroute serve",
+    "noServer": "Serveris neveikia. Paleiskite naudodami: freeroute serve",
     "noData": "Kvotos informacijos nėra."
   },
   "cache": {
     "description": "Tvarkyti atsakymų podėlį",
-    "noServer": "Serveris neveikia. Paleiskite naudodami: omniroute serve",
+    "noServer": "Serveris neveikia. Paleiskite naudodami: freeroute serve",
     "cleared": "Podėlis išvalytas.",
     "clearFailed": "Nepavyko išvalyti podėlio."
   },
   "redis": {
-    "description": "Vienu spustelėjimu paleisti vietinį Redis konteinerį (Podman arba Docker), skirtą OmniRoute podėliui ir kvotų stebėjimui"
+    "description": "Vienu spustelėjimu paleisti vietinį Redis konteinerį (Podman arba Docker), skirtą FreeRoute podėliui ir kvotų stebėjimui"
   },
   "test": {
     "description": "Išbandyti ryšį su paslaugų teikėju",
-    "noServer": "Serveris neveikia. Paleiskite naudodami: omniroute serve",
+    "noServer": "Serveris neveikia. Paleiskite naudodami: freeroute serve",
     "testing": "Tikrinama {provider} / {model}...",
     "passed": "Ryšys sėkmingai užmegztas!",
     "failed": "Nepavyko užmegzti ryšio: {error}",
@@ -334,7 +334,7 @@
     "saved": "Rezultatai išsaugoti į {path}",
     "compareTitle": "Modelių palyginimas",
     "compareMinTwo": "Naudojant --compare būtini bent du modeliai (atskirti kableliais)",
-    "noProviders": "Nesukonfigūruotas nė vienas paslaugų teikėjas. Pridėkite naudodami: omniroute keys add"
+    "noProviders": "Nesukonfigūruotas nė vienas paslaugų teikėjas. Pridėkite naudodami: freeroute keys add"
   },
   "update": {
     "checking": "Tikrinama, ar yra naujinių...",
@@ -348,7 +348,7 @@
     "running": "MCP serveris veikia ({transport})",
     "stopped": "MCP serveris sustabdytas.",
     "restarted": "MCP serveris paleistas iš naujo.",
-    "stoppedHint": "Norėdami jį įjungti, paleiskite `omniroute mcp enable`.",
+    "stoppedHint": "Norėdami jį įjungti, paleiskite `freeroute mcp enable`.",
     "enabled": "MCP serveris įjungtas.",
     "disabled": "MCP serveris išjungtas.",
     "enable": {
@@ -416,7 +416,7 @@
     }
   },
   "policy": {
-    "description": "Tvarkyti OmniRoute autorizavimo strategijas",
+    "description": "Tvarkyti FreeRoute autorizavimo strategijas",
     "list": {
       "description": "Išvardyti strategijas",
       "kind": "Filtruoti pagal tipą (allow|deny|rate-limit|cost-cap)",
@@ -453,7 +453,7 @@
     }
   },
   "compression": {
-    "description": "Konfigūruoti ir tikrinti OmniRoute glaudinimo konvejerį",
+    "description": "Konfigūruoti ir tikrinti FreeRoute glaudinimo konvejerį",
     "status": {
       "description": "Rodyti dabartinę glaudinimo būseną ir nuostatas"
     },
@@ -507,18 +507,18 @@
     "confirmRotate": "Pakeisti tunelio {type} URL? (bus sugeneruotas naujas URL)"
   },
   "stop": {
-    "description": "Sustabdyti OmniRoute serverį",
+    "description": "Sustabdyti FreeRoute serverį",
     "stopping": "Serveris stabdomas (PID {pid})...",
     "stopped": "Serveris sustabdytas.",
     "notRunning": "Nė vienas serveris neveikia.",
     "portFallback": "PID failas nerastas, bandoma sustabdyti pagal prievadą..."
   },
   "restart": {
-    "description": "Paleisti OmniRoute serverį iš naujo",
-    "restarting": "OmniRoute serveris paleidžiamas iš naujo..."
+    "description": "Paleisti FreeRoute serverį iš naujo",
+    "restarting": "FreeRoute serveris paleidžiamas iš naujo..."
   },
   "dashboard": {
-    "description": "Atidaryti OmniRoute valdymo skydą naršyklėje",
+    "description": "Atidaryti FreeRoute valdymo skydą naršyklėje",
     "opening": "Valdymo skydas atidaromas adresu {url}",
     "urlOnly": "Parodyti valdymo skydo URL neatidarant naršyklės",
     "tui": "Atidaryti interaktyvų TUI valdymo skydą (terminalo sąsaja, 7 kortelės)"
@@ -526,7 +526,7 @@
   "models": {
     "description": "Rodyti galimus modelius (reikalingas serveris)",
     "search": "Filtruoti modelius pagal ID, pavadinimą, teikėją arba aprašą",
-    "noServer": "Serveris neveikia. Paleiskite naudodami: omniroute serve",
+    "noServer": "Serveris neveikia. Paleiskite naudodami: freeroute serve",
     "noModels": "Modelių nerasta."
   },
   "audit": {
@@ -558,7 +558,7 @@
     }
   },
   "skills": {
-    "description": "Tvarkyti OmniRoute įgūdžius (sandbox, builtin, custom, hybrid, skillssh)",
+    "description": "Tvarkyti FreeRoute įgūdžius (sandbox, builtin, custom, hybrid, skillssh)",
     "list": {
       "description": "Rodyti įdiegtus įgūdžius",
       "type": "Filtruoti pagal tipą (sandbox|custom|builtin|hybrid|skillssh)",
@@ -631,7 +631,7 @@
     }
   },
   "memory": {
-    "description": "Tvarkyti OmniRoute pokalbių atmintį (FTS5 + vektorinė paieška)",
+    "description": "Tvarkyti FreeRoute pokalbių atmintį (FTS5 + vektorinė paieška)",
     "search": {
       "description": "Ieškoti atminties įrašų pagal semantinę užklausą",
       "type": "Filtruoti pagal atminties tipą (user|feedback|project|reference)",
@@ -789,7 +789,7 @@
     }
   },
   "webhooks": {
-    "description": "Tvarkyti OmniRoute žiniatinklio atgalinius iškvietimus",
+    "description": "Tvarkyti FreeRoute žiniatinklio atgalinius iškvietimus",
     "events": {
       "description": "Rodyti visų galimų žiniatinklio atgalinių iškvietimų įvykių tipų sąrašą"
     },
@@ -821,14 +821,14 @@
     }
   },
   "program": {
-    "description": "OmniRoute — išmanusis DI maršruto parinktuvas su automatiniu atsarginiu perjungimu",
+    "description": "FreeRoute — išmanusis DI maršruto parinktuvas su automatiniu atsarginiu perjungimu",
     "version": "Parodyti versiją ir išeiti",
     "output": "Išvesties formatas (table, json, jsonl, csv)",
     "quiet": "Nerodyti neesminės išvesties",
     "no_color": "Išjungti spalvotą išvestį",
     "timeout": "HTTP užklausos skirtasis laikas milisekundėmis",
-    "api_key": "OmniRoute serverio API raktas",
-    "base_url": "OmniRoute serverio bazinis URL",
+    "api_key": "FreeRoute serverio API raktas",
+    "base_url": "FreeRoute serverio bazinis URL",
     "context": "Šiai komandai naudotinas serverio kontekstas / profilis",
     "lang": "Nustatyti CLI rodymo kalbą (nepaisyti OMNIROUTE_LANG)"
   },
@@ -1079,7 +1079,7 @@
     }
   },
   "openapi": {
-    "description": "Pasiekti ir išbandyti OmniRoute OpenAPI specifikaciją",
+    "description": "Pasiekti ir išbandyti FreeRoute OpenAPI specifikaciją",
     "dump": {
       "description": "Išvesti OpenAPI specifikaciją į stdout arba failą",
       "format": "Išvesties formatas: yaml|json (numatyta: yaml)",
@@ -1149,7 +1149,7 @@
     }
   },
   "open": {
-    "description": "Naršyklėje atidaryti konkretų OmniRoute skydelio puslapį",
+    "description": "Naršyklėje atidaryti konkretų FreeRoute skydelio puslapį",
     "url": "Tik išvesti URL, neatidaryti naršyklės"
   },
   "telemetry": {
@@ -1166,7 +1166,7 @@
     }
   },
   "sync": {
-    "description": "Sinchronizuoti konfigūraciją tarp OmniRoute egzempliorių",
+    "description": "Sinchronizuoti konfigūraciją tarp FreeRoute egzempliorių",
     "push": {
       "description": "Nusiųsti konfigūraciją į debesiją arba nuotolinį egzempliorių",
       "target": "Paskirties vieta (cloud arba context:name)",
@@ -1222,8 +1222,8 @@
       "listTitle": "Galimos kalbos",
       "current": "Kalba: {code} ({name})",
       "saved": "Kalba nustatyta į {code} ({name}).",
-      "noCode": "Būtina nurodyti kalbos kodą. Paleiskite „omniroute config lang list“, kad pamatytumėte galimus kodus.",
-      "unknown": "Nežinomas kalbos kodas: {code}. Paleiskite „omniroute config lang list“, kad pamatytumėte galimus kodus.",
+      "noCode": "Būtina nurodyti kalbos kodą. Paleiskite „freeroute config lang list“, kad pamatytumėte galimus kodus.",
+      "unknown": "Nežinomas kalbos kodas: {code}. Paleiskite „freeroute config lang list“, kad pamatytumėte galimus kodus.",
       "alreadySet": "Kalba jau nustatyta į {code}.",
       "envHint": "Patarimas: savo aplinkoje taip pat galite nustatyti OMNIROUTE_LANG={code}."
     }
@@ -1242,7 +1242,7 @@
     "filter": "Filtruoti pagal lygį (error,warn,info) — reikšmės atskiriamos kableliais",
     "lines": "Gaunamų eilučių skaičius",
     "timeout": "Ryšio skirtasis laikas, ms",
-    "baseUrl": "OmniRoute API bazinis URL",
+    "baseUrl": "FreeRoute API bazinis URL",
     "requestId": "Filtruoti pagal užklausos ID",
     "apiKey": "Filtruoti pagal API raktą",
     "combo": "Filtruoti pagal derinio pavadinimą",
@@ -1258,10 +1258,10 @@
     "description": "Valdyti sistemos dėklo piktogramą",
     "show": "Rodyti dėklo piktogramą (jei serveris veikia su --tray)",
     "hide": "Slėpti dėklo piktogramą",
-    "quit": "Išjungti OmniRoute per sistemos dėklą"
+    "quit": "Išjungti FreeRoute per sistemos dėklą"
   },
   "autostart": {
-    "description": "Valdyti automatinį OmniRoute paleidimą įkrovos metu (Linux: systemd naudotojo paslauga)",
+    "description": "Valdyti automatinį FreeRoute paleidimą įkrovos metu (Linux: systemd naudotojo paslauga)",
     "enable": "Įjungti automatinį paleidimą įkrovos metu",
     "disable": "Išjungti automatinį paleidimą įkrovos metu",
     "toggle": "Perjungti automatinį paleidimą įkrovos metu",
@@ -1293,19 +1293,19 @@
     "scaffold": "Sukurti naujo papildinio pradinį šabloną"
   },
   "launch": {
-    "description": "Paleisti Claude Code, nukreiptą į OmniRoute (vietinį arba nuotolinį, naudojant --profile)",
+    "description": "Paleisti Claude Code, nukreiptą į FreeRoute (vietinį arba nuotolinį, naudojant --profile)",
     "token": "Atpažinimo ženklas, kurį turi siųsti Claude klientas (ANTHROPIC_AUTH_TOKEN)",
-    "notRunning": "OmniRoute nepasiekiamas per {port}. Paleiskite jį naudodami „omniroute serve“.",
+    "notRunning": "FreeRoute nepasiekiamas per {port}. Paleiskite jį naudodami „freeroute serve“.",
     "notFound": "„claude“ CLI nerastas PATH."
   },
   "run": {
-    "description": "Paleisti palaikomą CLI taikinį per OmniRoute"
+    "description": "Paleisti palaikomą CLI taikinį per FreeRoute"
   },
   "setupClaude": {
-    "description": "Sugeneruoti ~/.claude/profiles Claude Code profilius iš OmniRoute modelių katalogo"
+    "description": "Sugeneruoti ~/.claude/profiles Claude Code profilius iš FreeRoute modelių katalogo"
   },
   "connect": {
-    "description": "Prisijungti prie nuotolinio OmniRoute serverio ir įjungti nuotolinį režimą"
+    "description": "Prisijungti prie nuotolinio FreeRoute serverio ir įjungti nuotolinį režimą"
   },
   "tokens": {
     "description": "Tvarkyti ribotos apimties CLI prieigos prieigos raktus (nuotolinis režimas)"
@@ -1314,10 +1314,10 @@
     "description": "Pasirinkti teikėją ir modelį iš aktyvaus serverio bei sukonfigūruoti palaikomą vietinę CLI"
   },
   "launchCodex": {
-    "description": "Paleisti Codex CLI, nukreiptą į OmniRoute (vietiniame arba nuotoliniame VPS)"
+    "description": "Paleisti Codex CLI, nukreiptą į FreeRoute (vietiniame arba nuotoliniame VPS)"
   },
   "setupCodex": {
-    "description": "Sugeneruoti ~/.codex profilio failus iš tiesioginio OmniRoute modelių katalogo"
+    "description": "Sugeneruoti ~/.codex profilio failus iš tiesioginio FreeRoute modelių katalogo"
   },
   "packs": {
     "description": "Tvarkyti pasirinktinius vykdymo aplinkos paketus (ML / naršyklės automatizavimas)",
@@ -1330,7 +1330,7 @@
     "errUnknown": "nežinomas paketas: {name}",
     "errNoIndex": "paketų indeksas nerastas; nurodykite --source <dir>, kuriame yra paketo turinys (darbalaukio programos rinkiniuose jis pateikiamas šalia programos)",
     "installed": "paketas „{name}“ įdiegtas ir patikrintas kataloge {dir}",
-    "restartHint": "paleiskite OmniRoute serverį (arba darbalaukio programą) iš naujo, kad vykdymo aplinka aptiktų paketą",
+    "restartHint": "paleiskite FreeRoute serverį (arba darbalaukio programą) iš naujo, kad vykdymo aplinka aptiktų paketą",
     "removed": "paketas „{name}“ pašalintas",
     "notInstalled": "paketas „{name}“ nebuvo įdiegtas",
     "verifyOk": "visi įdiegti paketai patikrinti",

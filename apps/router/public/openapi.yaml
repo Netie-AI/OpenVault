@@ -1,9 +1,9 @@
 openapi: 3.1.0
 info:
-  title: OmniRoute API
+  title: FreeRoute API
   version: 3.8.35
   description: |
-    OmniRoute is a local-first AI API proxy router. It provides an OpenAI-compatible
+    FreeRoute is a local-first AI API proxy router. It provides an OpenAI-compatible
     endpoint that routes requests to multiple AI providers with load balancing,
     failover, and usage tracking.
 
@@ -14,7 +14,7 @@ info:
     All proxy endpoints require a Bearer token (API key managed via the dashboard).
     Management endpoints are protected when `requireLogin` is enabled.
   contact:
-    name: OmniRoute
+    name: FreeRoute
   license:
     name: MIT
 
@@ -82,7 +82,7 @@ tags:
   - name: Agent Skills
     description: >-
       Agent Skills catalog — 42 SKILL.md files (22 REST API + 20 CLI) for external agents,
-      MCP clients, and A2A orchestrators to discover OmniRoute capabilities.
+      MCP clients, and A2A orchestrators to discover FreeRoute capabilities.
   - name: AgentBridge
     description: >-
       MITM proxy manager for 9 IDE agents (Antigravity, Kiro, Copilot, Codex, Cursor, Zed,
@@ -1136,7 +1136,7 @@ paths:
             X-OmniRoute-Version:
               schema:
                 type: string
-              description: OmniRoute build version (always present).
+              description: FreeRoute build version (always present).
             X-OmniRoute-Cost-Saved:
               schema:
                 type: string
@@ -3276,7 +3276,7 @@ paths:
       tags: [Embedded Services]
       summary: Toggle 9Router auto-start
       description: >-
-        When enabled, 9Router starts automatically on the next OmniRoute boot.
+        When enabled, 9Router starts automatically on the next FreeRoute boot.
         **LOCAL_ONLY** — loopback only.
       requestBody:
         required: true
@@ -3437,7 +3437,7 @@ paths:
       tags: [Embedded Services]
       summary: Toggle CLIProxyAPI auto-start
       description: >-
-        When enabled, CLIProxyAPI starts automatically on the next OmniRoute boot.
+        When enabled, CLIProxyAPI starts automatically on the next FreeRoute boot.
         **LOCAL_ONLY** — loopback only.
       requestBody:
         required: true
@@ -3620,7 +3620,7 @@ paths:
     post:
       tags: [Cloud]
       summary: Authenticate with cloud worker
-      description: Authenticates with the OmniRoute cloud worker for remote access.
+      description: Authenticates with the FreeRoute cloud worker for remote access.
       requestBody:
         required: true
         content:
@@ -4670,7 +4670,7 @@ paths:
   /api/tools/traffic-inspector/requests/{id}/replay:
     post:
       tags: [Traffic Inspector]
-      summary: Replay a captured request through OmniRoute router
+      summary: Replay a captured request through FreeRoute router
       description: Re-executes the original request body against /v1/chat/completions. Consumes quota.
       parameters:
         - name: id
@@ -5065,7 +5065,7 @@ paths:
       summary: List agent skills catalog
       description: |
         Returns the full 42-entry Agent Skills catalog with optional filtering.
-        Skills describe how to use OmniRoute's REST API and CLI — they are structured
+        Skills describe how to use FreeRoute's REST API and CLI — they are structured
         SKILL.md documentation files discoverable by external agents, MCP clients, and
         A2A orchestrators. No authentication required.
       parameters:
@@ -5569,7 +5569,7 @@ components:
     AgentSkill:
       type: object
       description: >-
-        Single entry in the Agent Skills catalog. Describes one OmniRoute REST API surface
+        Single entry in the Agent Skills catalog. Describes one FreeRoute REST API surface
         (category: api) or CLI subcommand group (category: cli) with a canonical ID and a
         link to its SKILL.md documentation file.
       required: [id, name, description, category, area, rawUrl, githubUrl]
@@ -5624,13 +5624,13 @@ components:
         rawUrl:
           type: string
           format: uri
-          description: GitHub raw URL of the SKILL.md file
-          example: "https://raw.githubusercontent.com/diegosouzapw/OmniRoute/refs/heads/main/skills/omni-providers/SKILL.md"
+          description: FreeRoute's own API route serving this skill's raw SKILL.md content
+          example: "/api/agent-skills/omni-providers/raw"
         githubUrl:
           type: string
           format: uri
-          description: GitHub blob URL for viewing the SKILL.md in the browser
-          example: "https://github.com/diegosouzapw/OmniRoute/blob/main/skills/omni-providers/SKILL.md"
+          description: FreeRoute's GitHub repository (this edition does not host a per-skill page)
+          example: "https://github.com/Netie-AI/Netie"
 
     SkillCoverage:
       type: object

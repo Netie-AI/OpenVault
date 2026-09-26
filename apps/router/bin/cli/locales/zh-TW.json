@@ -1,8 +1,8 @@
 {
   "common": {
     "error": "錯誤：{message}",
-    "serverOffline": "OmniRoute 伺服器已離線。請啟動：omniroute serve",
-    "authRequired": "需要認證。請設定 OMNIROUTE_API_KEY 或執行：omniroute setup",
+    "serverOffline": "FreeRoute 伺服器已離線。請啟動：freeroute serve",
+    "authRequired": "需要認證。請設定 OMNIROUTE_API_KEY 或執行：freeroute setup",
     "rateLimited": "請求超出限制。請在 {seconds}s 後重試。",
     "timeout": "請求在 {ms}ms 後超時。",
     "success": "完成。",
@@ -15,7 +15,7 @@
     "yesOpt": "跳過確認"
   },
   "setup": {
-    "title": "OmniRoute 設定",
+    "title": "FreeRoute 設定",
     "passwordPrompt": "管理員密碼",
     "providerPrompt": "預設提供者（留空跳過）",
     "done": "設定完成",
@@ -30,19 +30,19 @@
     "opencode": "安裝並配置隨附的 @omniroute/opencode-plugin 以用於 OpenCode"
   },
   "doctor": {
-    "title": "OmniRoute 診斷",
+    "title": "FreeRoute 診斷",
     "dbOk": "資料庫：正常（{path}）",
-    "dbMissing": "資料庫：未初始化 — 執行 omniroute setup",
+    "dbMissing": "資料庫：未初始化 — 執行 freeroute setup",
     "portOk": "埠 {port}：可用",
     "portConflict": "埠 {port}：已被其他程序佔用",
     "encryptionOk": "加密金鑰：已配置",
-    "encryptionMissing": "加密金鑰缺失 — 執行 omniroute setup",
+    "encryptionMissing": "加密金鑰缺失 — 執行 freeroute setup",
     "allGood": "所有檢查通過。",
     "warnings": "{count} 個警告 — 見上文。"
   },
   "providers": {
     "title": "提供者",
-    "noProviders": "未配置提供者。執行：omniroute setup",
+    "noProviders": "未配置提供者。執行：freeroute setup",
     "testing": "正在測試 {name}...",
     "available": "{count} 個提供者可用",
     "connected": "已連線",
@@ -71,7 +71,7 @@
       "dryRunOpt": "預覽將要更改的內容而不寫入",
       "confirmPrompt": "替換連線 \"{name}\" ({id}) 的 API 金鑰？[y/N] ",
       "dryRunResult": "【模擬】將輪換 \"{name}\" ({id}) 的金鑰。未做任何更改。",
-      "oauthHint": "OAuth 連線 — 執行：omniroute oauth {provider}",
+      "oauthHint": "OAuth 連線 — 執行：freeroute oauth {provider}",
       "envVarEmpty": "環境變數 {var} 未設定或為空。",
       "success": "已為 \"{name}\" 輪換金鑰。執行 providers test {id} 驗證。",
       "testPassed": "輪換後測試通過。",
@@ -82,7 +82,7 @@
       "providerOpt": "按提供者名稱篩選",
       "header": "ID         提供者       名稱                     過期狀態  測試狀態  冷卻至",
       "noData": "沒有可用的提供者連線資料。",
-      "requiresServer": "providers status 需要 OmniRoute 伺服器正在執行。"
+      "requiresServer": "providers status 需要 FreeRoute 伺服器正在執行。"
     }
   },
   "keys": {
@@ -90,8 +90,8 @@
     "addDescription": "為提供者新增或更新 API 金鑰",
     "listDescription": "列出所有已配置的 API 金鑰",
     "removeDescription": "移除提供者的 API 金鑰",
-    "regenerateDescription": "重新生成 OmniRoute API 金鑰",
-    "revokeDescription": "撤銷 OmniRoute API 金鑰",
+    "regenerateDescription": "重新生成 FreeRoute API 金鑰",
+    "revokeDescription": "撤銷 FreeRoute API 金鑰",
     "revealDescription": "顯示未掩碼的 API 金鑰值",
     "usageDescription": "顯示 API 金鑰的最近使用情況",
     "usageLimitOpt": "最近請求數",
@@ -142,7 +142,7 @@
     "warning": "⚠ 此操作會列印/寫入已解密的明文 API 金鑰和 OAuth 令牌。請確保你的螢幕、shell 歷史記錄以及任何輸出檔案保持私密。",
     "confirmHeading": "⚠ 警告：此操作會以明文匯出已解密的提供者憑據",
     "confirmBody": "此命令會為所選連線解密並列印/寫入 apiKey、accessToken、refreshToken 和\nidToken。請將輸出視為機密。",
-    "confirmFooter": "如需確認，請執行：\n  omniroute auth export --force",
+    "confirmFooter": "如需確認，請執行：\n  freeroute auth export --force",
     "missingKey": "匯出憑據需要 STORAGE_ENCRYPTION_KEY。",
     "notFound": "找不到連線：{id}",
     "invalidFormat": "無效格式：{format}。請使用 json 或 env。"
@@ -220,10 +220,10 @@
     "reasoning": "推理努力級別（low|medium|high）",
     "thinking": "擴充套件思維權杖預算",
     "explain": "在 stderr 中列印回退樹和成本範圍",
-    "noCombo": "未找到匹配的組合。使用以下命令配置：omniroute combo create"
+    "noCombo": "未找到匹配的組合。使用以下命令配置：freeroute combo create"
   },
   "chat": {
-    "description": "向 OmniRoute 傳送一次性聊天提示",
+    "description": "向 FreeRoute 傳送一次性聊天提示",
     "file": "從檔案讀取提示",
     "stdin": "從標準輸入讀取提示",
     "system": "系統提示",
@@ -242,8 +242,8 @@
     }
   },
   "serve": {
-    "description": "啟動 OmniRoute 伺服器（預設操作）",
-    "starting": "正在啟動 OmniRoute 伺服器（埠 {port}）...",
+    "description": "啟動 FreeRoute 伺服器（預設操作）",
+    "starting": "正在啟動 FreeRoute 伺服器（埠 {port}）...",
     "ready": "就緒地址：http://localhost:{port}",
     "stopping": "正在停止伺服器（PID {pid}）...",
     "stopped": "伺服器已停止。",
@@ -262,7 +262,7 @@
   },
   "backup": {
     "title": "備份",
-    "description": "建立 OmniRoute 資料備份",
+    "description": "建立 FreeRoute 資料備份",
     "creating": "正在建立備份...",
     "done": "備份已儲存至 {path}",
     "noFiles": "沒有可備份的檔案（資料庫未初始化）",
@@ -274,7 +274,7 @@
     "noBackups": "未找到備份。",
     "notFound": "未找到備份：{name}",
     "confirmRestore": "用 {ts} 的備份覆蓋當前資料？",
-    "createDescription": "建立 OmniRoute 資料備份",
+    "createDescription": "建立 FreeRoute 資料備份",
     "nameOpt": "自定義備份名稱",
     "cloudOpt": "將備份上傳到雲端儲存",
     "encryptOpt": "使用 AES-256-GCM 加密備份",
@@ -292,14 +292,14 @@
       "statusDescription": "顯示當前備份計劃狀態",
       "cronOpt": "計劃 cron 表示式（預設：每天凌晨 3 點）",
       "enabled": "已啟用自動備份（cron：{cron}）。",
-      "hint": "  計劃由 omniroute serve 啟動時讀取。",
+      "hint": "  計劃由 freeroute serve 啟動時讀取。",
       "disabled": "已停用自動備份。",
       "notConfigured": "未配置備份計劃。"
     }
   },
   "health": {
     "description": "檢查伺服器健康狀態和元件狀態",
-    "noServer": "伺服器未執行。啟動：omniroute serve",
+    "noServer": "伺服器未執行。啟動：freeroute serve",
     "title": "健康狀態",
     "status": "狀態：{status}",
     "uptime": "執行時間：{uptime}",
@@ -308,21 +308,21 @@
   },
   "quota": {
     "description": "顯示提供者配額使用情況",
-    "noServer": "伺服器未執行。啟動：omniroute serve",
+    "noServer": "伺服器未執行。啟動：freeroute serve",
     "noData": "沒有可用的配額資訊。"
   },
   "cache": {
     "description": "管理響應快取",
-    "noServer": "伺服器未執行。啟動：omniroute serve",
+    "noServer": "伺服器未執行。啟動：freeroute serve",
     "cleared": "快取已清除。",
     "clearFailed": "清除快取失敗。"
   },
   "redis": {
-    "description": "一鍵啟動本地 Redis 容器（Podman 或 Docker），用於 OmniRoute 快取和配額跟蹤"
+    "description": "一鍵啟動本地 Redis 容器（Podman 或 Docker），用於 FreeRoute 快取和配額跟蹤"
   },
   "test": {
     "description": "測試提供者連線",
-    "noServer": "伺服器未執行。啟動：omniroute serve",
+    "noServer": "伺服器未執行。啟動：freeroute serve",
     "testing": "正在測試 {provider} / {model}...",
     "passed": "連線成功！",
     "failed": "連線失敗：{error}",
@@ -334,7 +334,7 @@
     "saved": "結果已儲存至 {path}",
     "compareTitle": "模型比較",
     "compareMinTwo": "--compare 需要至少兩個模型（逗號分隔）",
-    "noProviders": "未配置提供者。新增：omniroute keys add"
+    "noProviders": "未配置提供者。新增：freeroute keys add"
   },
   "update": {
     "checking": "正在檢查更新...",
@@ -348,7 +348,7 @@
     "running": "MCP 伺服器正在執行（{transport}）",
     "stopped": "MCP 伺服器已停止。",
     "restarted": "MCP 伺服器已重啟。",
-    "stoppedHint": "執行 `omniroute mcp enable` 以啟用它。",
+    "stoppedHint": "執行 `freeroute mcp enable` 以啟用它。",
     "enabled": "MCP 伺服器已啟用。",
     "disabled": "MCP 伺服器已停用。",
     "enable": {
@@ -416,7 +416,7 @@
     }
   },
   "policy": {
-    "description": "管理 OmniRoute 授權策略",
+    "description": "管理 FreeRoute 授權策略",
     "list": {
       "description": "列出策略",
       "kind": "按型別篩選（allow|deny|rate-limit|cost-cap）",
@@ -453,7 +453,7 @@
     }
   },
   "compression": {
-    "description": "配置和檢查 OmniRoute 壓縮管道",
+    "description": "配置和檢查 FreeRoute 壓縮管道",
     "status": {
       "description": "顯示當前壓縮狀態和設定"
     },
@@ -507,18 +507,18 @@
     "confirmRotate": "輪換隧道 {type}？（將生成新 URL）"
   },
   "stop": {
-    "description": "停止 OmniRoute 伺服器",
+    "description": "停止 FreeRoute 伺服器",
     "stopping": "正在停止伺服器（PID {pid}）...",
     "stopped": "伺服器已停止。",
     "notRunning": "沒有伺服器在執行。",
     "portFallback": "未找到 PID 檔案，嘗試通過埠停止..."
   },
   "restart": {
-    "description": "重啟 OmniRoute 伺服器",
-    "restarting": "正在重啟 OmniRoute 伺服器..."
+    "description": "重啟 FreeRoute 伺服器",
+    "restarting": "正在重啟 FreeRoute 伺服器..."
   },
   "dashboard": {
-    "description": "在瀏覽器中開啟 OmniRoute 儀表盤",
+    "description": "在瀏覽器中開啟 FreeRoute 儀表盤",
     "opening": "正在開啟儀表盤：{url}",
     "urlOnly": "僅列印儀表盤 URL，不開啟瀏覽器",
     "tui": "開啟互動式 TUI 儀表盤（終端 UI，7 個標籤頁）"
@@ -526,7 +526,7 @@
   "models": {
     "description": "列出可用模型（需要伺服器）",
     "search": "按 ID、名稱、提供者或描述篩選模型",
-    "noServer": "伺服器未執行。啟動：omniroute serve",
+    "noServer": "伺服器未執行。啟動：freeroute serve",
     "noModels": "未找到模型。"
   },
   "audit": {
@@ -558,7 +558,7 @@
     }
   },
   "skills": {
-    "description": "管理 OmniRoute 技能（沙箱、內建、自定義、混合、skillssh）",
+    "description": "管理 FreeRoute 技能（沙箱、內建、自定義、混合、skillssh）",
     "list": {
       "description": "列出已安裝的技能",
       "type": "按型別篩選（sandbox|custom|builtin|hybrid|skillssh）",
@@ -631,7 +631,7 @@
     }
   },
   "memory": {
-    "description": "管理 OmniRoute 對話記憶（FTS5 + 向量）",
+    "description": "管理 FreeRoute 對話記憶（FTS5 + 向量）",
     "search": {
       "description": "按語義查詢搜尋記憶條目",
       "type": "按記憶型別篩選（user|feedback|project|reference）",
@@ -789,7 +789,7 @@
     }
   },
   "webhooks": {
-    "description": "管理 OmniRoute Webhook",
+    "description": "管理 FreeRoute Webhook",
     "events": {
       "description": "列出所有可用的 Webhook 事件型別"
     },
@@ -821,14 +821,14 @@
     }
   },
   "program": {
-    "description": "OmniRoute — 具有自動故障轉移的智慧 AI 路由器",
+    "description": "FreeRoute — 具有自動故障轉移的智慧 AI 路由器",
     "version": "列印版本並退出",
     "output": "輸出格式（table, json, jsonl, csv）",
     "quiet": "禁止非必要輸出",
     "no_color": "停用彩色輸出",
     "timeout": "HTTP 請求超時（毫秒）",
-    "api_key": "OmniRoute 伺服器的 API 金鑰",
-    "base_url": "OmniRoute 伺服器的基礎 URL",
+    "api_key": "FreeRoute 伺服器的 API 金鑰",
+    "base_url": "FreeRoute 伺服器的基礎 URL",
     "context": "此命令使用的伺服器上下文/配置檔案",
     "lang": "設定 CLI 顯示語言（覆蓋 OMNIROUTE_LANG）"
   },
@@ -1079,7 +1079,7 @@
     }
   },
   "openapi": {
-    "description": "訪問和測試 OmniRoute OpenAPI 規範",
+    "description": "訪問和測試 FreeRoute OpenAPI 規範",
     "dump": {
       "description": "將 OpenAPI 規範輸出到 stdout 或檔案",
       "format": "輸出格式：yaml|json（預設：yaml）",
@@ -1149,7 +1149,7 @@
     }
   },
   "open": {
-    "description": "在瀏覽器中開啟特定的 OmniRoute 儀表盤頁面",
+    "description": "在瀏覽器中開啟特定的 FreeRoute 儀表盤頁面",
     "url": "僅列印 URL，不開啟瀏覽器"
   },
   "telemetry": {
@@ -1166,7 +1166,7 @@
     }
   },
   "sync": {
-    "description": "在 OmniRoute 例項之間同步配置",
+    "description": "在 FreeRoute 例項之間同步配置",
     "push": {
       "description": "將配置推送到雲或遠端例項",
       "target": "目標（cloud 或 context:name）",
@@ -1222,8 +1222,8 @@
       "listTitle": "可用語言",
       "current": "語言：{code}（{name}）",
       "saved": "語言已設定為 {code}（{name}）。",
-      "noCode": "需要語言程式碼。執行 omniroute config lang list 檢視可用程式碼。",
-      "unknown": "未知語言程式碼：{code}。執行 omniroute config lang list 檢視可用程式碼。",
+      "noCode": "需要語言程式碼。執行 freeroute config lang list 檢視可用程式碼。",
+      "unknown": "未知語言程式碼：{code}。執行 freeroute config lang list 檢視可用程式碼。",
       "alreadySet": "語言已設定為 {code}。",
       "envHint": "提示：您也可以在環境中設定 OMNIROUTE_LANG={code}。"
     }
@@ -1242,7 +1242,7 @@
     "filter": "按級別篩選（error,warn,info）— 逗號分隔",
     "lines": "要獲取的行數",
     "timeout": "連線超時（毫秒）",
-    "baseUrl": "OmniRoute API 基礎 URL",
+    "baseUrl": "FreeRoute API 基礎 URL",
     "requestId": "按請求 ID 篩選",
     "apiKey": "按 API 金鑰篩選",
     "combo": "按組合名稱篩選",
@@ -1258,10 +1258,10 @@
     "description": "控制系統托盤圖示",
     "show": "顯示托盤圖示（如果伺服器使用 --tray 執行）",
     "hide": "隱藏托盤圖示",
-    "quit": "通過托盤退出 OmniRoute"
+    "quit": "通過托盤退出 FreeRoute"
   },
   "autostart": {
-    "description": "管理 OmniRoute 開機自啟（Linux：systemd 使用者服務）",
+    "description": "管理 FreeRoute 開機自啟（Linux：systemd 使用者服務）",
     "enable": "啟用開機自啟",
     "disable": "停用開機自啟",
     "toggle": "切換開機自啟",
@@ -1293,19 +1293,19 @@
     "scaffold": "搭建新的外掛模板"
   },
   "launch": {
-    "description": "啟動指向 OmniRoute 的 Claude Code（本機或遠端，使用 --profile）",
+    "description": "啟動指向 FreeRoute 的 Claude Code（本機或遠端，使用 --profile）",
     "token": "Claude 用戶端應傳送的令牌（ANTHROPIC_AUTH_TOKEN）",
-    "notRunning": "無法在 {port} 存取 OmniRoute。請使用「omniroute serve」啟動它。",
+    "notRunning": "無法在 {port} 存取 FreeRoute。請使用「freeroute serve」啟動它。",
     "notFound": "在 PATH 中找不到「claude」CLI。"
   },
   "run": {
-    "description": "透過 OmniRoute 啟動受支援的 CLI 目標"
+    "description": "透過 FreeRoute 啟動受支援的 CLI 目標"
   },
   "setupClaude": {
-    "description": "從 OmniRoute 模型目錄產生 ~/.claude/profiles 的 Claude Code 配置檔"
+    "description": "從 FreeRoute 模型目錄產生 ~/.claude/profiles 的 Claude Code 配置檔"
   },
   "connect": {
-    "description": "連線到遠端 OmniRoute 伺服器並進入遠端模式"
+    "description": "連線到遠端 FreeRoute 伺服器並進入遠端模式"
   },
   "tokens": {
     "description": "管理限定範圍的 CLI 存取令牌（遠端模式）"
@@ -1314,10 +1314,10 @@
     "description": "從使用中的伺服器選擇提供者+模型並配置受支援的本機 CLI"
   },
   "launchCodex": {
-    "description": "啟動指向 OmniRoute 的 Codex CLI（本機或遠端 VPS）"
+    "description": "啟動指向 FreeRoute 的 Codex CLI（本機或遠端 VPS）"
   },
   "setupCodex": {
-    "description": "從 OmniRoute 即時模型目錄產生 ~/.codex 配置檔"
+    "description": "從 FreeRoute 即時模型目錄產生 ~/.codex 配置檔"
   },
   "packs": {
     "description": "管理可選的執行階段套件（ML / 瀏覽器自動化）",
@@ -1330,7 +1330,7 @@
     "errUnknown": "未知的套件：{name}",
     "errNoIndex": "找不到套件索引；請透過 --source <dir> 傳入存放套件負載的目錄（桌面套件會將其隨附在應用程式旁）",
     "installed": "套件「{name}」已安裝並在 {dir} 驗證通過",
-    "restartHint": "請重新啟動 OmniRoute 伺服器（或桌面應用程式），以便執行階段載入該套件",
+    "restartHint": "請重新啟動 FreeRoute 伺服器（或桌面應用程式），以便執行階段載入該套件",
     "removed": "套件「{name}」已移除",
     "notInstalled": "套件「{name}」未安裝",
     "verifyOk": "所有已安裝的套件均已驗證通過",

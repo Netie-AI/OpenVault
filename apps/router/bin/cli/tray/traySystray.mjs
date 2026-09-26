@@ -45,14 +45,14 @@ export async function initSystrayUnix(
 
   const autostartEnabled = isAutostartEnabled();
   const items = [
-    { title: `OmniRoute  •  port ${port}`, tooltip: "Server running", enabled: false },
+    { title: `FreeRoute  •  port ${port}`, tooltip: "Server running", enabled: false },
     { title: "Open Dashboard", enabled: true },
     { title: "Show Logs", enabled: true },
     {
       title: autostartEnabled ? "✓ Auto-start (click to disable)" : "Enable Auto-start",
       enabled: true,
     },
-    { title: "Quit OmniRoute", enabled: true },
+    { title: "Quit FreeRoute", enabled: true },
   ];
 
   let tray;
@@ -65,7 +65,7 @@ export async function initSystrayUnix(
         // (the icon looked "missing" even when the tray loaded). (PR #1080)
         isTemplateIcon: false,
         title: "",
-        tooltip: `OmniRoute — port ${port}`,
+        tooltip: `FreeRoute — port ${port}`,
         items,
       },
       debug: false,

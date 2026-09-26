@@ -69,7 +69,7 @@ export function ensureRuntimeDir() {
           name: "omniroute-runtime",
           version: "1.0.0",
           private: true,
-          description: "User-writable runtime deps for OmniRoute (native binaries)",
+          description: "User-writable runtime deps for FreeRoute (native binaries)",
           // #14355: npm 11+ rejects `--allow-scripts=<pkg>` as a CLI flag for
           // project-scoped installs ("Add the entries to the 'allowScripts'
           // field in package.json, or to .npmrc, instead") — this is the
@@ -83,7 +83,7 @@ export function ensureRuntimeDir() {
     );
   } else {
     // #14355: retrofit `allowScripts` into a runtime dir created by an older
-    // OmniRoute version, so an existing install picks up the fix on the next
+    // FreeRoute version, so an existing install picks up the fix on the next
     // repair/runtime-check without the user having to delete the directory.
     try {
       const pkg = JSON.parse(readFileSync(pkgPath, "utf8"));

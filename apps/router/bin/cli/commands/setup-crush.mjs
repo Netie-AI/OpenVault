@@ -1,5 +1,5 @@
 /**
- * omniroute setup-crush — configure Crush (charmbracelet/crush) for OmniRoute.
+ * freeroute setup-crush — configure Crush (charmbracelet/crush) for FreeRoute.
  *
  * Crush is a terminal AI agent with a file-based config: ~/.config/crush/crush.json
  * (or ./crush.json). It supports a custom `openai-compat` provider. base_url must
@@ -53,7 +53,7 @@ export function buildCrushProvider(modelIds, baseUrl) {
   for (const id of modelIds) {
     const cfg = categoriseModel(id);
     if (!cfg) continue;
-    models.push({ id, name: `OmniRoute: ${id}`, context_window: cfg.ctx });
+    models.push({ id, name: `FreeRoute: ${id}`, context_window: cfg.ctx });
   }
   return {
     type: "openai-compat",
@@ -63,7 +63,7 @@ export function buildCrushProvider(modelIds, baseUrl) {
   };
 }
 
-/** Merge the OmniRoute provider into an existing crush.json (preserve the rest). */
+/** Merge the FreeRoute provider into an existing crush.json (preserve the rest). */
 export function mergeCrushConfig(existing, provider) {
   const cfg = existing && typeof existing === "object" ? { ...existing } : {};
   cfg.providers = { ...(cfg.providers || {}), omniroute: provider };
@@ -106,13 +106,13 @@ export async function runSetupCrushCommand(opts = {}) {
 
   const guard = await guardHostConfigTarget(configPath, {
     toolLabel: "Crush",
-    hostCommand: "omniroute setup-crush",
+    hostCommand: "freeroute setup-crush",
     allowContainerWrite: Boolean(opts.allowContainerWrite ?? opts["allow-container-write"]),
     dryRun,
   });
   if (guard !== 0) return guard;
 
-  printHeading("OmniRoute → Crush (openai-compat)");
+  printHeading("FreeRoute → Crush (openai-compat)");
   printInfo(`base_url: ${baseUrl}`);
 
   let ids;
@@ -120,7 +120,7 @@ export async function runSetupCrushCommand(opts = {}) {
     ids = await fetchModelIds(baseUrl, apiKey);
   } catch (e) {
     printError(`Could not fetch models: ${e.message}`);
-    printInfo("Make sure OmniRoute is running and --remote/--api-key are correct.");
+    printInfo("Make sure FreeRoute is running and --remote/--api-key are correct.");
     return 1;
   }
   if (only) ids = ids.filter((id) => only.some((f) => id.includes(f)));
@@ -153,10 +153,10 @@ export async function runSetupCrushCommand(opts = {}) {
 export function registerSetupCrush(program) {
   program
     .command("setup-crush")
-    .description("Generate the OmniRoute openai-compat provider in ~/.config/crush/crush.json")
-    .option("--port <port>", "Local OmniRoute port (ignored when --remote is set)", "20128")
-    .option("--remote <url>", "Remote OmniRoute URL, e.g. http://192.168.0.15:20128")
-    .option("--api-key <key>", "OmniRoute API key (defaults to OMNIROUTE_API_KEY env var)")
+    .description("Generate the FreeRoute openai-compat provider in ~/.config/crush/crush.json")
+    .option("--port <port>", "Local FreeRoute port (ignored when --remote is set)", "20128")
+    .option("--remote <url>", "Remote FreeRoute URL, e.g. http://192.168.0.15:20128")
+    .option("--api-key <key>", "FreeRoute API key (defaults to OMNIROUTE_API_KEY env var)")
     .option("--only <patterns>", "Comma-separated substrings — keep only matching model IDs")
     .option("--config-path <path>", "crush.json path (default: ~/.config/crush/crush.json)")
     .option("--dry-run", "Print what would be written without touching the filesystem")

@@ -14,6 +14,7 @@ import {
   supportsDualAuthProvider,
   type RiskNoticeVariant,
 } from "@/shared/constants/providers";
+import { isProviderHidden } from "@omniroute/open-sse/netie/policy.ts";
 
 export type ProviderDisplayAuthType = "oauth" | "apikey" | "compatible" | "no-auth";
 export type ProviderToggleAuthType = "oauth" | "free" | "apikey" | "no-auth";
@@ -186,10 +187,30 @@ const MANAGED_PROVIDER_CONNECTION_CATEGORIES = new Set<StaticProviderCatalogCate
   "cloud-agent",
 ]);
 
+// FreeRoute: providers hard-disabled by open-sse/netie/policy.ts (consumer
+// subscription pooling / browser-session relay) are hidden from the "Add
+// Connection" picker here rather than by editing AI_PROVIDERS/OAUTH_PROVIDERS/
+// WEB_COOKIE_PROVIDERS themselves — this is the single render-time choke
+// point every "which providers can I add" listing goes through
+// (buildStaticProviderEntries in the providers dashboard page). Individual
+// lookups by id (resolveStaticProviderCatalogEntry below) stay unfiltered so
+// an existing (pre-fork) connection can still resolve its own display info.
+// `providerRegistry.ts` (which this pulls in) is already client-bundle-safe —
+// see its own header comment: it's reachable from ProviderDetailPageClient.tsx.
+function filterHiddenProviders(providers: ProviderRecord): ProviderRecord {
+  const filtered: ProviderRecord = {};
+  for (const [id, meta] of Object.entries(providers)) {
+    if (isProviderHidden(id)) continue;
+    filtered[id] = meta;
+  }
+  return filtered;
+}
+
 export function getStaticProviderCatalogGroup(
   category: StaticProviderCatalogCategory
 ): StaticProviderCatalogGroup {
-  return STATIC_PROVIDER_CATALOG_GROUPS[category];
+  const group = STATIC_PROVIDER_CATALOG_GROUPS[category];
+  return { ...group, providers: filterHiddenProviders(group.providers) };
 }
 
 export function resolveStaticProviderCatalogEntry(

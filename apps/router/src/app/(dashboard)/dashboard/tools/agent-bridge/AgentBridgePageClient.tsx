@@ -48,7 +48,7 @@ export interface AgentBridgeServerState {
   hasCachedPassword?: boolean;
   /** Server OS requires a sudo password and none is cached (#7836). */
   needsSudoPassword?: boolean;
-  /** Whether the OmniRoute server is running on Windows. */
+  /** Whether the FreeRoute server is running on Windows. */
   isWin?: boolean;
 }
 

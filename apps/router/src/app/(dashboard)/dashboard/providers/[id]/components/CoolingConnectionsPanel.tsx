@@ -9,11 +9,11 @@
  * Why this exists: Fix A (per-account 429 cascade not persisting) writes the
  * cooldown to `provider_connections.rate_limited_until` so the cascade
  * survives the request boundary and process restart. Without a visible
- * indicator the user has no way to see "OmniRoute learned that this key is
+ * indicator the user has no way to see "FreeRoute learned that this key is
  * exhausted — and for how long". This panel makes the lesson visible.
  *
  * Each row also carries a manual "Clear cooldown" action. The cooldown is
- * OmniRoute's local lesson, not upstream truth: when the quota has already
+ * FreeRoute's local lesson, not upstream truth: when the quota has already
  * refreshed upstream (daily/weekly resets, provider-side fix), the automatic
  * clear paths (Test-button success, Edit-modal key re-validation) still
  * require an upstream round-trip before the bench lifts. The button PUTs
@@ -139,7 +139,7 @@ export default function CoolingConnectionsPanel(props: CoolingConnectionsPanelPr
         {providerText(
           t,
           "coolingConnectionsDescription",
-          "These connections are cooling after their last request. OmniRoute will skip them until the timer expires — no manual disable required."
+          "These connections are cooling after their last request. FreeRoute will skip them until the timer expires — no manual disable required."
         )}
       </p>
       <ul className="space-y-1">

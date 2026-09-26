@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
- * OmniRoute Antigravity Bridge Proxy
+ * FreeRoute Antigravity Bridge Proxy
  *
  * Intercepts Antigravity CLI and IDE requests:
  * - Directs Gemini 3.8 models directly to Google backend (100% native, untouched).
- * - Directs other models (Claude Sonnet 4.5/4.6, Opus, Gemini 3.7, GPT-OSS, etc.) to OmniRoute /v1/antigravity.
+ * - Directs other models (Claude Sonnet 4.5/4.6, Opus, Gemini 3.7, GPT-OSS, etc.) to FreeRoute /v1/antigravity.
  * - Passes all non-model Google requests (auth, onboarding, telemetry) directly to Google backend.
  * - Transparently forwards all other non-target internet traffic.
  */
@@ -98,7 +98,7 @@ function extractModel(body, url) {
 }
 
 const MODEL_ROUTING_MAP = {
-  // Official OmniRoute Auto Groups
+  // Official FreeRoute Auto Groups
   "auto/best-fast": "groq/openai/gpt-oss-120b",
   "auto/best-coding": "mistral/codestral-latest",
   "auto/best-reasoning": "nvidia/nvidia/nemotron-3-super-120b-a12b",
@@ -117,22 +117,22 @@ const MODEL_ROUTING_MAP = {
   "auto/gemma": "groq/qwen/qwen3.8-27b",
 
   // Human-readable Display Names (in case CLI sends displayName in envelope)
-  "Auto: Best Fast (OmniRoute)": "groq/openai/gpt-oss-120b",
-  "Auto: Best Coding (OmniRoute)": "mistral/codestral-latest",
-  "Auto: Best Reasoning (OmniRoute)": "nvidia/nvidia/nemotron-3-super-120b-a12b",
-  "Auto: Best Free (OmniRoute)": "groq/qwen/qwen3.8-27b",
-  "Auto: Best Vision (OmniRoute)": "nvidia/meta/llama-3.2-90b-vision-instruct",
-  "Auto: Coding Pro (OmniRoute)": "mistral/codestral-latest",
-  "Auto: Coding Fast (OmniRoute)": "groq/openai/gpt-oss-120b",
-  "Auto: Coding Free (OmniRoute)": "groq/qwen/qwen3.8-27b",
-  "Auto: Coding Reliable (OmniRoute)": "mistral/codestral-latest",
-  "Auto: Reasoning Pro (OmniRoute)": "nvidia/nvidia/nemotron-3-super-120b-a12b",
-  "Auto: Smart (OmniRoute)": "nvidia/nvidia/nemotron-3-super-120b-a12b",
-  "Auto: Claude Sonnet (OmniRoute)": "mistral/codestral-latest",
-  "Auto: Claude Opus (OmniRoute)": "nvidia/nvidia/nemotron-3-super-120b-a12b",
-  "Auto: Gemini (OmniRoute)": "gemini/gemini-2.5-flash",
-  "Auto: Llama (OmniRoute)": "groq/openai/gpt-oss-120b",
-  "Auto: Gemma (OmniRoute)": "groq/qwen/qwen3.8-27b",
+  "Auto: Best Fast (FreeRoute)": "groq/openai/gpt-oss-120b",
+  "Auto: Best Coding (FreeRoute)": "mistral/codestral-latest",
+  "Auto: Best Reasoning (FreeRoute)": "nvidia/nvidia/nemotron-3-super-120b-a12b",
+  "Auto: Best Free (FreeRoute)": "groq/qwen/qwen3.8-27b",
+  "Auto: Best Vision (FreeRoute)": "nvidia/meta/llama-3.2-90b-vision-instruct",
+  "Auto: Coding Pro (FreeRoute)": "mistral/codestral-latest",
+  "Auto: Coding Fast (FreeRoute)": "groq/openai/gpt-oss-120b",
+  "Auto: Coding Free (FreeRoute)": "groq/qwen/qwen3.8-27b",
+  "Auto: Coding Reliable (FreeRoute)": "mistral/codestral-latest",
+  "Auto: Reasoning Pro (FreeRoute)": "nvidia/nvidia/nemotron-3-super-120b-a12b",
+  "Auto: Smart (FreeRoute)": "nvidia/nvidia/nemotron-3-super-120b-a12b",
+  "Auto: Claude Sonnet (FreeRoute)": "mistral/codestral-latest",
+  "Auto: Claude Opus (FreeRoute)": "nvidia/nvidia/nemotron-3-super-120b-a12b",
+  "Auto: Gemini (FreeRoute)": "gemini/gemini-2.5-flash",
+  "Auto: Llama (FreeRoute)": "groq/openai/gpt-oss-120b",
+  "Auto: Gemma (FreeRoute)": "groq/qwen/qwen3.8-27b",
 
   // Fail-safe self-healing for dead/retired models
   "nvidia/deepseek-ai/deepseek-v4-pro-0813": "groq/openai/gpt-oss-120b",
@@ -167,85 +167,85 @@ function resolveTargetModel(model) {
 const OMNIROUTE_BUILTIN_GROUPS = [
   {
     id: "auto/best-coding",
-    displayName: "Auto: Best Coding (OmniRoute)",
+    displayName: "Auto: Best Coding (FreeRoute)",
     descriptionText:
-      "OmniRoute dynamic routing to the highest benchmark coding model available (Mistral Codestral)",
+      "FreeRoute dynamic routing to the highest benchmark coding model available (Mistral Codestral)",
   },
   {
     id: "auto/best-reasoning",
-    displayName: "Auto: Best Reasoning (OmniRoute)",
+    displayName: "Auto: Best Reasoning (FreeRoute)",
     descriptionText:
-      "OmniRoute dynamic routing to the highest benchmark reasoning model available (Nemotron 3 Super 120B)",
+      "FreeRoute dynamic routing to the highest benchmark reasoning model available (Nemotron 3 Super 120B)",
   },
   {
     id: "auto/best-fast",
-    displayName: "Auto: Best Fast (OmniRoute)",
-    descriptionText: "OmniRoute sub-second lowest latency high-throughput model (Groq LPUs)",
+    displayName: "Auto: Best Fast (FreeRoute)",
+    descriptionText: "FreeRoute sub-second lowest latency high-throughput model (Groq LPUs)",
   },
   {
     id: "auto/best-vision",
-    displayName: "Auto: Best Vision (OmniRoute)",
-    descriptionText: "OmniRoute multimodal & computer vision routing",
+    displayName: "Auto: Best Vision (FreeRoute)",
+    descriptionText: "FreeRoute multimodal & computer vision routing",
   },
   {
     id: "auto/best-free",
-    displayName: "Auto: Best Free (OmniRoute)",
-    descriptionText: "OmniRoute 100% unmetered free tier model routing (Qwen 3.8 27B)",
+    displayName: "Auto: Best Free (FreeRoute)",
+    descriptionText: "FreeRoute 100% unmetered free tier model routing (Qwen 3.8 27B)",
   },
   {
     id: "auto/coding:pro",
-    displayName: "Auto: Coding Pro (OmniRoute)",
-    descriptionText: "OmniRoute frontier pro-tier coding model (Codestral)",
+    displayName: "Auto: Coding Pro (FreeRoute)",
+    descriptionText: "FreeRoute frontier pro-tier coding model (Codestral)",
   },
   {
     id: "auto/coding:fast",
-    displayName: "Auto: Coding Fast (OmniRoute)",
-    descriptionText: "OmniRoute fast sub-second daily coding model (Groq 120B)",
+    displayName: "Auto: Coding Fast (FreeRoute)",
+    descriptionText: "FreeRoute fast sub-second daily coding model (Groq 120B)",
   },
   {
     id: "auto/coding:free",
-    displayName: "Auto: Coding Free (OmniRoute)",
-    descriptionText: "OmniRoute zero-cost free coding model",
+    displayName: "Auto: Coding Free (FreeRoute)",
+    descriptionText: "FreeRoute zero-cost free coding model",
   },
   {
     id: "auto/coding:reliable",
-    displayName: "Auto: Coding Reliable (OmniRoute)",
-    descriptionText: "OmniRoute maximum uptime and reliability coding model",
+    displayName: "Auto: Coding Reliable (FreeRoute)",
+    descriptionText: "FreeRoute maximum uptime and reliability coding model",
   },
   {
     id: "auto/reasoning:pro",
-    displayName: "Auto: Reasoning Pro (OmniRoute)",
-    descriptionText: "OmniRoute deep reasoning frontier model",
+    displayName: "Auto: Reasoning Pro (FreeRoute)",
+    descriptionText: "FreeRoute deep reasoning frontier model",
   },
   {
     id: "auto/smart",
-    displayName: "Auto: Smart (OmniRoute)",
-    descriptionText: "OmniRoute highest intelligence general-purpose model",
+    displayName: "Auto: Smart (FreeRoute)",
+    descriptionText: "FreeRoute highest intelligence general-purpose model",
   },
   {
     id: "auto/claude-sonnet",
-    displayName: "Auto: Claude Sonnet (OmniRoute)",
-    descriptionText: "OmniRoute automated routing across Claude Sonnet providers",
+    displayName: "Auto: Claude Sonnet (FreeRoute)",
+    descriptionText: "FreeRoute automated routing across Claude Sonnet providers",
   },
   {
     id: "auto/claude-opus",
-    displayName: "Auto: Claude Opus (OmniRoute)",
-    descriptionText: "OmniRoute automated routing across Claude Opus providers",
+    displayName: "Auto: Claude Opus (FreeRoute)",
+    descriptionText: "FreeRoute automated routing across Claude Opus providers",
   },
   {
     id: "auto/gemini",
-    displayName: "Auto: Gemini (OmniRoute)",
-    descriptionText: "OmniRoute automated routing across Gemini providers",
+    displayName: "Auto: Gemini (FreeRoute)",
+    descriptionText: "FreeRoute automated routing across Gemini providers",
   },
   {
     id: "auto/llama",
-    displayName: "Auto: Llama (OmniRoute)",
-    descriptionText: "OmniRoute automated routing across Llama providers",
+    displayName: "Auto: Llama (FreeRoute)",
+    descriptionText: "FreeRoute automated routing across Llama providers",
   },
   {
     id: "auto/gemma",
-    displayName: "Auto: Gemma (OmniRoute)",
-    descriptionText: "OmniRoute automated routing across Gemma providers",
+    displayName: "Auto: Gemma (FreeRoute)",
+    descriptionText: "FreeRoute automated routing across Gemma providers",
   },
   // Active, verified provider models
   {
@@ -309,7 +309,7 @@ function shouldInterceptToOmniRoute(model, url) {
     return false;
   }
 
-  // Intercept any OmniRoute auto group, provider model, or mapped alias
+  // Intercept any FreeRoute auto group, provider model, or mapped alias
   const clean = model.replace(/^models\//, "").trim();
   if (
     clean.startsWith("auto/") ||
@@ -350,7 +350,7 @@ const internalApp = http.createServer(async (req, res) => {
   if (shouldIntercept) {
     const resolvedModel = resolveTargetModel(model);
     console.log(
-      `[Bridge] 🔀 INTERCEPTING -> OmniRoute: "${model || "default"}" => "${resolvedModel}" (${url})`
+      `[Bridge] 🔀 INTERCEPTING -> FreeRoute: "${model || "default"}" => "${resolvedModel}" (${url})`
     );
 
     let outgoingBuffer = bodyBuffer;
@@ -363,7 +363,7 @@ const internalApp = http.createServer(async (req, res) => {
       outgoingBuffer = Buffer.from(JSON.stringify(cloned), "utf-8");
     }
 
-    // Forward to OmniRoute /v1/antigravity
+    // Forward to FreeRoute /v1/antigravity
     try {
       const forwardHeaders = {
         "Content-Type": "application/json",
@@ -389,10 +389,10 @@ const internalApp = http.createServer(async (req, res) => {
       upstreamReq.setNoDelay(true);
 
       upstreamReq.on("error", (err) => {
-        console.error(`[Bridge] ❌ Error forwarding to OmniRoute: ${err.message}`);
+        console.error(`[Bridge] ❌ Error forwarding to FreeRoute: ${err.message}`);
         if (!res.headersSent) {
           res.writeHead(502, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ error: { message: `OmniRoute bridge error: ${err.message}` } }));
+          res.end(JSON.stringify({ error: { message: `FreeRoute bridge error: ${err.message}` } }));
         }
       });
 
@@ -400,7 +400,7 @@ const internalApp = http.createServer(async (req, res) => {
       upstreamReq.end();
       return;
     } catch (err) {
-      console.error(`[Bridge] ❌ Failed to invoke OmniRoute: ${err.message}`);
+      console.error(`[Bridge] ❌ Failed to invoke FreeRoute: ${err.message}`);
     }
   }
 
@@ -434,7 +434,7 @@ const internalApp = http.createServer(async (req, res) => {
           try {
             const data = JSON.parse(respBuffer.toString("utf-8"));
             if (data && data.models) {
-              // Inject OmniRoute built-in auto groups and models
+              // Inject FreeRoute built-in auto groups and models
               const baseTemplate =
                 data.models["claude-sonnet-4-6"] ||
                 data.models["gpt-oss-120b-medium"] ||
@@ -453,7 +453,7 @@ const internalApp = http.createServer(async (req, res) => {
                 injectedIds.push(group.id);
               }
 
-              // Prepend OmniRoute groups to agentModelSorts recommended group
+              // Prepend FreeRoute groups to agentModelSorts recommended group
               if (
                 Array.isArray(data.agentModelSorts) &&
                 data.agentModelSorts[0]?.groups?.[0]?.modelIds
@@ -510,7 +510,7 @@ internalApp.headersTimeout = 66000;
 const proxyServer = http.createServer((req, res) => {
   // Plain HTTP request (non-CONNECT)
   res.writeHead(200, { "Content-Type": "text/plain" });
-  res.end("OmniRoute Antigravity Bridge Proxy Active\n");
+  res.end("FreeRoute Antigravity Bridge Proxy Active\n");
 });
 
 proxyServer.keepAliveTimeout = 65000;
@@ -575,7 +575,7 @@ const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPat
 
 if (isMain) {
   proxyServer.listen(PORT, "127.0.0.1", () => {
-    console.log(`🚀 OmniRoute Antigravity Bridge listening on 127.0.0.1:${PORT}`);
+    console.log(`🚀 FreeRoute Antigravity Bridge listening on 127.0.0.1:${PORT}`);
     console.log(`   Routing non-Gemini 3.8 model traffic -> ${ROUTER_URL}`);
     console.log(`   Preserving Gemini 3.8 native traffic -> Google`);
   });

@@ -4,7 +4,7 @@
  * Dual audience: the dashboard calls these routes with a management session,
  * A2A clients with an inference API key. Posture matrix:
  *
- *  - REQUIRE_API_KEY=true: a valid OmniRoute key is mandatory (the same
+ *  - REQUIRE_API_KEY=true: a valid FreeRoute key is mandatory (the same
  *    posture the /v1 inference plane enforces); a management session also
  *    passes (dashboard), via alwaysRequireAuth so requireLogin=false cannot
  *    bypass it.

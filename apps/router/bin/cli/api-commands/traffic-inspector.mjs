@@ -49,7 +49,7 @@ export function register_traffic_inspector(parent) {
       emit(data, gOpts);
     });
   tag.command("post-api-tools-traffic-inspector-requests-id-replay")
-    .description("Replay a captured request through OmniRoute router")
+    .description("Replay a captured request through FreeRoute router")
     .requiredOption("--id <id>", "")
     .action(async (opts, cmd) => {
       const gOpts = cmd.optsWithGlobals();

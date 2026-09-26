@@ -16,7 +16,7 @@ interface ModelMappingTableProps {
 }
 
 /**
- * Editable table: source model → target OmniRoute model.
+ * Editable table: source model → target FreeRoute model.
  */
 export function ModelMappingTable({ agentId, mappings, onSave }: ModelMappingTableProps) {
   const t = useTranslations("agentBridge");
@@ -56,7 +56,7 @@ export function ModelMappingTable({ agentId, mappings, onSave }: ModelMappingTab
         <div className="rounded-lg border border-border/40 bg-surface/30 px-4 py-6 text-center">
           <p className="text-xs text-text-muted mb-3">
             {t("noMappingsDesc") ||
-              "No model mappings configured yet. Add mappings to route agent requests through OmniRoute."}
+              "No model mappings configured yet. Add mappings to route agent requests through FreeRoute."}
           </p>
           <button
             type="button"
@@ -77,7 +77,7 @@ export function ModelMappingTable({ agentId, mappings, onSave }: ModelMappingTab
                     {t("sourceModel") || "Source model (agent native)"}
                   </th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-text-muted">
-                    {t("targetModel") || "Target model (OmniRoute)"}
+                    {t("targetModel") || "Target model (FreeRoute)"}
                   </th>
                   <th className="px-3 py-2 w-12"></th>
                 </tr>
@@ -126,7 +126,7 @@ export function ModelMappingTable({ agentId, mappings, onSave }: ModelMappingTab
             </table>
           </div>
           <p className="text-xs text-text-muted">
-            Use * as the source to route every model without an explicit mapping through OmniRoute
+            Use * as the source to route every model without an explicit mapping through FreeRoute
             to the selected target. Exact source matches always win over *.
           </p>
 

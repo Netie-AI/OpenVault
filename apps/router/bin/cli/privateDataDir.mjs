@@ -1,4 +1,4 @@
-// Private-by-default helpers for the OmniRoute data directory (GHSA-2pg2-xm9r-8544).
+// Private-by-default helpers for the FreeRoute data directory (GHSA-2pg2-xm9r-8544).
 //
 // DATA_DIR holds `.env` (STORAGE_ENCRYPTION_KEY — the key to every credential in
 // storage.sqlite) and the database itself. Creating them without an explicit mode lets the

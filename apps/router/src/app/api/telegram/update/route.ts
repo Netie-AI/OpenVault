@@ -11,7 +11,7 @@
  *   1. Rejects when TELEGRAM_BOT_TOKEN is unset (never silently no-op).
  *   2. Verifies initData when present (Mini App path).
  *   3. Handles /start (returns the Mini App deep link) and everything else
- *      as a chat prompt proxied through the OmniRoute pipeline.
+ *      as a chat prompt proxied through the FreeRoute pipeline.
  */
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
@@ -73,7 +73,7 @@ function buildMiniAppLink(botUsername?: string): string {
 }
 
 const START_HELP =
-  "👋 Welcome! This bot bridges Telegram and your OmniRoute gateway.\n\n" +
+  "👋 Welcome! This bot bridges Telegram and your FreeRoute gateway.\n\n" +
   "• Send any message and I'll route it through your configured models.\n" +
   "• Open the Mini App for a full chat UI.";
 

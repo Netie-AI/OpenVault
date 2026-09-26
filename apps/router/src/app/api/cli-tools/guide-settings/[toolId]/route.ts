@@ -15,21 +15,21 @@ import { guardCliConfigWrite } from "@/lib/api/cliConfigWriteGuard";
 
 /**
  * Where each guide tool's config lands, and the host command that writes the
- * same thing when OmniRoute itself runs in a container.
+ * same thing when FreeRoute itself runs in a container.
  */
 const GUIDE_TOOL_TARGETS: Record<string, { resolve: () => string; hostCommand: string }> = {
   continue: {
     resolve: () => path.join(os.homedir(), ".continue", "config.json"),
-    hostCommand: "omniroute setup-continue",
+    hostCommand: "freeroute setup-continue",
   },
   opencode: {
     resolve: () => getOpenCodeConfigPath(),
-    hostCommand: "omniroute setup-opencode",
+    hostCommand: "freeroute setup-opencode",
   },
   hermes: {
     resolve: () =>
       getCliPrimaryConfigPath("hermes") || path.join(os.homedir(), ".hermes", "config.yaml"),
-    hostCommand: "omniroute config set hermes",
+    hostCommand: "freeroute config set hermes",
   },
 };
 
@@ -134,7 +134,7 @@ async function saveContinueConfig({ baseUrl, apiKey, model }) {
     // No existing config or invalid JSON — start fresh
   }
 
-  // Build the OmniRoute model entry
+  // Build the FreeRoute model entry
   const normalizedBaseUrl = String(baseUrl || "")
     .trim()
     .replace(/\/+$/, "");
@@ -157,7 +157,7 @@ async function saveContinueConfig({ baseUrl, apiKey, model }) {
       .toLowerCase();
   }
 
-  // Check if OmniRoute entry already exists and update it, or add new
+  // Check if FreeRoute entry already exists and update it, or add new
   const existingIdx = models.findIndex(
     (m) =>
       m &&
@@ -238,7 +238,7 @@ async function saveOpenCodeConfig({ baseUrl, apiKey, model, models, modelLabels 
  * Save Hermes config to ~/.hermes/config.yaml
  *
  * Hermes stores its primary routing settings in YAML. Preserve any existing
- * keys, but make sure the OmniRoute provider entry is present and selected.
+ * keys, but make sure the FreeRoute provider entry is present and selected.
  */
 async function saveHermesConfig({ baseUrl, apiKey, model }) {
   const configPath =

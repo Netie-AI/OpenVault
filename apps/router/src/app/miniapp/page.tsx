@@ -52,7 +52,7 @@ export default function TelegramMiniApp() {
           ...prev,
           {
             role: "assistant",
-            content: `👋 Hi ${user.first_name || "there"}! Send a message to chat through your OmniRoute gateway.`,
+            content: `👋 Hi ${user.first_name || "there"}! Send a message to chat through your FreeRoute gateway.`,
           },
         ]);
       }
@@ -109,7 +109,7 @@ export default function TelegramMiniApp() {
         fontFamily: "system-ui, -apple-system, sans-serif",
       }}
     >
-      <h1 style={{ fontSize: 18, margin: "0 0 12px" }}>OmniRoute Mini App</h1>
+      <h1 style={{ fontSize: 18, margin: "0 0 12px" }}>FreeRoute Mini App</h1>
       {error && <p style={{ color: "#e5484d", fontSize: 13, margin: "0 0 12px" }}>{error}</p>}
 
       <div style={{ flex: 1, overflowY: "auto", marginBottom: 12 }}>

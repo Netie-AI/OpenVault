@@ -25,11 +25,11 @@ const TOOL_ID = "jcode";
  * wrote a ~/.jcode/config.json that jcode never reads). Reference:
  * https://github.com/1jehuang/jcode#openai-compatible-providers
  *
- * The OmniRoute-managed profile is kept inside a marker-delimited block so
+ * The FreeRoute-managed profile is kept inside a marker-delimited block so
  * apply/reset round-trips without disturbing the rest of the user's config.
  */
-const MANAGED_BEGIN = "# >>> managed by OmniRoute (jcode provider profile) >>>";
-const MANAGED_END = "# <<< managed by OmniRoute <<<";
+const MANAGED_BEGIN = "# >>> managed by FreeRoute (jcode provider profile) >>>";
+const MANAGED_END = "# <<< managed by FreeRoute <<<";
 
 const getJcodeConfigPath = (): string =>
   getCliPrimaryConfigPath(TOOL_ID) ?? path.join(process.env.HOME ?? "~", ".jcode", "config.toml");
@@ -122,7 +122,7 @@ export async function GET(request: Request) {
   }
 }
 
-// POST — write the OmniRoute provider profile into jcode's config.toml
+// POST — write the FreeRoute provider profile into jcode's config.toml
 export async function POST(request: Request) {
   const authError = await requireCliToolsAuth(request);
   if (authError) return authError;
@@ -179,7 +179,7 @@ export async function POST(request: Request) {
             {
               error: {
                 message:
-                  "config.toml already defines [providers.omniroute] outside the OmniRoute-managed block; remove it or manage it manually",
+                  "config.toml already defines [providers.omniroute] outside the FreeRoute-managed block; remove it or manage it manually",
               },
             },
             { status: 409 }
@@ -191,7 +191,7 @@ export async function POST(request: Request) {
         {
           error: {
             message:
-              "existing ~/.jcode/config.toml is not valid TOML; fix it before applying OmniRoute settings",
+              "existing ~/.jcode/config.toml is not valid TOML; fix it before applying FreeRoute settings",
           },
         },
         { status: 409 }
@@ -222,7 +222,7 @@ export async function POST(request: Request) {
   }
 }
 
-// DELETE — remove the OmniRoute-managed block from jcode's config.toml
+// DELETE — remove the FreeRoute-managed block from jcode's config.toml
 export async function DELETE(request: Request) {
   const authError = await requireCliToolsAuth(request);
   if (authError) return authError;
@@ -263,7 +263,7 @@ export async function DELETE(request: Request) {
       /* non-critical */
     }
 
-    return NextResponse.json({ success: true, message: "jcode OmniRoute settings removed" });
+    return NextResponse.json({ success: true, message: "jcode FreeRoute settings removed" });
   } catch (err) {
     return NextResponse.json({ error: { message: sanitizeErrorMessage(err) } }, { status: 500 });
   }

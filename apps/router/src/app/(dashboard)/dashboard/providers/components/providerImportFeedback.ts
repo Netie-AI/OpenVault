@@ -136,7 +136,7 @@ export function formatImportErrorLine(err: ImportRowError): string {
  * does not create new endpoint nodes. Header names are cosmetic; the parser
  * destructures by index (`provider,name,apiKey,baseUrl,priority`).
  */
-export const PROVIDER_IMPORT_CSV_TEMPLATE = `# OmniRoute provider import (positional columns)
+export const PROVIDER_IMPORT_CSV_TEMPLATE = `# FreeRoute provider import (positional columns)
 # Columns: provider, name, apiKey, baseUrl (optional), priority (optional, 1-100)
 # The provider column must be an existing managed provider id (openai, anthropic, …)
 # or an already-registered OpenAI/Anthropic-compatible node id.

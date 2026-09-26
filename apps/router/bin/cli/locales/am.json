@@ -1,8 +1,8 @@
 {
   "common": {
     "error": "ስህተት፦ {message}",
-    "serverOffline": "የOmniRoute አገልጋይ ከመስመር ውጭ ነው። በዚህ ያስጀምሩት፦ omniroute serve",
-    "authRequired": "ማረጋገጫ ያስፈልጋል። OMNIROUTE_API_KEY ያዘጋጁ ወይም ይህን ያስኪዱ፦ omniroute setup",
+    "serverOffline": "የFreeRoute አገልጋይ ከመስመር ውጭ ነው። በዚህ ያስጀምሩት፦ freeroute serve",
+    "authRequired": "ማረጋገጫ ያስፈልጋል። OMNIROUTE_API_KEY ያዘጋጁ ወይም ይህን ያስኪዱ፦ freeroute setup",
     "rateLimited": "የጥያቄ መጠን ገደቡ አልፏል። ከ{seconds} ሰከንድ በኋላ እንደገና ይሞክሩ።",
     "timeout": "ጥያቄው ከ{ms} ሚሊሰከንድ በኋላ ጊዜው አልፏል።",
     "success": "ተጠናቋል።",
@@ -15,7 +15,7 @@
     "yesOpt": "የማረጋገጫ ጥያቄውን ዝለል"
   },
   "setup": {
-    "title": "የOmniRoute ማዋቀር",
+    "title": "የFreeRoute ማዋቀር",
     "passwordPrompt": "የአስተዳዳሪ የይለፍ ቃል",
     "providerPrompt": "ነባሪ አቅራቢ (ለመዝለል ባዶ ይተዉት)",
     "done": "ማዋቀሩ ተጠናቋል",
@@ -30,19 +30,19 @@
     "opencode": "ከOpenCode ጋር የተካተተውን @omniroute/opencode-plugin ጫን እና አዋቅር"
   },
   "doctor": {
-    "title": "OmniRoute ዶክተር",
+    "title": "FreeRoute ዶክተር",
     "dbOk": "የውሂብ ጎታ፦ ደህና ({path})",
-    "dbMissing": "የውሂብ ጎታ፦ አልተጀመረም — `omniroute setup` ያስኪዱ",
+    "dbMissing": "የውሂብ ጎታ፦ አልተጀመረም — `freeroute setup` ያስኪዱ",
     "portOk": "ወደብ {port}፦ ይገኛል",
     "portConflict": "ወደብ {port}፦ በሌላ ሂደት ጥቅም ላይ ነው",
     "encryptionOk": "የምስጠራ ቁልፍ፦ ተዋቅሯል",
-    "encryptionMissing": "የምስጠራ ቁልፍ የለም — `omniroute setup` ያስኪዱ",
+    "encryptionMissing": "የምስጠራ ቁልፍ የለም — `freeroute setup` ያስኪዱ",
     "allGood": "ሁሉም ምርመራዎች ተሳክተዋል።",
     "warnings": "{count} ማስጠንቀቂያ(ዎች) — ከላይ ይመልከቱ።"
   },
   "providers": {
     "title": "አቅራቢዎች",
-    "noProviders": "ምንም አቅራቢ አልተዋቀረም። ይህን ያስኪዱ፦ omniroute setup",
+    "noProviders": "ምንም አቅራቢ አልተዋቀረም። ይህን ያስኪዱ፦ freeroute setup",
     "testing": "{name}ን በመሞከር ላይ...",
     "available": "{count} አቅራቢ(ዎች) ይገኛሉ",
     "connected": "ተገናኝቷል",
@@ -71,7 +71,7 @@
       "dryRunOpt": "ምንም ሳይጻፍ የሚቀየረውን አትም",
       "confirmPrompt": "ለግንኙነት \"{name}\" ({id}) የAPI ቁልፉ ይተካ? [y/N]",
       "dryRunResult": "[dry-run] ለ\"{name}\" ({id}) ቁልፉ ይቀየር ነበር። ምንም ለውጥ አልተደረገም።",
-      "oauthHint": "የOAuth ግንኙነት — ይህን ያሂዱ፦ omniroute oauth {provider}",
+      "oauthHint": "የOAuth ግንኙነት — ይህን ያሂዱ፦ freeroute oauth {provider}",
       "envVarEmpty": "የአካባቢ ተለዋዋጭ {var} አልተዋቀረም ወይም ባዶ ነው።",
       "success": "ለ\"{name}\" ቁልፉ ተቀይሯል። ለማረጋገጥ `providers test {id}` ያሂዱ።",
       "testPassed": "ከቁልፍ ለውጡ በኋላ የተደረገው ሙከራ ተሳክቷል።",
@@ -82,7 +82,7 @@
       "providerOpt": "በአቅራቢ ስም አጣራ",
       "header": "ID         አቅራቢ       ስም                     የማብቂያ ሁኔታ  የሙከራ ሁኔታ  የእፎይታ ጊዜ እስከ",
       "noData": "ምንም የአቅራቢ ግንኙነት ውሂብ የለም።",
-      "requiresServer": "providers status የOmniRoute አገልጋይ እየሰራ እንዲሆን ይፈልጋል።"
+      "requiresServer": "providers status የFreeRoute አገልጋይ እየሰራ እንዲሆን ይፈልጋል።"
     }
   },
   "keys": {
@@ -90,8 +90,8 @@
     "addDescription": "ለአቅራቢ የAPI ቁልፍ ጨምር ወይም አዘምን",
     "listDescription": "ሁሉንም የተዋቀሩ የAPI ቁልፎች ዘርዝር",
     "removeDescription": "የአቅራቢውን የAPI ቁልፍ አስወግድ",
-    "regenerateDescription": "የOmniRoute API ቁልፍን እንደገና ፍጠር",
-    "revokeDescription": "የOmniRoute API ቁልፍን ሻር",
+    "regenerateDescription": "የFreeRoute API ቁልፍን እንደገና ፍጠር",
+    "revokeDescription": "የFreeRoute API ቁልፍን ሻር",
     "revealDescription": "ያልተሸፈነውን የAPI ቁልፍ እሴት አሳይ",
     "usageDescription": "ለአንድ የAPI ቁልፍ የቅርብ ጊዜ አጠቃቀምን አሳይ",
     "usageLimitOpt": "የቅርብ ጊዜ ጥያቄዎች ብዛት",
@@ -142,7 +142,7 @@
     "warning": "⚠ ይህ ዲክሪፕት የተደረጉ ግልጽ ጽሑፍ API ቁልፎችን እና OAuth ቶከኖችን ያትማል/ይጽፋል። ማያዎ፣ የሼል ታሪክዎ እና ማንኛውም የውጤት ፋይል የግል ሆነው መቆየታቸውን ያረጋግጡ።",
     "confirmHeading": "⚠ ማስጠንቀቂያ፦ ይህ ዲክሪፕት የተደረጉ የአቅራቢ ማረጋገጫዎችን በግልጽ ጽሑፍ ወደ ውጭ ይልካል",
     "confirmBody": "ይህ ትዕዛዝ ለተመረጠው ግንኙነት(ነቶች) apiKey፣ accessToken፣ refreshToken እና\nidTokenን ዲክሪፕት አድርጎ ያትማል/ይጽፋል። ውጤቱን እንደ ሚስጥር ይያዙ።",
-    "confirmFooter": "ለማረጋገጥ፣ ይህን ያስኪዱ፦\n  omniroute auth export --force",
+    "confirmFooter": "ለማረጋገጥ፣ ይህን ያስኪዱ፦\n  freeroute auth export --force",
     "missingKey": "የመግቢያ ማረጋገጫዎችን ወደ ውጭ ለመላክ STORAGE_ENCRYPTION_KEY ያስፈልጋል።",
     "notFound": "ግንኙነቱ አልተገኘም፦ {id}",
     "invalidFormat": "ልክ ያልሆነ ቅርጸት፦ {format}። json ወይም env ይጠቀሙ።"
@@ -220,10 +220,10 @@
     "reasoning": "የማመዛዘን ጥረት ደረጃ (low|medium|high)",
     "thinking": "የተራዘመ የማሰብ token በጀት",
     "explain": "የfallback ዛፍን እና የወጪ ክልሉን ወደ stderr ያትሙ",
-    "noCombo": "ምንም ተዛማጅ combo አልተገኘም። በሚከተለው አንድ ያዋቅሩ፦ omniroute combo create"
+    "noCombo": "ምንም ተዛማጅ combo አልተገኘም። በሚከተለው አንድ ያዋቅሩ፦ freeroute combo create"
   },
   "chat": {
-    "description": "የአንድ ጊዜ የውይይት ጥያቄ ወደ OmniRoute ይላኩ",
+    "description": "የአንድ ጊዜ የውይይት ጥያቄ ወደ FreeRoute ይላኩ",
     "file": "ጥያቄውን ከፋይል ያንብቡ",
     "stdin": "ጥያቄውን ከstdin ያንብቡ",
     "system": "የስርዓት ጥያቄ",
@@ -242,8 +242,8 @@
     }
   },
   "serve": {
-    "description": "የOmniRoute አገልጋይን ያስጀምሩ (ነባሪ እርምጃ)",
-    "starting": "የOmniRoute አገልጋይ በport {port} ላይ እየተጀመረ ነው...",
+    "description": "የFreeRoute አገልጋይን ያስጀምሩ (ነባሪ እርምጃ)",
+    "starting": "የFreeRoute አገልጋይ በport {port} ላይ እየተጀመረ ነው...",
     "ready": "በhttp://localhost:{port} ላይ ዝግጁ ነው",
     "stopping": "አገልጋዩ እየቆመ ነው (PID {pid})...",
     "stopped": "አገልጋዩ ቆሟል።",
@@ -262,7 +262,7 @@
   },
   "backup": {
     "title": "ምትኬ",
-    "description": "የOmniRoute ውሂብ ምትኬ ፍጠር",
+    "description": "የFreeRoute ውሂብ ምትኬ ፍጠር",
     "creating": "ምትኬ በመፍጠር ላይ...",
     "done": "ምትኬው ወደ {path} ተቀምጧል",
     "noFiles": "ምትኬ የሚቀመጥላቸው ፋይሎች የሉም (የውሂብ ጎታው አልተጀመረም)",
@@ -274,7 +274,7 @@
     "noBackups": "ምንም ምትኬ አልተገኘም።",
     "notFound": "ምትኬው አልተገኘም፦ {name}",
     "confirmRestore": "የአሁኑ ውሂብ በ{ts} ምትኬ እንዲተካ ይደረግ?",
-    "createDescription": "የOmniRoute ውሂብ ምትኬ ፍጠር",
+    "createDescription": "የFreeRoute ውሂብ ምትኬ ፍጠር",
     "nameOpt": "ብጁ የምትኬ ስም",
     "cloudOpt": "ምትኬውን ወደ ደመና ማከማቻ ስቀል",
     "encryptOpt": "ምትኬውን በAES-256-GCM አመስጥር",
@@ -292,14 +292,14 @@
       "statusDescription": "የአሁኑን የምትኬ መርሐግብር ሁኔታ አሳይ",
       "cronOpt": "የመርሐግብሩ Cron አገላለጽ (ነባሪ፦ በየቀኑ ከጠዋቱ 3 ሰዓት)",
       "enabled": "ራስ-ሰር ምትኬ ነቅቷል (cron፦ {cron})።",
-      "hint": "መርሐግብሩ ሲጀመር omniroute serve ያነበዋል።",
+      "hint": "መርሐግብሩ ሲጀመር freeroute serve ያነበዋል።",
       "disabled": "ራስ-ሰር ምትኬ ተሰናክሏል።",
       "notConfigured": "ምንም የምትኬ መርሐግብር አልተዋቀረም።"
     }
   },
   "health": {
     "description": "የአገልጋዩን ጤንነትና የክፍሎቹን ሁኔታ ፈትሽ",
-    "noServer": "አገልጋዩ እየሰራ አይደለም። በዚህ ያስጀምሩ፦ omniroute serve",
+    "noServer": "አገልጋዩ እየሰራ አይደለም። በዚህ ያስጀምሩ፦ freeroute serve",
     "title": "ጤንነት",
     "status": "ሁኔታ፦ {status}",
     "uptime": "የሥራ ጊዜ፦ {uptime}",
@@ -308,21 +308,21 @@
   },
   "quota": {
     "description": "የአቅራቢውን ኮታ አጠቃቀም አሳይ",
-    "noServer": "ሰርቨሩ እየሰራ አይደለም። በዚህ ያስጀምሩ፦ omniroute serve",
+    "noServer": "ሰርቨሩ እየሰራ አይደለም። በዚህ ያስጀምሩ፦ freeroute serve",
     "noData": "ምንም የኮታ መረጃ የለም።"
   },
   "cache": {
     "description": "የምላሽ መሸጎጫን ያስተዳድሩ",
-    "noServer": "ሰርቨሩ እየሰራ አይደለም። በዚህ ያስጀምሩ፦ omniroute serve",
+    "noServer": "ሰርቨሩ እየሰራ አይደለም። በዚህ ያስጀምሩ፦ freeroute serve",
     "cleared": "መሸጎጫው ጸድቷል።",
     "clearFailed": "መሸጎጫውን ማጽዳት አልተሳካም።"
   },
   "redis": {
-    "description": "ለOmniRoute መሸጎጫ እና ኮታ ክትትል የሚያገለግል አካባቢያዊ Redis ኮንቴይነርን (Podman ወይም Docker) በአንድ ጠቅታ ያስጀምሩ"
+    "description": "ለFreeRoute መሸጎጫ እና ኮታ ክትትል የሚያገለግል አካባቢያዊ Redis ኮንቴይነርን (Podman ወይም Docker) በአንድ ጠቅታ ያስጀምሩ"
   },
   "test": {
     "description": "የአቅራቢ ግንኙነትን ይፈትሹ",
-    "noServer": "ሰርቨሩ እየሰራ አይደለም። በዚህ ያስጀምሩ፦ omniroute serve",
+    "noServer": "ሰርቨሩ እየሰራ አይደለም። በዚህ ያስጀምሩ፦ freeroute serve",
     "testing": "{provider} / {model} በመፈተሽ ላይ...",
     "passed": "ግንኙነቱ ተሳክቷል!",
     "failed": "ግንኙነቱ አልተሳካም፦ {error}",
@@ -334,7 +334,7 @@
     "saved": "ውጤቶቹ ወደ {path} ተቀምጠዋል",
     "compareTitle": "የሞዴሎች ንጽጽር",
     "compareMinTwo": "ለ--compare ቢያንስ ሁለት ሞዴሎች ያስፈልጋሉ (በነጠላ ሰረዝ የተለዩ)",
-    "noProviders": "ምንም አቅራቢ አልተዋቀረም። በዚህ አንድ ያክሉ፦ omniroute keys add"
+    "noProviders": "ምንም አቅራቢ አልተዋቀረም። በዚህ አንድ ያክሉ፦ freeroute keys add"
   },
   "update": {
     "checking": "ዝማኔዎችን በመፈለግ ላይ...",
@@ -348,7 +348,7 @@
     "running": "MCP ሰርቨር እየሰራ ነው ({transport})",
     "stopped": "MCP ሰርቨር ቆሟል።",
     "restarted": "MCP ሰርቨር እንደገና ተጀምሯል።",
-    "stoppedHint": "ለማብራት `omniroute mcp enable`ን ያሂዱ።",
+    "stoppedHint": "ለማብራት `freeroute mcp enable`ን ያሂዱ።",
     "enabled": "MCP አገልጋይ ነቅቷል።",
     "disabled": "MCP አገልጋይ ተሰናክሏል።",
     "enable": {
@@ -416,7 +416,7 @@
     }
   },
   "policy": {
-    "description": "የOmniRoute ፈቃድ አሰጣጥ ፖሊሲዎችን አስተዳድር",
+    "description": "የFreeRoute ፈቃድ አሰጣጥ ፖሊሲዎችን አስተዳድር",
     "list": {
       "description": "ፖሊሲዎችን ዘርዝር",
       "kind": "በዓይነት አጣራ (allow|deny|rate-limit|cost-cap)",
@@ -453,7 +453,7 @@
     }
   },
   "compression": {
-    "description": "የOmniRoute መጭመቂያ ሂደትን ያዋቅሩ እና ይመርምሩ",
+    "description": "የFreeRoute መጭመቂያ ሂደትን ያዋቅሩ እና ይመርምሩ",
     "status": {
       "description": "የአሁኑን የመጭመቂያ ሁኔታ እና ቅንብሮች አሳይ"
     },
@@ -507,18 +507,18 @@
     "confirmRotate": "ቱነል {type} ይቀየር? (አዲስ URL ይፈጠራል)"
   },
   "stop": {
-    "description": "የOmniRoute ሰርቨርን ያቁሙ",
+    "description": "የFreeRoute ሰርቨርን ያቁሙ",
     "stopping": "ሰርቨሩ እየቆመ ነው (PID {pid})...",
     "stopped": "ሰርቨሩ ቆሟል።",
     "notRunning": "ምንም ሰርቨር እየሰራ አይደለም።",
     "portFallback": "ምንም PID ፋይል አልተገኘም፤ በፖርት ላይ የተመሠረተ ማቆም እየተሞከረ ነው..."
   },
   "restart": {
-    "description": "የOmniRoute ሰርቨርን እንደገና ያስጀምሩ",
-    "restarting": "የOmniRoute አገልጋይ እንደገና እየተጀመረ ነው..."
+    "description": "የFreeRoute ሰርቨርን እንደገና ያስጀምሩ",
+    "restarting": "የFreeRoute አገልጋይ እንደገና እየተጀመረ ነው..."
   },
   "dashboard": {
-    "description": "የOmniRoute ዳሽቦርድን በድር አሳሽ ውስጥ ይክፈቱ",
+    "description": "የFreeRoute ዳሽቦርድን በድር አሳሽ ውስጥ ይክፈቱ",
     "opening": "ዳሽቦርዱ በ{url} እየተከፈተ ነው",
     "urlOnly": "የድር አሳሽ ሳይከፈት የዳሽቦርዱን URL ብቻ አትም",
     "tui": "በይነተገናኝ TUI ዳሽቦርድን ክፈት (የተርሚናል በይነገጽ፣ 7 ትሮች)"
@@ -526,7 +526,7 @@
   "models": {
     "description": "ያሉትን ሞዴሎች ዘርዝር (አገልጋይ ያስፈልጋል)",
     "search": "ሞዴሎችን በid፣ በስም፣ በአቅራቢ ወይም በመግለጫ አጣራ",
-    "noServer": "አገልጋዩ እየሰራ አይደለም። በዚህ ያስጀምሩ፦ omniroute serve",
+    "noServer": "አገልጋዩ እየሰራ አይደለም። በዚህ ያስጀምሩ፦ freeroute serve",
     "noModels": "ምንም ሞዴሎች አልተገኙም።"
   },
   "audit": {
@@ -558,7 +558,7 @@
     }
   },
   "skills": {
-    "description": "የOmniRoute ክህሎቶችን አስተዳድር (sandbox, builtin, custom, hybrid, skillssh)",
+    "description": "የFreeRoute ክህሎቶችን አስተዳድር (sandbox, builtin, custom, hybrid, skillssh)",
     "list": {
       "description": "የተጫኑ ክህሎቶችን ዘርዝር",
       "type": "በዓይነት አጣራ (sandbox|custom|builtin|hybrid|skillssh)",
@@ -631,7 +631,7 @@
     }
   },
   "memory": {
-    "description": "የOmniRoute የውይይት ማህደረ ትውስታን አስተዳድር (FTS5 + vector)",
+    "description": "የFreeRoute የውይይት ማህደረ ትውስታን አስተዳድር (FTS5 + vector)",
     "search": {
       "description": "የፍቺ ጥያቄን በመጠቀም የማህደረ ትውስታ ግቤቶችን ፈልግ",
       "type": "በማህደረ ትውስታ ዓይነት አጣራ (user|feedback|project|reference)",
@@ -789,7 +789,7 @@
     }
   },
   "webhooks": {
-    "description": "የOmniRoute webhooksን አስተዳድር",
+    "description": "የFreeRoute webhooksን አስተዳድር",
     "events": {
       "description": "ሁሉንም የሚገኙ የwebhook ክስተት አይነቶች ዘርዝር"
     },
@@ -821,14 +821,14 @@
     }
   },
   "program": {
-    "description": "OmniRoute — ራስ-ሰር ተተኪ ያለው ብልህ AI ራውተር",
+    "description": "FreeRoute — ራስ-ሰር ተተኪ ያለው ብልህ AI ራውተር",
     "version": "ስሪቱን አትምና ውጣ",
     "output": "የውጤት ቅርጸት (table, json, jsonl, csv)",
     "quiet": "አስፈላጊ ያልሆነ ውጤትን አፍን",
     "no_color": "ባለቀለም ውጤትን አሰናክል",
     "timeout": "የHTTP ጥያቄ የጊዜ ገደብ በሚሊሰከንድ",
-    "api_key": "ለOmniRoute አገልጋይ የAPI ቁልፍ",
-    "base_url": "የOmniRoute አገልጋይ መሠረታዊ URL",
+    "api_key": "ለFreeRoute አገልጋይ የAPI ቁልፍ",
+    "base_url": "የFreeRoute አገልጋይ መሠረታዊ URL",
     "context": "ለዚህ ትዕዛዝ የሚያገለግል የአገልጋይ ዐውድ/መገለጫ",
     "lang": "የCLI ማሳያ ቋንቋን አዘጋጅ (OMNIROUTE_LANGን ይሽራል)"
   },
@@ -1079,7 +1079,7 @@
     }
   },
   "openapi": {
-    "description": "የOmniRoute OpenAPI ዝርዝር መግለጫን ይድረሱበት እና ይፈትሹ",
+    "description": "የFreeRoute OpenAPI ዝርዝር መግለጫን ይድረሱበት እና ይፈትሹ",
     "dump": {
       "description": "የOpenAPI ዝርዝር መግለጫን ወደ stdout ወይም ፋይል አውጣ",
       "format": "የውጤት ቅርጸት፦ yaml|json (ነባሪ፦ yaml)",
@@ -1149,7 +1149,7 @@
     }
   },
   "open": {
-    "description": "የተወሰነ የOmniRoute ዳሽቦርድ ገጽን በአሳሹ ውስጥ ክፈት",
+    "description": "የተወሰነ የFreeRoute ዳሽቦርድ ገጽን በአሳሹ ውስጥ ክፈት",
     "url": "URLን ብቻ አትም፤ አሳሹን አትክፈት"
   },
   "telemetry": {
@@ -1166,7 +1166,7 @@
     }
   },
   "sync": {
-    "description": "በOmniRoute ኢንስታንሶች መካከል ውቅርን አመሳስል",
+    "description": "በFreeRoute ኢንስታንሶች መካከል ውቅርን አመሳስል",
     "push": {
       "description": "ውቅሩን ወደ ደመና ወይም የርቀት ኢንስታንስ ግፋ",
       "target": "መድረሻ (cloud ወይም context:name)",
@@ -1222,8 +1222,8 @@
       "listTitle": "የሚገኙ ቋንቋዎች",
       "current": "ቋንቋ፦ {code} ({name})",
       "saved": "ቋንቋው ወደ {code} ({name}) ተዘጋጅቷል።",
-      "noCode": "የቋንቋ ኮድ ያስፈልጋል። የሚገኙ ኮዶችን ለማየት 'omniroute config lang list' ያሂዱ።",
-      "unknown": "ያልታወቀ የቋንቋ ኮድ፦ {code}። የሚገኙ ኮዶችን ለማየት 'omniroute config lang list' ያሂዱ።",
+      "noCode": "የቋንቋ ኮድ ያስፈልጋል። የሚገኙ ኮዶችን ለማየት 'freeroute config lang list' ያሂዱ።",
+      "unknown": "ያልታወቀ የቋንቋ ኮድ፦ {code}። የሚገኙ ኮዶችን ለማየት 'freeroute config lang list' ያሂዱ።",
       "alreadySet": "ቋንቋው ቀድሞውኑ ወደ {code} ተዘጋጅቷል።",
       "envHint": "ጠቃሚ ምክር፦ በአካባቢዎ ውስጥ OMNIROUTE_LANG={code} ማዘጋጀትም ይችላሉ።"
     }
@@ -1242,7 +1242,7 @@
     "filter": "በደረጃ አጣራ (error,warn,info) — በኮማ የተለዩ",
     "lines": "የሚመጡ መስመሮች ብዛት",
     "timeout": "የግንኙነት የጊዜ ገደብ በms",
-    "baseUrl": "የOmniRoute API መሠረታዊ URL",
+    "baseUrl": "የFreeRoute API መሠረታዊ URL",
     "requestId": "በጥያቄ ID አጣራ",
     "apiKey": "በAPI ቁልፍ አጣራ",
     "combo": "በኮምቦ ስም አጣራ",
@@ -1258,10 +1258,10 @@
     "description": "የስርዓት ትሪ አዶውን ይቆጣጠሩ",
     "show": "የትሪ አዶውን አሳይ (ሰርቨሩ በ--tray እየሰራ ከሆነ)",
     "hide": "የትሪ አዶውን ደብቅ",
-    "quit": "OmniRouteን በትሪ በኩል ዝጋ"
+    "quit": "FreeRouteን በትሪ በኩል ዝጋ"
   },
   "autostart": {
-    "description": "OmniRoute ስርዓቱ ሲነሳ በራስ-ሰር እንዲጀምር ያስተዳድሩ (Linux፦ systemd የተጠቃሚ አገልግሎት)",
+    "description": "FreeRoute ስርዓቱ ሲነሳ በራስ-ሰር እንዲጀምር ያስተዳድሩ (Linux፦ systemd የተጠቃሚ አገልግሎት)",
     "enable": "ስርዓቱ ሲነሳ በራስ-ሰር መጀመርን አንቃ",
     "disable": "ስርዓቱ ሲነሳ በራስ-ሰር መጀመርን አሰናክል",
     "toggle": "ስርዓቱ ሲነሳ በራስ-ሰር መጀመርን ቀያይር",
@@ -1293,19 +1293,19 @@
     "scaffold": "ለአዲስ ተሰኪ መነሻ መዋቅር ፍጠር"
   },
   "launch": {
-    "description": "ወደ OmniRoute የተጠቆመ Claude Codeን አስጀምር (አካባቢያዊ ወይም የርቀት፣ በ--profile)",
+    "description": "ወደ FreeRoute የተጠቆመ Claude Codeን አስጀምር (አካባቢያዊ ወይም የርቀት፣ በ--profile)",
     "token": "የClaude ደንበኛው መላክ ያለበት ቶከን (ANTHROPIC_AUTH_TOKEN)",
-    "notRunning": "OmniRoute በ{port} ላይ ሊደረስበት አልቻለም። በ'omniroute serve' ያስጀምሩት።",
+    "notRunning": "FreeRoute በ{port} ላይ ሊደረስበት አልቻለም። በ'freeroute serve' ያስጀምሩት።",
     "notFound": "'claude' CLI በPATH ውስጥ አልተገኘም።"
   },
   "run": {
-    "description": "በOmniRoute በኩል የሚደገፍ CLI ዒላማ ያስጀምሩ"
+    "description": "በFreeRoute በኩል የሚደገፍ CLI ዒላማ ያስጀምሩ"
   },
   "setupClaude": {
-    "description": "ከOmniRoute ሞዴል ካታሎግ የ~/.claude/profiles Claude Code መገለጫዎችን ይፍጠሩ"
+    "description": "ከFreeRoute ሞዴል ካታሎግ የ~/.claude/profiles Claude Code መገለጫዎችን ይፍጠሩ"
   },
   "connect": {
-    "description": "ከርቀት OmniRoute አገልጋይ ጋር ይገናኙ እና ወደ የርቀት ሁነታ ይግቡ"
+    "description": "ከርቀት FreeRoute አገልጋይ ጋር ይገናኙ እና ወደ የርቀት ሁነታ ይግቡ"
   },
   "tokens": {
     "description": "የተወሰነ ወሰን ያላቸውን የCLI መዳረሻ ቶከኖች ያስተዳድሩ (የርቀት ሁነታ)"
@@ -1314,10 +1314,10 @@
     "description": "ከንቁው አገልጋይ አቅራቢና ሞዴል ይምረጡ እና የሚደገፍ የአካባቢ CLI ያዋቅሩ"
   },
   "launchCodex": {
-    "description": "ወደ OmniRoute (አካባቢያዊ ወይም የርቀት VPS) የሚያመለክተውን Codex CLI ያስጀምሩ"
+    "description": "ወደ FreeRoute (አካባቢያዊ ወይም የርቀት VPS) የሚያመለክተውን Codex CLI ያስጀምሩ"
   },
   "setupCodex": {
-    "description": "ከOmniRoute የቀጥታ ሞዴል ካታሎግ የ~/.codex መገለጫ ፋይሎችን ይፍጠሩ"
+    "description": "ከFreeRoute የቀጥታ ሞዴል ካታሎግ የ~/.codex መገለጫ ፋይሎችን ይፍጠሩ"
   },
   "packs": {
     "description": "አማራጭ የአሂድ ጊዜ ጥቅሎችን ያስተዳድሩ (ML / የአሳሽ አውቶሜሽን)",
@@ -1330,7 +1330,7 @@
     "errUnknown": "ያልታወቀ ጥቅል፦ {name}",
     "errNoIndex": "የጥቅል ማውጫ አልተገኘም፤ የጥቅሉን ይዘት የያዘውን --source <dir> ያስገቡ (የዴስክቶፕ ጥቅሎች ከመተግበሪያው አጠገብ ያካትቱታል)",
     "installed": "ጥቅል \"{name}\" በ{dir} ተጭኗል እና ተረጋግጧል",
-    "restartHint": "የአሂድ ጊዜ ስርዓቱ ጥቅሉን እንዲያውቀው የOmniRoute አገልጋዩን (ወይም የዴስክቶፕ መተግበሪያውን) እንደገና ያስጀምሩ",
+    "restartHint": "የአሂድ ጊዜ ስርዓቱ ጥቅሉን እንዲያውቀው የFreeRoute አገልጋዩን (ወይም የዴስክቶፕ መተግበሪያውን) እንደገና ያስጀምሩ",
     "removed": "ጥቅል \"{name}\" ተወግዷል",
     "notInstalled": "ጥቅል \"{name}\" አልተጫነም ነበር",
     "verifyOk": "ሁሉም የተጫኑ ጥቅሎች ተረጋግጠዋል",

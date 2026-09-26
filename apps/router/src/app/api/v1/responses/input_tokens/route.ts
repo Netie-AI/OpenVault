@@ -44,7 +44,7 @@ import { HTTP_STATUS } from "@omniroute/open-sse/config/constants.ts";
  * decide when to compact, so over-counting is safe (it compacts slightly
  * early) while under-counting risks sending a request past the context
  * window. The public response stays byte-shape compatible with the OpenAI
- * contract: no OmniRoute-only metadata fields are added.
+ * contract: no FreeRoute-only metadata fields are added.
  */
 
 /** Protocol overhead per input item, mirroring Responses message framing. */

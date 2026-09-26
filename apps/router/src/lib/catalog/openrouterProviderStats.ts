@@ -1,7 +1,7 @@
 /**
  * openrouterProviderStats.ts
  *
- * Enriches OmniRoute's provider directory with data scraped from OpenRouter's
+ * Enriches FreeRoute's provider directory with data scraped from OpenRouter's
  * *internal* frontend API (openrouter.ai/api/frontend/v1/*) — undocumented and
  * unversioned, unlike the public /api/v1/models consumed by openrouterCatalog.ts.
  * Three bulk endpoints, one request each, refreshed once/day — never per-model:
@@ -127,7 +127,7 @@ function parseRows<T extends z.ZodTypeAny>(raw: unknown, schema: T): z.infer<T>[
 async function fetchJson(url: string): Promise<unknown> {
   const res = await fetch(url, {
     headers: {
-      "User-Agent": "OmniRoute/2.0",
+      "User-Agent": "FreeRoute/2.0",
       Accept: "application/json",
     },
     signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),

@@ -95,7 +95,7 @@ export function createSqliteNativeError(error) {
   if (message.includes("NODE_MODULE_VERSION") || message.includes("ERR_DLOPEN_FAILED")) {
     return new Error(
       `better-sqlite3 native binding is incompatible with this runtime. ` +
-        `Run \`${rebuildCmd}\` in the OmniRoute project and try again. ` +
+        `Run \`${rebuildCmd}\` in the FreeRoute project and try again. ` +
         `Or run: omniroute runtime repair  ` +
         `(rebuilds into a user-writable runtime; works without a C++ toolchain).`
     );

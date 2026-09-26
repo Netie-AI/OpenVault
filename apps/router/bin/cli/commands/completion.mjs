@@ -87,7 +87,7 @@ function modelSubcommandWords(program) {
 function generateZshScript(modelCommands) {
   return `#compdef omniroute
 
-# OmniRoute zsh completion (dynamic)
+# FreeRoute zsh completion (dynamic)
 _omniroute_get_cache() {
   local key="$1"
   local cache="$HOME/.omniroute/completion-cache.json"
@@ -107,10 +107,10 @@ _omniroute_get_cache() {
 _omniroute() {
   local -a commands
   commands=(
-    'serve:Start the OmniRoute server'
+    'serve:Start the FreeRoute server'
     'stop:Stop the server'
     'restart:Restart the server'
-    'setup:Configure OmniRoute'
+    'setup:Configure FreeRoute'
     'doctor:Run health diagnostics'
     'status:Show server status'
     'logs:View application logs'
@@ -137,12 +137,12 @@ _omniroute() {
     'completion:Shell completion'
     'memory:Manage memory store'
     'skills:Manage skills'
-    'connect:Connect to a local or remote OmniRoute server'
+    'connect:Connect to a local or remote FreeRoute server'
     'contexts:Manage local and remote server contexts'
     'configure:Configure a supported AI CLI'
-    'launch:Launch an AI CLI through OmniRoute'
-    'launch-codex:Launch Codex through OmniRoute'
-    'run:Run a supported AI CLI through OmniRoute'
+    'launch:Launch an AI CLI through FreeRoute'
+    'launch-codex:Launch Codex through FreeRoute'
+    'run:Run a supported AI CLI through FreeRoute'
     'runtime:Inspect CLI runtime capabilities'
     'repair:Repair native runtime dependencies'
   )
@@ -209,7 +209,7 @@ compdef _omniroute omniroute
 
 function generateBashScript(modelCommands) {
   return `#!/bin/bash
-# OmniRoute CLI bash completion (dynamic)
+# FreeRoute CLI bash completion (dynamic)
 
 _omniroute_get_cache() {
   local key="$1"
@@ -267,7 +267,7 @@ complete -F _omniroute omniroute
 }
 
 function generateFishScript(modelCommands) {
-  return `# OmniRoute CLI fish completion (dynamic)
+  return `# FreeRoute CLI fish completion (dynamic)
 complete -c omniroute -f
 
 set -l commands serve stop restart setup doctor status logs providers config keys models combo chat stream completion dashboard open backup restore health quota cache mcp a2a tunnel env memory skills connect contexts configure launch launch-codex update test run runtime repair

@@ -41,7 +41,7 @@ export function resolveMaxUploadSizeBytes(
   return mb * 1024 * 1024;
 }
 
-// Required tables that must exist in a valid OmniRoute database
+// Required tables that must exist in a valid FreeRoute database
 const REQUIRED_TABLES = ["provider_connections", "provider_nodes", "combos", "api_keys"];
 
 /**
@@ -143,7 +143,7 @@ export async function POST(request: Request) {
       if (missingTables.length > 0) {
         return NextResponse.json(
           {
-            error: `Invalid OmniRoute database. Missing tables: ${missingTables.join(", ")}`,
+            error: `Invalid FreeRoute database. Missing tables: ${missingTables.join(", ")}`,
           },
           { status: 400 }
         );

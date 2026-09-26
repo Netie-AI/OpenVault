@@ -77,7 +77,7 @@ export async function autoSyncClaudeProfilesFromLiveCatalog(
   // Strip a trailing /v1 (Claude Code appends the version segment itself).
   const profileBaseUrl = internalBase.replace(/\/v1$/, "");
 
-  // Reuse the CLI generator so automatic sync and `omniroute setup-claude` stay
+  // Reuse the CLI generator so automatic sync and `freeroute setup-claude` stay
   // behaviorally identical.
   // @ts-ignore - bin CLI modules are shipped as ESM JavaScript, without TS declarations.
   const { syncClaudeProfilesFromModels } =

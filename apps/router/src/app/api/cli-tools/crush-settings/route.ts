@@ -21,7 +21,7 @@ const TOOL_ID = "crush";
 // Crush (charmbracelet/crush) reads a file-based config, default
 // ~/.config/crush/crush.json — same default `bin/cli/commands/setup-crush.mjs`
 // (resolveCrushTarget / runSetupCrushCommand) writes to, so the dashboard and
-// the `omniroute setup-crush` CLI command agree on one canonical location.
+// the `freeroute setup-crush` CLI command agree on one canonical location.
 const getCrushConfigPath = (): string =>
   getCliPrimaryConfigPath(TOOL_ID) ??
   path.join(process.env.HOME ?? "~", ".config", "crush", "crush.json");
@@ -29,7 +29,7 @@ const getCrushConfigPath = (): string =>
 const getCrushDir = () => path.dirname(getCrushConfigPath());
 
 /**
- * Crush's config uses a `providers.<id>` map. OmniRoute is registered under
+ * Crush's config uses a `providers.<id>` map. FreeRoute is registered under
  * the `omniroute` provider id as an `openai-compat` provider — same shape
  * `buildCrushProvider()`/`mergeCrushConfig()` in setup-crush.mjs produce.
  */
@@ -112,7 +112,7 @@ export async function GET(request: Request) {
   }
 }
 
-// POST — write OmniRoute settings to crush.json (providers.omniroute)
+// POST — write FreeRoute settings to crush.json (providers.omniroute)
 export async function POST(request: Request) {
   const authError = await requireCliToolsAuth(request);
   if (authError) return authError;
@@ -163,7 +163,7 @@ export async function POST(request: Request) {
       type: "openai-compat",
       base_url: normalizedBaseUrl,
       api_key: apiKey,
-      models: [{ id: model, name: `OmniRoute: ${model}`, context_window: DEFAULT_CONTEXT_WINDOW }],
+      models: [{ id: model, name: `FreeRoute: ${model}`, context_window: DEFAULT_CONTEXT_WINDOW }],
     };
 
     const updated: Record<string, unknown> = {
@@ -193,7 +193,7 @@ export async function POST(request: Request) {
   }
 }
 
-// DELETE — remove OmniRoute provider from Crush config
+// DELETE — remove FreeRoute provider from Crush config
 export async function DELETE(request: Request) {
   const authError = await requireCliToolsAuth(request);
   if (authError) return authError;
@@ -221,7 +221,7 @@ export async function DELETE(request: Request) {
       throw err;
     }
 
-    // Remove only the OmniRoute-managed provider entry — preserve the rest
+    // Remove only the FreeRoute-managed provider entry — preserve the rest
     // of the user's providers map (Crush supports multiple providers).
     const providers = { ...((existing.providers as Record<string, unknown>) || {}) };
     delete providers.omniroute;
@@ -245,7 +245,7 @@ export async function DELETE(request: Request) {
       /* non-critical */
     }
 
-    return NextResponse.json({ success: true, message: "Crush OmniRoute settings removed" });
+    return NextResponse.json({ success: true, message: "Crush FreeRoute settings removed" });
   } catch (err) {
     return NextResponse.json({ error: { message: sanitizeErrorMessage(err) } }, { status: 500 });
   }

@@ -98,7 +98,7 @@ export default function DeprecatedProviderBanner() {
               {providerText(
                 t,
                 "deprecatedProviderLeftover",
-                "Provider {name} was removed from OmniRoute. {n} leftover connection(s) are still in the database and cannot be opened from a card. Re-add the account under {migrateTo}, then remove leftovers.",
+                "Provider {name} was removed from FreeRoute. {n} leftover connection(s) are still in the database and cannot be opened from a card. Re-add the account under {migrateTo}, then remove leftovers.",
                 { name: row.provider, n, migrateTo: row.migrateTo }
               )}
             </p>

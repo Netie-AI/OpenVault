@@ -22,7 +22,7 @@ import { authenticateA2ARequest, resolveA2AOwner } from "@/lib/a2a/authenticate"
 // A2A 1.0 renamed the JSON-RPC methods (message/send → SendMessage,
 // message/stream → SendStreamingMessage) and changed the synchronous
 // response shape: a 1.0 client reads the reply from
-// `task.status.message.parts[].text` (and `task.artifacts`), whereas OmniRoute's
+// `task.status.message.parts[].text` (and `task.artifacts`), whereas FreeRoute's
 // v0.3 server returns top-level `artifacts`/`metadata`. This layer aliases the
 // 1.0 method names and reshapes the synchronous response so 1.0 clients
 // (a2a-sdk 1.x, Hermes, …) can call the endpoint unchanged. v0.3 clients are

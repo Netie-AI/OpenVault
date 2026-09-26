@@ -36,7 +36,7 @@ import { startDetachedTray, validateTrayOptions } from "../tray/detachedTray.mjs
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const _pkg = JSON.parse(readFileSync(join(__dirname, "..", "..", "..", "package.json"), "utf8"));
 
-// URL scheme for the "OmniRoute is running" banner — flipped to https when
+// URL scheme for the "FreeRoute is running" banner — flipped to https when
 // opt-in TLS (#5242) is active. Process-scoped: one `serve` run = one scheme.
 let urlScheme = "http";
 const ROOT = join(__dirname, "..", "..", "..");
@@ -136,7 +136,7 @@ export async function runServe(opts = {}) {
       tlsCert,
       tlsKey,
     });
-    console.log(`\x1b[32m✔ OmniRoute tray started in background\x1b[0m`);
+    console.log(`\x1b[32m✔ FreeRoute tray started in background\x1b[0m`);
     console.log(`  \x1b[1mDashboard:\x1b[0m  ${urlScheme}://localhost:${port}`);
     return result;
   }
@@ -285,7 +285,7 @@ export async function runServe(opts = {}) {
     DASHBOARD_PORT: String(dashboardPort),
     API_PORT: String(apiPort),
     // #10492: HOSTNAME is standard shell state on Unix-like systems, not an
-    // OmniRoute bind setting. The resolver only keeps its legacy meaning on
+    // FreeRoute bind setting. The resolver only keeps its legacy meaning on
     // Windows; OMNIROUTE_SERVER_HOST is the cross-platform explicit setting.
     HOSTNAME: resolveServerHost(),
     NODE_ENV: "production",
@@ -355,7 +355,7 @@ export function reportPortInUse(port, pids = []) {
         : `PIDs ${known.join(", ")}`;
   console.error(`\n\x1b[31m✖ Port ${port} is already in use by ${owner}.\x1b[0m`);
   console.error(
-    `  Another OmniRoute is most likely already serving there, so open` +
+    `  Another FreeRoute is most likely already serving there, so open` +
       ` ${urlScheme}://localhost:${port} before starting a second one.`
   );
   console.error(`  To replace it:    \x1b[36momniroute stop\x1b[0m, then start again`);
@@ -382,7 +382,7 @@ function runDaemon(serverJs, env, memoryLimit, dashboardPort, apiPort) {
   );
   writePidFile("server", server.pid);
   server.unref();
-  console.log(`\x1b[32m✔ OmniRoute started in background (PID: ${server.pid})\x1b[0m`);
+  console.log(`\x1b[32m✔ FreeRoute started in background (PID: ${server.pid})\x1b[0m`);
   console.log(`  \x1b[1mDashboard:\x1b[0m  ${urlScheme}://localhost:${dashboardPort}`);
   console.log(`  \x1b[1mAPI Base:\x1b[0m   ${urlScheme}://localhost:${apiPort}/v1`);
 }
@@ -441,7 +441,7 @@ function runWithoutRecovery(serverJs, env, memoryLimit, dashboardPort, apiPort, 
   });
 
   const shutdown = () => {
-    console.log("\n\x1b[33m⏹ Shutting down OmniRoute...\x1b[0m");
+    console.log("\n\x1b[33m⏹ Shutting down FreeRoute...\x1b[0m");
     cleanupPidFile("server");
     server.kill("SIGTERM");
     setTimeout(() => {
@@ -640,7 +640,7 @@ async function onReady(dashboardPort, apiPort, noOpen, startedAt) {
       : "0.0";
 
   console.log(`
-  \x1b[32m✔ OmniRoute is running!\x1b[0m \x1b[2m(started in ${elapsed}s)\x1b[0m
+  \x1b[32m✔ FreeRoute is running!\x1b[0m \x1b[2m(started in ${elapsed}s)\x1b[0m
 
   \x1b[1m  Dashboard:\x1b[0m  ${dashboardUrl}
   \x1b[1m  API Base:\x1b[0m   ${apiUrl}/v1

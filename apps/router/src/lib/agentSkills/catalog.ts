@@ -175,9 +175,16 @@ export function refreshCatalog(): void {
  *
  * Resolution order:
  *  1. Local filesystem `skills/{id}/SKILL.md` (fast, used during dev + after generation)
- *  2. GitHub raw URL with 1-hour cache (production fallback when file not yet generated)
+ *  2. A static "not available in this edition" placeholder
  *
- * Returns a `SkillMarkdown` shape. Throws if both sources fail.
+ * FreeRoute: upstream OmniRoute's step 2 fetched SKILL.md live from
+ * raw.githubusercontent.com/diegosouzapw/OmniRoute as a production fallback
+ * when the file hadn't been generated locally yet. FreeRoute does not bundle
+ * that upstream `skills/` directory and must not fetch it at runtime, so this
+ * never makes a network call — a missing local file resolves to a placeholder
+ * instead of upstream content.
+ *
+ * Returns a `SkillMarkdown` shape. Throws only if the skill id itself is unknown.
  * Used by: F4 `/api/agent-skills/[id]/raw` route.
  */
 export async function fetchSkillMarkdown(id: string): Promise<SkillMarkdown> {
@@ -195,31 +202,19 @@ export async function fetchSkillMarkdown(id: string): Promise<SkillMarkdown> {
       fetchedAt: new Date().toISOString(),
     };
   } catch {
-    // File not present locally — fall through to GitHub
+    // File not present locally — fall through to the placeholder below.
   }
 
-  // 2. Fetch from GitHub raw (with Next.js revalidate cache if available)
   const skill = getSkillById(id);
   if (!skill) {
     throw new Error(`Skill not found in catalog: ${id}`);
   }
 
-  const response = await fetch(skill.rawUrl, {
-    next: { revalidate: 3600 },
-  } as unknown as RequestInit);
-
-  if (!response.ok) {
-    throw new Error(`GitHub raw fetch failed: HTTP ${response.status} for ${skill.rawUrl}`);
-  }
-
-  const raw = await response.text();
-  const parsed = parseMarkdownFrontmatter(raw);
-
   return {
     id,
-    frontmatter: parsed.frontmatter,
-    body: parsed.body,
-    source: "github",
+    frontmatter: { name: skill.name, description: skill.description },
+    body: "This skill's full SKILL.md content is not available in this edition of FreeRoute.",
+    source: "unavailable",
     fetchedAt: new Date().toISOString(),
   };
 }

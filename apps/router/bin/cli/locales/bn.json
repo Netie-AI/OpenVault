@@ -1,8 +1,8 @@
 {
   "common": {
     "error": "ত্রুটি: {message}",
-    "serverOffline": "OmniRoute সার্ভার অফলাইনে আছে। এটি চালু করুন: omniroute serve",
-    "authRequired": "প্রমাণীকরণ প্রয়োজন। OMNIROUTE_API_KEY সেট করুন অথবা চালান: omniroute setup",
+    "serverOffline": "FreeRoute সার্ভার অফলাইনে আছে। এটি চালু করুন: freeroute serve",
+    "authRequired": "প্রমাণীকরণ প্রয়োজন। OMNIROUTE_API_KEY সেট করুন অথবা চালান: freeroute setup",
     "rateLimited": "রেট সীমা অতিক্রম করেছে। {seconds}s পরে আবার চেষ্টা করুন।",
     "timeout": "{ms}ms পরে অনুরোধের সময়সীমা শেষ হয়েছে।",
     "success": "সম্পন্ন।",
@@ -15,7 +15,7 @@
     "yesOpt": "নিশ্চিতকরণের প্রম্পট এড়িয়ে যান"
   },
   "setup": {
-    "title": "OmniRoute সেটআপ",
+    "title": "FreeRoute সেটআপ",
     "passwordPrompt": "অ্যাডমিন পাসওয়ার্ড",
     "providerPrompt": "ডিফল্ট প্রোভাইডার (এড়িয়ে যেতে খালি রাখুন)",
     "done": "সেটআপ সম্পন্ন হয়েছে",
@@ -30,19 +30,19 @@
     "opencode": "OpenCode-এর জন্য অন্তর্ভুক্ত @omniroute/opencode-plugin ইনস্টল ও কনফিগার করুন"
   },
   "doctor": {
-    "title": "OmniRoute ডক্টর",
+    "title": "FreeRoute ডক্টর",
     "dbOk": "ডেটাবেস: ঠিক আছে ({path})",
-    "dbMissing": "ডেটাবেস: ইনিশিয়ালাইজ করা হয়নি — `omniroute setup` চালান",
+    "dbMissing": "ডেটাবেস: ইনিশিয়ালাইজ করা হয়নি — `freeroute setup` চালান",
     "portOk": "পোর্ট {port}: উপলভ্য",
     "portConflict": "পোর্ট {port}: অন্য একটি প্রক্রিয়া ব্যবহার করছে",
     "encryptionOk": "এনক্রিপশন কী: কনফিগার করা হয়েছে",
-    "encryptionMissing": "এনক্রিপশন কী অনুপস্থিত — `omniroute setup` চালান",
+    "encryptionMissing": "এনক্রিপশন কী অনুপস্থিত — `freeroute setup` চালান",
     "allGood": "সব পরীক্ষা সফল হয়েছে।",
     "warnings": "{count}টি সতর্কতা — উপরে দেখুন।"
   },
   "providers": {
     "title": "প্রোভাইডারসমূহ",
-    "noProviders": "কোনো প্রোভাইডার কনফিগার করা নেই। চালান: omniroute setup",
+    "noProviders": "কোনো প্রোভাইডার কনফিগার করা নেই। চালান: freeroute setup",
     "testing": "{name} পরীক্ষা করা হচ্ছে...",
     "available": "{count}টি প্রোভাইডার উপলভ্য",
     "connected": "সংযুক্ত",
@@ -71,7 +71,7 @@
       "dryRunOpt": "কোনো কিছু না লিখে কী পরিবর্তন হবে তা দেখান",
       "confirmPrompt": "সংযোগ \"{name}\" ({id})-এর API কী প্রতিস্থাপন করবেন? [y/N]",
       "dryRunResult": "[dry-run] \"{name}\" ({id})-এর কী ঘুরিয়ে পরিবর্তন করা হতো। কোনো পরিবর্তন করা হয়নি।",
-      "oauthHint": "OAuth সংযোগ — চালান: omniroute oauth {provider}",
+      "oauthHint": "OAuth সংযোগ — চালান: freeroute oauth {provider}",
       "envVarEmpty": "এনভায়রনমেন্ট ভেরিয়েবল {var} সেট করা নেই অথবা খালি।",
       "success": "\"{name}\"-এর কী ঘুরিয়ে পরিবর্তন করা হয়েছে। যাচাই করতে `providers test {id}` চালান।",
       "testPassed": "কী পরিবর্তনের পরের পরীক্ষা সফল হয়েছে।",
@@ -82,7 +82,7 @@
       "providerOpt": "প্রোভাইডারের নাম অনুযায়ী ফিল্টার করুন",
       "header": "ID         প্রোভাইডার       নাম                     মেয়াদের অবস্থা  পরীক্ষার অবস্থা  কুলডাউন শেষ হবে",
       "noData": "কোনো প্রোভাইডার সংযোগের ডেটা উপলভ্য নেই।",
-      "requiresServer": "providers status ব্যবহার করতে OmniRoute সার্ভারটি চালু থাকতে হবে।"
+      "requiresServer": "providers status ব্যবহার করতে FreeRoute সার্ভারটি চালু থাকতে হবে।"
     }
   },
   "keys": {
@@ -90,8 +90,8 @@
     "addDescription": "একটি প্রোভাইডারের জন্য API কী যোগ বা আপডেট করুন",
     "listDescription": "কনফিগার করা সব API কী তালিকাভুক্ত করুন",
     "removeDescription": "একটি প্রোভাইডারের API কী সরান",
-    "regenerateDescription": "একটি OmniRoute API কী পুনরায় তৈরি করুন",
-    "revokeDescription": "একটি OmniRoute API কী প্রত্যাহার করুন",
+    "regenerateDescription": "একটি FreeRoute API কী পুনরায় তৈরি করুন",
+    "revokeDescription": "একটি FreeRoute API কী প্রত্যাহার করুন",
     "revealDescription": "মাস্ক না করা API কী-এর মান প্রকাশ করুন",
     "usageDescription": "একটি API কী-এর সাম্প্রতিক ব্যবহার দেখান",
     "usageLimitOpt": "সাম্প্রতিক অনুরোধের সংখ্যা",
@@ -142,7 +142,7 @@
     "warning": "⚠ এটি ডিক্রিপ্ট করা প্লেইনটেক্সট API কী এবং OAuth টোকেন প্রিন্ট/রাইট করে। আপনার স্ক্রিন, শেল হিস্ট্রি এবং যেকোনো আউটপুট ফাইল ব্যক্তিগত রাখুন।",
     "confirmHeading": "⚠ সতর্কতা: এটি ডিক্রিপ্ট করা প্রোভাইডার ক্রেডেনশিয়াল প্লেইনটেক্সটে এক্সপোর্ট করে",
     "confirmBody": "এই কমান্ডটি নির্বাচিত সংযোগগুলোর apiKey, accessToken, refreshToken এবং\nidToken ডিক্রিপ্ট করে প্রিন্ট/রাইট করে। আউটপুটটিকে একটি সিক্রেট হিসেবে বিবেচনা করুন।",
-    "confirmFooter": "নিশ্চিত করতে চালান:\n  omniroute auth export --force",
+    "confirmFooter": "নিশ্চিত করতে চালান:\n  freeroute auth export --force",
     "missingKey": "ক্রেডেনশিয়াল এক্সপোর্ট করতে STORAGE_ENCRYPTION_KEY প্রয়োজন।",
     "notFound": "সংযোগ পাওয়া যায়নি: {id}",
     "invalidFormat": "অবৈধ ফরম্যাট: {format}। json অথবা env ব্যবহার করুন।"
@@ -220,10 +220,10 @@
     "reasoning": "Reasoning effort-এর মাত্রা (low|medium|high)",
     "thinking": "Extended thinking token-এর বাজেট",
     "explain": "fallback tree এবং খরচের পরিসর stderr-এ প্রিন্ট করুন",
-    "noCombo": "কোনো মিলে যাওয়া combo পাওয়া যায়নি। এটি দিয়ে একটি কনফিগার করুন: omniroute combo create"
+    "noCombo": "কোনো মিলে যাওয়া combo পাওয়া যায়নি। এটি দিয়ে একটি কনফিগার করুন: freeroute combo create"
   },
   "chat": {
-    "description": "OmniRoute-এ একটি ওয়ান-শট chat prompt পাঠান",
+    "description": "FreeRoute-এ একটি ওয়ান-শট chat prompt পাঠান",
     "file": "ফাইল থেকে prompt পড়ুন",
     "stdin": "stdin থেকে prompt পড়ুন",
     "system": "System prompt",
@@ -242,8 +242,8 @@
     }
   },
   "serve": {
-    "description": "OmniRoute server চালু করুন (ডিফল্ট অ্যাকশন)",
-    "starting": "{port} পোর্টে OmniRoute server চালু হচ্ছে...",
+    "description": "FreeRoute server চালু করুন (ডিফল্ট অ্যাকশন)",
+    "starting": "{port} পোর্টে FreeRoute server চালু হচ্ছে...",
     "ready": "http://localhost:{port}-এ প্রস্তুত",
     "stopping": "server বন্ধ করা হচ্ছে (PID {pid})...",
     "stopped": "server বন্ধ হয়েছে।",
@@ -262,7 +262,7 @@
   },
   "backup": {
     "title": "ব্যাকআপ",
-    "description": "OmniRoute ডেটার একটি ব্যাকআপ তৈরি করুন",
+    "description": "FreeRoute ডেটার একটি ব্যাকআপ তৈরি করুন",
     "creating": "ব্যাকআপ তৈরি করা হচ্ছে...",
     "done": "ব্যাকআপ {path}-এ সংরক্ষিত হয়েছে",
     "noFiles": "ব্যাকআপ করার মতো কোনো ফাইল নেই (ডেটাবেস আরম্ভ করা হয়নি)",
@@ -274,7 +274,7 @@
     "noBackups": "কোনো ব্যাকআপ পাওয়া যায়নি।",
     "notFound": "ব্যাকআপ পাওয়া যায়নি: {name}",
     "confirmRestore": "{ts}-এর ব্যাকআপ দিয়ে বর্তমান ডেটা ওভাররাইট করবেন?",
-    "createDescription": "OmniRoute ডেটার একটি ব্যাকআপ তৈরি করুন",
+    "createDescription": "FreeRoute ডেটার একটি ব্যাকআপ তৈরি করুন",
     "nameOpt": "কাস্টম ব্যাকআপ নাম",
     "cloudOpt": "ক্লাউড স্টোরেজে ব্যাকআপ আপলোড করুন",
     "encryptOpt": "AES-256-GCM দিয়ে ব্যাকআপ এনক্রিপ্ট করুন",
@@ -292,14 +292,14 @@
       "statusDescription": "বর্তমান ব্যাকআপ সময়সূচির স্থিতি দেখান",
       "cronOpt": "সময়সূচির জন্য Cron এক্সপ্রেশন (ডিফল্ট: প্রতিদিন রাত ৩টায়)",
       "enabled": "স্বয়ংক্রিয় ব্যাকআপ সক্ষম করা হয়েছে (cron: {cron})।",
-      "hint": "সূচনাকালে omniroute serve সময়সূচিটি পড়ে।",
+      "hint": "সূচনাকালে freeroute serve সময়সূচিটি পড়ে।",
       "disabled": "স্বয়ংক্রিয় ব্যাকআপ নিষ্ক্রিয় করা হয়েছে।",
       "notConfigured": "কোনো ব্যাকআপ সময়সূচি কনফিগার করা নেই।"
     }
   },
   "health": {
     "description": "সার্ভারের স্বাস্থ্য ও কম্পোনেন্টের স্থিতি পরীক্ষা করুন",
-    "noServer": "সার্ভার চলছে না। এটি দিয়ে চালু করুন: omniroute serve",
+    "noServer": "সার্ভার চলছে না। এটি দিয়ে চালু করুন: freeroute serve",
     "title": "স্বাস্থ্য",
     "status": "স্থিতি: {status}",
     "uptime": "চালু থাকার সময়: {uptime}",
@@ -308,21 +308,21 @@
   },
   "quota": {
     "description": "প্রোভাইডারের কোটা ব্যবহার দেখান",
-    "noServer": "সার্ভার চলছে না। এটি দিয়ে চালু করুন: omniroute serve",
+    "noServer": "সার্ভার চলছে না। এটি দিয়ে চালু করুন: freeroute serve",
     "noData": "কোনো কোটা-সংক্রান্ত তথ্য উপলভ্য নেই।"
   },
   "cache": {
     "description": "রেসপন্স ক্যাশ পরিচালনা করুন",
-    "noServer": "সার্ভার চলছে না। এটি দিয়ে চালু করুন: omniroute serve",
+    "noServer": "সার্ভার চলছে না। এটি দিয়ে চালু করুন: freeroute serve",
     "cleared": "ক্যাশ সাফ করা হয়েছে।",
     "clearFailed": "ক্যাশ সাফ করা যায়নি।"
   },
   "redis": {
-    "description": "OmniRoute ক্যাশিং এবং কোটা ট্র্যাকিংয়ের জন্য এক ক্লিকে স্থানীয় Redis কন্টেইনার (Podman বা Docker) চালু করুন"
+    "description": "FreeRoute ক্যাশিং এবং কোটা ট্র্যাকিংয়ের জন্য এক ক্লিকে স্থানীয় Redis কন্টেইনার (Podman বা Docker) চালু করুন"
   },
   "test": {
     "description": "একটি প্রোভাইডার সংযোগ পরীক্ষা করুন",
-    "noServer": "সার্ভার চলছে না। এটি দিয়ে চালু করুন: omniroute serve",
+    "noServer": "সার্ভার চলছে না। এটি দিয়ে চালু করুন: freeroute serve",
     "testing": "{provider} / {model} পরীক্ষা করা হচ্ছে...",
     "passed": "সংযোগ সফল হয়েছে!",
     "failed": "সংযোগ ব্যর্থ হয়েছে: {error}",
@@ -334,7 +334,7 @@
     "saved": "ফলাফল {path}-এ সংরক্ষণ করা হয়েছে",
     "compareTitle": "মডেল তুলনা",
     "compareMinTwo": "--compare-এর জন্য কমপক্ষে দুটি মডেল প্রয়োজন (কমা দিয়ে পৃথক করা)",
-    "noProviders": "কোনো প্রোভাইডার কনফিগার করা নেই। এটি দিয়ে একটি যোগ করুন: omniroute keys add"
+    "noProviders": "কোনো প্রোভাইডার কনফিগার করা নেই। এটি দিয়ে একটি যোগ করুন: freeroute keys add"
   },
   "update": {
     "checking": "আপডেট পরীক্ষা করা হচ্ছে...",
@@ -348,7 +348,7 @@
     "running": "MCP সার্ভার চলছে ({transport})",
     "stopped": "MCP সার্ভার বন্ধ করা হয়েছে।",
     "restarted": "MCP সার্ভার পুনরায় চালু করা হয়েছে।",
-    "stoppedHint": "এটি চালু করতে `omniroute mcp enable` চালান।",
+    "stoppedHint": "এটি চালু করতে `freeroute mcp enable` চালান।",
     "enabled": "MCP সার্ভার সক্রিয় করা হয়েছে।",
     "disabled": "MCP সার্ভার নিষ্ক্রিয় করা হয়েছে।",
     "enable": {
@@ -416,7 +416,7 @@
     }
   },
   "policy": {
-    "description": "OmniRoute অনুমোদন নীতিগুলো পরিচালনা করুন",
+    "description": "FreeRoute অনুমোদন নীতিগুলো পরিচালনা করুন",
     "list": {
       "description": "নীতিগুলোর তালিকা দেখান",
       "kind": "ধরন অনুযায়ী ফিল্টার করুন (allow|deny|rate-limit|cost-cap)",
@@ -453,7 +453,7 @@
     }
   },
   "compression": {
-    "description": "OmniRoute কম্প্রেশন পাইপলাইন কনফিগার ও পরিদর্শন করুন",
+    "description": "FreeRoute কম্প্রেশন পাইপলাইন কনফিগার ও পরিদর্শন করুন",
     "status": {
       "description": "বর্তমান কম্প্রেশন স্ট্যাটাস ও সেটিংস দেখান"
     },
@@ -507,18 +507,18 @@
     "confirmRotate": "{type} টানেলের URL পরিবর্তন করবেন? (একটি নতুন URL তৈরি হবে)"
   },
   "stop": {
-    "description": "OmniRoute সার্ভার বন্ধ করুন",
+    "description": "FreeRoute সার্ভার বন্ধ করুন",
     "stopping": "সার্ভার বন্ধ করা হচ্ছে (PID {pid})...",
     "stopped": "সার্ভার বন্ধ হয়েছে।",
     "notRunning": "কোনো সার্ভার চলছে না।",
     "portFallback": "কোনো PID ফাইল পাওয়া যায়নি, পোর্টের ভিত্তিতে বন্ধ করার চেষ্টা করা হচ্ছে..."
   },
   "restart": {
-    "description": "OmniRoute সার্ভার পুনরায় চালু করুন",
-    "restarting": "OmniRoute সার্ভার পুনরায় চালু করা হচ্ছে..."
+    "description": "FreeRoute সার্ভার পুনরায় চালু করুন",
+    "restarting": "FreeRoute সার্ভার পুনরায় চালু করা হচ্ছে..."
   },
   "dashboard": {
-    "description": "ব্রাউজারে OmniRoute ড্যাশবোর্ড খুলুন",
+    "description": "ব্রাউজারে FreeRoute ড্যাশবোর্ড খুলুন",
     "opening": "{url}-এ ড্যাশবোর্ড খোলা হচ্ছে",
     "urlOnly": "ব্রাউজার না খুলে ড্যাশবোর্ডের URL দেখান",
     "tui": "ইন্টার্যাক্টিভ TUI ড্যাশবোর্ড খুলুন (টার্মিনাল UI, ৭টি ট্যাব)"
@@ -526,7 +526,7 @@
   "models": {
     "description": "উপলভ্য মডেলগুলোর তালিকা দেখান (সার্ভার প্রয়োজন)",
     "search": "আইডি, নাম, প্রোভাইডার বা বিবরণ অনুযায়ী মডেল ফিল্টার করুন",
-    "noServer": "সার্ভার চলছে না। এটি দিয়ে চালু করুন: omniroute serve",
+    "noServer": "সার্ভার চলছে না। এটি দিয়ে চালু করুন: freeroute serve",
     "noModels": "কোনো মডেল পাওয়া যায়নি।"
   },
   "audit": {
@@ -558,7 +558,7 @@
     }
   },
   "skills": {
-    "description": "OmniRoute স্কিল পরিচালনা করুন (sandbox, builtin, custom, hybrid, skillssh)",
+    "description": "FreeRoute স্কিল পরিচালনা করুন (sandbox, builtin, custom, hybrid, skillssh)",
     "list": {
       "description": "ইনস্টল করা স্কিলগুলোর তালিকা দেখান",
       "type": "ধরন অনুযায়ী ফিল্টার করুন (sandbox|custom|builtin|hybrid|skillssh)",
@@ -631,7 +631,7 @@
     }
   },
   "memory": {
-    "description": "OmniRoute-এর কথোপকথনমূলক মেমরি পরিচালনা করুন (FTS5 + vector)",
+    "description": "FreeRoute-এর কথোপকথনমূলক মেমরি পরিচালনা করুন (FTS5 + vector)",
     "search": {
       "description": "সিমান্টিক কোয়েরির মাধ্যমে মেমরি এন্ট্রি অনুসন্ধান করুন",
       "type": "মেমরির ধরন অনুযায়ী ফিল্টার করুন (user|feedback|project|reference)",
@@ -789,7 +789,7 @@
     }
   },
   "webhooks": {
-    "description": "OmniRoute ওয়েবহুক পরিচালনা করুন",
+    "description": "FreeRoute ওয়েবহুক পরিচালনা করুন",
     "events": {
       "description": "সব উপলভ্য ওয়েবহুক ইভেন্ট টাইপের তালিকা দেখান"
     },
@@ -821,14 +821,14 @@
     }
   },
   "program": {
-    "description": "OmniRoute — স্বয়ংক্রিয় ফলব্যাকসহ স্মার্ট AI রাউটার",
+    "description": "FreeRoute — স্বয়ংক্রিয় ফলব্যাকসহ স্মার্ট AI রাউটার",
     "version": "সংস্করণ প্রিন্ট করে প্রস্থান করুন",
     "output": "আউটপুট ফরম্যাট (table, json, jsonl, csv)",
     "quiet": "অপ্রয়োজনীয় আউটপুট দমন করুন",
     "no_color": "রঙিন আউটপুট নিষ্ক্রিয় করুন",
     "timeout": "মিলিসেকেন্ডে HTTP অনুরোধের সময়সীমা",
-    "api_key": "OmniRoute সার্ভারের API কী",
-    "base_url": "OmniRoute সার্ভারের বেস URL",
+    "api_key": "FreeRoute সার্ভারের API কী",
+    "base_url": "FreeRoute সার্ভারের বেস URL",
     "context": "এই কমান্ডের জন্য ব্যবহারযোগ্য সার্ভার কনটেক্সট/প্রোফাইল",
     "lang": "CLI প্রদর্শনের ভাষা সেট করুন (OMNIROUTE_LANG ওভাররাইড করে)"
   },
@@ -1079,7 +1079,7 @@
     }
   },
   "openapi": {
-    "description": "OmniRoute OpenAPI স্পেক অ্যাক্সেস ও পরীক্ষা করুন",
+    "description": "FreeRoute OpenAPI স্পেক অ্যাক্সেস ও পরীক্ষা করুন",
     "dump": {
       "description": "OpenAPI স্পেক stdout বা ফাইলে ডাম্প করুন",
       "format": "আউটপুট ফরম্যাট: yaml|json (ডিফল্ট: yaml)",
@@ -1149,7 +1149,7 @@
     }
   },
   "open": {
-    "description": "ব্রাউজারে একটি নির্দিষ্ট OmniRoute ড্যাশবোর্ড পৃষ্ঠা খুলুন",
+    "description": "ব্রাউজারে একটি নির্দিষ্ট FreeRoute ড্যাশবোর্ড পৃষ্ঠা খুলুন",
     "url": "শুধু URL প্রিন্ট করুন, ব্রাউজার খুলবেন না"
   },
   "telemetry": {
@@ -1166,7 +1166,7 @@
     }
   },
   "sync": {
-    "description": "OmniRoute ইনস্ট্যান্সগুলোর মধ্যে কনফিগারেশন সিঙ্ক করুন",
+    "description": "FreeRoute ইনস্ট্যান্সগুলোর মধ্যে কনফিগারেশন সিঙ্ক করুন",
     "push": {
       "description": "কনফিগ ক্লাউড বা রিমোট ইনস্ট্যান্সে পুশ করুন",
       "target": "লক্ষ্য (cloud বা context:name)",
@@ -1222,8 +1222,8 @@
       "listTitle": "উপলভ্য ভাষাসমূহ",
       "current": "ভাষা: {code} ({name})",
       "saved": "ভাষা {code} ({name})-এ সেট করা হয়েছে।",
-      "noCode": "ভাষার কোড আবশ্যক। উপলভ্য কোড দেখতে 'omniroute config lang list' চালান।",
-      "unknown": "অজানা ভাষার কোড: {code}। উপলভ্য কোড দেখতে 'omniroute config lang list' চালান।",
+      "noCode": "ভাষার কোড আবশ্যক। উপলভ্য কোড দেখতে 'freeroute config lang list' চালান।",
+      "unknown": "অজানা ভাষার কোড: {code}। উপলভ্য কোড দেখতে 'freeroute config lang list' চালান।",
       "alreadySet": "ভাষা ইতিমধ্যেই {code}-এ সেট করা আছে।",
       "envHint": "পরামর্শ: আপনার এনভায়রনমেন্টে OMNIROUTE_LANG={code} সেট করেও এটি করা যায়।"
     }
@@ -1242,7 +1242,7 @@
     "filter": "লেভেল অনুযায়ী ফিল্টার করুন (error,warn,info) — কমা দিয়ে পৃথক করা",
     "lines": "আনার জন্য লাইনের সংখ্যা",
     "timeout": "সংযোগের সময়সীমা, ms-এ",
-    "baseUrl": "OmniRoute API-এর বেস URL",
+    "baseUrl": "FreeRoute API-এর বেস URL",
     "requestId": "অনুরোধ ID অনুযায়ী ফিল্টার করুন",
     "apiKey": "API কী অনুযায়ী ফিল্টার করুন",
     "combo": "কম্বোর নাম অনুযায়ী ফিল্টার করুন",
@@ -1258,10 +1258,10 @@
     "description": "সিস্টেম ট্রে আইকন নিয়ন্ত্রণ করুন",
     "show": "ট্রে আইকন দেখান (সার্ভার --tray সহ চললে)",
     "hide": "ট্রে আইকন লুকান",
-    "quit": "ট্রে থেকে OmniRoute বন্ধ করুন"
+    "quit": "ট্রে থেকে FreeRoute বন্ধ করুন"
   },
   "autostart": {
-    "description": "বুটের সময় OmniRoute-এর স্বয়ংক্রিয় চালু হওয়া পরিচালনা করুন (Linux: systemd user service)",
+    "description": "বুটের সময় FreeRoute-এর স্বয়ংক্রিয় চালু হওয়া পরিচালনা করুন (Linux: systemd user service)",
     "enable": "বুটের সময় স্বয়ংক্রিয় চালু হওয়া সক্রিয় করুন",
     "disable": "বুটের সময় স্বয়ংক্রিয় চালু হওয়া নিষ্ক্রিয় করুন",
     "toggle": "বুটের সময় স্বয়ংক্রিয় চালু হওয়ার অবস্থা টগল করুন",
@@ -1293,19 +1293,19 @@
     "scaffold": "একটি নতুন প্লাগইনের বয়লারপ্লেট তৈরি করুন"
   },
   "launch": {
-    "description": "OmniRoute-এর দিকে নির্দেশিত Claude Code চালু করুন (লোকাল বা রিমোট, --profile সহ)",
+    "description": "FreeRoute-এর দিকে নির্দেশিত Claude Code চালু করুন (লোকাল বা রিমোট, --profile সহ)",
     "token": "Claude ক্লায়েন্টের পাঠানোর জন্য টোকেন (ANTHROPIC_AUTH_TOKEN)",
-    "notRunning": "{port}-এ OmniRoute অ্যাক্সেসযোগ্য নয়। 'omniroute serve' দিয়ে এটি চালু করুন।",
+    "notRunning": "{port}-এ FreeRoute অ্যাক্সেসযোগ্য নয়। 'freeroute serve' দিয়ে এটি চালু করুন।",
     "notFound": "PATH-এ 'claude' CLI পাওয়া যায়নি।"
   },
   "run": {
-    "description": "OmniRoute-এর মাধ্যমে একটি সমর্থিত CLI টার্গেট চালু করুন"
+    "description": "FreeRoute-এর মাধ্যমে একটি সমর্থিত CLI টার্গেট চালু করুন"
   },
   "setupClaude": {
-    "description": "OmniRoute মডেল ক্যাটালগ থেকে ~/.claude/profiles Claude Code প্রোফাইল তৈরি করুন"
+    "description": "FreeRoute মডেল ক্যাটালগ থেকে ~/.claude/profiles Claude Code প্রোফাইল তৈরি করুন"
   },
   "connect": {
-    "description": "একটি রিমোট OmniRoute সার্ভারের সাথে সংযোগ করুন এবং রিমোট মোডে প্রবেশ করুন"
+    "description": "একটি রিমোট FreeRoute সার্ভারের সাথে সংযোগ করুন এবং রিমোট মোডে প্রবেশ করুন"
   },
   "tokens": {
     "description": "স্কোপযুক্ত CLI অ্যাক্সেস টোকেন পরিচালনা করুন (রিমোট মোড)"
@@ -1314,10 +1314,10 @@
     "description": "সক্রিয় সার্ভার থেকে একটি প্রোভাইডার+মডেল বেছে নিয়ে একটি সমর্থিত লোকাল CLI কনফিগার করুন"
   },
   "launchCodex": {
-    "description": "OmniRoute-এর দিকে নির্দেশিত Codex CLI চালু করুন (লোকাল বা রিমোট VPS)"
+    "description": "FreeRoute-এর দিকে নির্দেশিত Codex CLI চালু করুন (লোকাল বা রিমোট VPS)"
   },
   "setupCodex": {
-    "description": "OmniRoute-এর লাইভ মডেল ক্যাটালগ থেকে ~/.codex প্রোফাইল ফাইল তৈরি করুন"
+    "description": "FreeRoute-এর লাইভ মডেল ক্যাটালগ থেকে ~/.codex প্রোফাইল ফাইল তৈরি করুন"
   },
   "packs": {
     "description": "ঐচ্ছিক রানটাইম প্যাক পরিচালনা করুন (ML / ব্রাউজার অটোমেশন)",
@@ -1330,7 +1330,7 @@
     "errUnknown": "অজানা প্যাক: {name}",
     "errNoIndex": "প্যাক ইনডেক্স পাওয়া যায়নি; প্যাকের পেলোড ধারণকারী --source <dir> দিন (ডেস্কটপ বান্ডেলে এটি অ্যাপের পাশে থাকে)",
     "installed": "প্যাক \"{name}\" ইনস্টল করা হয়েছে এবং {dir}-এ যাচাই করা হয়েছে",
-    "restartHint": "রানটাইমে প্যাকটি কার্যকর করতে OmniRoute সার্ভার (বা ডেস্কটপ অ্যাপ) পুনরায় চালু করুন",
+    "restartHint": "রানটাইমে প্যাকটি কার্যকর করতে FreeRoute সার্ভার (বা ডেস্কটপ অ্যাপ) পুনরায় চালু করুন",
     "removed": "প্যাক \"{name}\" সরিয়ে ফেলা হয়েছে",
     "notInstalled": "প্যাক \"{name}\" ইনস্টল করা ছিল না",
     "verifyOk": "ইনস্টল করা সব প্যাক যাচাই করা হয়েছে",

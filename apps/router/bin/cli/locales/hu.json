@@ -1,8 +1,8 @@
 {
   "common": {
     "error": "Hiba: {message}",
-    "serverOffline": "Az OmniRoute szerver offline. Indítsa el: omniroute serve",
-    "authRequired": "Hitelesítés szükséges. Állítsa be az OMNIROUTE_API_KEY-t vagy futtassa: omniroute setup",
+    "serverOffline": "Az FreeRoute szerver offline. Indítsa el: freeroute serve",
+    "authRequired": "Hitelesítés szükséges. Állítsa be az OMNIROUTE_API_KEY-t vagy futtassa: freeroute setup",
     "rateLimited": "Kérési korlát túllépve. Próbálja újra {seconds}s múlva.",
     "timeout": "A kérés {ms}ms után lejárt.",
     "success": "Kész.",
@@ -15,7 +15,7 @@
     "yesOpt": "Megerősítés kihagyása"
   },
   "setup": {
-    "title": "OmniRoute beállítása",
+    "title": "FreeRoute beállítása",
     "passwordPrompt": "Rendszergazdai jelszó",
     "providerPrompt": "Alapértelmezett szolgáltató (a kihagyáshoz hagyja üresen)",
     "done": "A beállítás befejeződött",
@@ -30,19 +30,19 @@
     "opencode": "Az OpenCode csomagban található @omniroute/opencode-plugin telepítése és konfigurálása"
   },
   "doctor": {
-    "title": "OmniRoute diagnosztika",
+    "title": "FreeRoute diagnosztika",
     "dbOk": "Adatbázis: rendben ({path})",
-    "dbMissing": "Adatbázis: nincs inicializálva — futtassa az `omniroute setup` parancsot",
+    "dbMissing": "Adatbázis: nincs inicializálva — futtassa az `freeroute setup` parancsot",
     "portOk": "{port} port: elérhető",
     "portConflict": "{port} port: egy másik folyamat használja",
     "encryptionOk": "Titkosítási kulcs: beállítva",
-    "encryptionMissing": "Hiányzik a titkosítási kulcs — futtassa az `omniroute setup` parancsot",
+    "encryptionMissing": "Hiányzik a titkosítási kulcs — futtassa az `freeroute setup` parancsot",
     "allGood": "Minden ellenőrzés sikeres.",
     "warnings": "{count} figyelmeztetés — lásd fent."
   },
   "providers": {
     "title": "Szolgáltatók",
-    "noProviders": "Nincsenek beállított szolgáltatók. Futtassa: omniroute setup",
+    "noProviders": "Nincsenek beállított szolgáltatók. Futtassa: freeroute setup",
     "testing": "{name} tesztelése...",
     "available": "{count} szolgáltató érhető el",
     "connected": "Csatlakoztatva",
@@ -71,7 +71,7 @@
       "dryRunOpt": "A módosítások megjelenítése mentés nélkül",
       "confirmPrompt": "Lecseréli a(z) „{name}” ({id}) kapcsolat API-kulcsát? [y/N]",
       "dryRunResult": "[dry-run] A(z) „{name}” ({id}) kulcsa rotálásra kerülne. Nem történt módosítás.",
-      "oauthHint": "OAuth-kapcsolat — futtassa: omniroute oauth {provider}",
+      "oauthHint": "OAuth-kapcsolat — futtassa: freeroute oauth {provider}",
       "envVarEmpty": "A(z) {var} környezeti változó nincs beállítva vagy üres.",
       "success": "A(z) „{name}” kulcsa rotálva. Az ellenőrzéshez futtassa: `providers test {id}`.",
       "testPassed": "A rotáció utáni teszt sikeres.",
@@ -82,7 +82,7 @@
       "providerOpt": "Szűrés szolgáltatónév szerint",
       "header": "Azonosító Szolgáltató    Név                      Lejárati állapot Tesztállapot Várakozás vége",
       "noData": "Nem érhetők el szolgáltatói kapcsolati adatok.",
-      "requiresServer": "A providers status parancshoz futnia kell az OmniRoute szervernek."
+      "requiresServer": "A providers status parancshoz futnia kell az FreeRoute szervernek."
     }
   },
   "keys": {
@@ -90,8 +90,8 @@
     "addDescription": "API-kulcs hozzáadása vagy frissítése egy szolgáltatóhoz",
     "listDescription": "Az összes konfigurált API-kulcs listázása",
     "removeDescription": "Egy szolgáltató API-kulcsának eltávolítása",
-    "regenerateDescription": "OmniRoute API-kulcs újragenerálása",
-    "revokeDescription": "OmniRoute API-kulcs visszavonása",
+    "regenerateDescription": "FreeRoute API-kulcs újragenerálása",
+    "revokeDescription": "FreeRoute API-kulcs visszavonása",
     "revealDescription": "A nem maszkolt API-kulcsérték megjelenítése",
     "usageDescription": "Egy API-kulcs legutóbbi használatának megjelenítése",
     "usageLimitOpt": "Legutóbbi kérések száma",
@@ -142,7 +142,7 @@
     "warning": "⚠ Ez VISSZAFEJTETT, egyszerű szöveges API-kulcsokat és OAuth-tokeneket jelenít meg/ír ki. Gondoskodjon arról, hogy a képernyője, a parancsértelmező előzményei és minden kimeneti fájl privát maradjon.",
     "confirmHeading": "⚠ FIGYELMEZTETÉS: ez VISSZAFEJTETT szolgáltatói hitelesítő adatokat exportál egyszerű szövegként",
     "confirmBody": "Ez a parancs visszafejti és megjeleníti/kiírja a kiválasztott kapcsolat(ok) apiKey, accessToken, refreshToken és\nidToken értékét. A kimenetet bizalmas adatként kezelje.",
-    "confirmFooter": "A megerősítéshez futtassa:\n  omniroute auth export --force",
+    "confirmFooter": "A megerősítéshez futtassa:\n  freeroute auth export --force",
     "missingKey": "A hitelesítő adatok exportálásához szükséges a STORAGE_ENCRYPTION_KEY.",
     "notFound": "A kapcsolat nem található: {id}",
     "invalidFormat": "Érvénytelen formátum: {format}. Használja a json vagy env formátumot."
@@ -220,10 +220,10 @@
     "reasoning": "Következtetési erőfeszítés szintje (low|medium|high)",
     "thinking": "Kibővített gondolkodás tokenkerete",
     "explain": "A tartalékútvonal-fastruktúra és a költségtartomány kiírása az stderr-re",
-    "noCombo": "Nem található megfelelő kombináció. Hozzon létre egyet ezzel: omniroute combo create"
+    "noCombo": "Nem található megfelelő kombináció. Hozzon létre egyet ezzel: freeroute combo create"
   },
   "chat": {
-    "description": "Egyszeri csevegési prompt küldése az OmniRoute-nak",
+    "description": "Egyszeri csevegési prompt küldése az FreeRoute-nak",
     "file": "Prompt beolvasása fájlból",
     "stdin": "Prompt beolvasása a szabványos bemenetről",
     "system": "Rendszerprompt",
@@ -242,8 +242,8 @@
     }
   },
   "serve": {
-    "description": "Az OmniRoute szerver elindítása (alapértelmezett művelet)",
-    "starting": "Az OmniRoute szerver indítása a(z) {port} porton...",
+    "description": "Az FreeRoute szerver elindítása (alapértelmezett művelet)",
+    "starting": "Az FreeRoute szerver indítása a(z) {port} porton...",
     "ready": "Elérhető itt: http://localhost:{port}",
     "stopping": "Szerver leállítása (PID: {pid})...",
     "stopped": "A szerver leállt.",
@@ -262,7 +262,7 @@
   },
   "backup": {
     "title": "Biztonsági mentés",
-    "description": "Biztonsági mentés készítése az OmniRoute adatairól",
+    "description": "Biztonsági mentés készítése az FreeRoute adatairól",
     "creating": "Biztonsági mentés készítése...",
     "done": "A biztonsági mentés ide lett mentve: {path}",
     "noFiles": "Nincsenek mentendő fájlok (az adatbázis nincs inicializálva)",
@@ -274,7 +274,7 @@
     "noBackups": "Nem találhatók biztonsági mentések.",
     "notFound": "A biztonsági mentés nem található: {name}",
     "confirmRestore": "Felülírja a jelenlegi adatokat a(z) {ts} időpontból származó biztonsági mentéssel?",
-    "createDescription": "Biztonsági mentés készítése az OmniRoute adatairól",
+    "createDescription": "Biztonsági mentés készítése az FreeRoute adatairól",
     "nameOpt": "Egyéni név a biztonsági mentéshez",
     "cloudOpt": "Biztonsági mentés feltöltése felhőtárhelyre",
     "encryptOpt": "Biztonsági mentés titkosítása AES-256-GCM használatával",
@@ -292,14 +292,14 @@
       "statusDescription": "A biztonsági mentések aktuális ütemezési állapotának megjelenítése",
       "cronOpt": "Cron-kifejezés az ütemezéshez (alapértelmezés: naponta hajnali 3-kor)",
       "enabled": "Az automatikus biztonsági mentés engedélyezve (cron: {cron}).",
-      "hint": "Az ütemezést az omniroute serve olvassa be indításkor.",
+      "hint": "Az ütemezést az freeroute serve olvassa be indításkor.",
       "disabled": "Az automatikus biztonsági mentés letiltva.",
       "notConfigured": "Nincs beállítva biztonsági mentési ütemezés."
     }
   },
   "health": {
     "description": "A kiszolgáló állapotának és az összetevők státuszának ellenőrzése",
-    "noServer": "A kiszolgáló nem fut. Indítás: omniroute serve",
+    "noServer": "A kiszolgáló nem fut. Indítás: freeroute serve",
     "title": "Állapot",
     "status": "Állapot: {status}",
     "uptime": "Üzemidő: {uptime}",
@@ -308,21 +308,21 @@
   },
   "quota": {
     "description": "A szolgáltatói kvótahasználat megjelenítése",
-    "noServer": "A kiszolgáló nem fut. Indítás: omniroute serve",
+    "noServer": "A kiszolgáló nem fut. Indítás: freeroute serve",
     "noData": "Nem áll rendelkezésre kvótainformáció."
   },
   "cache": {
     "description": "Válaszgyorsítótár kezelése",
-    "noServer": "A kiszolgáló nem fut. Indítás: omniroute serve",
+    "noServer": "A kiszolgáló nem fut. Indítás: freeroute serve",
     "cleared": "A gyorsítótár törölve.",
     "clearFailed": "A gyorsítótár törlése sikertelen."
   },
   "redis": {
-    "description": "Helyi Redis-tároló indítása egyetlen kattintással (Podman vagy Docker) az OmniRoute gyorsítótárazáshoz és kvótafigyeléshez"
+    "description": "Helyi Redis-tároló indítása egyetlen kattintással (Podman vagy Docker) az FreeRoute gyorsítótárazáshoz és kvótafigyeléshez"
   },
   "test": {
     "description": "Szolgáltatói kapcsolat tesztelése",
-    "noServer": "A szerver nem fut. Indítsa el ezzel: omniroute serve",
+    "noServer": "A szerver nem fut. Indítsa el ezzel: freeroute serve",
     "testing": "{provider} / {model} tesztelése...",
     "passed": "Sikeres csatlakozás!",
     "failed": "A csatlakozás sikertelen: {error}",
@@ -334,7 +334,7 @@
     "saved": "Az eredmények mentve ide: {path}",
     "compareTitle": "Modellek összehasonlítása",
     "compareMinTwo": "A --compare használatához legalább két modell szükséges (vesszővel elválasztva)",
-    "noProviders": "Nincsenek konfigurált szolgáltatók. Adjon hozzá egyet ezzel: omniroute keys add"
+    "noProviders": "Nincsenek konfigurált szolgáltatók. Adjon hozzá egyet ezzel: freeroute keys add"
   },
   "update": {
     "checking": "Frissítések keresése...",
@@ -348,7 +348,7 @@
     "running": "Az MCP-szerver fut ({transport})",
     "stopped": "Az MCP-szerver leállt.",
     "restarted": "Az MCP-szerver újraindult.",
-    "stoppedHint": "A bekapcsoláshoz futtassa az `omniroute mcp enable` parancsot.",
+    "stoppedHint": "A bekapcsoláshoz futtassa az `freeroute mcp enable` parancsot.",
     "enabled": "Az MCP-szerver engedélyezve.",
     "disabled": "Az MCP-szerver letiltva.",
     "enable": {
@@ -416,7 +416,7 @@
     }
   },
   "policy": {
-    "description": "Az OmniRoute engedélyezési szabályzatainak kezelése",
+    "description": "Az FreeRoute engedélyezési szabályzatainak kezelése",
     "list": {
       "description": "Szabályzatok listázása",
       "kind": "Szűrés típus szerint (allow|deny|rate-limit|cost-cap)",
@@ -453,7 +453,7 @@
     }
   },
   "compression": {
-    "description": "Az OmniRoute tömörítési folyamatának konfigurálása és vizsgálata",
+    "description": "Az FreeRoute tömörítési folyamatának konfigurálása és vizsgálata",
     "status": {
       "description": "A tömörítés aktuális állapotának és beállításainak megjelenítése"
     },
@@ -507,18 +507,18 @@
     "confirmRotate": "Lecseréli a(z) {type} alagút URL-jét? (Új URL jön létre.)"
   },
   "stop": {
-    "description": "Az OmniRoute szerver leállítása",
+    "description": "Az FreeRoute szerver leállítása",
     "stopping": "A szerver leállítása (PID: {pid})...",
     "stopped": "A szerver leállítva.",
     "notRunning": "Nem fut szerver.",
     "portFallback": "Nem található PID-fájl, kísérlet port alapú leállításra..."
   },
   "restart": {
-    "description": "Az OmniRoute szerver újraindítása",
-    "restarting": "Az OmniRoute szerver újraindítása..."
+    "description": "Az FreeRoute szerver újraindítása",
+    "restarting": "Az FreeRoute szerver újraindítása..."
   },
   "dashboard": {
-    "description": "Az OmniRoute irányítópult megnyitása böngészőben",
+    "description": "Az FreeRoute irányítópult megnyitása böngészőben",
     "opening": "Az irányítópult megnyitása itt: {url}",
     "urlOnly": "Az irányítópult URL-jének kiírása a böngésző megnyitása nélkül",
     "tui": "Interaktív TUI irányítópult megnyitása (terminálos felhasználói felület, 7 lap)"
@@ -526,7 +526,7 @@
   "models": {
     "description": "Az elérhető modellek listázása (szerver szükséges)",
     "search": "Modellek szűrése azonosító, név, szolgáltató vagy leírás alapján",
-    "noServer": "A szerver nem fut. Indítsa el ezzel: omniroute serve",
+    "noServer": "A szerver nem fut. Indítsa el ezzel: freeroute serve",
     "noModels": "Nem találhatók modellek."
   },
   "audit": {
@@ -558,7 +558,7 @@
     }
   },
   "skills": {
-    "description": "OmniRoute-készségek kezelése (sandbox, builtin, custom, hybrid, skillssh)",
+    "description": "FreeRoute-készségek kezelése (sandbox, builtin, custom, hybrid, skillssh)",
     "list": {
       "description": "Telepített készségek listázása",
       "type": "Szűrés típus szerint (sandbox|custom|builtin|hybrid|skillssh)",
@@ -631,7 +631,7 @@
     }
   },
   "memory": {
-    "description": "Az OmniRoute társalgási memóriájának kezelése (FTS5 + vector)",
+    "description": "Az FreeRoute társalgási memóriájának kezelése (FTS5 + vector)",
     "search": {
       "description": "Memóriabejegyzések keresése szemantikai lekérdezéssel",
       "type": "Szűrés memóriatípus szerint (user|feedback|project|reference)",
@@ -789,7 +789,7 @@
     }
   },
   "webhooks": {
-    "description": "OmniRoute-webhookok kezelése",
+    "description": "FreeRoute-webhookok kezelése",
     "events": {
       "description": "Az összes elérhető webhook-eseménytípus listázása"
     },
@@ -821,14 +821,14 @@
     }
   },
   "program": {
-    "description": "OmniRoute — Intelligens AI útválasztó automatikus fallbackkel",
+    "description": "FreeRoute — Intelligens AI útválasztó automatikus fallbackkel",
     "version": "Verzió kiírása és kilépés",
     "output": "Kimeneti formátum (table, json, jsonl, csv)",
     "quiet": "Nem lényeges kimenet elnyomása",
     "no_color": "Színes kimenet letiltása",
     "timeout": "HTTP kérés időtúllépése ezredmásodpercben",
-    "api_key": "API kulcs az OmniRoute szerverhez",
-    "base_url": "Az OmniRoute szerver alap URL-je",
+    "api_key": "API kulcs az FreeRoute szerverhez",
+    "base_url": "Az FreeRoute szerver alap URL-je",
     "context": "Szerverkontextus/profil ehhez a parancshoz",
     "lang": "CLI megjelenítési nyelv beállítása (felülírja az OMNIROUTE_LANG-ot)"
   },
@@ -1079,7 +1079,7 @@
     }
   },
   "openapi": {
-    "description": "Az OmniRoute OpenAPI-specifikáció elérése és tesztelése",
+    "description": "Az FreeRoute OpenAPI-specifikáció elérése és tesztelése",
     "dump": {
       "description": "Az OpenAPI-specifikáció kiírása stdout-ra vagy fájlba",
       "format": "Kimeneti formátum: yaml|json (alapértelmezett: yaml)",
@@ -1149,7 +1149,7 @@
     }
   },
   "open": {
-    "description": "Egy adott OmniRoute-irányítópultoldal megnyitása a böngészőben",
+    "description": "Egy adott FreeRoute-irányítópultoldal megnyitása a böngészőben",
     "url": "Csak az URL kiírása, a böngésző megnyitása nélkül"
   },
   "telemetry": {
@@ -1166,7 +1166,7 @@
     }
   },
   "sync": {
-    "description": "Konfiguráció szinkronizálása OmniRoute-példányok között",
+    "description": "Konfiguráció szinkronizálása FreeRoute-példányok között",
     "push": {
       "description": "Konfiguráció küldése a felhőbe vagy egy távoli példányra",
       "target": "Cél (cloud vagy context:name)",
@@ -1222,8 +1222,8 @@
       "listTitle": "Elérhető nyelvek",
       "current": "Nyelv: {code} ({name})",
       "saved": "A nyelv beállítva: {code} ({name}).",
-      "noCode": "Meg kell adni a nyelvi kódot. Az elérhető kódok megtekintéséhez futtasd az „omniroute config lang list” parancsot.",
-      "unknown": "Ismeretlen nyelvi kód: {code}. Az elérhető kódok megtekintéséhez futtasd az „omniroute config lang list” parancsot.",
+      "noCode": "Meg kell adni a nyelvi kódot. Az elérhető kódok megtekintéséhez futtasd az „freeroute config lang list” parancsot.",
+      "unknown": "Ismeretlen nyelvi kód: {code}. Az elérhető kódok megtekintéséhez futtasd az „freeroute config lang list” parancsot.",
       "alreadySet": "A nyelv már erre van beállítva: {code}.",
       "envHint": "Tipp: az OMNIROUTE_LANG={code} környezeti változót is beállíthatod."
     }
@@ -1242,7 +1242,7 @@
     "filter": "Szűrés szint szerint (error,warn,info) — vesszővel elválasztva",
     "lines": "Lekérendő sorok száma",
     "timeout": "Kapcsolati időtúllépés ezredmásodpercben",
-    "baseUrl": "Az OmniRoute API alap-URL-je",
+    "baseUrl": "Az FreeRoute API alap-URL-je",
     "requestId": "Szűrés kérésazonosító szerint",
     "apiKey": "Szűrés API-kulcs szerint",
     "combo": "Szűrés kombinációnév szerint",
@@ -1258,10 +1258,10 @@
     "description": "A rendszertálcaikon vezérlése",
     "show": "A tálcaikon megjelenítése (ha a kiszolgáló a --tray kapcsolóval fut)",
     "hide": "A tálcaikon elrejtése",
-    "quit": "Kilépés az OmniRoute-ból a tálcaikonon keresztül"
+    "quit": "Kilépés az FreeRoute-ból a tálcaikonon keresztül"
   },
   "autostart": {
-    "description": "Az OmniRoute rendszerindításkori automatikus indításának kezelése (Linux: systemd felhasználói szolgáltatás)",
+    "description": "Az FreeRoute rendszerindításkori automatikus indításának kezelése (Linux: systemd felhasználói szolgáltatás)",
     "enable": "Automatikus indítás engedélyezése rendszerindításkor",
     "disable": "Automatikus indítás letiltása rendszerindításkor",
     "toggle": "Automatikus indítás be- vagy kikapcsolása rendszerindításkor",
@@ -1293,19 +1293,19 @@
     "scaffold": "Új bővítmény sablonjának létrehozása"
   },
   "launch": {
-    "description": "A Claude Code indítása az OmniRoute használatával (helyileg vagy távolról, --profile kapcsolóval)",
+    "description": "A Claude Code indítása az FreeRoute használatával (helyileg vagy távolról, --profile kapcsolóval)",
     "token": "A Claude kliens által küldendő token (ANTHROPIC_AUTH_TOKEN)",
-    "notRunning": "Az OmniRoute nem érhető el ezen a porton: {port}. Indítsa el az 'omniroute serve' paranccsal.",
+    "notRunning": "Az FreeRoute nem érhető el ezen a porton: {port}. Indítsa el az 'freeroute serve' paranccsal.",
     "notFound": "A 'claude' CLI nem található a PATH-ban."
   },
   "run": {
-    "description": "Támogatott CLI-cél indítása az OmniRoute-on keresztül"
+    "description": "Támogatott CLI-cél indítása az FreeRoute-on keresztül"
   },
   "setupClaude": {
-    "description": "Claude Code-profilok létrehozása a ~/.claude/profiles könyvtárban az OmniRoute modellkatalógusából"
+    "description": "Claude Code-profilok létrehozása a ~/.claude/profiles könyvtárban az FreeRoute modellkatalógusából"
   },
   "connect": {
-    "description": "Kapcsolódás távoli OmniRoute-kiszolgálóhoz és belépés távoli módba"
+    "description": "Kapcsolódás távoli FreeRoute-kiszolgálóhoz és belépés távoli módba"
   },
   "tokens": {
     "description": "Hatókörrel rendelkező CLI-hozzáférési tokenek kezelése (távoli mód)"
@@ -1314,10 +1314,10 @@
     "description": "Szolgáltató és modell kiválasztása az aktív kiszolgálóról, valamint egy támogatott helyi CLI konfigurálása"
   },
   "launchCodex": {
-    "description": "A Codex CLI indítása az OmniRoute használatával (helyi vagy távoli VPS)"
+    "description": "A Codex CLI indítása az FreeRoute használatával (helyi vagy távoli VPS)"
   },
   "setupCodex": {
-    "description": "~/.codex-profilfájlok létrehozása az OmniRoute élő modellkatalógusából"
+    "description": "~/.codex-profilfájlok létrehozása az FreeRoute élő modellkatalógusából"
   },
   "packs": {
     "description": "Opcionális futtatókörnyezeti csomagok kezelése (ML / böngészőautomatizálás)",
@@ -1330,7 +1330,7 @@
     "errUnknown": "ismeretlen csomag: {name}",
     "errNoIndex": "a csomagindex nem található; adja meg a csomag tartalmát tároló könyvtárat a --source <dir> kapcsolóval (az asztali alkalmazáscsomagok az alkalmazás mellett tartalmazzák)",
     "installed": "a(z) \"{name}\" csomag telepítve és ellenőrizve itt: {dir}",
-    "restartHint": "indítsa újra az OmniRoute szervert (vagy asztali alkalmazást), hogy a futtatókörnyezet betöltse a csomagot",
+    "restartHint": "indítsa újra az FreeRoute szervert (vagy asztali alkalmazást), hogy a futtatókörnyezet betöltse a csomagot",
     "removed": "a(z) „{name}” csomag eltávolítva",
     "notInstalled": "a(z) „{name}” csomag nem volt telepítve",
     "verifyOk": "az összes telepített csomag ellenőrzése sikeres",

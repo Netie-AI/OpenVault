@@ -147,7 +147,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       message:
-        "Oh My Pi settings applied! Run omp and all OmniRoute models appear under omniroute in /model.",
+        "Oh My Pi settings applied! Run omp and all FreeRoute models appear under omniroute in /model.",
       configPath: getOmpModelsYmlPath(),
     });
   } catch (error) {
@@ -180,7 +180,7 @@ export async function DELETE(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: "OmniRoute removed from Oh My Pi",
+      message: "FreeRoute removed from Oh My Pi",
     });
   } catch (error) {
     return NextResponse.json(

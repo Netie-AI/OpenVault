@@ -157,8 +157,10 @@ export function buildNodeRuntimeArgs(env = process.env, memoryLimit, serverPath)
  * @param {NodeJS.ProcessEnv | Record<string, string | undefined>} [fromEnv]
  *        Defaults to process.env. Pass bootstrap `merged` so project `.env` PORT applies before spawn.
  */
+// FreeRoute default: port 3020 (override with PORT), loopback-only by default
+// (override with OMNIROUTE_HOSTNAME) — see PRODUCT_ROLES.md.
 export function resolveRuntimePorts(fromEnv = process.env) {
-  const basePort = parsePort(fromEnv.PORT || "20128", 20128);
+  const basePort = parsePort(fromEnv.PORT || "3020", 3020);
   const apiPort = parsePort(fromEnv.API_PORT || String(basePort), basePort);
   const dashboardPort = parsePort(fromEnv.DASHBOARD_PORT || String(basePort), basePort);
 
@@ -174,7 +176,7 @@ export function withRuntimePortEnv(env, runtimePorts) {
     PORT: String(dashboardPort),
     DASHBOARD_PORT: String(dashboardPort),
     API_PORT: String(apiPort),
-    HOSTNAME: env.OMNIROUTE_HOSTNAME || "0.0.0.0",
+    HOSTNAME: env.OMNIROUTE_HOSTNAME || "127.0.0.1",
   };
 }
 

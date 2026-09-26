@@ -69,7 +69,7 @@ export async function autoSyncCodexProfilesFromLiveCatalog(
   }
   const codexHome = path.dirname(codexPaths.config);
 
-  // Reuse the CLI generator so automatic sync and `omniroute setup-codex`
+  // Reuse the CLI generator so automatic sync and `freeroute setup-codex`
   // stay behaviorally identical.
   // @ts-ignore - bin CLI modules are shipped as ESM JavaScript, without TS declarations.
   const { syncCodexProfilesFromModels } = await import("../../../bin/cli/commands/setup-codex.mjs");

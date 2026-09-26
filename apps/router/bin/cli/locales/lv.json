@@ -1,8 +1,8 @@
 {
   "common": {
     "error": "Kļūda: {message}",
-    "serverOffline": "OmniRoute serveris nedarbojas. Startējiet to ar: omniroute serve",
-    "authRequired": "Nepieciešama autentifikācija. Iestatiet OMNIROUTE_API_KEY vai palaidiet: omniroute setup",
+    "serverOffline": "FreeRoute serveris nedarbojas. Startējiet to ar: freeroute serve",
+    "authRequired": "Nepieciešama autentifikācija. Iestatiet OMNIROUTE_API_KEY vai palaidiet: freeroute setup",
     "rateLimited": "Pieprasījumu limits pārsniegs. Mēģiniet vēlreiz pēc {seconds}s.",
     "timeout": "Pieprasījums beidzās pēc {ms}ms.",
     "success": "Gatavs.",
@@ -15,7 +15,7 @@
     "yesOpt": "Izlaist apstiprinājuma pieprasījumu"
   },
   "setup": {
-    "title": "OmniRoute iestatīšana",
+    "title": "FreeRoute iestatīšana",
     "passwordPrompt": "Administrēšanas parole",
     "providerPrompt": "Noklusējuma pakalpojumu sniedzējs (atstājiet tukšu, lai izlaistu)",
     "done": "Iestatīšana pabeigta",
@@ -30,19 +30,19 @@
     "opencode": "Instalēt un konfigurēt iekļauto @omniroute/opencode-plugin OpenCode lietošanai"
   },
   "doctor": {
-    "title": "OmniRoute Diagnostika",
+    "title": "FreeRoute Diagnostika",
     "dbOk": "Datubāze: kārtībā ({path})",
     "dbMissing": "Datubāze nav inicializēta — palaidiet `omnīroute setup`",
     "portOk": "Ports {port}: pieejams",
     "portConflict": "Ports {port}: aizņemts ar citu procesu",
     "encryptionOk": "Šifrēšanas atslēga: konfigurēta",
-    "encryptionMissing": "Trūkst šifrēšanas atslēgas — palaidiet `omniroute setup`",
+    "encryptionMissing": "Trūkst šifrēšanas atslēgas — palaidiet `freeroute setup`",
     "allGood": "Visas pārbaudes veiksmīgas.",
     "warnings": "{count} brīdinājumi — skatīt iepriekš."
   },
   "providers": {
     "title": "Pakalpojumu sniedzēji",
-    "noProviders": "Nav konfigurētu pakalpojumu sniedzēju. Palaidiet: omniroute setup",
+    "noProviders": "Nav konfigurētu pakalpojumu sniedzēju. Palaidiet: freeroute setup",
     "testing": "Pārbauda {name}...",
     "available": "{count} pakalpojumu sniedzējs(-i) pieejami(-s)",
     "connected": "Savienots",
@@ -71,7 +71,7 @@
       "dryRunOpt": "Drukāt, kas mainītos bez rakstīšanas",
       "confirmPrompt": "Aizstāt API atslēgu savienojumam \"{name}\" ({id})? [y/N]",
       "dryRunResult": "[dry-run] Rotētu atslēgu \"{name}\" ({id}). Nav veiktas izmaiņas.",
-      "oauthHint": "OAuth savienojums — palaid: omniroute oauth {provider}",
+      "oauthHint": "OAuth savienojums — palaid: freeroute oauth {provider}",
       "envVarEmpty": "Vides mainīgais {var} nav iestatīts vai ir tukšs.",
       "success": "Atslēga rotēta \"{name}\". Palaid `providers test {id}`, lai verificētu.",
       "testPassed": "Pēc rotācijas tests veiksmīgs.",
@@ -82,7 +82,7 @@
       "providerOpt": "Filtrēt pēc pakalpojumu sniedzēja nosaukuma",
       "header": "ID         Pakalpojumu sniedzējs       Nosaukums                     Termiņa beigu statuss  Testa statuss  Atdzesēšana līdz",
       "noData": "Nav pieejamu pakalpojumu sniedzēju savienojumu datu.",
-      "requiresServer": "providers status prasa, lai OmniRoute serveris darbotos."
+      "requiresServer": "providers status prasa, lai FreeRoute serveris darbotos."
     }
   },
   "keys": {
@@ -90,8 +90,8 @@
     "addDescription": "Pievienot vai atjaunināt API atslēgu pakalpojumu sniedzējam",
     "listDescription": "Uzskaitīt visus konfigurētos API atslēgas",
     "removeDescription": "Noņemt API atslēgu pakalpojumu sniedzējam",
-    "regenerateDescription": "Ģenerēt OmniRoute API atslēgu atkārtoti",
-    "revokeDescription": "Atsaukt OmniRoute API atslēgu",
+    "regenerateDescription": "Ģenerēt FreeRoute API atslēgu atkārtoti",
+    "revokeDescription": "Atsaukt FreeRoute API atslēgu",
     "revealDescription": "Atklāt neaizsegto API atslēgas vērtību",
     "usageDescription": "Rādīt neseno lietojumu API atslēgai",
     "usageLimitOpt": "Neseno pieprasījumu skaits",
@@ -142,7 +142,7 @@
     "warning": "⚠ Tas izdrukā/raksta DEKRYPTĒTAS teksta API atslēgas un OAuth tokenus. Pārliecinieties, ka jūsu ekrāns, čellas vēsture un jebkāds izejas fails ir privāts.",
     "confirmHeading": "⚠ BRĪDINĀJUMS: tas eksportē DEKRYPTĒTAS piegādātāja akreditācijas datus tekstā",
     "confirmBody": "Šī komanda atšifrē un izdrukā/raksta apiKey, accessToken, refreshToken un\nidToken izvēlētajam(-iem) savienojum(-iem). Izturas pret izeju kā pret noslēpumu.",
-    "confirmFooter": "Lai apstiprinātu, palaidiet:\n  omniroute auth export --force",
+    "confirmFooter": "Lai apstiprinātu, palaidiet:\n  freeroute auth export --force",
     "missingKey": "STORAGE_ENCRYPTION_KEY ir nepieciešams, lai eksportētu akreditācijas datus.",
     "notFound": "Savienojums nav atrasts: {id}",
     "invalidFormat": "Nepareizs formāts: {format}. Izmantojiet json vai env."
@@ -220,10 +220,10 @@
     "reasoning": "Domāšanas pūļu līmenis (zems|vidējs|augsts)",
     "thinking": "Paplašinātas domāšanas žetonu budžets",
     "explain": "Drukāt atkāpšanās koku un izmaksu diapazonu uz stderr",
-    "noCombo": "Nav atbilstošas kombinācijas. Konfigurēt vienu ar: omniroute combo create"
+    "noCombo": "Nav atbilstošas kombinācijas. Konfigurēt vienu ar: freeroute combo create"
   },
   "chat": {
-    "description": "Sūtīt vienreizēju tērzēšanas pieprasījumu uz OmniRoute",
+    "description": "Sūtīt vienreizēju tērzēšanas pieprasījumu uz FreeRoute",
     "file": "Lasīt pieprasījumu no faila",
     "stdin": "Lasīt pieprasījumu no stdin",
     "system": "Sistēmas pieprasījums",
@@ -242,8 +242,8 @@
     }
   },
   "serve": {
-    "description": "Startēt OmniRoute serveri (noklusējuma darbība)",
-    "starting": "Startēju OmniRoute serveri uz porta {port}...",
+    "description": "Startēt FreeRoute serveri (noklusējuma darbība)",
+    "starting": "Startēju FreeRoute serveri uz porta {port}...",
     "ready": "Gatavs pie http://localhost:{port}",
     "stopping": "Apturot serveri (PID {pid})...",
     "stopped": "Serveris apturēts.",
@@ -262,7 +262,7 @@
   },
   "backup": {
     "title": "Dublēšana",
-    "description": "Izveidot OmniRoute datu dublējumu",
+    "description": "Izveidot FreeRoute datu dublējumu",
     "creating": "Veido dublējumu...",
     "done": "Dublējums saglabāts {path}",
     "noFiles": "Nav failu dublēšanai (datubāze nav inicializēta)",
@@ -274,7 +274,7 @@
     "noBackups": "Dublējumi nav atrasti.",
     "notFound": "Dublējums nav atrasts: {name}",
     "confirmRestore": "Pārrakstīt pašreizējos datus ar dublējumu no {ts}?",
-    "createDescription": "Izveidot OmniRoute datu dublējumu",
+    "createDescription": "Izveidot FreeRoute datu dublējumu",
     "nameOpt": "Pielāgots dublējuma nosaukums",
     "cloudOpt": "Augšupielādēt dublējumu mākoņkrātuvē",
     "encryptOpt": "Šifrēt dublējumu ar AES-256-GCM",
@@ -292,14 +292,14 @@
       "statusDescription": "Rādīt pašreizējo dublēšanas grafika statusu",
       "cronOpt": "Cron izteiksme grafikam (noklusējums: katru dienu plkst. 3:00)",
       "enabled": "Automātiskā dublēšana iespējota (cron: {cron}).",
-      "hint": "Grafiku nolasīja omniroute serve startēšanas laikā.",
+      "hint": "Grafiku nolasīja freeroute serve startēšanas laikā.",
       "disabled": "Automātiskā dublēšana atspējota.",
       "notConfigured": "Dublēšanas grafiks nav konfigurēts."
     }
   },
   "health": {
     "description": "Pārbaudīt servera veselību un komponentu statusu",
-    "noServer": "Serveris nedarbojas. Sākt ar: omniroute serve",
+    "noServer": "Serveris nedarbojas. Sākt ar: freeroute serve",
     "title": "Veselība",
     "status": "Statuss: {status}",
     "uptime": "Pieejamības laiks: {uptime}",
@@ -308,21 +308,21 @@
   },
   "quota": {
     "description": "Rādīt pakalpojumu sniedzēja kvotas lietojumu",
-    "noServer": "Serveris nedarbojas. Sāc ar: omniroute serve",
+    "noServer": "Serveris nedarbojas. Sāc ar: freeroute serve",
     "noData": "Kvotas informācija nav pieejama."
   },
   "cache": {
     "description": "Pārvaldīt atbildes kešatmiņu",
-    "noServer": "Serveris nedarbojas. Sāc ar: omniroute serve",
+    "noServer": "Serveris nedarbojas. Sāc ar: freeroute serve",
     "cleared": "Kešatmiņa iztīrīta.",
     "clearFailed": "Neizdevās iztīrīt kešatmiņu."
   },
   "redis": {
-    "description": "Palaidiet vienas klikšķa lokālo Redis konteineru (Podman vai Docker) OmniRoute kešatmiņai un kvotas izsekošanai"
+    "description": "Palaidiet vienas klikšķa lokālo Redis konteineru (Podman vai Docker) FreeRoute kešatmiņai un kvotas izsekošanai"
   },
   "test": {
     "description": "Testēt pakalpojumu sniedzēja savienojumu",
-    "noServer": "Serveris nedarbojas. Sāc ar: omniroute serve",
+    "noServer": "Serveris nedarbojas. Sāc ar: freeroute serve",
     "testing": "Testēju {provider} / {model}...",
     "passed": "Savienojums veiksmīgs!",
     "failed": "Savienojums neizdevās: {error}",
@@ -334,7 +334,7 @@
     "saved": "Rezultāti saglabāti {path}",
     "compareTitle": "Modeļu salīdzinājums",
     "compareMinTwo": "Vismaz divi modeļi nepieciešami --compare (ar komatu atdalīti)",
-    "noProviders": "Nav konfigurētu pakalpojumu sniedzēju. Pievienojiet vienu ar: omniroute keys add"
+    "noProviders": "Nav konfigurētu pakalpojumu sniedzēju. Pievienojiet vienu ar: freeroute keys add"
   },
   "update": {
     "checking": "Pārbaudu atjauninājumus...",
@@ -348,7 +348,7 @@
     "running": "MCP serveris darbojas ({transport})",
     "stopped": "MCP serveris apturēts.",
     "restarted": "MCP serveris restartēts.",
-    "stoppedHint": "Lai to ieslēgtu, palaidiet `omniroute mcp enable`.",
+    "stoppedHint": "Lai to ieslēgtu, palaidiet `freeroute mcp enable`.",
     "enabled": "MCP serveris ir iespējots.",
     "disabled": "MCP serveris ir atspējots.",
     "enable": {
@@ -416,7 +416,7 @@
     }
   },
   "policy": {
-    "description": "Pārvaldīt OmniRoute autorizācijas politikas",
+    "description": "Pārvaldīt FreeRoute autorizācijas politikas",
     "list": {
       "description": "Uzskaitīt politikas",
       "kind": "Filtrēt pēc veida (allow|deny|rate-limit|cost-cap)",
@@ -453,7 +453,7 @@
     }
   },
   "compression": {
-    "description": "Konfigurēt un pārbaudīt OmniRoute saspiešanas kanālu",
+    "description": "Konfigurēt un pārbaudīt FreeRoute saspiešanas kanālu",
     "status": {
       "description": "Parādīt pašreizējo saspiešanas statusu un iestatījumus"
     },
@@ -507,18 +507,18 @@
     "confirmRotate": "Mainīt tuneļu {type}? (tiks ģenerēts jauns URL)"
   },
   "stop": {
-    "description": "Apturēt OmniRoute serveri",
+    "description": "Apturēt FreeRoute serveri",
     "stopping": "Aptur serveri (PID {pid})...",
     "stopped": "Serveris apturēts.",
     "notRunning": "Nedarbojas neviens serveris.",
     "portFallback": "PID fails nav atrasts, mēģina apturēt, balstoties uz portu..."
   },
   "restart": {
-    "description": "Restartēt OmniRoute serveri",
-    "restarting": "Restartēju OmniRoute serveri..."
+    "description": "Restartēt FreeRoute serveri",
+    "restarting": "Restartēju FreeRoute serveri..."
   },
   "dashboard": {
-    "description": "Atveriet OmniRoute vadīklu pārlūkprogrammā",
+    "description": "Atveriet FreeRoute vadīklu pārlūkprogrammā",
     "opening": "Atveru vadīklu {url}",
     "urlOnly": "Izdrukāt vadīkla URL neatverot pārlūkprogrammu",
     "tui": "Atvērt interaktīvu TUI vadīklu (termināla interfeiss, 7 cilnes)"
@@ -526,7 +526,7 @@
   "models": {
     "description": "Uzskaitīt pieejamos modeļus (nepieciešams serveris)",
     "search": "Filtrēt modeļus pēc id, nosaukuma, nodrošinātāja vai apraksta",
-    "noServer": "Serveris nedarbojas. Sākt ar: omniroute serve",
+    "noServer": "Serveris nedarbojas. Sākt ar: freeroute serve",
     "noModels": "Modeļi nav atrasti."
   },
   "audit": {
@@ -558,7 +558,7 @@
     }
   },
   "skills": {
-    "description": "Pārvaldīt OmniRoute prasmes (sandbox, builtin, custom, hybrid, skillssh)",
+    "description": "Pārvaldīt FreeRoute prasmes (sandbox, builtin, custom, hybrid, skillssh)",
     "list": {
       "description": "Uzskaitīt instalētās prasmes",
       "type": "Filtrēt pēc veida (sandbox|custom|builtin|hybrid|skillssh)",
@@ -631,7 +631,7 @@
     }
   },
   "memory": {
-    "description": "Pārvaldīt OmniRoute sarunu atmiņu (FTS5 + vektors)",
+    "description": "Pārvaldīt FreeRoute sarunu atmiņu (FTS5 + vektors)",
     "search": {
       "description": "Meklēt atmiņas ierakstus ar semantisko vaicājumu",
       "type": "Filtrēt pēc atmiņas veida (user|feedback|project|reference)",
@@ -789,7 +789,7 @@
     }
   },
   "webhooks": {
-    "description": "Pārvaldīt OmniRoute tīmekļa āķus",
+    "description": "Pārvaldīt FreeRoute tīmekļa āķus",
     "events": {
       "description": "Uzskaitīt visus pieejamos tīmekļa āķa notikumu veidus"
     },
@@ -821,14 +821,14 @@
     }
   },
   "program": {
-    "description": "OmniRoute — Viedais AI maršrutētājs ar automātisko rezerves režīmu",
+    "description": "FreeRoute — Viedais AI maršrutētājs ar automātisko rezerves režīmu",
     "version": "Drukāt versiju un iziet",
     "output": "Izvades formāts (table, json, jsonl, csv)",
     "quiet": "Nomāc nebūtisko izvadi",
     "no_color": "Atspējot krāsaino izvadi",
     "timeout": "HTTP pieprasījuma taimauts milisekundēs",
-    "api_key": "API atslēga OmniRoute serverim",
-    "base_url": "OmniRoute servera bāzes URL",
+    "api_key": "API atslēga FreeRoute serverim",
+    "base_url": "FreeRoute servera bāzes URL",
     "context": "Servera konteksts/profils šai komandai",
     "lang": "Iestatīt CLI displeja valodu (pārraksta OMNIROUTE_LANG)"
   },
@@ -1079,7 +1079,7 @@
     }
   },
   "openapi": {
-    "description": "Piekļūt un pārbaudīt OmniRoute OpenAPI specifikāciju",
+    "description": "Piekļūt un pārbaudīt FreeRoute OpenAPI specifikāciju",
     "dump": {
       "description": "Izvadīt OpenAPI specifikāciju uz stdout vai failu",
       "format": "Izvades formāts: yaml|json (noklusējums: yaml)",
@@ -1149,7 +1149,7 @@
     }
   },
   "open": {
-    "description": "Atvērt konkrētu OmniRoute informācijas paneli pārlūkā",
+    "description": "Atvērt konkrētu FreeRoute informācijas paneli pārlūkā",
     "url": "Tikai izdrukāt URL, neatvērt pārlūku"
   },
   "telemetry": {
@@ -1166,7 +1166,7 @@
     }
   },
   "sync": {
-    "description": "Sinhronizēt konfigurāciju starp OmniRoute instancēm",
+    "description": "Sinhronizēt konfigurāciju starp FreeRoute instancēm",
     "push": {
       "description": "Iespiest konfigurāciju mākoņvai attālai instancei",
       "target": "Mērķis (mākonis vai konteksts:nosaukums)",
@@ -1222,8 +1222,8 @@
       "listTitle": "Pieejamās valodas",
       "current": "Valoda: {code} ({name})",
       "saved": "Valoda iestatīta uz {code} ({name}).",
-      "noCode": "Valodas kods nepieciešams. Izpildiet 'omniroute config lang list', lai redzētu pieejamos kodus.",
-      "unknown": "Nezināms valodas kods: {code}. Izpildiet 'omniroute config lang list', lai redzētu pieejamos kodus.",
+      "noCode": "Valodas kods nepieciešams. Izpildiet 'freeroute config lang list', lai redzētu pieejamos kodus.",
+      "unknown": "Nezināms valodas kods: {code}. Izpildiet 'freeroute config lang list', lai redzētu pieejamos kodus.",
       "alreadySet": "Valoda jau ir iestatīta uz {code}.",
       "envHint": "Padoms: jūs varat arī iestatīt OMNIROUTE_LANG={code} savā vidē."
     }
@@ -1242,7 +1242,7 @@
     "filter": "Filtrēt pēc līmeņa (error,warn,info) — atdalīts ar komatu",
     "lines": "Ielādējamo rindu skaits",
     "timeout": "Savienojuma taimauts milisekundēs",
-    "baseUrl": "OmniRoute API bāzes URL",
+    "baseUrl": "FreeRoute API bāzes URL",
     "requestId": "Filtrēt pēc pieprasījuma ID",
     "apiKey": "Filtrēt pēc API atslēgas",
     "combo": "Filtrēt pēc kombo nosaukuma",
@@ -1258,10 +1258,10 @@
     "description": "Kontrolēt sistēkas paneļa ikonu",
     "show": "Rādīt paneļa ikonu (ja serveris darbojas ar --tray)",
     "hide": "Paslēpt paneļa ikonu",
-    "quit": "Iziet no OmniRoute caur paneli"
+    "quit": "Iziet no FreeRoute caur paneli"
   },
   "autostart": {
-    "description": "Pārvaldīt OmniRoute automātisko startu pie startēšanas (Linux: systemd lietotāja pakalpojums)",
+    "description": "Pārvaldīt FreeRoute automātisko startu pie startēšanas (Linux: systemd lietotāja pakalpojums)",
     "enable": "Iespējot automātisko startu pie startēšanas",
     "disable": "Atspējot automātisko startu pie startēšanas",
     "toggle": "Pārslēgt automātisko startu pie startēšanas",
@@ -1293,19 +1293,19 @@
     "scaffold": "Izveidot jauna spraudņa veidni"
   },
   "launch": {
-    "description": "Palaist Claude Code, norādot uz OmniRoute (vietējo vai attālinātu, ar --profile)",
+    "description": "Palaist Claude Code, norādot uz FreeRoute (vietējo vai attālinātu, ar --profile)",
     "token": "Tokens, ko Claude klients jānosūta (ANTHROPIC_AUTH_TOKEN)",
-    "notRunning": "OmniRoute nav sasniedzams pie {port}. Palaidiet to ar 'omniroute serve'.",
+    "notRunning": "FreeRoute nav sasniedzams pie {port}. Palaidiet to ar 'freeroute serve'.",
     "notFound": "'claude' CLI netika atrasts PATH."
   },
   "run": {
-    "description": "Palaidiet atbalstītu CLI mērķi caur OmniRoute"
+    "description": "Palaidiet atbalstītu CLI mērķi caur FreeRoute"
   },
   "setupClaude": {
-    "description": "Ģenerēt ~/.claude/profiles Claude Code profilus no OmniRoute modeļu kataloga"
+    "description": "Ģenerēt ~/.claude/profiles Claude Code profilus no FreeRoute modeļu kataloga"
   },
   "connect": {
-    "description": "Savienoties ar attālinātu OmniRoute serveri un ievadīt attālināto režīmu"
+    "description": "Savienoties ar attālinātu FreeRoute serveri un ievadīt attālināto režīmu"
   },
   "tokens": {
     "description": "Pārvaldīt ierobežotus CLI pieejas žetonus (attālinātais režīms)"
@@ -1314,10 +1314,10 @@
     "description": "Izvēlēties piegādātāju+modeli no aktīvā servera un konfigurēt atbalstītu vietējo CLI"
   },
   "launchCodex": {
-    "description": "Palaidiet Codex CLI vērstu uz OmniRoute (vietējā vai attālinātā VPS)"
+    "description": "Palaidiet Codex CLI vērstu uz FreeRoute (vietējā vai attālinātā VPS)"
   },
   "setupCodex": {
-    "description": "Ģenerēt ~/.codex profila failus no OmniRoute dzīvā modeļu kataloga"
+    "description": "Ģenerēt ~/.codex profila failus no FreeRoute dzīvā modeļu kataloga"
   },
   "packs": {
     "description": "Pārvaldīt izvēles runtime pakotnes (ML / pārlūkprogrammu automatizācija)",
@@ -1330,7 +1330,7 @@
     "errUnknown": "nezināma pakotne: {name}",
     "errNoIndex": "pakotnes indekss nav atrasts; padod --source <dir>, kas satur pakotnes ielādi (darbvirsmas komplekti to piegādā blakus lietotnei)",
     "installed": "pakotne \"{name}\" instalēta un pārbaudīta {dir}",
-    "restartHint": "restartēt OmniRoute serveri (vai darbvirsmas lietotni), lai runtime pārņemtu pakotni",
+    "restartHint": "restartēt FreeRoute serveri (vai darbvirsmas lietotni), lai runtime pārņemtu pakotni",
     "removed": "pakotne \"{name}\" noņemta",
     "notInstalled": "pakotne \"{name}\" netika instalēta",
     "verifyOk": "visas instalētās pakotnes pārbaudītas",

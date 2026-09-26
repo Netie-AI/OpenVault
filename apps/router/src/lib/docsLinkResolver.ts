@@ -1,6 +1,9 @@
 import path from "node:path";
 
-export const GITHUB_REPO_BLOB_URL = "https://github.com/diegosouzapw/OmniRoute/blob/main";
+// FreeRoute: this used to point at the upstream OmniRoute repo. FreeRoute's
+// own source (this app) lives under `apps/router` in the Netie monorepo, so
+// doc links that escape `docs/` into repo source now resolve there instead.
+export const GITHUB_REPO_BLOB_URL = "https://github.com/Netie-AI/Netie/blob/main/apps/router";
 
 /**
  * Resolves a doc link (e.g. `../routing/AUTO-COMBO.md#14-factors`, `./RESILIENCE_GUIDE.md`,

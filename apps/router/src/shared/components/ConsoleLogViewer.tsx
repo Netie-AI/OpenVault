@@ -260,7 +260,7 @@ export default function ConsoleLogViewer() {
           <div className="w-3 h-3 rounded-full bg-[#FFBD2E]" />
           <div className="w-3 h-3 rounded-full bg-[#27C93F]" />
           <span className="ml-3 text-[#8b949e] text-[11px]">
-            OmniRoute — {tv("applicationConsole")}
+            FreeRoute — {tv("applicationConsole")}
           </span>
         </div>
 

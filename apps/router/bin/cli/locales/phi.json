@@ -1,8 +1,8 @@
 {
   "common": {
     "error": "Error: {message}",
-    "serverOffline": "Offline ang OmniRoute server. Simulan ito gamit ang: omniroute serve",
-    "authRequired": "Kinakailangan ang authentication. Itakda ang OMNIROUTE_API_KEY o patakbuhin ang: omniroute setup",
+    "serverOffline": "Offline ang FreeRoute server. Simulan ito gamit ang: freeroute serve",
+    "authRequired": "Kinakailangan ang authentication. Itakda ang OMNIROUTE_API_KEY o patakbuhin ang: freeroute setup",
     "rateLimited": "Lumampas sa limitasyon ng rate. Subukan muli pagkalipas ng {seconds}s.",
     "timeout": "Nag-timeout ang request pagkalipas ng {ms}ms.",
     "success": "Tapos na.",
@@ -15,7 +15,7 @@
     "yesOpt": "Laktawan ang prompt sa pagkumpirma"
   },
   "setup": {
-    "title": "Pag-setup ng OmniRoute",
+    "title": "Pag-setup ng FreeRoute",
     "passwordPrompt": "Password ng admin",
     "providerPrompt": "Default na provider (iwanang blangko para laktawan)",
     "done": "Kumpleto na ang pag-setup",
@@ -30,19 +30,19 @@
     "opencode": "I-install at i-configure ang kasamang @omniroute/opencode-plugin para sa OpenCode"
   },
   "doctor": {
-    "title": "OmniRoute Doctor",
+    "title": "FreeRoute Doctor",
     "dbOk": "Database: OK ({path})",
-    "dbMissing": "Database: hindi pa nasisimulan — patakbuhin ang `omniroute setup`",
+    "dbMissing": "Database: hindi pa nasisimulan — patakbuhin ang `freeroute setup`",
     "portOk": "Port {port}: available",
     "portConflict": "Port {port}: ginagamit ng ibang proseso",
     "encryptionOk": "Encryption key: naka-configure",
-    "encryptionMissing": "Nawawala ang encryption key — patakbuhin ang `omniroute setup`",
+    "encryptionMissing": "Nawawala ang encryption key — patakbuhin ang `freeroute setup`",
     "allGood": "Pumasa ang lahat ng pagsusuri.",
     "warnings": "{count} babala — tingnan sa itaas."
   },
   "providers": {
     "title": "Mga Provider",
-    "noProviders": "Walang naka-configure na provider. Patakbuhin ang: omniroute setup",
+    "noProviders": "Walang naka-configure na provider. Patakbuhin ang: freeroute setup",
     "testing": "Sinusubukan ang {name}...",
     "available": "{count} provider ang available",
     "connected": "Nakakonekta",
@@ -71,7 +71,7 @@
       "dryRunOpt": "Ipakita kung ano ang magbabago nang hindi nagsusulat",
       "confirmPrompt": "Palitan ang API key para sa koneksyong \"{name}\" ({id})? [y/N]",
       "dryRunResult": "[dry-run] Papalitan sana ang key para sa \"{name}\" ({id}). Walang ginawang pagbabago.",
-      "oauthHint": "Koneksyong OAuth — patakbuhin: omniroute oauth {provider}",
+      "oauthHint": "Koneksyong OAuth — patakbuhin: freeroute oauth {provider}",
       "envVarEmpty": "Hindi nakatakda o walang laman ang environment variable na {var}.",
       "success": "Napalitan ang key para sa \"{name}\". Patakbuhin ang `providers test {id}` para beripikahin.",
       "testPassed": "Pumasa ang test pagkatapos palitan ang key.",
@@ -82,7 +82,7 @@
       "providerOpt": "I-filter ayon sa pangalan ng provider",
       "header": "ID         Provider       Pangalan                 Status ng Expiration  Status ng Test  Cooldown Hanggang",
       "noData": "Walang available na data ng koneksyon ng provider.",
-      "requiresServer": "Kailangang tumatakbo ang server ng OmniRoute para sa providers status."
+      "requiresServer": "Kailangang tumatakbo ang server ng FreeRoute para sa providers status."
     }
   },
   "keys": {
@@ -90,8 +90,8 @@
     "addDescription": "Magdagdag o mag-update ng API key para sa isang provider",
     "listDescription": "Ilista ang lahat ng naka-configure na API key",
     "removeDescription": "Alisin ang API key para sa isang provider",
-    "regenerateDescription": "Muling bumuo ng OmniRoute API key",
-    "revokeDescription": "Bawiin ang OmniRoute API key",
+    "regenerateDescription": "Muling bumuo ng FreeRoute API key",
+    "revokeDescription": "Bawiin ang FreeRoute API key",
     "revealDescription": "Ipakita ang hindi natatakpang value ng API key",
     "usageDescription": "Ipakita ang kamakailang paggamit ng isang API key",
     "usageLimitOpt": "Bilang ng mga kamakailang request",
@@ -142,7 +142,7 @@
     "warning": "⚠ Nagpi-print/nagsusulat ito ng mga NA-DECRYPT na plaintext na API key at OAuth token. Tiyaking mananatiling pribado ang iyong screen, kasaysayan ng shell, at anumang output file.",
     "confirmHeading": "⚠ BABALA: ine-export nito ang mga NA-DECRYPT na kredensyal ng provider bilang plaintext",
     "confirmBody": "Dini-decrypt at pini-print/isinusulat ng command na ito ang apiKey, accessToken, refreshToken, at\nidToken para sa napiling (mga) koneksyon. Ituring na lihim ang output.",
-    "confirmFooter": "Para kumpirmahin, patakbuhin:\n  omniroute auth export --force",
+    "confirmFooter": "Para kumpirmahin, patakbuhin:\n  freeroute auth export --force",
     "missingKey": "Kinakailangan ang STORAGE_ENCRYPTION_KEY upang i-export ang mga kredensyal.",
     "notFound": "Hindi nahanap ang koneksyon: {id}",
     "invalidFormat": "Di-wastong format: {format}. Gamitin ang json o env."
@@ -220,10 +220,10 @@
     "reasoning": "Antas ng pagsisikap sa pangangatwiran (low|medium|high)",
     "thinking": "Badyet ng token para sa pinalawig na pag-iisip",
     "explain": "I-print ang fallback tree at saklaw ng gastos sa stderr",
-    "noCombo": "Walang nakitang tumutugmang combo. Mag-configure ng isa gamit ang: omniroute combo create"
+    "noCombo": "Walang nakitang tumutugmang combo. Mag-configure ng isa gamit ang: freeroute combo create"
   },
   "chat": {
-    "description": "Magpadala ng one-shot na chat prompt sa OmniRoute",
+    "description": "Magpadala ng one-shot na chat prompt sa FreeRoute",
     "file": "Basahin ang prompt mula sa file",
     "stdin": "Basahin ang prompt mula sa stdin",
     "system": "System prompt",
@@ -242,8 +242,8 @@
     }
   },
   "serve": {
-    "description": "Simulan ang OmniRoute server (default na aksyon)",
-    "starting": "Sinisimulan ang OmniRoute server sa port {port}...",
+    "description": "Simulan ang FreeRoute server (default na aksyon)",
+    "starting": "Sinisimulan ang FreeRoute server sa port {port}...",
     "ready": "Handa na sa http://localhost:{port}",
     "stopping": "Itinitigil ang server (PID {pid})...",
     "stopped": "Itinigil na ang server.",
@@ -262,7 +262,7 @@
   },
   "backup": {
     "title": "Backup",
-    "description": "Gumawa ng backup ng data ng OmniRoute",
+    "description": "Gumawa ng backup ng data ng FreeRoute",
     "creating": "Ginagawa ang backup...",
     "done": "Na-save ang backup sa {path}",
     "noFiles": "Walang file na iba-backup (hindi pa nasisimulan ang database)",
@@ -274,7 +274,7 @@
     "noBackups": "Walang nakitang backup.",
     "notFound": "Hindi nakita ang backup: {name}",
     "confirmRestore": "I-overwrite ang kasalukuyang data gamit ang backup mula noong {ts}?",
-    "createDescription": "Gumawa ng backup ng data ng OmniRoute",
+    "createDescription": "Gumawa ng backup ng data ng FreeRoute",
     "nameOpt": "Custom na pangalan ng backup",
     "cloudOpt": "I-upload ang backup sa cloud storage",
     "encryptOpt": "I-encrypt ang backup gamit ang AES-256-GCM",
@@ -292,14 +292,14 @@
       "statusDescription": "Ipakita ang kasalukuyang status ng iskedyul ng backup",
       "cronOpt": "Cron expression para sa iskedyul (default: araw-araw nang 3am)",
       "enabled": "Naka-enable ang awtomatikong backup (cron: {cron}).",
-      "hint": "Binabasa ng omniroute serve ang iskedyul sa pagsisimula.",
+      "hint": "Binabasa ng freeroute serve ang iskedyul sa pagsisimula.",
       "disabled": "Naka-disable ang awtomatikong backup.",
       "notConfigured": "Walang nakakonfigurang iskedyul ng backup."
     }
   },
   "health": {
     "description": "Suriin ang kalusugan ng server at status ng mga component",
-    "noServer": "Hindi tumatakbo ang server. Simulan gamit ang: omniroute serve",
+    "noServer": "Hindi tumatakbo ang server. Simulan gamit ang: freeroute serve",
     "title": "Kalusugan",
     "status": "Katayuan: {status}",
     "uptime": "Tagal ng paggana: {uptime}",
@@ -308,21 +308,21 @@
   },
   "quota": {
     "description": "Ipakita ang paggamit ng quota ng provider",
-    "noServer": "Hindi tumatakbo ang server. Simulan gamit ang: omniroute serve",
+    "noServer": "Hindi tumatakbo ang server. Simulan gamit ang: freeroute serve",
     "noData": "Walang available na impormasyon tungkol sa quota."
   },
   "cache": {
     "description": "Pamahalaan ang cache ng tugon",
-    "noServer": "Hindi tumatakbo ang server. Simulan gamit ang: omniroute serve",
+    "noServer": "Hindi tumatakbo ang server. Simulan gamit ang: freeroute serve",
     "cleared": "Na-clear ang cache.",
     "clearFailed": "Hindi na-clear ang cache."
   },
   "redis": {
-    "description": "Maglunsad ng lokal na Redis container sa isang click (Podman o Docker) para sa pag-cache at pagsubaybay ng quota ng OmniRoute"
+    "description": "Maglunsad ng lokal na Redis container sa isang click (Podman o Docker) para sa pag-cache at pagsubaybay ng quota ng FreeRoute"
   },
   "test": {
     "description": "Subukan ang koneksyon sa isang provider",
-    "noServer": "Hindi tumatakbo ang server. Simulan gamit ang: omniroute serve",
+    "noServer": "Hindi tumatakbo ang server. Simulan gamit ang: freeroute serve",
     "testing": "Sinusubukan ang {provider} / {model}...",
     "passed": "Matagumpay ang koneksyon!",
     "failed": "Nabigo ang koneksyon: {error}",
@@ -334,7 +334,7 @@
     "saved": "Na-save ang mga resulta sa {path}",
     "compareTitle": "Paghahambing ng mga Modelo",
     "compareMinTwo": "Kailangan ng hindi bababa sa dalawang modelo para sa --compare (pinaghihiwalay ng kuwit)",
-    "noProviders": "Walang naka-configure na provider. Magdagdag gamit ang: omniroute keys add"
+    "noProviders": "Walang naka-configure na provider. Magdagdag gamit ang: freeroute keys add"
   },
   "update": {
     "checking": "Sinusuri kung may mga update...",
@@ -348,7 +348,7 @@
     "running": "Tumatakbo ang MCP server ({transport})",
     "stopped": "Huminto ang MCP server.",
     "restarted": "Na-restart ang MCP server.",
-    "stoppedHint": "Patakbuhin ang `omniroute mcp enable` upang i-on ito.",
+    "stoppedHint": "Patakbuhin ang `freeroute mcp enable` upang i-on ito.",
     "enabled": "Naka-enable ang MCP server.",
     "disabled": "Naka-disable ang MCP server.",
     "enable": {
@@ -416,7 +416,7 @@
     }
   },
   "policy": {
-    "description": "Pamahalaan ang mga patakaran sa awtorisasyon ng OmniRoute",
+    "description": "Pamahalaan ang mga patakaran sa awtorisasyon ng FreeRoute",
     "list": {
       "description": "Ilista ang mga patakaran",
       "kind": "I-filter ayon sa uri (allow|deny|rate-limit|cost-cap)",
@@ -453,7 +453,7 @@
     }
   },
   "compression": {
-    "description": "I-configure at siyasatin ang compression pipeline ng OmniRoute",
+    "description": "I-configure at siyasatin ang compression pipeline ng FreeRoute",
     "status": {
       "description": "Ipakita ang kasalukuyang status at mga setting ng compression"
     },
@@ -507,18 +507,18 @@
     "confirmRotate": "I-rotate ang tunnel na {type}? (gagawa ng bagong URL)"
   },
   "stop": {
-    "description": "Ihinto ang OmniRoute server",
+    "description": "Ihinto ang FreeRoute server",
     "stopping": "Ihihinto ang server (PID {pid})...",
     "stopped": "Nahinto na ang server.",
     "notRunning": "Walang tumatakbong server.",
     "portFallback": "Walang nakitang PID file, susubukang ihinto batay sa port..."
   },
   "restart": {
-    "description": "I-restart ang OmniRoute server",
-    "restarting": "Nire-restart ang OmniRoute server..."
+    "description": "I-restart ang FreeRoute server",
+    "restarting": "Nire-restart ang FreeRoute server..."
   },
   "dashboard": {
-    "description": "Buksan ang OmniRoute dashboard sa browser",
+    "description": "Buksan ang FreeRoute dashboard sa browser",
     "opening": "Binubuksan ang dashboard sa {url}",
     "urlOnly": "I-print ang URL ng dashboard nang hindi binubuksan ang browser",
     "tui": "Buksan ang interaktibong TUI dashboard (terminal UI, 7 tab)"
@@ -526,7 +526,7 @@
   "models": {
     "description": "Ilista ang mga available na modelo (kailangan ang server)",
     "search": "I-filter ang mga modelo ayon sa id, pangalan, provider, o paglalarawan",
-    "noServer": "Hindi tumatakbo ang server. Simulan gamit ang: omniroute serve",
+    "noServer": "Hindi tumatakbo ang server. Simulan gamit ang: freeroute serve",
     "noModels": "Walang nakitang modelo."
   },
   "audit": {
@@ -558,7 +558,7 @@
     }
   },
   "skills": {
-    "description": "Pamahalaan ang mga skill ng OmniRoute (sandbox, builtin, custom, hybrid, skillssh)",
+    "description": "Pamahalaan ang mga skill ng FreeRoute (sandbox, builtin, custom, hybrid, skillssh)",
     "list": {
       "description": "Ilista ang mga naka-install na skill",
       "type": "I-filter ayon sa uri (sandbox|custom|builtin|hybrid|skillssh)",
@@ -631,7 +631,7 @@
     }
   },
   "memory": {
-    "description": "Pamahalaan ang memorya ng pag-uusap ng OmniRoute (FTS5 + vector)",
+    "description": "Pamahalaan ang memorya ng pag-uusap ng FreeRoute (FTS5 + vector)",
     "search": {
       "description": "Maghanap sa mga entry ng memorya gamit ang semantic query",
       "type": "I-filter ayon sa uri ng memorya (user|feedback|project|reference)",
@@ -789,7 +789,7 @@
     }
   },
   "webhooks": {
-    "description": "Pamahalaan ang mga webhook ng OmniRoute",
+    "description": "Pamahalaan ang mga webhook ng FreeRoute",
     "events": {
       "description": "Ilista ang lahat ng available na uri ng webhook event"
     },
@@ -821,14 +821,14 @@
     }
   },
   "program": {
-    "description": "OmniRoute — Matalinong AI Router na may Awtomatikong Fallback",
+    "description": "FreeRoute — Matalinong AI Router na may Awtomatikong Fallback",
     "version": "I-print ang bersyon at lumabas",
     "output": "Format ng output (table, json, jsonl, csv)",
     "quiet": "Itago ang hindi mahalagang output",
     "no_color": "I-disable ang may-kulay na output",
     "timeout": "Timeout ng HTTP request sa millisecond",
-    "api_key": "API key para sa OmniRoute server",
-    "base_url": "Base URL ng OmniRoute server",
+    "api_key": "API key para sa FreeRoute server",
+    "base_url": "Base URL ng FreeRoute server",
     "context": "Context/profile ng server na gagamitin para sa command na ito",
     "lang": "Itakda ang wika ng display ng CLI (ino-override ang OMNIROUTE_LANG)"
   },
@@ -1079,7 +1079,7 @@
     }
   },
   "openapi": {
-    "description": "I-access at subukan ang OmniRoute OpenAPI spec",
+    "description": "I-access at subukan ang FreeRoute OpenAPI spec",
     "dump": {
       "description": "I-dump ang OpenAPI spec sa stdout o file",
       "format": "Format ng output: yaml|json (default: yaml)",
@@ -1149,7 +1149,7 @@
     }
   },
   "open": {
-    "description": "Magbukas ng partikular na page ng dashboard ng OmniRoute sa browser",
+    "description": "Magbukas ng partikular na page ng dashboard ng FreeRoute sa browser",
     "url": "URL lang ang i-print, huwag buksan ang browser"
   },
   "telemetry": {
@@ -1166,7 +1166,7 @@
     }
   },
   "sync": {
-    "description": "I-sync ang configuration sa pagitan ng mga instance ng OmniRoute",
+    "description": "I-sync ang configuration sa pagitan ng mga instance ng FreeRoute",
     "push": {
       "description": "I-push ang config sa cloud o remote instance",
       "target": "Target (cloud o context:name)",
@@ -1222,8 +1222,8 @@
       "listTitle": "Mga Available na Wika",
       "current": "Wika: {code} ({name})",
       "saved": "Itinakda ang wika sa {code} ({name}).",
-      "noCode": "Kailangan ang code ng wika. Patakbuhin ang 'omniroute config lang list' upang makita ang mga available na code.",
-      "unknown": "Hindi kilalang code ng wika: {code}. Patakbuhin ang 'omniroute config lang list' upang makita ang mga available na code.",
+      "noCode": "Kailangan ang code ng wika. Patakbuhin ang 'freeroute config lang list' upang makita ang mga available na code.",
+      "unknown": "Hindi kilalang code ng wika: {code}. Patakbuhin ang 'freeroute config lang list' upang makita ang mga available na code.",
       "alreadySet": "Nakatakda na ang wika sa {code}.",
       "envHint": "Tip: maaari mo ring itakda ang OMNIROUTE_LANG={code} sa iyong environment."
     }
@@ -1242,7 +1242,7 @@
     "filter": "I-filter ayon sa antas (error,warn,info) — pinaghihiwalay ng kuwit",
     "lines": "Bilang ng mga linyang kukunin",
     "timeout": "Timeout ng koneksyon sa ms",
-    "baseUrl": "Base URL ng OmniRoute API",
+    "baseUrl": "Base URL ng FreeRoute API",
     "requestId": "I-filter ayon sa request ID",
     "apiKey": "I-filter ayon sa API key",
     "combo": "I-filter ayon sa pangalan ng combo",
@@ -1258,10 +1258,10 @@
     "description": "Kontrolin ang icon sa system tray",
     "show": "Ipakita ang icon sa tray (kung tumatakbo ang server gamit ang --tray)",
     "hide": "Itago ang icon sa tray",
-    "quit": "Isara ang OmniRoute sa pamamagitan ng tray"
+    "quit": "Isara ang FreeRoute sa pamamagitan ng tray"
   },
   "autostart": {
-    "description": "Pamahalaan ang awtomatikong pagsisimula ng OmniRoute sa pag-boot (Linux: systemd user service)",
+    "description": "Pamahalaan ang awtomatikong pagsisimula ng FreeRoute sa pag-boot (Linux: systemd user service)",
     "enable": "Paganahin ang awtomatikong pagsisimula sa pag-boot",
     "disable": "Huwag paganahin ang awtomatikong pagsisimula sa pag-boot",
     "toggle": "I-toggle ang awtomatikong pagsisimula sa pag-boot",
@@ -1293,19 +1293,19 @@
     "scaffold": "Bumuo ng boilerplate para sa bagong plugin"
   },
   "launch": {
-    "description": "Ilunsad ang Claude Code na nakaturo sa OmniRoute (lokal o remote, gamit ang --profile)",
+    "description": "Ilunsad ang Claude Code na nakaturo sa FreeRoute (lokal o remote, gamit ang --profile)",
     "token": "Token na dapat ipadala ng Claude client (ANTHROPIC_AUTH_TOKEN)",
-    "notRunning": "Hindi maabot ang OmniRoute sa {port}. Simulan ito gamit ang 'omniroute serve'.",
+    "notRunning": "Hindi maabot ang FreeRoute sa {port}. Simulan ito gamit ang 'freeroute serve'.",
     "notFound": "Hindi natagpuan sa PATH ang 'claude' CLI."
   },
   "run": {
-    "description": "Maglunsad ng sinusuportahang CLI target sa pamamagitan ng OmniRoute"
+    "description": "Maglunsad ng sinusuportahang CLI target sa pamamagitan ng FreeRoute"
   },
   "setupClaude": {
-    "description": "Bumuo ng mga Claude Code profile sa ~/.claude/profiles mula sa catalog ng modelo ng OmniRoute"
+    "description": "Bumuo ng mga Claude Code profile sa ~/.claude/profiles mula sa catalog ng modelo ng FreeRoute"
   },
   "connect": {
-    "description": "Kumonekta sa isang remote na OmniRoute server at pumasok sa remote mode"
+    "description": "Kumonekta sa isang remote na FreeRoute server at pumasok sa remote mode"
   },
   "tokens": {
     "description": "Pamahalaan ang mga scoped CLI access token (remote mode)"
@@ -1314,10 +1314,10 @@
     "description": "Pumili ng provider+model mula sa aktibong server at i-configure ang isang sinusuportahang lokal na CLI"
   },
   "launchCodex": {
-    "description": "Ilunsad ang Codex CLI na nakaturo sa OmniRoute (lokal o remote VPS)"
+    "description": "Ilunsad ang Codex CLI na nakaturo sa FreeRoute (lokal o remote VPS)"
   },
   "setupCodex": {
-    "description": "Bumuo ng mga ~/.codex profile file mula sa live na catalog ng modelo ng OmniRoute"
+    "description": "Bumuo ng mga ~/.codex profile file mula sa live na catalog ng modelo ng FreeRoute"
   },
   "packs": {
     "description": "Pamahalaan ang mga opsyonal na runtime pack (ML / browser automation)",
@@ -1330,7 +1330,7 @@
     "errUnknown": "hindi kilalang pack: {name}",
     "errNoIndex": "hindi natagpuan ang pack index; ipasa ang --source <dir> na naglalaman ng pack payload (kasama ito sa mga desktop bundle, katabi ng app)",
     "installed": "na-install at na-verify ang pack na \"{name}\" sa {dir}",
-    "restartHint": "i-restart ang OmniRoute server (o desktop app) upang magamit ng runtime ang pack",
+    "restartHint": "i-restart ang FreeRoute server (o desktop app) upang magamit ng runtime ang pack",
     "removed": "inalis ang pack na \"{name}\"",
     "notInstalled": "hindi naka-install ang pack na \"{name}\"",
     "verifyOk": "na-verify ang lahat ng naka-install na pack",

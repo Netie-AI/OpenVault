@@ -13,9 +13,9 @@ export const APIKEY_PROVIDERS_SPECIALTY = {
     textIcon: "NLPC",
     website: "https://docs.nlpcloud.com",
     authHint:
-      "Use your NLP Cloud API key in Authorization: Token <key>. OmniRoute targets the chatbot endpoint on https://api.nlpcloud.io/v1/gpu/<model>/chatbot by default.",
+      "Use your NLP Cloud API key in Authorization: Token <key>. FreeRoute targets the chatbot endpoint on https://api.nlpcloud.io/v1/gpu/<model>/chatbot by default.",
     apiHint:
-      "NLP Cloud uses a proprietary chatbot API instead of OpenAI chat/completions. OmniRoute adapts OpenAI messages to input/context/history and exposes a local catalog of supported chatbot models.",
+      "NLP Cloud uses a proprietary chatbot API instead of OpenAI chat/completions. FreeRoute adapts OpenAI messages to input/context/history and exposes a local catalog of supported chatbot models.",
     hasFree: true,
     freeNote: "Trial credits for new accounts",
   },
@@ -29,9 +29,9 @@ export const APIKEY_PROVIDERS_SPECIALTY = {
     textIcon: "RW",
     website: "https://docs.dev.runwayml.com",
     authHint:
-      "Use your Runway API key in Authorization: Bearer <key>. OmniRoute targets the current Runway API at https://api.dev.runwayml.com/v1 and sends the required X-Runway-Version header automatically.",
+      "Use your Runway API key in Authorization: Bearer <key>. FreeRoute targets the current Runway API at https://api.dev.runwayml.com/v1 and sends the required X-Runway-Version header automatically.",
     apiHint:
-      "Runway video generation is task-based. OmniRoute submits text-to-video or image-to-video jobs, polls /v1/tasks/{id}, and normalizes the finished video outputs back into the OpenAI-like /v1/videos/generations response.",
+      "Runway video generation is task-based. FreeRoute submits text-to-video or image-to-video jobs, polls /v1/tasks/{id}, and normalizes the finished video outputs back into the OpenAI-like /v1/videos/generations response.",
   },
   kie: {
     id: "kie",
@@ -55,7 +55,7 @@ export const APIKEY_PROVIDERS_SPECIALTY = {
     hasFree: true,
     anonymousFallback: true,
     authHint:
-      "Anonymous/keyless access to the documented free models is best-effort. Local v3.8.50 verification (2026-07-31) returned 401 via OmniRoute and Cloudflare 1010 on direct upstream probes from the same network. Premium models still require a Pollinations API key from enter.pollinations.ai.",
+      "Anonymous/keyless access to the documented free models is best-effort. Local v3.8.50 verification (2026-07-31) returned 401 via FreeRoute and Cloudflare 1010 on direct upstream probes from the same network. Premium models still require a Pollinations API key from enter.pollinations.ai.",
     freeNote:
       "Free keyless tier: openai, openai-fast, openai-large, qwen-coder, mistral, deepseek, grok, gemini-flash-lite-3.1, perplexity-fast, perplexity-reasoning. Premium models (claude, gemini, midijourney) require a Pollinations API key from enter.pollinations.ai.",
   },
@@ -226,9 +226,9 @@ export const APIKEY_PROVIDERS_SPECIALTY = {
     textIcon: "SG",
     website: "https://segmind.com",
     authHint:
-      "Use your Segmind API key in the x-api-key header. OmniRoute targets https://api.segmind.com/v1/<model> and returns the generated image/video bytes directly.",
+      "Use your Segmind API key in the x-api-key header. FreeRoute targets https://api.segmind.com/v1/<model> and returns the generated image/video bytes directly.",
     apiHint:
-      "Segmind exposes 200+ hosted image and video models (Flux, SDXL, SD3, Kandinsky, Wan, Hunyuan, LTX, Kling, ...) under a single POST /v1/<model> REST call per model. OmniRoute ships a curated starter subset for each modality; more models can be routed by using their Segmind slug as the model id.",
+      "Segmind exposes 200+ hosted image and video models (Flux, SDXL, SD3, Kandinsky, Wan, Hunyuan, LTX, Kling, ...) under a single POST /v1/<model> REST call per model. FreeRoute ships a curated starter subset for each modality; more models can be routed by using their Segmind slug as the model id.",
     hasFree: true,
     freeNote: "Free trial credits on signup, no credit card required (per Segmind's public docs).",
   },
@@ -282,7 +282,7 @@ export const APIKEY_PROVIDERS_SPECIALTY = {
     textIcon: "JR",
     website: "https://jina.ai/reader",
     authHint:
-      "Bearer API key for r.jina.ai URL-to-markdown (/v1/web/fetch only). Does not serve /v1/embeddings or /v1/rerank. The same Jina token as Foundation API works; OmniRoute reuses a jina-ai dashboard key or JINA_AI_API_KEY when this card is empty.",
+      "Bearer API key for r.jina.ai URL-to-markdown (/v1/web/fetch only). Does not serve /v1/embeddings or /v1/rerank. The same Jina token as Foundation API works; FreeRoute reuses a jina-ai dashboard key or JINA_AI_API_KEY when this card is empty.",
     hasFree: true,
     notice: {
       text: "Reader / r.jina.ai only — not embeddings or rerank. Free tier: 1M fetches/month.",
@@ -299,7 +299,7 @@ export const APIKEY_PROVIDERS_SPECIALTY = {
     textIcon: "TF",
     website: "https://docs.tinyfish.ai/fetch-api",
     notice: {
-      text: "Fetch does not use TinyFish credits. Submit up to 10 URLs per request (OmniRoute fetches one URL per call).",
+      text: "Fetch does not use TinyFish credits. Submit up to 10 URLs per request (FreeRoute fetches one URL per call).",
       apiKeyUrl: "https://agent.tinyfish.ai/api-keys",
     },
     authHint: "X-API-Key from agent.tinyfish.ai/api-keys",
@@ -317,7 +317,7 @@ export const APIKEY_PROVIDERS_SPECIALTY = {
     authHint:
       "Use your DeepAI API key. Get one at deepai.org — requires a Pro subscription ($9.99/mo).",
     apiHint:
-      "DeepAI uses per-endpoint REST calls (e.g. /api/text2img) instead of OpenAI chat/completions. OmniRoute adapts OpenAI image generation requests to DeepAI's /api/{slug} endpoints.",
+      "DeepAI uses per-endpoint REST calls (e.g. /api/text2img) instead of OpenAI chat/completions. FreeRoute adapts OpenAI image generation requests to DeepAI's /api/{slug} endpoints.",
   },
   "cursor-api": {
     id: "cursor-api",
@@ -331,8 +331,8 @@ export const APIKEY_PROVIDERS_SPECIALTY = {
     subscriptionRisk: true,
     riskNoticeVariant: "oauth",
     authHint:
-      "Paste a Cursor user API key (crsr_...) from cursor.com/dashboard/api. OmniRoute exchanges it for a session token on demand; no IDE or cursor-agent install is needed. Usage bills to the Cursor plan that owns the key.",
+      "Paste a Cursor user API key (crsr_...) from cursor.com/dashboard/api. FreeRoute exchanges it for a session token on demand; no IDE or cursor-agent install is needed. Usage bills to the Cursor plan that owns the key.",
     apiHint:
-      "Same agent protocol and model catalog as the Cursor IDE provider. The Cursor CLI can also be pointed at /api/cursor-cli on this instance and authenticated with an OmniRoute API key.",
+      "Same agent protocol and model catalog as the Cursor IDE provider. The Cursor CLI can also be pointed at /api/cursor-cli on this instance and authenticated with an FreeRoute API key.",
   },
 };

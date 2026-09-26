@@ -1,8 +1,8 @@
 {
   "common": {
     "error": "خطأ: {message}",
-    "serverOffline": "خادم OmniRoute غير متصل. ابدأ بالأمر: omniroute serve",
-    "authRequired": "المصادقة مطلوبة. عيّن OMNIROUTE_API_KEY أو شغّل: omniroute setup",
+    "serverOffline": "خادم FreeRoute غير متصل. ابدأ بالأمر: freeroute serve",
+    "authRequired": "المصادقة مطلوبة. عيّن OMNIROUTE_API_KEY أو شغّل: freeroute setup",
     "rateLimited": "تم تجاوز حد الطلبات. أعد المحاولة بعد {seconds} ثانية.",
     "timeout": "انتهت مهلة الطلب بعد {ms}ms.",
     "success": "تم.",
@@ -15,7 +15,7 @@
     "yesOpt": "تخطي رسالة التأكيد"
   },
   "setup": {
-    "title": "إعداد OmniRoute",
+    "title": "إعداد FreeRoute",
     "passwordPrompt": "كلمة مرور المسؤول",
     "providerPrompt": "المزوّد الافتراضي (اتركه فارغًا للتخطي)",
     "done": "اكتمل الإعداد",
@@ -30,19 +30,19 @@
     "opencode": "ثبّت وعيّن إعدادات @omniroute/opencode-plugin المضمّنة لـ OpenCode"
   },
   "doctor": {
-    "title": "أداة تشخيص OmniRoute",
+    "title": "أداة تشخيص FreeRoute",
     "dbOk": "قاعدة البيانات: سليمة ({path})",
-    "dbMissing": "قاعدة البيانات: غير مهيأة — شغّل `omniroute setup`",
+    "dbMissing": "قاعدة البيانات: غير مهيأة — شغّل `freeroute setup`",
     "portOk": "المنفذ {port}: متاح",
     "portConflict": "المنفذ {port}: مستخدم بواسطة عملية أخرى",
     "encryptionOk": "مفتاح التشفير: تم تكوينه",
-    "encryptionMissing": "مفتاح التشفير مفقود — شغّل `omniroute setup`",
+    "encryptionMissing": "مفتاح التشفير مفقود — شغّل `freeroute setup`",
     "allGood": "نجحت جميع عمليات التحقق.",
     "warnings": "{count} تحذير — انظر أعلاه."
   },
   "providers": {
     "title": "المزوّدون",
-    "noProviders": "لم يتم تكوين أي مزوّدين. شغّل: omniroute setup",
+    "noProviders": "لم يتم تكوين أي مزوّدين. شغّل: freeroute setup",
     "testing": "جارٍ اختبار {name}...",
     "available": "عدد المزوّدين المتاحين: {count}",
     "connected": "متصل",
@@ -71,7 +71,7 @@
       "dryRunOpt": "عرض ما سيتغير دون كتابة",
       "confirmPrompt": "استبدال مفتاح API للاتصال \"{name}\" ({id})؟ [y/N]",
       "dryRunResult": "[dry-run] سيتم تدوير مفتاح \"{name}\" ({id}). لم تُجرَ أي تغييرات.",
-      "oauthHint": "اتصال OAuth — شغّل: omniroute oauth {provider}",
+      "oauthHint": "اتصال OAuth — شغّل: freeroute oauth {provider}",
       "envVarEmpty": "متغير البيئة {var} غير معيّن أو فارغ.",
       "success": "تم تدوير مفتاح \"{name}\". شغّل `providers test {id}` للتحقق.",
       "testPassed": "نجح اختبار ما بعد التدوير.",
@@ -82,7 +82,7 @@
       "providerOpt": "التصفية حسب اسم موفّر الخدمة",
       "header": "المعرّف     موفّر الخدمة   الاسم                     حالة الانتهاء  حالة الاختبار  انتهاء فترة الانتظار",
       "noData": "لا تتوفر بيانات لاتصالات موفّري الخدمة.",
-      "requiresServer": "يتطلب providers status أن يكون خادم OmniRoute قيد التشغيل."
+      "requiresServer": "يتطلب providers status أن يكون خادم FreeRoute قيد التشغيل."
     }
   },
   "keys": {
@@ -90,8 +90,8 @@
     "addDescription": "إضافة مفتاح API لموفّر خدمة أو تحديثه",
     "listDescription": "عرض جميع مفاتيح API المهيّأة",
     "removeDescription": "إزالة مفتاح API لموفّر خدمة",
-    "regenerateDescription": "إعادة إنشاء مفتاح API خاص بـ OmniRoute",
-    "revokeDescription": "إلغاء مفتاح API خاص بـ OmniRoute",
+    "regenerateDescription": "إعادة إنشاء مفتاح API خاص بـ FreeRoute",
+    "revokeDescription": "إلغاء مفتاح API خاص بـ FreeRoute",
     "revealDescription": "إظهار قيمة مفتاح API غير المحجوبة",
     "usageDescription": "عرض الاستخدام الأخير لمفتاح API",
     "usageLimitOpt": "عدد الطلبات الأخيرة",
@@ -142,7 +142,7 @@
     "warning": "⚠ يؤدي هذا إلى طباعة/كتابة مفاتيح API ورموز OAuth بعد فك تشفيرها بنص صريح. تأكد من الحفاظ على خصوصية شاشتك وسجل الصدفة وأي ملف مخرجات.",
     "confirmHeading": "⚠ تحذير: يؤدي هذا إلى تصدير بيانات اعتماد المزوّد بعد فك تشفيرها بنص صريح",
     "confirmBody": "يفك هذا الأمر تشفير apiKey وaccessToken وrefreshToken و\nidToken ويطبعها/يكتبها للاتصال (أو الاتصالات) المحدد. تعامل مع المخرجات باعتبارها سرًا.",
-    "confirmFooter": "للتأكيد، شغّل:\n  omniroute auth export --force",
+    "confirmFooter": "للتأكيد، شغّل:\n  freeroute auth export --force",
     "missingKey": "يلزم STORAGE_ENCRYPTION_KEY لتصدير بيانات الاعتماد.",
     "notFound": "لم يتم العثور على الاتصال: {id}",
     "invalidFormat": "تنسيق غير صالح: {format}. استخدم json أو env."
@@ -220,10 +220,10 @@
     "reasoning": "مستوى جهد الاستدلال (low|medium|high)",
     "thinking": "ميزانية الرموز للتفكير الممتد",
     "explain": "طباعة شجرة الخيارات الاحتياطية ونطاق التكلفة إلى stderr",
-    "noCombo": "لم يتم العثور على تركيبة مطابقة. اضبط واحدة باستخدام: omniroute combo create"
+    "noCombo": "لم يتم العثور على تركيبة مطابقة. اضبط واحدة باستخدام: freeroute combo create"
   },
   "chat": {
-    "description": "أرسل مطالبة دردشة لمرة واحدة إلى OmniRoute",
+    "description": "أرسل مطالبة دردشة لمرة واحدة إلى FreeRoute",
     "file": "اقرأ المطالبة من ملف",
     "stdin": "اقرأ المطالبة من stdin",
     "system": "مطالبة النظام",
@@ -242,8 +242,8 @@
     }
   },
   "serve": {
-    "description": "بدء تشغيل خادم OmniRoute (الإجراء الافتراضي)",
-    "starting": "جارٍ بدء تشغيل خادم OmniRoute على المنفذ {port}...",
+    "description": "بدء تشغيل خادم FreeRoute (الإجراء الافتراضي)",
+    "starting": "جارٍ بدء تشغيل خادم FreeRoute على المنفذ {port}...",
     "ready": "جاهز على http://localhost:{port}",
     "stopping": "جارٍ إيقاف الخادم (PID {pid})...",
     "stopped": "تم إيقاف الخادم.",
@@ -262,7 +262,7 @@
   },
   "backup": {
     "title": "نسخة احتياطية",
-    "description": "إنشاء نسخة احتياطية من بيانات OmniRoute",
+    "description": "إنشاء نسخة احتياطية من بيانات FreeRoute",
     "creating": "جارٍ إنشاء النسخة الاحتياطية...",
     "done": "حُفظت النسخة الاحتياطية في {path}",
     "noFiles": "لا توجد ملفات لنسخها احتياطيًا (لم تتم تهيئة قاعدة البيانات)",
@@ -274,7 +274,7 @@
     "noBackups": "لم يتم العثور على نسخ احتياطية.",
     "notFound": "لم يتم العثور على النسخة الاحتياطية: {name}",
     "confirmRestore": "هل تريد استبدال البيانات الحالية بالنسخة الاحتياطية المنشأة في {ts}؟",
-    "createDescription": "إنشاء نسخة احتياطية من بيانات OmniRoute",
+    "createDescription": "إنشاء نسخة احتياطية من بيانات FreeRoute",
     "nameOpt": "اسم مخصص للنسخة الاحتياطية",
     "cloudOpt": "رفع النسخة الاحتياطية إلى التخزين السحابي",
     "encryptOpt": "تشفير النسخة الاحتياطية باستخدام AES-256-GCM",
@@ -292,14 +292,14 @@
       "statusDescription": "عرض حالة جدول النسخ الاحتياطي الحالية",
       "cronOpt": "تعبير Cron للجدولة (الافتراضي: يوميًا في الساعة 3 صباحًا)",
       "enabled": "تم تمكين النسخ الاحتياطي التلقائي (Cron: {cron}).",
-      "hint": "تتم قراءة الجدول بواسطة omniroute serve عند بدء التشغيل.",
+      "hint": "تتم قراءة الجدول بواسطة freeroute serve عند بدء التشغيل.",
       "disabled": "تم تعطيل النسخ الاحتياطي التلقائي.",
       "notConfigured": "لم تتم تهيئة جدول للنسخ الاحتياطي."
     }
   },
   "health": {
     "description": "التحقق من سلامة الخادم وحالة المكونات",
-    "noServer": "الخادم لا يعمل. ابدأ تشغيله باستخدام: omniroute serve",
+    "noServer": "الخادم لا يعمل. ابدأ تشغيله باستخدام: freeroute serve",
     "title": "السلامة",
     "status": "الحالة: {status}",
     "uptime": "مدة التشغيل: {uptime}",
@@ -308,21 +308,21 @@
   },
   "quota": {
     "description": "عرض استخدام الحصة لدى مزود الخدمة",
-    "noServer": "الخادم لا يعمل. ابدأ تشغيله باستخدام: omniroute serve",
+    "noServer": "الخادم لا يعمل. ابدأ تشغيله باستخدام: freeroute serve",
     "noData": "لا تتوفر معلومات عن الحصة."
   },
   "cache": {
     "description": "إدارة ذاكرة التخزين المؤقت للاستجابات",
-    "noServer": "الخادم لا يعمل. ابدأ تشغيله باستخدام: omniroute serve",
+    "noServer": "الخادم لا يعمل. ابدأ تشغيله باستخدام: freeroute serve",
     "cleared": "تم مسح ذاكرة التخزين المؤقت.",
     "clearFailed": "فشل مسح ذاكرة التخزين المؤقت."
   },
   "redis": {
-    "description": "تشغيل حاوية Redis محلية بضغطة واحدة (Podman أو Docker) لتخزين التخزين المؤقت وتتبع الحصة في OmniRoute"
+    "description": "تشغيل حاوية Redis محلية بضغطة واحدة (Podman أو Docker) لتخزين التخزين المؤقت وتتبع الحصة في FreeRoute"
   },
   "test": {
     "description": "اختبار الاتصال بمزود الخدمة",
-    "noServer": "الخادم لا يعمل. شغّله باستخدام: omniroute serve",
+    "noServer": "الخادم لا يعمل. شغّله باستخدام: freeroute serve",
     "testing": "جارٍ اختبار {provider} / {model}...",
     "passed": "تم الاتصال بنجاح!",
     "failed": "فشل الاتصال: {error}",
@@ -334,7 +334,7 @@
     "saved": "تم حفظ النتائج في {path}",
     "compareTitle": "مقارنة النماذج",
     "compareMinTwo": "يلزم نموذجان على الأقل لاستخدام --compare (مفصولان بفواصل)",
-    "noProviders": "لم يتم إعداد أي مزوّدين. أضف مزوّدًا باستخدام: omniroute keys add"
+    "noProviders": "لم يتم إعداد أي مزوّدين. أضف مزوّدًا باستخدام: freeroute keys add"
   },
   "update": {
     "checking": "جارٍ التحقق من وجود تحديثات...",
@@ -348,7 +348,7 @@
     "running": "خادم MCP قيد التشغيل ({transport})",
     "stopped": "تم إيقاف خادم MCP.",
     "restarted": "تمت إعادة تشغيل خادم MCP.",
-    "stoppedHint": "شغّل `omniroute mcp enable` لتفعيله.",
+    "stoppedHint": "شغّل `freeroute mcp enable` لتفعيله.",
     "enabled": "تم تفعيل خادم MCP.",
     "disabled": "تم تعطيل خادم MCP.",
     "enable": {
@@ -416,7 +416,7 @@
     }
   },
   "policy": {
-    "description": "إدارة سياسات التخويل في OmniRoute",
+    "description": "إدارة سياسات التخويل في FreeRoute",
     "list": {
       "description": "عرض السياسات",
       "kind": "التصفية حسب النوع (allow|deny|rate-limit|cost-cap)",
@@ -453,7 +453,7 @@
     }
   },
   "compression": {
-    "description": "تهيئة مسار الضغط في OmniRoute وفحصه",
+    "description": "تهيئة مسار الضغط في FreeRoute وفحصه",
     "status": {
       "description": "عرض حالة الضغط وإعداداته الحالية"
     },
@@ -507,18 +507,18 @@
     "confirmRotate": "هل تريد تبديل عنوان URL للنفق {type}؟ (سيتم إنشاء عنوان URL جديد)"
   },
   "stop": {
-    "description": "إيقاف خادم OmniRoute",
+    "description": "إيقاف خادم FreeRoute",
     "stopping": "جارٍ إيقاف الخادم (PID {pid})...",
     "stopped": "تم إيقاف الخادم.",
     "notRunning": "لا يوجد خادم قيد التشغيل.",
     "portFallback": "لم يتم العثور على ملف PID، جارٍ محاولة الإيقاف استنادًا إلى المنفذ..."
   },
   "restart": {
-    "description": "إعادة تشغيل خادم OmniRoute",
-    "restarting": "جارٍ إعادة تشغيل خادم OmniRoute..."
+    "description": "إعادة تشغيل خادم FreeRoute",
+    "restarting": "جارٍ إعادة تشغيل خادم FreeRoute..."
   },
   "dashboard": {
-    "description": "فتح لوحة معلومات OmniRoute في متصفح",
+    "description": "فتح لوحة معلومات FreeRoute في متصفح",
     "opening": "جارٍ فتح لوحة المعلومات على {url}",
     "urlOnly": "طباعة عنوان URL للوحة المعلومات دون فتح المتصفح",
     "tui": "فتح لوحة معلومات TUI التفاعلية (واجهة طرفية، 7 علامات تبويب)"
@@ -526,7 +526,7 @@
   "models": {
     "description": "عرض النماذج المتاحة (يتطلب الخادم)",
     "search": "تصفية النماذج حسب المعرّف أو الاسم أو المزوّد أو الوصف",
-    "noServer": "الخادم لا يعمل. ابدأ باستخدام: omniroute serve",
+    "noServer": "الخادم لا يعمل. ابدأ باستخدام: freeroute serve",
     "noModels": "لم يتم العثور على نماذج."
   },
   "audit": {
@@ -558,7 +558,7 @@
     }
   },
   "skills": {
-    "description": "إدارة مهارات OmniRoute (sandbox، builtin، custom، hybrid، skillssh)",
+    "description": "إدارة مهارات FreeRoute (sandbox، builtin، custom، hybrid، skillssh)",
     "list": {
       "description": "عرض قائمة المهارات المثبّتة",
       "type": "التصفية حسب النوع (sandbox|custom|builtin|hybrid|skillssh)",
@@ -631,7 +631,7 @@
     }
   },
   "memory": {
-    "description": "إدارة الذاكرة الحوارية في OmniRoute ‏(FTS5 + vector)",
+    "description": "إدارة الذاكرة الحوارية في FreeRoute ‏(FTS5 + vector)",
     "search": {
       "description": "البحث في إدخالات الذاكرة باستخدام استعلام دلالي",
       "type": "تصفية حسب نوع الذاكرة (user|feedback|project|reference)",
@@ -789,7 +789,7 @@
     }
   },
   "webhooks": {
-    "description": "إدارة خطافات الويب في OmniRoute",
+    "description": "إدارة خطافات الويب في FreeRoute",
     "events": {
       "description": "عرض جميع أنواع أحداث خطافات الويب المتاحة"
     },
@@ -821,14 +821,14 @@
     }
   },
   "program": {
-    "description": "OmniRoute — جهاز توجيه الذكاء الاصطناعي مع التبديل التلقائي",
+    "description": "FreeRoute — جهاز توجيه الذكاء الاصطناعي مع التبديل التلقائي",
     "version": "عرض الإصدار والخروج",
     "output": "تنسيق الإخراج (table, json, jsonl, csv)",
     "quiet": "إخفاء المخرجات غير الأساسية",
     "no_color": "تعطيل الإخراج الملوّن",
     "timeout": "مهلة طلب HTTP بالميلي ثانية",
-    "api_key": "مفتاح API لخادم OmniRoute",
-    "base_url": "عنوان URL الأساسي لخادم OmniRoute",
+    "api_key": "مفتاح API لخادم FreeRoute",
+    "base_url": "عنوان URL الأساسي لخادم FreeRoute",
     "context": "سياق/ملف تعريف الخادم المستخدم في هذا الأمر",
     "lang": "تعيين لغة عرض CLI (يتجاوز OMNIROUTE_LANG)"
   },
@@ -1079,7 +1079,7 @@
     }
   },
   "openapi": {
-    "description": "الوصول إلى مواصفات OmniRoute OpenAPI واختبارها",
+    "description": "الوصول إلى مواصفات FreeRoute OpenAPI واختبارها",
     "dump": {
       "description": "تفريغ مواصفات OpenAPI إلى stdout أو ملف",
       "format": "تنسيق الإخراج: yaml|json (الافتراضي: yaml)",
@@ -1149,7 +1149,7 @@
     }
   },
   "open": {
-    "description": "فتح صفحة محددة من لوحة معلومات OmniRoute في المتصفح",
+    "description": "فتح صفحة محددة من لوحة معلومات FreeRoute في المتصفح",
     "url": "طباعة عنوان URL فقط، دون فتح المتصفح"
   },
   "telemetry": {
@@ -1166,7 +1166,7 @@
     }
   },
   "sync": {
-    "description": "مزامنة الإعدادات بين مثيلات OmniRoute",
+    "description": "مزامنة الإعدادات بين مثيلات FreeRoute",
     "push": {
       "description": "دفع الإعدادات إلى السحابة أو إلى مثيل بعيد",
       "target": "الهدف (cloud أو context:name)",
@@ -1222,8 +1222,8 @@
       "listTitle": "اللغات المتاحة",
       "current": "اللغة: {code} ({name})",
       "saved": "تم تعيين اللغة إلى {code} ({name}).",
-      "noCode": "رمز اللغة مطلوب. شغّل 'omniroute config lang list' لعرض الرموز المتاحة.",
-      "unknown": "رمز لغة غير معروف: {code}. شغّل 'omniroute config lang list' لعرض الرموز المتاحة.",
+      "noCode": "رمز اللغة مطلوب. شغّل 'freeroute config lang list' لعرض الرموز المتاحة.",
+      "unknown": "رمز لغة غير معروف: {code}. شغّل 'freeroute config lang list' لعرض الرموز المتاحة.",
       "alreadySet": "اللغة معيّنة بالفعل إلى {code}.",
       "envHint": "تلميح: يمكنك أيضًا تعيين OMNIROUTE_LANG={code} في بيئتك."
     }
@@ -1242,7 +1242,7 @@
     "filter": "التصفية حسب المستوى (error,warn,info) — مفصولة بفواصل",
     "lines": "عدد الأسطر المطلوب جلبها",
     "timeout": "مهلة الاتصال بالمللي ثانية",
-    "baseUrl": "عنوان URL الأساسي لواجهة OmniRoute API",
+    "baseUrl": "عنوان URL الأساسي لواجهة FreeRoute API",
     "requestId": "التصفية حسب معرّف الطلب",
     "apiKey": "التصفية حسب مفتاح API",
     "combo": "التصفية حسب اسم التركيبة",
@@ -1258,10 +1258,10 @@
     "description": "التحكم في أيقونة علبة النظام",
     "show": "إظهار أيقونة علبة النظام (إذا كان الخادم يعمل مع --tray)",
     "hide": "إخفاء أيقونة علبة النظام",
-    "quit": "إنهاء OmniRoute عبر علبة النظام"
+    "quit": "إنهاء FreeRoute عبر علبة النظام"
   },
   "autostart": {
-    "description": "إدارة التشغيل التلقائي لـ OmniRoute عند الإقلاع (Linux: خدمة مستخدم systemd)",
+    "description": "إدارة التشغيل التلقائي لـ FreeRoute عند الإقلاع (Linux: خدمة مستخدم systemd)",
     "enable": "تمكين التشغيل التلقائي عند الإقلاع",
     "disable": "تعطيل التشغيل التلقائي عند الإقلاع",
     "toggle": "تبديل حالة التشغيل التلقائي عند الإقلاع",
@@ -1293,19 +1293,19 @@
     "scaffold": "إنشاء هيكل أولي لإضافة جديدة"
   },
   "launch": {
-    "description": "تشغيل Claude Code موجّهًا إلى OmniRoute (محليًا أو عن بُعد، باستخدام --profile)",
+    "description": "تشغيل Claude Code موجّهًا إلى FreeRoute (محليًا أو عن بُعد، باستخدام --profile)",
     "token": "الرمز المميز الذي يجب أن يرسله عميل Claude ‏(ANTHROPIC_AUTH_TOKEN)",
-    "notRunning": "يتعذر الوصول إلى OmniRoute على {port}. شغّله باستخدام 'omniroute serve'.",
+    "notRunning": "يتعذر الوصول إلى FreeRoute على {port}. شغّله باستخدام 'freeroute serve'.",
     "notFound": "لم يتم العثور على واجهة CLI المسماة 'claude' في PATH."
   },
   "run": {
-    "description": "تشغيل هدف CLI مدعوم عبر OmniRoute"
+    "description": "تشغيل هدف CLI مدعوم عبر FreeRoute"
   },
   "setupClaude": {
-    "description": "إنشاء ملفات تعريف Claude Code في ~/.claude/profiles من كتالوج نماذج OmniRoute"
+    "description": "إنشاء ملفات تعريف Claude Code في ~/.claude/profiles من كتالوج نماذج FreeRoute"
   },
   "connect": {
-    "description": "الاتصال بخادم OmniRoute بعيد والدخول إلى الوضع البعيد"
+    "description": "الاتصال بخادم FreeRoute بعيد والدخول إلى الوضع البعيد"
   },
   "tokens": {
     "description": "إدارة رموز وصول CLI محددة النطاق (الوضع البعيد)"
@@ -1314,10 +1314,10 @@
     "description": "اختيار موفّر ونموذج من الخادم النشط وتهيئة CLI محلية مدعومة"
   },
   "launchCodex": {
-    "description": "تشغيل Codex CLI موجّهًا إلى OmniRoute (محليًا أو على VPS بعيد)"
+    "description": "تشغيل Codex CLI موجّهًا إلى FreeRoute (محليًا أو على VPS بعيد)"
   },
   "setupCodex": {
-    "description": "إنشاء ملفات تعريف في ~/.codex من كتالوج نماذج OmniRoute المباشر"
+    "description": "إنشاء ملفات تعريف في ~/.codex من كتالوج نماذج FreeRoute المباشر"
   },
   "packs": {
     "description": "إدارة حزم وقت التشغيل الاختيارية (ML / أتمتة المتصفح)",
@@ -1330,7 +1330,7 @@
     "errUnknown": "حزمة غير معروفة: {name}",
     "errNoIndex": "لم يتم العثور على فهرس الحزم؛ مرّر --source <dir> الذي يحتوي على محتويات الحزمة (تتضمنه حزم سطح المكتب بجوار التطبيق)",
     "installed": "تم تثبيت الحزمة \"{name}\" والتحقق منها في {dir}",
-    "restartHint": "أعد تشغيل خادم OmniRoute (أو تطبيق سطح المكتب) ليتمكن وقت التشغيل من التعرّف على الحزمة",
+    "restartHint": "أعد تشغيل خادم FreeRoute (أو تطبيق سطح المكتب) ليتمكن وقت التشغيل من التعرّف على الحزمة",
     "removed": "تمت إزالة الحزمة \"{name}\"",
     "notInstalled": "لم تكن الحزمة \"{name}\" مثبّتة",
     "verifyOk": "تم التحقق من جميع الحزم المثبّتة",

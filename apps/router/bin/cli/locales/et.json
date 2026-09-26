@@ -1,8 +1,8 @@
 {
   "common": {
     "error": "Viga: {message}",
-    "serverOffline": "OmniRoute server on offline. Käivita see käsuga: omniroute serve",
-    "authRequired": "Autentimine on nõutav. Määra OMNIROUTE_API_KEY või käivita: omniroute setup",
+    "serverOffline": "FreeRoute server on offline. Käivita see käsuga: freeroute serve",
+    "authRequired": "Autentimine on nõutav. Määra OMNIROUTE_API_KEY või käivita: freeroute setup",
     "rateLimited": "Kiiruspiirang on ületatud. Proovi uuesti {seconds}s pärast.",
     "timeout": "Päring aegus {ms}ms pärast.",
     "success": "Valmis.",
@@ -15,7 +15,7 @@
     "yesOpt": "Jäta kinnitusküsimus vahele"
   },
   "setup": {
-    "title": "OmniRoute seadistus",
+    "title": "FreeRoute seadistus",
     "passwordPrompt": "Administraatori parool",
     "providerPrompt": "Vaikepakkuja (jäta tühjaks, et vahele jätta)",
     "done": "Seadistamine on lõpetatud",
@@ -30,19 +30,19 @@
     "opencode": "Installi ja seadista OpenCode'i jaoks kaasas olev @omniroute/opencode-plugin"
   },
   "doctor": {
-    "title": "OmniRoute'i diagnostika",
+    "title": "FreeRoute'i diagnostika",
     "dbOk": "Andmebaas: korras ({path})",
-    "dbMissing": "Andmebaas: pole lähtestatud — käivita `omniroute setup`",
+    "dbMissing": "Andmebaas: pole lähtestatud — käivita `freeroute setup`",
     "portOk": "Port {port}: saadaval",
     "portConflict": "Port {port}: on teise protsessi kasutuses",
     "encryptionOk": "Krüpteerimisvõti: seadistatud",
-    "encryptionMissing": "Krüpteerimisvõti puudub — käivita `omniroute setup`",
+    "encryptionMissing": "Krüpteerimisvõti puudub — käivita `freeroute setup`",
     "allGood": "Kõik kontrollid läbiti edukalt.",
     "warnings": "{count} hoiatus(t) — vaata ülalt."
   },
   "providers": {
     "title": "Pakkujad",
-    "noProviders": "Ühtegi pakkujat ei ole seadistatud. Käivita: omniroute setup",
+    "noProviders": "Ühtegi pakkujat ei ole seadistatud. Käivita: freeroute setup",
     "testing": "Testitakse {name}...",
     "available": "{count} pakkuja(t) saadaval",
     "connected": "Ühendatud",
@@ -71,7 +71,7 @@
       "dryRunOpt": "Näita, mida muudetaks, ilma salvestamata",
       "confirmPrompt": "Vahetada API-võti ühenduse \"{name}\" ({id}) jaoks? [y/N]",
       "dryRunResult": "[katseajam] Vahetataks võtit \"{name}\" ({id}) jaoks. Muudatusi ei tehtud.",
-      "oauthHint": "OAuth-ühendus — käivita: omniroute oauth {provider}",
+      "oauthHint": "OAuth-ühendus — käivita: freeroute oauth {provider}",
       "envVarEmpty": "Keskkonnamuutuja {var} ei ole määratud või on tühi.",
       "success": "Võti vahetatud \"{name}\" jaoks. Käivita `providers test {id}`, et kontrollida.",
       "testPassed": "Vahetusjärgne test õnnestus.",
@@ -82,7 +82,7 @@
       "providerOpt": "Filtreeri pakkuja nime järgi",
       "header": "ID         Pakkuja       Nimi                     Kehtivuse olek  Testi olek  Jahtumisperiood kuni",
       "noData": "Pakkuja ühenduse andmed puuduvad.",
-      "requiresServer": "providers status eeldab, et OmniRoute server töötab."
+      "requiresServer": "providers status eeldab, et FreeRoute server töötab."
     }
   },
   "keys": {
@@ -90,8 +90,8 @@
     "addDescription": "Lisa või värskenda pakkuja API-võtit",
     "listDescription": "Loetle kõik konfigureeritud API-võtmed",
     "removeDescription": "Eemalda pakkuja API-võti",
-    "regenerateDescription": "Genereeri OmniRoute API-võti uuesti",
-    "revokeDescription": "Tühista OmniRoute API-võti",
+    "regenerateDescription": "Genereeri FreeRoute API-võti uuesti",
+    "revokeDescription": "Tühista FreeRoute API-võti",
     "revealDescription": "Näita API-võtme peidetut väärtust",
     "usageDescription": "Kuva API-võtme viimatine kasutus",
     "usageLimitOpt": "Viimaste päringute arv",
@@ -142,7 +142,7 @@
     "warning": "⚠ See kuvab/kirjutab DEKRÜPTEERITUD selgtekstilised API-võtmed ja OAuth-load. Veendu, et su ekraan, shelli ajalugu ja väljundfailid jäävad privaatseks.",
     "confirmHeading": "⚠ HOIATUS: see ekspordib DEKRÜPTEERITUD teenusepakkuja mandaadid selgtekstina",
     "confirmBody": "See käsklus dekrüpteerib ja kuvab/kirjutab valitud ühenduse/ühenduste apiKey, accessToken, refreshToken ja\nidToken väärtused. Käsitle väljundit saladusena.",
-    "confirmFooter": "Kinnitamiseks käivita:\n  omniroute auth export --force",
+    "confirmFooter": "Kinnitamiseks käivita:\n  freeroute auth export --force",
     "missingKey": "STORAGE_ENCRYPTION_KEY on vajalik mandaatide eksportimiseks.",
     "notFound": "Ühendust ei leitud: {id}",
     "invalidFormat": "Sobimatu vorming: {format}. Kasuta json või env."
@@ -220,10 +220,10 @@
     "reasoning": "Arutlustaseme jõupingutus (low|medium|high)",
     "thinking": "Laiendatud mõtlemise tunnuste eelarve",
     "explain": "Trüki tagavaravariantide puu ja kulude vahemik stderr-i",
-    "noCombo": "Sobivat kombot ei leitud. Loo see käsuga: omniroute combo create"
+    "noCombo": "Sobivat kombot ei leitud. Loo see käsuga: freeroute combo create"
   },
   "chat": {
-    "description": "Saada OmniRoute'ile ühekordne vestlusteade",
+    "description": "Saada FreeRoute'ile ühekordne vestlusteade",
     "file": "Loe vestlusteade failist",
     "stdin": "Loe vestlusteade stdin-ist",
     "system": "Süsteemi vestlusteade",
@@ -242,8 +242,8 @@
     }
   },
   "serve": {
-    "description": "Käivita OmniRoute'i server (vaiketoiming)",
-    "starting": "OmniRoute'i serveri käivitamine pordil {port}...",
+    "description": "Käivita FreeRoute'i server (vaiketoiming)",
+    "starting": "FreeRoute'i serveri käivitamine pordil {port}...",
     "ready": "Valmis aadressil http://localhost:{port}",
     "stopping": "Serveri peatamine (PID {pid})...",
     "stopped": "Server on peatatud.",
@@ -262,7 +262,7 @@
   },
   "backup": {
     "title": "Varukoopia",
-    "description": "Loo OmniRoute andmete varukoopia",
+    "description": "Loo FreeRoute andmete varukoopia",
     "creating": "Varukoopia loomine...",
     "done": "Varukoopia salvestatud asukohta {path}",
     "noFiles": "Varundamiseks ei leitud faile (andmebaas ei ole initsialiseeritud)",
@@ -274,7 +274,7 @@
     "noBackups": "Varukoopiaid ei leitud.",
     "notFound": "Varukoopiat ei leitud: {name}",
     "confirmRestore": "Kirjutada praegused andmed üle varukoopiaga ajast {ts}?",
-    "createDescription": "Loo OmniRoute andmete varukoopia",
+    "createDescription": "Loo FreeRoute andmete varukoopia",
     "nameOpt": "Kohandatud varukoopia nimi",
     "cloudOpt": "Laadi varukoopia pilvesalvestusse",
     "encryptOpt": "Krüpteeri varukoopia AES-256-GCM-iga",
@@ -292,14 +292,14 @@
       "statusDescription": "Näita praegust varundamise ajakava olekut",
       "cronOpt": "Cron-avaldis ajakava jaoks (vaikimisi: iga päev kell 3:00)",
       "enabled": "Automaatne varundamine on lubatud (cron: {cron}).",
-      "hint": "Ajakava loetakse käivitamisel omniroute serve käsu poolt.",
+      "hint": "Ajakava loetakse käivitamisel freeroute serve käsu poolt.",
       "disabled": "Automaatne varundamine on keelatud.",
       "notConfigured": "Varundamise ajakava ei ole seadistatud."
     }
   },
   "health": {
     "description": "Kontrolli serveri tervist ja komponentide olekut",
-    "noServer": "Server ei tööta. Käivita käsuga: omniroute serve",
+    "noServer": "Server ei tööta. Käivita käsuga: freeroute serve",
     "title": "Tervis",
     "status": "Olek: {status}",
     "uptime": "Töökestus: {uptime}",
@@ -308,21 +308,21 @@
   },
   "quota": {
     "description": "Kuva teenusepakkuja kvoodi kasutus",
-    "noServer": "Server ei tööta. Käivita käsuga: omniroute serve",
+    "noServer": "Server ei tööta. Käivita käsuga: freeroute serve",
     "noData": "Kvoodi andmed puuduvad."
   },
   "cache": {
     "description": "Halda vastuste vahemälu",
-    "noServer": "Server ei tööta. Käivita käsuga: omniroute serve",
+    "noServer": "Server ei tööta. Käivita käsuga: freeroute serve",
     "cleared": "Vahemälu tühjendatud.",
     "clearFailed": "Vahemälu tühjendamine ebaõnnestus."
   },
   "redis": {
-    "description": "Käivita ühe klikiga kohalik Redis konteiner (Podman või Docker) OmniRoute'i vahemälu ja kvoodi jälgimise jaoks"
+    "description": "Käivita ühe klikiga kohalik Redis konteiner (Podman või Docker) FreeRoute'i vahemälu ja kvoodi jälgimise jaoks"
   },
   "test": {
     "description": "Testi teenusepakkuja ühendust",
-    "noServer": "Server ei tööta. Käivita käsuga: omniroute serve",
+    "noServer": "Server ei tööta. Käivita käsuga: freeroute serve",
     "testing": "Testimine: {provider} / {model}...",
     "passed": "Ühendus õnnestus!",
     "failed": "Ühendus ebaõnnestus: {error}",
@@ -334,7 +334,7 @@
     "saved": "Tulemused salvestatud: {path}",
     "compareTitle": "Mudelite võrdlus",
     "compareMinTwo": "Vajalik on vähemalt kaks mudelit --compare jaoks (komadega eraldatud)",
-    "noProviders": "Teenusepakkujaid ei ole seadistatud. Lisa üks käsuga: omniroute keys add"
+    "noProviders": "Teenusepakkujaid ei ole seadistatud. Lisa üks käsuga: freeroute keys add"
   },
   "update": {
     "checking": "Uuenduste kontrollimine...",
@@ -348,7 +348,7 @@
     "running": "MCP server töötab ({transport})",
     "stopped": "MCP server peatatud.",
     "restarted": "MCP server taaskäivitatud.",
-    "stoppedHint": "Selle sisselülitamiseks käivitage `omniroute mcp enable`.",
+    "stoppedHint": "Selle sisselülitamiseks käivitage `freeroute mcp enable`.",
     "enabled": "MCP-server on lubatud.",
     "disabled": "MCP-server on keelatud.",
     "enable": {
@@ -416,7 +416,7 @@
     }
   },
   "policy": {
-    "description": "Halda OmniRoute'i autoriseerimispoliitikaid",
+    "description": "Halda FreeRoute'i autoriseerimispoliitikaid",
     "list": {
       "description": "Kuva poliitikad",
       "kind": "Filtreeri liigi järgi (allow|deny|rate-limit|cost-cap)",
@@ -453,7 +453,7 @@
     }
   },
   "compression": {
-    "description": "Konfigureeri ja kontrolli OmniRoute'i tihenduskonveierit",
+    "description": "Konfigureeri ja kontrolli FreeRoute'i tihenduskonveierit",
     "status": {
       "description": "Kuva praegune tihenduse olek ja seaded"
     },
@@ -507,18 +507,18 @@
     "confirmRotate": "Vaheta tunneli {type} URL? (genereeritakse uus URL)"
   },
   "stop": {
-    "description": "Peata OmniRoute server",
+    "description": "Peata FreeRoute server",
     "stopping": "Serveri peatamine (PID {pid})...",
     "stopped": "Server on peatatud.",
     "notRunning": "Ühtegi serverit ei töötle.",
     "portFallback": "PID-faili ei leitud, proovitakse peatada pordi järgi..."
   },
   "restart": {
-    "description": "Taaskäivita OmniRoute server",
-    "restarting": "OmniRoute serveri taaskäivitamine..."
+    "description": "Taaskäivita FreeRoute server",
+    "restarting": "FreeRoute serveri taaskäivitamine..."
   },
   "dashboard": {
-    "description": "Ava OmniRoute'i töölaud brauseris",
+    "description": "Ava FreeRoute'i töölaud brauseris",
     "opening": "Töölaua avamine aadressil {url}",
     "urlOnly": "Prindi töölaua URL brauserit avamata",
     "tui": "Ava interaktiivne TUI töölaud (terminali kasutajaliides, 7 vahekaarti)"
@@ -526,7 +526,7 @@
   "models": {
     "description": "Loetle saadaolevad mudelid (vajab serverit)",
     "search": "Filtreeri mudeleid ID, nime, pakkuja või kirjelduse alusel",
-    "noServer": "Server ei tööta. Käivita käsuga: omniroute serve",
+    "noServer": "Server ei tööta. Käivita käsuga: freeroute serve",
     "noModels": "Mudeleid ei leitud."
   },
   "audit": {
@@ -558,7 +558,7 @@
     }
   },
   "skills": {
-    "description": "Halda OmniRoute'i oskusi (sandbox, sisseehitatud, kohandatud, hübriid, skillssh)",
+    "description": "Halda FreeRoute'i oskusi (sandbox, sisseehitatud, kohandatud, hübriid, skillssh)",
     "list": {
       "description": "Loetle installitud oskused",
       "type": "Filtreeri tüübi alusel (sandbox|custom|builtin|hybrid|skillssh)",
@@ -631,7 +631,7 @@
     }
   },
   "memory": {
-    "description": "Halda OmniRoute'i vestlusmälu (FTS5 + vektor)",
+    "description": "Halda FreeRoute'i vestlusmälu (FTS5 + vektor)",
     "search": {
       "description": "Otsi mälukirjeid semantilise päringu järgi",
       "type": "Filtreeri mälu tüübi järgi (user|feedback|project|reference)",
@@ -789,7 +789,7 @@
     }
   },
   "webhooks": {
-    "description": "Halda OmniRoute veebihaake",
+    "description": "Halda FreeRoute veebihaake",
     "events": {
       "description": "Kuva kõikide saadaolevate veebihaagi sündmuste tüüpide loend"
     },
@@ -821,14 +821,14 @@
     }
   },
   "program": {
-    "description": "OmniRoute — nutikas AI ruuter automaatse tõrketaluvusega",
+    "description": "FreeRoute — nutikas AI ruuter automaatse tõrketaluvusega",
     "version": "Prindi versioon ja väljume",
     "output": "Väljundvorming (table, json, jsonl, csv)",
     "quiet": "Peida ebaolulised väljundid",
     "no_color": "Keela värviline väljund",
     "timeout": "HTTP päringu ajalõpp millisekundites",
-    "api_key": "OmniRoute serveri API võti",
-    "base_url": "OmniRoute serveri baas-URL",
+    "api_key": "FreeRoute serveri API võti",
+    "base_url": "FreeRoute serveri baas-URL",
     "context": "Selle käsu jaoks kasutatav serveri kontekst/profiil",
     "lang": "Määra CLI kuvamiskeel (tühistab OMNIROUTE_LANG)"
   },
@@ -1079,7 +1079,7 @@
     }
   },
   "openapi": {
-    "description": "OmniRoute OpenAPI spetsifikatsiooni vaatamine ja testimine",
+    "description": "FreeRoute OpenAPI spetsifikatsiooni vaatamine ja testimine",
     "dump": {
       "description": "OpenAPI spetsifikatsiooni väljastamine standardväljundisse või faili",
       "format": "Väljundvorming: yaml|json (vaikimisi: yaml)",
@@ -1149,7 +1149,7 @@
     }
   },
   "open": {
-    "description": "Ava veebibrauseris konkreetne OmniRoute juhtpaneeli leht",
+    "description": "Ava veebibrauseris konkreetne FreeRoute juhtpaneeli leht",
     "url": "Kuva ainult URL, ära ava brauserit"
   },
   "telemetry": {
@@ -1166,7 +1166,7 @@
     }
   },
   "sync": {
-    "description": "Sünkroonib seadeid OmniRoute'i eksemplaride vahel",
+    "description": "Sünkroonib seadeid FreeRoute'i eksemplaride vahel",
     "push": {
       "description": "Saada seaded pilve või kaugeksemplari",
       "target": "Sihtkoht (cloud või context:nimi)",
@@ -1222,8 +1222,8 @@
       "listTitle": "Saadaolevad keeled",
       "current": "Keel: {code} ({name})",
       "saved": "Keeleks on määratud {code} ({name}).",
-      "noCode": "Vajalik on keelekood. Käivita 'omniroute config lang list', et näha saadaolevaid koode.",
-      "unknown": "Tundmatu keelekood: {code}. Käivita 'omniroute config lang list', et näha saadaolevaid koode.",
+      "noCode": "Vajalik on keelekood. Käivita 'freeroute config lang list', et näha saadaolevaid koode.",
+      "unknown": "Tundmatu keelekood: {code}. Käivita 'freeroute config lang list', et näha saadaolevaid koode.",
       "alreadySet": "Keeleks on juba määratud {code}.",
       "envHint": "Nõuanne: võid ka määrata OMNIROUTE_LANG={code} oma keskkonnas."
     }
@@ -1242,7 +1242,7 @@
     "filter": "Filtreeri tasemete järgi (error,warn,info) — komadega eraldatud",
     "lines": "Toodavate ridade arv",
     "timeout": "Ühenduse aegumine millisekundites",
-    "baseUrl": "OmniRoute API baas-URL",
+    "baseUrl": "FreeRoute API baas-URL",
     "requestId": "Filtreeri päringu ID järgi",
     "apiKey": "Filtreeri API võtme järgi",
     "combo": "Filtreeri combo nime järgi",
@@ -1258,10 +1258,10 @@
     "description": "Juhi süsteemisalve ikooni",
     "show": "Näita süsteemisalve ikooni (kui server töötab lipuga --tray)",
     "hide": "Peida süsteemisalve ikoon",
-    "quit": "Sulge OmniRoute süsteemisalve kaudu"
+    "quit": "Sulge FreeRoute süsteemisalve kaudu"
   },
   "autostart": {
-    "description": "Halda OmniRoute automaatkäivitust arvuti käivitumisel (Linux: systemd kasutajateenus)",
+    "description": "Halda FreeRoute automaatkäivitust arvuti käivitumisel (Linux: systemd kasutajateenus)",
     "enable": "Luba automaatkäivitus arvuti käivitumisel",
     "disable": "Keela automaatkäivitus arvuti käivitumisel",
     "toggle": "Lülita automaatkäivitus arvuti käivitumisel sisse/välja",
@@ -1293,19 +1293,19 @@
     "scaffold": "Loo uue plugina põhistruktuur"
   },
   "launch": {
-    "description": "Käivita Claude Code, mis suunatakse OmniRoute'i (kohalik või kaug, koos lipuga --profile)",
+    "description": "Käivita Claude Code, mis suunatakse FreeRoute'i (kohalik või kaug, koos lipuga --profile)",
     "token": "Token, mille Claude klient peaks saatma (ANTHROPIC_AUTH_TOKEN)",
-    "notRunning": "OmniRoute ei ole aadressil {port} kättesaadav. Käivita see käsuga 'omniroute serve'.",
+    "notRunning": "FreeRoute ei ole aadressil {port} kättesaadav. Käivita see käsuga 'freeroute serve'.",
     "notFound": "'claude' CLI-d ei leitud PATH-ist."
   },
   "run": {
-    "description": "Käivita toetatud CLI sihtmärk OmniRoute'i kaudu"
+    "description": "Käivita toetatud CLI sihtmärk FreeRoute'i kaudu"
   },
   "setupClaude": {
-    "description": "Genereeri ~/.claude/profiles Claude Code profiilid OmniRoute'i mudelikataloogist"
+    "description": "Genereeri ~/.claude/profiles Claude Code profiilid FreeRoute'i mudelikataloogist"
   },
   "connect": {
-    "description": "Ühendu kaugserveriga OmniRoute ja lülitu kaugrežiimi"
+    "description": "Ühendu kaugserveriga FreeRoute ja lülitu kaugrežiimi"
   },
   "tokens": {
     "description": "Halda ulatusega CLI juurdepääsutokeneid (kaugrežiim)"
@@ -1314,10 +1314,10 @@
     "description": "Vali pakkuja+mudel aktiivselt serverilt ja konfigureeri toetatud kohalik CLI"
   },
   "launchCodex": {
-    "description": "Käivita Codex CLI, mis on suunatud OmniRoute'ile (kohalik või kaug-VPS)"
+    "description": "Käivita Codex CLI, mis on suunatud FreeRoute'ile (kohalik või kaug-VPS)"
   },
   "setupCodex": {
-    "description": "Genereeri ~/.codex profiilifailid OmniRoute'i reaalajas mudelikataloogist"
+    "description": "Genereeri ~/.codex profiilifailid FreeRoute'i reaalajas mudelikataloogist"
   },
   "packs": {
     "description": "Halda valikulisi käitusaja pakke (ML / brauseri automatiseerimine)",
@@ -1330,7 +1330,7 @@
     "errUnknown": "tundmatu pakk: {name}",
     "errNoIndex": "pakkide indeksit ei leitud; edasta --source <kataloog>, mis sisaldab paki sisu (töölauapaketid sisaldavad seda rakenduse kõrval)",
     "installed": "pakk \"{name}\" on installitud ja kontrollitud asukohas {dir}",
-    "restartHint": "taaskäivita OmniRoute server (või töölauarakendus), et käitusaeg paki üles korjaks",
+    "restartHint": "taaskäivita FreeRoute server (või töölauarakendus), et käitusaeg paki üles korjaks",
     "removed": "pakk \"{name}\" on eemaldatud",
     "notInstalled": "pakki \"{name}\" ei olnud installitud",
     "verifyOk": "kõik installitud pakid on kontrollitud",

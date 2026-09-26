@@ -41,9 +41,15 @@ export function SkillPreviewPane({
 }: SkillPreviewPaneProps): JSX.Element {
   const t = useTranslations("agentSkills");
 
+  // FreeRoute: this used to copy/link the upstream OmniRoute repo's raw/blob
+  // URL for this skill (raw.githubusercontent.com/diegosouzapw/OmniRoute and
+  // github.com/diegosouzapw/OmniRoute). FreeRoute serves this skill's content
+  // itself — see src/app/api/agent-skills/[id]/raw/route.ts — so the copy
+  // button now copies that same-origin URL, and there is no upstream "view on
+  // GitHub" link to offer (githubUrl removed below).
   const handleCopyRawUrl = useCallback(async () => {
     if (!skillId) return;
-    const rawUrl = `https://raw.githubusercontent.com/diegosouzapw/OmniRoute/refs/heads/main/skills/${skillId}/SKILL.md`;
+    const rawUrl = `${globalThis.location.origin}/api/agent-skills/${skillId}/raw`;
     try {
       await navigator.clipboard.writeText(rawUrl);
     } catch {
@@ -51,9 +57,7 @@ export function SkillPreviewPane({
     }
   }, [skillId]);
 
-  const githubUrl = skillId
-    ? `https://github.com/diegosouzapw/OmniRoute/blob/main/skills/${skillId}/SKILL.md`
-    : null;
+  const githubUrl: string | null = null;
 
   // Empty state
   if (!skillId) {

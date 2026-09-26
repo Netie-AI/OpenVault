@@ -124,7 +124,7 @@ export default function CavemanContextPageClient() {
     [t("savingsPercent"), `${cavemanStats?.avgSavingsPct ?? analytics?.avgSavingsPct ?? 0}%`],
     [t("avgLatency"), `${analytics?.avgDurationMs ?? 0}ms`],
   ];
-  const previewPrompt = `[OmniRoute Caveman Output Mode]\n${t(`preview.${outputMode.intensity}`)}`;
+  const previewPrompt = `[FreeRoute Caveman Output Mode]\n${t(`preview.${outputMode.intensity}`)}`;
 
   // Rule packs drive the input engines; output styles can instruct in more
   // languages (e.g. vi has no pack). The default-language selector offers both.

@@ -86,7 +86,7 @@ export interface SkillMarkdown {
   id: string;
   frontmatter: { name: string; description: string };
   body: string; // raw markdown after frontmatter
-  source: "filesystem" | "github" | "generated";
+  source: "filesystem" | "unavailable" | "generated";
   fetchedAt: string; // ISO
 }
 

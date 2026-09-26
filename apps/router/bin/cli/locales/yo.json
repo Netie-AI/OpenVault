@@ -1,8 +1,8 @@
 {
   "common": {
     "error": "Àṣìṣe: {message}",
-    "serverOffline": "Sẹ́fà OmniRoute kò sí lórí ayélujára. Bẹ̀rẹ̀ rẹ̀ pẹ̀lú: omniroute serve",
-    "authRequired": "Ìfàṣẹsí jẹ́ dandan. Ṣètò OMNIROUTE_API_KEY tàbí ṣiṣẹ́: omniroute setup",
+    "serverOffline": "Sẹ́fà FreeRoute kò sí lórí ayélujára. Bẹ̀rẹ̀ rẹ̀ pẹ̀lú: freeroute serve",
+    "authRequired": "Ìfàṣẹsí jẹ́ dandan. Ṣètò OMNIROUTE_API_KEY tàbí ṣiṣẹ́: freeroute setup",
     "rateLimited": "A ti kọjá òpin iye ìbéèrè. Gbìyànjú lẹ́ẹ̀kan sí i lẹ́yìn {seconds}s.",
     "timeout": "Àkókò ìbéèrè parí lẹ́yìn {ms}ms.",
     "success": "Ó ti ṣe tán.",
@@ -15,7 +15,7 @@
     "yesOpt": "Fo ìbéèrè ìmúdájú"
   },
   "setup": {
-    "title": "Ìṣètò OmniRoute",
+    "title": "Ìṣètò FreeRoute",
     "passwordPrompt": "Ọ̀rọ̀ aṣínà alákóso",
     "providerPrompt": "Olùpèsè àiyípò (fi sílẹ̀ láìkọ nǹkan láti fò ó)",
     "done": "Ìṣètò ti pé",
@@ -30,19 +30,19 @@
     "opencode": "Fi @omniroute/opencode-plugin tí a kó mọ́ ọn sílẹ̀ kí o sì ṣètò rẹ̀ fún OpenCode"
   },
   "doctor": {
-    "title": "Olùṣàyẹ̀wò OmniRoute",
+    "title": "Olùṣàyẹ̀wò FreeRoute",
     "dbOk": "Ibi ìpamọ́ dátà: Ó DÁRA ({path})",
-    "dbMissing": "Ibi ìpamọ́ dátà: a kò tíì ṣe ìpilẹ̀ṣẹ̀ rẹ̀ — ṣiṣẹ́ `omniroute setup`",
+    "dbMissing": "Ibi ìpamọ́ dátà: a kò tíì ṣe ìpilẹ̀ṣẹ̀ rẹ̀ — ṣiṣẹ́ `freeroute setup`",
     "portOk": "Pọ́ọ̀tù {port}: wà fún lílò",
     "portConflict": "Pọ́ọ̀tù {port}: ìlànà mìíràn ń lò ó",
     "encryptionOk": "Kọ́kọ́rọ́ ìpamọ́: ti ṣètò",
-    "encryptionMissing": "Kọ́kọ́rọ́ ìpamọ́ kò sí — ṣiṣẹ́ `omniroute setup`",
+    "encryptionMissing": "Kọ́kọ́rọ́ ìpamọ́ kò sí — ṣiṣẹ́ `freeroute setup`",
     "allGood": "Gbogbo àyẹ̀wò yege.",
     "warnings": "Ìkìlọ̀ {count} — wo òkè."
   },
   "providers": {
     "title": "Àwọn olùpèsè",
-    "noProviders": "Kò sí olùpèsè tí a ṣètò. Ṣiṣẹ́: omniroute setup",
+    "noProviders": "Kò sí olùpèsè tí a ṣètò. Ṣiṣẹ́: freeroute setup",
     "testing": "Ń dán {name} wò...",
     "available": "Olùpèsè {count} wà fún lílò",
     "connected": "Ti sopọ̀",
@@ -71,7 +71,7 @@
       "dryRunOpt": "Tẹ ohun tí yóò yí padà jáde láìkọ ohunkóhun",
       "confirmPrompt": "Rọ́pò kọ́kọ́rọ́ API fún ìsopọ̀ \"{name}\" ({id})? [y/N]",
       "dryRunResult": "[dry-run] A ó yí kọ́kọ́rọ́ fún \"{name}\" ({id}) padà. Kò sí ìyípadà tí a ṣe.",
-      "oauthHint": "Ìsopọ̀ OAuth — ṣiṣẹ́: omniroute oauth {provider}",
+      "oauthHint": "Ìsopọ̀ OAuth — ṣiṣẹ́: freeroute oauth {provider}",
       "envVarEmpty": "Environment variable {var} kò tíì ṣètò tàbí ó ṣófo.",
       "success": "A ti yí kọ́kọ́rọ́ fún \"{name}\" padà. Ṣiṣẹ́ `providers test {id}` láti ṣàyẹ̀wò.",
       "testPassed": "Ìdánwò lẹ́yìn yíyí padà ṣàṣeyọrí.",
@@ -82,7 +82,7 @@
       "providerOpt": "Ṣe àsẹ̀ nípa orúkọ provider",
       "header": "ID         Provider       Orúkọ                   Ipò Ìparí  Ipò Ìdánwò  Cooldown Títí Di",
       "noData": "Kò sí dátà ìsopọ̀ provider tó wà.",
-      "requiresServer": "providers status nílò kí server OmniRoute máa ṣiṣẹ́."
+      "requiresServer": "providers status nílò kí server FreeRoute máa ṣiṣẹ́."
     }
   },
   "keys": {
@@ -90,8 +90,8 @@
     "addDescription": "Ṣàfikún tàbí ṣe ìmúdójúìwọ̀n kọ́kọ́rọ́ API fún provider kan",
     "listDescription": "Ṣàkójọ gbogbo àwọn kọ́kọ́rọ́ API tí a ti ṣètò",
     "removeDescription": "Yọ kọ́kọ́rọ́ API kan kúrò fún provider kan",
-    "regenerateDescription": "Ṣẹ̀dá kọ́kọ́rọ́ API OmniRoute tuntun",
-    "revokeDescription": "Fagilé kọ́kọ́rọ́ API OmniRoute kan",
+    "regenerateDescription": "Ṣẹ̀dá kọ́kọ́rọ́ API FreeRoute tuntun",
+    "revokeDescription": "Fagilé kọ́kọ́rọ́ API FreeRoute kan",
     "revealDescription": "Ṣàfihàn iye kọ́kọ́rọ́ API tí a kò bò mọ́lẹ̀",
     "usageDescription": "Ṣàfihàn ìlò àìpẹ́ fún kọ́kọ́rọ́ API kan",
     "usageLimitOpt": "Iye àwọn ìbéèrè àìpẹ́",
@@ -142,7 +142,7 @@
     "warning": "⚠ Èyí máa tẹ̀/kọ àwọn kọ́kọ́rọ́ API àti àwọn tókìn OAuth tí a ti YỌ ÌPARỌ́ wọn gẹ́gẹ́ bí ọ̀rọ̀ gbangba. Rí i dájú pé ojú-ìbojú rẹ, ìtàn shell, àti fáìlì àbájáde èyíkéyìí wà ní ìkọ̀kọ̀.",
     "confirmHeading": "⚠ ÌKÌLỌ̀: èyí máa gbé àwọn ẹ̀rí ìdánimọ̀ olùpèsè tí a ti YỌ ÌPARỌ́ wọn jáde gẹ́gẹ́ bí ọ̀rọ̀ gbangba",
     "confirmBody": "Àṣẹ yìí máa yọ ìparọ́ kúrò, yóò sì tẹ̀/kọ apiKey, accessToken, refreshToken, àti\nidToken fún àwọn àsopọ̀ tí a yàn. Ka àbájáde náà sí àṣírí.",
-    "confirmFooter": "Láti jẹ́rìí sí i, ṣiṣẹ́:\n  omniroute auth export --force",
+    "confirmFooter": "Láti jẹ́rìí sí i, ṣiṣẹ́:\n  freeroute auth export --force",
     "missingKey": "A nílò STORAGE_ENCRYPTION_KEY láti kó àwọn ẹ̀rí ìdánimọ̀ jáde.",
     "notFound": "A kò rí àsopọ̀: {id}",
     "invalidFormat": "Ọ̀nà-kíkó tí kò tọ́: {format}. Lo json tàbí env."
@@ -220,10 +220,10 @@
     "reasoning": "Ìpele agbára ìrònú (low|medium|high)",
     "thinking": "Ìpín token fún ìrònú fífẹ̀",
     "explain": "Tẹ igi fallback àti àárín iye owó sí stderr",
-    "noCombo": "A kò rí combo tó bá mu. Ṣètò ọ̀kan pẹ̀lú: omniroute combo create"
+    "noCombo": "A kò rí combo tó bá mu. Ṣètò ọ̀kan pẹ̀lú: freeroute combo create"
   },
   "chat": {
-    "description": "Fi ìbéèrè ìfọ̀rọ̀wérọ̀ ẹ̀ẹ̀kan ṣoṣo ránṣẹ́ sí OmniRoute",
+    "description": "Fi ìbéèrè ìfọ̀rọ̀wérọ̀ ẹ̀ẹ̀kan ṣoṣo ránṣẹ́ sí FreeRoute",
     "file": "Ka ìbéèrè láti inú fáìlì",
     "stdin": "Ka ìbéèrè láti stdin",
     "system": "Ìbéèrè system",
@@ -242,8 +242,8 @@
     }
   },
   "serve": {
-    "description": "Bẹ̀rẹ̀ server OmniRoute (ìgbésẹ̀ àìyípadà)",
-    "starting": "Ń bẹ̀rẹ̀ server OmniRoute lórí port {port}...",
+    "description": "Bẹ̀rẹ̀ server FreeRoute (ìgbésẹ̀ àìyípadà)",
+    "starting": "Ń bẹ̀rẹ̀ server FreeRoute lórí port {port}...",
     "ready": "Ó ti ṣetán ní http://localhost:{port}",
     "stopping": "Ń dá server dúró (PID {pid})...",
     "stopped": "Server ti dúró.",
@@ -262,7 +262,7 @@
   },
   "backup": {
     "title": "Afẹ́yìntì",
-    "description": "Ṣẹ̀dá afẹ́yìntì dátà OmniRoute",
+    "description": "Ṣẹ̀dá afẹ́yìntì dátà FreeRoute",
     "creating": "Ń ṣẹ̀dá afẹ́yìntì...",
     "done": "A ti fi afẹ́yìntì pamọ́ sí {path}",
     "noFiles": "Kò sí fáìlì láti ṣe afẹ́yìntì (a kò tíì ṣe ìbẹ̀rẹ̀ dátábéèsì)",
@@ -274,7 +274,7 @@
     "noBackups": "A kò rí afẹ́yìntì kankan.",
     "notFound": "A kò rí afẹ́yìntì: {name}",
     "confirmRestore": "Ṣé kí a fi afẹ́yìntì láti {ts} kọ bo dátà tó wà lọ́wọ́lọ́wọ́?",
-    "createDescription": "Ṣẹ̀dá afẹ́yìntì dátà OmniRoute",
+    "createDescription": "Ṣẹ̀dá afẹ́yìntì dátà FreeRoute",
     "nameOpt": "Orúkọ àdáni fún afẹ́yìntì",
     "cloudOpt": "Gbé afẹ́yìntì sókè sí ibi ìpamọ́ àwọsánmà",
     "encryptOpt": "Fi AES-256-GCM parọ́ afẹ́yìntì",
@@ -292,14 +292,14 @@
       "statusDescription": "Ṣàfihàn ipò àkókò afẹ́yìntì lọ́wọ́lọ́wọ́",
       "cronOpt": "Gbólóhùn Cron fún ètò àkókò (àtìlẹ́yìn: ojoojúmọ́ ní aago mẹ́ta òwúrọ̀)",
       "enabled": "A ti mú afẹ́yìntì aládàáṣiṣẹ́ ṣiṣẹ́ (cron: {cron}).",
-      "hint": "omniroute serve máa ń ka ètò àkókò náà nígbà ìbẹ̀rẹ̀.",
+      "hint": "freeroute serve máa ń ka ètò àkókò náà nígbà ìbẹ̀rẹ̀.",
       "disabled": "A ti pa afẹ́yìntì aládàáṣiṣẹ́ rẹ́.",
       "notConfigured": "A kò ṣètò àkókò afẹ́yìntì kankan."
     }
   },
   "health": {
     "description": "Ṣàyẹ̀wò ìlera olupin àti ipò àwọn èròjà",
-    "noServer": "Olupin kò ṣiṣẹ́. Bẹ̀rẹ̀ pẹ̀lú: omniroute serve",
+    "noServer": "Olupin kò ṣiṣẹ́. Bẹ̀rẹ̀ pẹ̀lú: freeroute serve",
     "title": "Ìlera",
     "status": "Ipò: {status}",
     "uptime": "Àkókò iṣẹ́: {uptime}",
@@ -308,21 +308,21 @@
   },
   "quota": {
     "description": "Ṣàfihàn lílo ìpín iṣẹ́ olùpèsè",
-    "noServer": "Olùpín kò ṣiṣẹ́. Bẹ̀rẹ̀ rẹ̀ pẹ̀lú: omniroute serve",
+    "noServer": "Olùpín kò ṣiṣẹ́. Bẹ̀rẹ̀ rẹ̀ pẹ̀lú: freeroute serve",
     "noData": "Kò sí ìwífún nípa ìpín iṣẹ́."
   },
   "cache": {
     "description": "Ṣàkóso cache ìdáhùn",
-    "noServer": "Olùpín kò ṣiṣẹ́. Bẹ̀rẹ̀ rẹ̀ pẹ̀lú: omniroute serve",
+    "noServer": "Olùpín kò ṣiṣẹ́. Bẹ̀rẹ̀ rẹ̀ pẹ̀lú: freeroute serve",
     "cleared": "A ti pa cache rẹ́.",
     "clearFailed": "Pípa cache rẹ́ kùnà."
   },
   "redis": {
-    "description": "Ṣí container Redis àdúgbò kan pẹ̀lú títẹ̀ ẹ̀ẹ̀kan (Podman tàbí Docker) fún caching àti títọpa ìpín iṣẹ́ OmniRoute"
+    "description": "Ṣí container Redis àdúgbò kan pẹ̀lú títẹ̀ ẹ̀ẹ̀kan (Podman tàbí Docker) fún caching àti títọpa ìpín iṣẹ́ FreeRoute"
   },
   "test": {
     "description": "Dán ìsopọ̀ olùpèsè kan wò",
-    "noServer": "Olùpín kò ṣiṣẹ́. Bẹ̀rẹ̀ rẹ̀ pẹ̀lú: omniroute serve",
+    "noServer": "Olùpín kò ṣiṣẹ́. Bẹ̀rẹ̀ rẹ̀ pẹ̀lú: freeroute serve",
     "testing": "Ń dán {provider} / {model} wò...",
     "passed": "Ìsopọ̀ ṣàṣeyọrí!",
     "failed": "Ìsopọ̀ kùnà: {error}",
@@ -334,7 +334,7 @@
     "saved": "A ti fi àwọn èsì pamọ́ sí {path}",
     "compareTitle": "Ìfiwéra Model",
     "compareMinTwo": "Ó kéré tán, model méjì ni a nílò fún --compare (tí a fi àmì kọ́má yà)",
-    "noProviders": "Kò sí olùpèsè tí a ti ṣètò. Ṣàfikún ọ̀kan pẹ̀lú: omniroute keys add"
+    "noProviders": "Kò sí olùpèsè tí a ti ṣètò. Ṣàfikún ọ̀kan pẹ̀lú: freeroute keys add"
   },
   "update": {
     "checking": "Ń ṣàyẹ̀wò àwọn àfikún tuntun...",
@@ -348,7 +348,7 @@
     "running": "Olùpín MCP ń ṣiṣẹ́ ({transport})",
     "stopped": "Olùpín MCP ti dá iṣẹ́ dúró.",
     "restarted": "A ti tún olùpín MCP bẹ̀rẹ̀.",
-    "stoppedHint": "Ṣe `omniroute mcp enable` láti mú un ṣiṣẹ́.",
+    "stoppedHint": "Ṣe `freeroute mcp enable` láti mú un ṣiṣẹ́.",
     "enabled": "A ti mú olupin MCP ṣiṣẹ́.",
     "disabled": "A ti pa olupin MCP.",
     "enable": {
@@ -416,7 +416,7 @@
     }
   },
   "policy": {
-    "description": "Ṣàkóso àwọn ìlànà ìfúnni-láṣẹ OmniRoute",
+    "description": "Ṣàkóso àwọn ìlànà ìfúnni-láṣẹ FreeRoute",
     "list": {
       "description": "Ṣe àkójọ àwọn ìlànà",
       "kind": "Ṣe àsẹ̀ nípasẹ̀ irú (allow|deny|rate-limit|cost-cap)",
@@ -453,7 +453,7 @@
     }
   },
   "compression": {
-    "description": "Ṣètò kí o sì ṣàyẹ̀wò ọ̀nà ṣiṣàn ìfúnpọ̀ OmniRoute",
+    "description": "Ṣètò kí o sì ṣàyẹ̀wò ọ̀nà ṣiṣàn ìfúnpọ̀ FreeRoute",
     "status": {
       "description": "Ṣàfihàn ipò àti àwọn ètò ìfúnpọ̀ lọ́wọ́lọ́wọ́"
     },
@@ -507,18 +507,18 @@
     "confirmRotate": "Yí túúnẹ́lì {type} padà? (a ó ṣẹ̀dá URL tuntun)"
   },
   "stop": {
-    "description": "Dá olupin OmniRoute dúró",
+    "description": "Dá olupin FreeRoute dúró",
     "stopping": "Ń dá olupin dúró (PID {pid})...",
     "stopped": "A ti dá olupin dúró.",
     "notRunning": "Kò sí olupin kankan tó ń ṣiṣẹ́.",
     "portFallback": "A kò rí fáìlì PID, ń gbìyànjú láti dá a dúró nípasẹ̀ port..."
   },
   "restart": {
-    "description": "Tun olupin OmniRoute bẹ̀rẹ̀",
-    "restarting": "Ń tún sáfà OmniRoute bẹ̀rẹ̀..."
+    "description": "Tun olupin FreeRoute bẹ̀rẹ̀",
+    "restarting": "Ń tún sáfà FreeRoute bẹ̀rẹ̀..."
   },
   "dashboard": {
-    "description": "Ṣí pátákó ìdarí OmniRoute nínú aṣàwákiri",
+    "description": "Ṣí pátákó ìdarí FreeRoute nínú aṣàwákiri",
     "opening": "Ń ṣí pátákó ìdarí ní {url}",
     "urlOnly": "Tẹ URL pátákó ìdarí jáde láìṣí aṣàwákiri",
     "tui": "Ṣí pátákó ìdarí TUI alábáṣepọ̀ (ojú-ìṣàmúlò ebute, taabu 7)"
@@ -526,7 +526,7 @@
   "models": {
     "description": "Ṣe àkójọ àwọn àwòṣe tó wà (ó nílò sáfà)",
     "search": "Ṣe àlẹ̀mọ́ àwọn àwòṣe nípasẹ̀ id, orúkọ, olùpèsè, tàbí àpèjúwe",
-    "noServer": "Sáfà kò ṣiṣẹ́. Bẹ̀rẹ̀ pẹ̀lú: omniroute serve",
+    "noServer": "Sáfà kò ṣiṣẹ́. Bẹ̀rẹ̀ pẹ̀lú: freeroute serve",
     "noModels": "A kò rí àwòṣe kankan."
   },
   "audit": {
@@ -558,7 +558,7 @@
     }
   },
   "skills": {
-    "description": "Ṣàkóso àwọn ọgbọ́n OmniRoute (sandbox, builtin, custom, hybrid, skillssh)",
+    "description": "Ṣàkóso àwọn ọgbọ́n FreeRoute (sandbox, builtin, custom, hybrid, skillssh)",
     "list": {
       "description": "Ṣe àkójọ àwọn ọgbọ́n tí a ti fi sílẹ̀",
       "type": "Ṣe àlẹ̀mọ́ nípasẹ̀ irú (sandbox|custom|builtin|hybrid|skillssh)",
@@ -631,7 +631,7 @@
     }
   },
   "memory": {
-    "description": "Ṣàkóso ìrántí ìjíròrò OmniRoute (FTS5 + vector)",
+    "description": "Ṣàkóso ìrántí ìjíròrò FreeRoute (FTS5 + vector)",
     "search": {
       "description": "Ṣàwárí àwọn àkọsílẹ̀ ìrántí nípasẹ̀ ìbéèrè ìtumọ̀",
       "type": "Ṣe àlẹ̀mọ́ nípa irú ìrántí (user|feedback|project|reference)",
@@ -789,7 +789,7 @@
     }
   },
   "webhooks": {
-    "description": "Ṣàkóso àwọn webhook OmniRoute",
+    "description": "Ṣàkóso àwọn webhook FreeRoute",
     "events": {
       "description": "Ṣàtòjọ gbogbo irú ìṣẹ̀lẹ̀ webhook tó wà"
     },
@@ -821,14 +821,14 @@
     }
   },
   "program": {
-    "description": "OmniRoute — Olùdarí AI ọlọ́gbọ́n pẹ̀lú ìpadà-aifọwọ́yi",
+    "description": "FreeRoute — Olùdarí AI ọlọ́gbọ́n pẹ̀lú ìpadà-aifọwọ́yi",
     "version": "Ṣàfihàn ẹ̀dà kí o sì jáde",
     "output": "Ọ̀nà àgbékalẹ̀ àbájáde (table, json, jsonl, csv)",
     "quiet": "Má ṣe ṣàfihàn àbájáde tí kò ṣe pàtàkì",
     "no_color": "Pa àbájáde aláwọ̀ rẹ́",
     "timeout": "Àkókò ìparí ìbéèrè HTTP ní ìṣẹ́jú-àáyá kékeré",
-    "api_key": "Kọ́kọ́rọ́ API fún olupin OmniRoute",
-    "base_url": "URL ìpìlẹ̀ olupin OmniRoute",
+    "api_key": "Kọ́kọ́rọ́ API fún olupin FreeRoute",
+    "base_url": "URL ìpìlẹ̀ olupin FreeRoute",
     "context": "Àyíká/prófáìlì olupin láti lò fún àṣẹ yìí",
     "lang": "Ṣètò èdè àfihàn CLI (ó borí OMNIROUTE_LANG)"
   },
@@ -1079,7 +1079,7 @@
     }
   },
   "openapi": {
-    "description": "Wọlé sí OpenAPI spec OmniRoute kí o sì dán an wò",
+    "description": "Wọlé sí OpenAPI spec FreeRoute kí o sì dán an wò",
     "dump": {
       "description": "Tú OpenAPI spec jáde sí stdout tàbí fáìlì",
       "format": "Ọ̀nà àgbéjáde: yaml|json (àìyípadà: yaml)",
@@ -1149,7 +1149,7 @@
     }
   },
   "open": {
-    "description": "Ṣí ojú ìdarí OmniRoute pàtó kan nínú aṣàwákiri",
+    "description": "Ṣí ojú ìdarí FreeRoute pàtó kan nínú aṣàwákiri",
     "url": "Tẹ URL nìkan jáde, má ṣe ṣí aṣàwákiri"
   },
   "telemetry": {
@@ -1166,7 +1166,7 @@
     }
   },
   "sync": {
-    "description": "Mú ìṣètò bá ara mu láàárín àwọn instance OmniRoute",
+    "description": "Mú ìṣètò bá ara mu láàárín àwọn instance FreeRoute",
     "push": {
       "description": "Fi ìṣètò ránṣẹ́ sí cloud tàbí instance jíjìn",
       "target": "Àfojúsùn (cloud tàbí context:name)",
@@ -1222,8 +1222,8 @@
       "listTitle": "Àwọn Èdè Tó Wà",
       "current": "Èdè: {code} ({name})",
       "saved": "A ti ṣètò èdè sí {code} ({name}).",
-      "noCode": "A nílò kóòdù èdè. Ṣiṣe 'omniroute config lang list' láti rí àwọn kóòdù tó wà.",
-      "unknown": "Kóòdù èdè tí a kò mọ̀: {code}. Ṣiṣe 'omniroute config lang list' láti rí àwọn kóòdù tó wà.",
+      "noCode": "A nílò kóòdù èdè. Ṣiṣe 'freeroute config lang list' láti rí àwọn kóòdù tó wà.",
+      "unknown": "Kóòdù èdè tí a kò mọ̀: {code}. Ṣiṣe 'freeroute config lang list' láti rí àwọn kóòdù tó wà.",
       "alreadySet": "A ti ṣètò èdè sí {code} tẹ́lẹ̀.",
       "envHint": "Ìmọ̀ràn: o tún lè ṣètò OMNIROUTE_LANG={code} nínú àyíká rẹ."
     }
@@ -1242,7 +1242,7 @@
     "filter": "Ṣàsẹ̀ nípa ìpele (error,warn,info) — fi kọ́mà yà wọ́n",
     "lines": "Iye àwọn ìlà láti gba",
     "timeout": "Àkókò ìparí àsopọ̀ ní ms",
-    "baseUrl": "URL ìpìlẹ̀ API OmniRoute",
+    "baseUrl": "URL ìpìlẹ̀ API FreeRoute",
     "requestId": "Ṣàsẹ̀ nípa ID ìbéèrè",
     "apiKey": "Ṣàsẹ̀ nípa kọ́kọ́rọ́ API",
     "combo": "Ṣe àlẹ̀mọ́ pẹ̀lú orúkọ combo",
@@ -1258,10 +1258,10 @@
     "description": "Ṣàkóso àmì àtẹ ìṣàmúlò ètò",
     "show": "Fi àmì àtẹ hàn (bí server bá ń ṣiṣẹ́ pẹ̀lú --tray)",
     "hide": "Fi àmì àtẹ pamọ́",
-    "quit": "Jáde kúrò ní OmniRoute nípasẹ̀ àtẹ"
+    "quit": "Jáde kúrò ní FreeRoute nípasẹ̀ àtẹ"
   },
   "autostart": {
-    "description": "Ṣàkóso ìbẹ̀rẹ̀ aládàáṣiṣẹ́ OmniRoute nígbà ìgbéjáde (Linux: iṣẹ́ oníṣe systemd)",
+    "description": "Ṣàkóso ìbẹ̀rẹ̀ aládàáṣiṣẹ́ FreeRoute nígbà ìgbéjáde (Linux: iṣẹ́ oníṣe systemd)",
     "enable": "Mú ìbẹ̀rẹ̀ aládàáṣiṣẹ́ ṣiṣẹ́ nígbà ìgbéjáde",
     "disable": "Pa ìbẹ̀rẹ̀ aládàáṣiṣẹ́ nígbà ìgbéjáde",
     "toggle": "Yí ipò ìbẹ̀rẹ̀ aládàáṣiṣẹ́ padà nígbà ìgbéjáde",
@@ -1293,19 +1293,19 @@
     "scaffold": "Ṣẹ̀dá àwòṣe ìpilẹ̀ plugin tuntun"
   },
   "launch": {
-    "description": "Ṣí Claude Code tí a darí sí OmniRoute (àdúgbò tàbí jíjìnnà, pẹ̀lú --profile)",
+    "description": "Ṣí Claude Code tí a darí sí FreeRoute (àdúgbò tàbí jíjìnnà, pẹ̀lú --profile)",
     "token": "Token tí Claude client gbọ́dọ̀ fi ránṣẹ́ (ANTHROPIC_AUTH_TOKEN)",
-    "notRunning": "A kò lè dé OmniRoute ní {port}. Bẹ̀rẹ̀ rẹ̀ pẹ̀lú 'omniroute serve'.",
+    "notRunning": "A kò lè dé FreeRoute ní {port}. Bẹ̀rẹ̀ rẹ̀ pẹ̀lú 'freeroute serve'.",
     "notFound": "A kò rí CLI 'claude' nínú PATH."
   },
   "run": {
-    "description": "Ṣe ìfilọ́lẹ̀ ibi-àfojúsùn CLI tí a ṣe àtìlẹ́yìn fún nípasẹ̀ OmniRoute"
+    "description": "Ṣe ìfilọ́lẹ̀ ibi-àfojúsùn CLI tí a ṣe àtìlẹ́yìn fún nípasẹ̀ FreeRoute"
   },
   "setupClaude": {
-    "description": "Ṣẹ̀dá àwọn prófáìlì Claude Code ~/.claude/profiles láti inú àkójọ awoṣe OmniRoute"
+    "description": "Ṣẹ̀dá àwọn prófáìlì Claude Code ~/.claude/profiles láti inú àkójọ awoṣe FreeRoute"
   },
   "connect": {
-    "description": "Sopọ̀ mọ́ olupin OmniRoute jíjìn kí o sì wọ ipò jíjìn"
+    "description": "Sopọ̀ mọ́ olupin FreeRoute jíjìn kí o sì wọ ipò jíjìn"
   },
   "tokens": {
     "description": "Ṣàkóso àwọn àmì ìráyè CLI tí a fi ààlà sí (ipò jíjìn)"
@@ -1314,10 +1314,10 @@
     "description": "Yan olùpèsè+awoṣe láti inú olupin tó ń ṣiṣẹ́ kí o sì ṣètò CLI agbègbè tí a ṣe àtìlẹ́yìn fún"
   },
   "launchCodex": {
-    "description": "Ṣe ìfilọ́lẹ̀ Codex CLI tí a tọ́ka sí OmniRoute (VPS agbègbè tàbí jíjìn)"
+    "description": "Ṣe ìfilọ́lẹ̀ Codex CLI tí a tọ́ka sí FreeRoute (VPS agbègbè tàbí jíjìn)"
   },
   "setupCodex": {
-    "description": "Ṣẹ̀dá àwọn fáìlì prófáìlì ~/.codex láti inú àkójọ awoṣe alààyè OmniRoute"
+    "description": "Ṣẹ̀dá àwọn fáìlì prófáìlì ~/.codex láti inú àkójọ awoṣe alààyè FreeRoute"
   },
   "packs": {
     "description": "Ṣàkóso àwọn àpò runtime àṣàyàn (ML / aládàáṣiṣẹ́ aṣàwákiri)",
@@ -1330,7 +1330,7 @@
     "errUnknown": "àpò tí a kò mọ̀: {name}",
     "errNoIndex": "a kò rí àtọ́ka àpò; fi --source <dir> tó ní payload àpò náà kọjá (àwọn bundle desktop ló máa ń fi í ránṣẹ́ lẹ́gbẹ̀ẹ́ app náà)",
     "installed": "a ti fi àpò \"{name}\" sílẹ̀, a sì ti jẹ́rìí rẹ̀ ní {dir}",
-    "restartHint": "tun olupin OmniRoute (tàbí app desktop) bẹ̀rẹ̀ kí runtime lè lo àpò náà",
+    "restartHint": "tun olupin FreeRoute (tàbí app desktop) bẹ̀rẹ̀ kí runtime lè lo àpò náà",
     "removed": "a ti yọ àpò \"{name}\"",
     "notInstalled": "a kò fi àpò \"{name}\" sílẹ̀",
     "verifyOk": "a ti jẹ́rìí gbogbo àwọn àpò tí a fi sílẹ̀",

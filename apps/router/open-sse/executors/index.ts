@@ -2,6 +2,7 @@ import { SEARCH_PROVIDERS } from "../config/searchRegistry.ts";
 import { assertMicrosoftDesignerWebProviderAvailable } from "@/shared/constants/designerWebRetirement";
 import { assertRuntimeProviderAvailable } from "@/shared/constants/providerRetirement";
 import { assertCommonChatGptWebProviderAvailable } from "@/shared/constants/chatgptWebRetirement";
+import { assertProviderAllowed } from "../netie/policy.ts";
 import { registerLazyExecutor, loadRegisteredExecutor, hasRegisteredExecutor } from "./registry.ts";
 // Type-only: pulls no runtime code, keeps DefaultExecutor the only eager class.
 import type { BaseExecutor } from "./base.ts";
@@ -214,6 +215,9 @@ const CHAT_UNSUPPORTED_CLOUD_AGENT_PROVIDERS = new Set(["jules"]);
 const CHAT_UNSUPPORTED_SEARCH_PROVIDERS = new Set(Object.keys(SEARCH_PROVIDERS));
 
 export async function getExecutor(provider: string): Promise<BaseExecutor> {
+  // FreeRoute: hard-disable dispatch to any consumer-subscription-pooling or
+  // browser-session-relay executor before it can load. See open-sse/netie/policy.ts.
+  assertProviderAllowed(provider);
   assertMicrosoftDesignerWebProviderAvailable(provider);
   assertRuntimeProviderAvailable(provider);
   assertCommonChatGptWebProviderAvailable(provider);

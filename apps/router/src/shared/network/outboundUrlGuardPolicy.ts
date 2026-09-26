@@ -11,7 +11,7 @@ import {
 } from "./outboundUrlGuard";
 
 // #7682: this module is the DB/feature-flag-backed half of the outbound URL guard, split out
-// of `./outboundUrlGuard.ts` so the CLI (`omniroute setup-opencode`, loaded via tsx with no
+// of `./outboundUrlGuard.ts` so the CLI (`freeroute setup-opencode`, loaded via tsx with no
 // tsconfig.json in a global npm install) never has to resolve the `@/` alias. Only Next.js /
 // webpack-bundled server code (never the CLI) should import from here.
 

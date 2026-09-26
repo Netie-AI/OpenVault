@@ -531,6 +531,18 @@ export default function AddApiKeyModal({
       {...TALL_MODAL_PROPS}
     >
       <div className="flex flex-col gap-4">
+        <a
+          href="http://127.0.0.1:3010/keys"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/20"
+        >
+          <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+            open_in_new
+          </span>
+          Provider API keys are managed in OpenVault. Add or update this key at 127.0.0.1:3010/keys
+          — FreeRoute reads it from there and never stores it here.
+        </a>
         {webProviderHostLink && (
           <a
             href={webProviderHostLink.url}

@@ -122,7 +122,7 @@ export function registerRedis(program) {
     .command("redis")
     .description(
       t("redis.description") ||
-        "Launch a 1-click local Redis container (Podman or Docker) for OmniRoute caching and quota tracking"
+        "Launch a 1-click local Redis container (Podman or Docker) for FreeRoute caching and quota tracking"
     );
 
   redis
@@ -263,7 +263,7 @@ export async function runRedisUpCommand(opts = {}) {
   try {
     await execFile(runtime, args);
     success(`Container '${name}' is now running on redis://${bind}:${port}`);
-    info(`Set OMNIROUTE_REDIS_URL=redis://${bind}:${port} in your .env to wire OmniRoute to it.`);
+    info(`Set OMNIROUTE_REDIS_URL=redis://${bind}:${port} in your .env to wire FreeRoute to it.`);
     if (bind !== DEFAULT_BIND && !opts.password) {
       info(
         `Warning: '${bind}' publishes Redis beyond loopback without AUTH. Re-run with --password <secret>.`
@@ -344,7 +344,7 @@ export async function runRedisStatusCommand(opts = {}) {
     );
   }
   if (!running) {
-    info(`Run 'omniroute redis up' to launch it.`);
+    info(`Run 'freeroute redis up' to launch it.`);
   }
   return 0;
 }

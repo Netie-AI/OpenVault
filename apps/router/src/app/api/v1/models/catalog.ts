@@ -1,4 +1,5 @@
 import { PROVIDER_MODELS, PROVIDER_ID_TO_ALIAS } from "@/shared/constants/models";
+import { isProviderHidden } from "@omniroute/open-sse/netie/policy.ts";
 import { NOAUTH_PROVIDERS } from "@/shared/constants/providers";
 import { getCombos } from "@/lib/db/combos";
 import { isComboNameAllowedForKey } from "@/shared/utils/apiKeyPolicy";
@@ -260,7 +261,7 @@ async function buildCatalogPayload(
   request: Request
 ): Promise<{ body: string; headers: Record<string, string>; status: number; cacheTTL: number }> {
   const built = await buildUnifiedModelsResponseCore(request);
-  const body = await built.text();
+  const body = filterHardDisabledCatalogEntries(await built.text());
   const headers: Record<string, string> = {};
   built.headers.forEach((value, key) => {
     headers[key] = value;
@@ -278,6 +279,35 @@ async function buildCatalogPayload(
     // Swallow — use default TTL on DB error
   }
   return { body, headers, status: built.status, cacheTTL };
+}
+
+/**
+ * FreeRoute: drop model entries owned by a hard-disabled (consumer-subscription-
+ * pooling or browser-session-relay) provider from the /v1/models catalog body.
+ * Post-processes the already-serialized response so the intricate combo/alias/
+ * synced-model assembly above stays untouched — see open-sse/netie/policy.ts.
+ */
+function filterHardDisabledCatalogEntries(rawBody: string): string {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(rawBody);
+  } catch {
+    return rawBody;
+  }
+  if (
+    !parsed ||
+    typeof parsed !== "object" ||
+    !Array.isArray((parsed as { data?: unknown }).data)
+  ) {
+    return rawBody;
+  }
+  const payload = parsed as { data: Array<Record<string, unknown>> };
+  const filtered = payload.data.filter((model) => {
+    const ownedBy = typeof model?.owned_by === "string" ? model.owned_by : null;
+    return !ownedBy || !isProviderHidden(ownedBy);
+  });
+  if (filtered.length === payload.data.length) return rawBody;
+  return JSON.stringify({ ...payload, data: filtered });
 }
 
 /**

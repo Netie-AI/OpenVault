@@ -3,8 +3,8 @@
  *
  * #11885: `src/app/api/system/version/route.ts` hardcoded `pm2 restart omniroute` as the
  * ONLY restart mechanism, at two near-identical branches. OmniRoute ships its OWN
- * supervisor (`bin/cli/runtime/processSupervisor.mjs`, started by `omniroute serve` /
- * `omniroute serve --daemon`) with PID-file management (`bin/cli/utils/pid.mjs`) as an
+ * supervisor (`bin/cli/runtime/processSupervisor.mjs`, started by `freeroute serve` /
+ * `freeroute serve --daemon`) with PID-file management (`bin/cli/utils/pid.mjs`) as an
  * alternative to pm2 — so on any install that isn't pm2-managed, the restart step
  * silently degraded to a "skipped" status while the install step still reported "done",
  * which reads like a completed live update even though nothing restarted.

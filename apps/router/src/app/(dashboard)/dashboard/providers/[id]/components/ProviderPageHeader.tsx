@@ -35,7 +35,7 @@ interface ProviderPageHeaderProps {
    * referral link (D28 — referral links / free credits), rather than the
    * static catalog `website`. Reuses the same discreet "Partner link" note
    * as the pre-existing Kimi partnership link — both are the same kind of
-   * "this link supports OmniRoute" disclosure.
+   * "this link supports FreeRoute" disclosure.
    */
   isReferralLink?: boolean;
 }
@@ -63,7 +63,7 @@ export default function ProviderPageHeader({
   const kimiPartnerLinkNote = providerText(
     t,
     "kimiPartnerLinkNote",
-    "Partner link — supports OmniRoute at no extra cost to you"
+    "Partner link — supports FreeRoute at no extra cost to you"
   );
 
   // Resolve the API-key registration link: prefer apiKeyUrl, fall back to

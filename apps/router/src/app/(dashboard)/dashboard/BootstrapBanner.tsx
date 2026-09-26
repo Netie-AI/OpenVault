@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 
 /**
- * Shown when OmniRoute was started with auto-generated secrets (zero-config mode).
+ * Shown when FreeRoute was started with auto-generated secrets (zero-config mode).
  * The banner is dismissable and persists only for the current session.
  */
 export default function BootstrapBanner() {

@@ -1,8 +1,8 @@
 {
   "common": {
     "error": "Σφάλμα: {message}",
-    "serverOffline": "Ο διακομιστής OmniRoute είναι εκτός σύνδεσης. Εκκινήστε τον με: omniroute serve",
-    "authRequired": "Απαιτείται έλεγχος ταυτότητας. Ορίστε το OMNIROUTE_API_KEY ή εκτελέστε: omniroute setup",
+    "serverOffline": "Ο διακομιστής FreeRoute είναι εκτός σύνδεσης. Εκκινήστε τον με: freeroute serve",
+    "authRequired": "Απαιτείται έλεγχος ταυτότητας. Ορίστε το OMNIROUTE_API_KEY ή εκτελέστε: freeroute setup",
     "rateLimited": "Υπέρβαση ορίου αιτημάτων. Δοκιμάστε ξανά μετά από {seconds}δ.",
     "timeout": "Το αίτημα έληξε μετά από {ms}ms.",
     "success": "Ολοκληρώθηκε.",
@@ -15,7 +15,7 @@
     "yesOpt": "Παράλειψη προτροπής επιβεβαίωσης"
   },
   "setup": {
-    "title": "Εγκατάσταση OmniRoute",
+    "title": "Εγκατάσταση FreeRoute",
     "passwordPrompt": "Κωδικός διαχειριστή",
     "providerPrompt": "Προεπιλεγμένος πάροχος (αφήστε κενό για παράλειψη)",
     "done": "Η εγκατάσταση ολοκληρώθηκε",
@@ -30,19 +30,19 @@
     "opencode": "Εγκατάσταση και ρύθμιση του ενσωματωμένου @omniroute/opencode-plugin για το OpenCode"
   },
   "doctor": {
-    "title": "OmniRoute Doctor",
+    "title": "FreeRoute Doctor",
     "dbOk": "Βάση δεδομένων: ΟΚ ({path})",
-    "dbMissing": "Βάση δεδομένων: μη αρχικοποιημένη — εκτελέστε `omniroute setup`",
+    "dbMissing": "Βάση δεδομένων: μη αρχικοποιημένη — εκτελέστε `freeroute setup`",
     "portOk": "Θύρα {port}: διαθέσιμη",
     "portConflict": "Θύρα {port}: χρησιμοποιείται από άλλη διεργασία",
     "encryptionOk": "Κλειδί κρυπτογράφησης: ρυθμισμένο",
-    "encryptionMissing": "Λείπει το κλειδί κρυπτογράφησης — εκτελέστε `omniroute setup`",
+    "encryptionMissing": "Λείπει το κλειδί κρυπτογράφησης — εκτελέστε `freeroute setup`",
     "allGood": "Όλοι οι έλεγχοι πέρασαν.",
     "warnings": "{count} προειδοποίηση(-εις) — δείτε παραπάνω."
   },
   "providers": {
     "title": "Πάροχοι",
-    "noProviders": "Δεν έχουν ρυθμιστεί πάροχοι. Εκτελέστε: omniroute setup",
+    "noProviders": "Δεν έχουν ρυθμιστεί πάροχοι. Εκτελέστε: freeroute setup",
     "testing": "Δοκιμή {name}...",
     "available": "{count} διαθέσιμος(-οι) πάροχος(-οι)",
     "connected": "Συνδέθηκε",
@@ -71,7 +71,7 @@
       "dryRunOpt": "Εκτύπωση των αλλαγών που θα γίνονταν χωρίς εγγραφή",
       "confirmPrompt": "Αντικατάσταση κλειδιού API για τη σύνδεση \"{name}\" ({id}); [y/N]",
       "dryRunResult": "[dry-run] Θα εναλλασσόταν το κλειδί για το \"{name}\" ({id}). Δεν έγιναν αλλαγές.",
-      "oauthHint": "Σύνδεση OAuth — εκτελέστε: omniroute oauth {provider}",
+      "oauthHint": "Σύνδεση OAuth — εκτελέστε: freeroute oauth {provider}",
       "envVarEmpty": "Η μεταβλητή περιβάλλοντος {var} δεν έχει οριστεί ή είναι κενή.",
       "success": "Το κλειδί εναλλάχθηκε για το \"{name}\". Εκτελέστε `providers test {id}` για επαλήθευση.",
       "testPassed": "Ο έλεγχος μετά την εναλλαγή ολοκληρώθηκε επιτυχώς.",
@@ -82,7 +82,7 @@
       "providerOpt": "Φιλτράρισμα κατά όνομα παρόχου",
       "header": "ID         Πάροχος       Όνομα                     Κατάσταση Λήξης  Κατάσταση Ελέγχου  Αναμονή Έως",
       "noData": "Δεν υπάρχουν διαθέσιμα δεδομένα σύνδεσης παρόχου.",
-      "requiresServer": "Το providers status απαιτεί να εκτελείται ο διακομιστής OmniRoute."
+      "requiresServer": "Το providers status απαιτεί να εκτελείται ο διακομιστής FreeRoute."
     }
   },
   "keys": {
@@ -90,8 +90,8 @@
     "addDescription": "Προσθήκη ή ενημέρωση κλειδιού API για έναν πάροχο",
     "listDescription": "Εμφάνιση όλων των διαμορφωμένων κλειδιών API",
     "removeDescription": "Αφαίρεση κλειδιού API για έναν πάροχο",
-    "regenerateDescription": "Αναδημιουργία κλειδιού API του OmniRoute",
-    "revokeDescription": "Ανάκληση κλειδιού API του OmniRoute",
+    "regenerateDescription": "Αναδημιουργία κλειδιού API του FreeRoute",
+    "revokeDescription": "Ανάκληση κλειδιού API του FreeRoute",
     "revealDescription": "Αποκάλυψη της μη συγκαλυμμένης τιμής κλειδιού API",
     "usageDescription": "Εμφάνιση πρόσφατης χρήσης για ένα κλειδί API",
     "usageLimitOpt": "Αριθμός πρόσφατων αιτημάτων",
@@ -142,7 +142,7 @@
     "warning": "⚠ Αυτό εκτυπώνει/γράφει ΑΠΟΚΡΥΠΤΟΓΡΑΦΗΜΈΝΑ κλειδιά API και διακριτικά OAuth σε απλό κείμενο. Βεβαιωθείτε ότι η οθόνη σας, το ιστορικό του κελύφους και τυχόν αρχεία εξόδου παραμένουν ιδιωτικά.",
     "confirmHeading": "⚠ ΠΡΟΕΙΔΟΠΟΙΗΣΗ: αυτό εξάγει ΑΠΟΚΡΥΠΤΟΓΡΑΦΗΜΕΝΑ διαπιστευτήρια παρόχου σε απλό κείμενο",
     "confirmBody": "Αυτή η εντολή αποκρυπτογραφεί και εκτυπώνει/γράφει τα apiKey, accessToken, refreshToken και\nidToken για τις επιλεγμένες συνδέσεις. Αντιμετωπίστε την έξοδο ως μυστικό.",
-    "confirmFooter": "Για επιβεβαίωση, εκτελέστε:\n  omniroute auth export --force",
+    "confirmFooter": "Για επιβεβαίωση, εκτελέστε:\n  freeroute auth export --force",
     "missingKey": "Το STORAGE_ENCRYPTION_KEY απαιτείται για την εξαγωγή διαπιστευτηρίων.",
     "notFound": "Η σύνδεση δεν βρέθηκε: {id}",
     "invalidFormat": "Μη έγκυρη μορφή: {format}. Χρησιμοποιήστε json ή env."
@@ -220,10 +220,10 @@
     "reasoning": "Επίπεδο προσπάθειας συλλογισμού (low|medium|high)",
     "thinking": "Προϋπολογισμός token για εκτεταμένη σκέψη",
     "explain": "Εκτύπωση δέντρου εναλλακτικής δρομολόγησης και εύρους κόστους στο stderr",
-    "noCombo": "Δεν βρέθηκε αντίστοιχο combo. Δημιουργήστε ένα με: omniroute combo create"
+    "noCombo": "Δεν βρέθηκε αντίστοιχο combo. Δημιουργήστε ένα με: freeroute combo create"
   },
   "chat": {
-    "description": "Αποστολή ενός μεμονωμένου μηνύματος chat στο OmniRoute",
+    "description": "Αποστολή ενός μεμονωμένου μηνύματος chat στο FreeRoute",
     "file": "Ανάγνωση προτροπής από αρχείο",
     "stdin": "Ανάγνωση προτροπής από το stdin",
     "system": "Προτροπή συστήματος",
@@ -242,8 +242,8 @@
     }
   },
   "serve": {
-    "description": "Εκκίνηση του διακομιστή OmniRoute (προεπιλεγμένη ενέργεια)",
-    "starting": "Εκκίνηση διακομιστή OmniRoute στη θύρα {port}...",
+    "description": "Εκκίνηση του διακομιστή FreeRoute (προεπιλεγμένη ενέργεια)",
+    "starting": "Εκκίνηση διακομιστή FreeRoute στη θύρα {port}...",
     "ready": "Έτοιμος στο http://localhost:{port}",
     "stopping": "Διακοπή διακομιστή (PID {pid})...",
     "stopped": "Ο διακομιστής διακόπηκε.",
@@ -262,7 +262,7 @@
   },
   "backup": {
     "title": "Αντίγραφο ασφαλείας",
-    "description": "Δημιουργία αντιγράφου ασφαλείας δεδομένων OmniRoute",
+    "description": "Δημιουργία αντιγράφου ασφαλείας δεδομένων FreeRoute",
     "creating": "Δημιουργία αντιγράφου ασφαλείας...",
     "done": "Το αντίγραφο ασφαλείας αποθηκεύτηκε στο {path}",
     "noFiles": "Δεν υπάρχουν αρχεία για δημιουργία αντιγράφου ασφαλείας (η βάση δεδομένων δεν έχει αρχικοποιηθεί)",
@@ -274,7 +274,7 @@
     "noBackups": "Δεν βρέθηκαν αντίγραφα ασφαλείας.",
     "notFound": "Το αντίγραφο ασφαλείας δεν βρέθηκε: {name}",
     "confirmRestore": "Αντικατάσταση των τρεχόντων δεδομένων με το αντίγραφο ασφαλείας από {ts};",
-    "createDescription": "Δημιουργία αντιγράφου ασφαλείας δεδομένων OmniRoute",
+    "createDescription": "Δημιουργία αντιγράφου ασφαλείας δεδομένων FreeRoute",
     "nameOpt": "Προσαρμοσμένο όνομα αντιγράφου ασφαλείας",
     "cloudOpt": "Αποστολή αντιγράφου ασφαλείας στο αποθηκευτικό χώρο cloud",
     "encryptOpt": "Κρυπτογράφηση αντιγράφου ασφαλείας με AES-256-GCM",
@@ -292,14 +292,14 @@
       "statusDescription": "Εμφάνιση τρέχουσας κατάστασης χρονοδιαγράμματος αντιγράφων ασφαλείας",
       "cronOpt": "Έκφραση cron για το χρονοδιάγραμμα (προεπιλογή: καθημερινά στις 3 π.μ.)",
       "enabled": "Το αυτόματο αντίγραφο ασφαλείας είναι ενεργοποιημένο (cron: {cron}).",
-      "hint": "Το χρονοδιάγραμμα διαβάζεται από το omniroute serve κατά την εκκίνηση.",
+      "hint": "Το χρονοδιάγραμμα διαβάζεται από το freeroute serve κατά την εκκίνηση.",
       "disabled": "Το αυτόματο αντίγραφο ασφαλείας είναι απενεργοποιημένο.",
       "notConfigured": "Δεν έχει ρυθμιστεί χρονοδιάγραμμα αντιγράφων ασφαλείας."
     }
   },
   "health": {
     "description": "Έλεγχος υγείας διακομιστή και κατάστασης εξαρτημάτων",
-    "noServer": "Ο διακομιστής δεν εκτελείται. Εκκινήστε με: omniroute serve",
+    "noServer": "Ο διακομιστής δεν εκτελείται. Εκκινήστε με: freeroute serve",
     "title": "Υγεία",
     "status": "Κατάσταση: {status}",
     "uptime": "Χρόνος λειτουργίας: {uptime}",
@@ -308,21 +308,21 @@
   },
   "quota": {
     "description": "Εμφάνιση χρήσης ορίου παρόχου",
-    "noServer": "Ο διακομιστής δεν εκτελείται. Εκκινήστε με: omniroute serve",
+    "noServer": "Ο διακομιστής δεν εκτελείται. Εκκινήστε με: freeroute serve",
     "noData": "Δεν υπάρχουν διαθέσιμες πληροφορίες ορίου."
   },
   "cache": {
     "description": "Διαχείριση κρυφής μνήμης απαντήσεων",
-    "noServer": "Ο διακομιστής δεν εκτελείται. Εκκινήστε με: omniroute serve",
+    "noServer": "Ο διακομιστής δεν εκτελείται. Εκκινήστε με: freeroute serve",
     "cleared": "Η κρυφή μνήμη εκκαθαρίστηκε.",
     "clearFailed": "Αποτυχία εκκαθάρισης κρυφής μνήμης."
   },
   "redis": {
-    "description": "Εκκίνηση τοπικού container Redis με ένα κλικ (Podman ή Docker) για αποθήκευση στην κρυφή μνήμη και παρακολούθηση ορίων του OmniRoute"
+    "description": "Εκκίνηση τοπικού container Redis με ένα κλικ (Podman ή Docker) για αποθήκευση στην κρυφή μνήμη και παρακολούθηση ορίων του FreeRoute"
   },
   "test": {
     "description": "Δοκιμή σύνδεσης παρόχου",
-    "noServer": "Ο διακομιστής δεν εκτελείται. Εκκινήστε με: omniroute serve",
+    "noServer": "Ο διακομιστής δεν εκτελείται. Εκκινήστε με: freeroute serve",
     "testing": "Δοκιμή {provider} / {model}...",
     "passed": "Η σύνδεση ήταν επιτυχής!",
     "failed": "Αποτυχία σύνδεσης: {error}",
@@ -334,7 +334,7 @@
     "saved": "Τα αποτελέσματα αποθηκεύτηκαν στο {path}",
     "compareTitle": "Σύγκριση Μοντέλων",
     "compareMinTwo": "Απαιτούνται τουλάχιστον δύο μοντέλα για την επιλογή --compare (διαχωρισμένα με κόμμα)",
-    "noProviders": "Δεν έχουν ρυθμιστεί πάροχοι. Προσθέστε έναν με: omniroute keys add"
+    "noProviders": "Δεν έχουν ρυθμιστεί πάροχοι. Προσθέστε έναν με: freeroute keys add"
   },
   "update": {
     "checking": "Έλεγχος για ενημερώσεις...",
@@ -348,7 +348,7 @@
     "running": "Ο διακομιστής MCP εκτελείται ({transport})",
     "stopped": "Ο διακομιστής MCP διακόπηκε.",
     "restarted": "Ο διακομιστής MCP επανεκκινήθηκε.",
-    "stoppedHint": "Εκτελέστε `omniroute mcp enable` για να το ενεργοποιήσετε.",
+    "stoppedHint": "Εκτελέστε `freeroute mcp enable` για να το ενεργοποιήσετε.",
     "enabled": "Ο διακομιστής MCP ενεργοποιήθηκε.",
     "disabled": "Ο διακομιστής MCP απενεργοποιήθηκε.",
     "enable": {
@@ -416,7 +416,7 @@
     }
   },
   "policy": {
-    "description": "Διαχείριση πολιτικών εξουσιοδότησης OmniRoute",
+    "description": "Διαχείριση πολιτικών εξουσιοδότησης FreeRoute",
     "list": {
       "description": "Λίστα πολιτικών",
       "kind": "Φιλτράρισμα κατά είδος (allow|deny|rate-limit|cost-cap)",
@@ -453,7 +453,7 @@
     }
   },
   "compression": {
-    "description": "Ρυθμίστε και επιθεωρήστε τον αγωγό συμπίεσης OmniRoute",
+    "description": "Ρυθμίστε και επιθεωρήστε τον αγωγό συμπίεσης FreeRoute",
     "status": {
       "description": "Εμφάνιση τρέχουσας κατάστασης και ρυθμίσεων συμπίεσης"
     },
@@ -507,18 +507,18 @@
     "confirmRotate": "Ανανέωση τούνελ {type}; (θα δημιουργηθεί νέο URL)"
   },
   "stop": {
-    "description": "Διακοπή του διακομιστή OmniRoute",
+    "description": "Διακοπή του διακομιστή FreeRoute",
     "stopping": "Διακοπή διακομιστή (PID {pid})...",
     "stopped": "Ο διακομιστής διακόπηκε.",
     "notRunning": "Κανένας διακομιστής δεν εκτελείται.",
     "portFallback": "Δεν βρέθηκε αρχείο PID, απόπειρα διακοπής βάσει θύρας..."
   },
   "restart": {
-    "description": "Επανεκκίνηση του διακομιστή OmniRoute",
-    "restarting": "Επανεκκίνηση διακομιστή OmniRoute..."
+    "description": "Επανεκκίνηση του διακομιστή FreeRoute",
+    "restarting": "Επανεκκίνηση διακομιστή FreeRoute..."
   },
   "dashboard": {
-    "description": "Άνοιγμα του πίνακα ελέγχου OmniRoute σε πρόγραμμα περιήγησης",
+    "description": "Άνοιγμα του πίνακα ελέγχου FreeRoute σε πρόγραμμα περιήγησης",
     "opening": "Άνοιγμα πίνακα ελέγχου στη διεύθυνση {url}",
     "urlOnly": "Εκτύπωση URL πίνακα ελέγχου χωρίς άνοιγμα προγράμματος περιήγησης",
     "tui": "Άνοιγμα διαδραστικού πίνακα ελέγχου TUI (διεπαφή τερματικού, 7 καρτέλες)"
@@ -526,7 +526,7 @@
   "models": {
     "description": "Εμφάνιση διαθέσιμων μοντέλων (απαιτείται διακομιστής)",
     "search": "Φιλτράρισμα μοντέλων βάσει αναγνωριστικού, ονόματος, παρόχου ή περιγραφής",
-    "noServer": "Ο διακομιστής δεν εκτελείται. Εκκινήστε με: omniroute serve",
+    "noServer": "Ο διακομιστής δεν εκτελείται. Εκκινήστε με: freeroute serve",
     "noModels": "Δεν βρέθηκαν μοντέλα."
   },
   "audit": {
@@ -558,7 +558,7 @@
     }
   },
   "skills": {
-    "description": "Διαχείριση δεξιοτήτων OmniRoute (sandbox, builtin, custom, hybrid, skillssh)",
+    "description": "Διαχείριση δεξιοτήτων FreeRoute (sandbox, builtin, custom, hybrid, skillssh)",
     "list": {
       "description": "Εμφάνιση εγκατεστημένων δεξιοτήτων",
       "type": "Φιλτράρισμα βάσει τύπου (sandbox|custom|builtin|hybrid|skillssh)",
@@ -631,7 +631,7 @@
     }
   },
   "memory": {
-    "description": "Διαχείριση συνομιλιακής μνήμης OmniRoute (FTS5 + vector)",
+    "description": "Διαχείριση συνομιλιακής μνήμης FreeRoute (FTS5 + vector)",
     "search": {
       "description": "Αναζήτηση καταχωρήσεων μνήμης με σημασιολογικό ερώτημα",
       "type": "Φιλτράρισμα ανά τύπο μνήμης (user|feedback|project|reference)",
@@ -789,7 +789,7 @@
     }
   },
   "webhooks": {
-    "description": "Διαχείριση webhooks του OmniRoute",
+    "description": "Διαχείριση webhooks του FreeRoute",
     "events": {
       "description": "Λίστα όλων των διαθέσιμων τύπων συμβάντων webhook"
     },
@@ -821,14 +821,14 @@
     }
   },
   "program": {
-    "description": "OmniRoute — Έξυπνος δρομολογητής AI με αυτόματο εναλλακτικό μηχανισμό",
+    "description": "FreeRoute — Έξυπνος δρομολογητής AI με αυτόματο εναλλακτικό μηχανισμό",
     "version": "Εκτύπωση έκδοσης και έξοδος",
     "output": "Μορφή εξόδου (table, json, jsonl, csv)",
     "quiet": "Απόκρυψη μη απαραίτητης εξόδου",
     "no_color": "Απενεργοποίηση έγχρωμης εξόδου",
     "timeout": "Χρονικό όριο αιτήματος HTTP σε χιλιοστά του δευτερολέπτου",
-    "api_key": "Κλειδί API για τον διακομιστή OmniRoute",
-    "base_url": "Βασικό URL διακομιστή OmniRoute",
+    "api_key": "Κλειδί API για τον διακομιστή FreeRoute",
+    "base_url": "Βασικό URL διακομιστή FreeRoute",
     "context": "Περιβάλλον/προφίλ διακομιστή για αυτήν την εντολή",
     "lang": "Ορισμός γλώσσας εμφάνισης CLI (παρακάμπτει το OMNIROUTE_LANG)"
   },
@@ -1079,7 +1079,7 @@
     }
   },
   "openapi": {
-    "description": "Πρόσβαση και δοκιμή της προδιαγραφής OpenAPI του OmniRoute",
+    "description": "Πρόσβαση και δοκιμή της προδιαγραφής OpenAPI του FreeRoute",
     "dump": {
       "description": "Εξαγωγή προδιαγραφής OpenAPI στην stdout ή σε αρχείο",
       "format": "Μορφή εξόδου: yaml|json (προεπιλογή: yaml)",
@@ -1149,7 +1149,7 @@
     }
   },
   "open": {
-    "description": "Άνοιγμα συγκεκριμένης σελίδας του πίνακα ελέγχου OmniRoute στο πρόγραμμα περιήγησης",
+    "description": "Άνοιγμα συγκεκριμένης σελίδας του πίνακα ελέγχου FreeRoute στο πρόγραμμα περιήγησης",
     "url": "Εκτύπωση μόνο του URL, χωρίς άνοιγμα προγράμματος περιήγησης"
   },
   "telemetry": {
@@ -1166,7 +1166,7 @@
     }
   },
   "sync": {
-    "description": "Συγχρονισμός ρυθμίσεων μεταξύ παρουσιών OmniRoute",
+    "description": "Συγχρονισμός ρυθμίσεων μεταξύ παρουσιών FreeRoute",
     "push": {
       "description": "Ώθηση ρυθμίσεων στο cloud ή σε απομακρυσμένη παρουσία",
       "target": "Στόχος (cloud ή context:name)",
@@ -1222,8 +1222,8 @@
       "listTitle": "Διαθέσιμες Γλώσσες",
       "current": "Γλώσσα: {code} ({name})",
       "saved": "Η γλώσσα ορίστηκε σε {code} ({name}).",
-      "noCode": "Απαιτείται κωδικός γλώσσας. Εκτελέστε 'omniroute config lang list' για να δείτε τους διαθέσιμους κωδικούς.",
-      "unknown": "Άγνωστος κωδικός γλώσσας: {code}. Εκτελέστε 'omniroute config lang list' για να δείτε τους διαθέσιμους κωδικούς.",
+      "noCode": "Απαιτείται κωδικός γλώσσας. Εκτελέστε 'freeroute config lang list' για να δείτε τους διαθέσιμους κωδικούς.",
+      "unknown": "Άγνωστος κωδικός γλώσσας: {code}. Εκτελέστε 'freeroute config lang list' για να δείτε τους διαθέσιμους κωδικούς.",
       "alreadySet": "Η γλώσσα έχει ήδη οριστεί σε {code}.",
       "envHint": "Συμβουλή: μπορείτε επίσης να ορίσετε OMNIROUTE_LANG={code} στο περιβάλλον σας."
     }
@@ -1242,7 +1242,7 @@
     "filter": "Φιλτράρισμα κατά επίπεδο (error,warn,info) — διαχωρισμένα με κόμμα",
     "lines": "Αριθμός γραμμών προς ανάκτηση",
     "timeout": "Χρονικό όριο σύνδεσης σε ms",
-    "baseUrl": "Βασικό URL API OmniRoute",
+    "baseUrl": "Βασικό URL API FreeRoute",
     "requestId": "Φιλτράρισμα κατά αναγνωριστικό αιτήματος",
     "apiKey": "Φιλτράρισμα κατά κλειδί API",
     "combo": "Φιλτράρισμα κατά όνομα combo",
@@ -1258,10 +1258,10 @@
     "description": "Έλεγχος του εικονιδίου στην περιοχή ειδοποιήσεων",
     "show": "Εμφάνιση του εικονιδίου στην περιοχή ειδοποιήσεων (αν ο διακομιστής εκτελείται με --tray)",
     "hide": "Απόκρυψη του εικονιδίου από την περιοχή ειδοποιήσεων",
-    "quit": "Έξοδος από το OmniRoute μέσω της περιοχής ειδοποιήσεων"
+    "quit": "Έξοδος από το FreeRoute μέσω της περιοχής ειδοποιήσεων"
   },
   "autostart": {
-    "description": "Διαχείριση αυτόματης εκκίνησης του OmniRoute κατά την εκκίνηση (Linux: υπηρεσία χρήστη systemd)",
+    "description": "Διαχείριση αυτόματης εκκίνησης του FreeRoute κατά την εκκίνηση (Linux: υπηρεσία χρήστη systemd)",
     "enable": "Ενεργοποίηση αυτόματης εκκίνησης κατά την εκκίνηση",
     "disable": "Απενεργοποίηση αυτόματης εκκίνησης κατά την εκκίνηση",
     "toggle": "Εναλλαγή αυτόματης εκκίνησης κατά την εκκίνηση",
@@ -1293,19 +1293,19 @@
     "scaffold": "Δημιουργία βασικής δομής νέου πρόσθετου"
   },
   "launch": {
-    "description": "Εκκίνηση του Claude Code που δείχνει στο OmniRoute (τοπικά ή απομακρυσμένα, με --profile)",
+    "description": "Εκκίνηση του Claude Code που δείχνει στο FreeRoute (τοπικά ή απομακρυσμένα, με --profile)",
     "token": "Διακριτικό που θα αποστέλλει ο Claude client (ANTHROPIC_AUTH_TOKEN)",
-    "notRunning": "Το OmniRoute δεν είναι προσβάσιμο στη θύρα {port}. Εκκινήστε το με 'omniroute serve'.",
+    "notRunning": "Το FreeRoute δεν είναι προσβάσιμο στη θύρα {port}. Εκκινήστε το με 'freeroute serve'.",
     "notFound": "Το CLI 'claude' δεν βρέθηκε στο PATH."
   },
   "run": {
-    "description": "Εκκίνηση ενός υποστηριζόμενου στόχου CLI μέσω του OmniRoute"
+    "description": "Εκκίνηση ενός υποστηριζόμενου στόχου CLI μέσω του FreeRoute"
   },
   "setupClaude": {
-    "description": "Δημιουργία προφίλ Claude Code στο ~/.claude/profiles από τον κατάλογο μοντέλων του OmniRoute"
+    "description": "Δημιουργία προφίλ Claude Code στο ~/.claude/profiles από τον κατάλογο μοντέλων του FreeRoute"
   },
   "connect": {
-    "description": "Σύνδεση σε απομακρυσμένο διακομιστή OmniRoute και είσοδος σε απομακρυσμένη λειτουργία"
+    "description": "Σύνδεση σε απομακρυσμένο διακομιστή FreeRoute και είσοδος σε απομακρυσμένη λειτουργία"
   },
   "tokens": {
     "description": "Διαχείριση διακριτικών πρόσβασης CLI με εύρος (απομακρυσμένη λειτουργία)"
@@ -1314,10 +1314,10 @@
     "description": "Επιλογή παρόχου και μοντέλου από τον ενεργό διακομιστή και διαμόρφωση υποστηριζόμενου τοπικού CLI"
   },
   "launchCodex": {
-    "description": "Εκκίνηση του Codex CLI με κατεύθυνση στο OmniRoute (τοπικό ή απομακρυσμένο VPS)"
+    "description": "Εκκίνηση του Codex CLI με κατεύθυνση στο FreeRoute (τοπικό ή απομακρυσμένο VPS)"
   },
   "setupCodex": {
-    "description": "Δημιουργία αρχείων προφίλ ~/.codex από τον ζωντανό κατάλογο μοντέλων του OmniRoute"
+    "description": "Δημιουργία αρχείων προφίλ ~/.codex από τον ζωντανό κατάλογο μοντέλων του FreeRoute"
   },
   "packs": {
     "description": "Διαχείριση προαιρετικών πακέτων χρόνου εκτέλεσης (ML / αυτοματισμός προγράμματος περιήγησης)",
@@ -1330,7 +1330,7 @@
     "errUnknown": "άγνωστο πακέτο: {name}",
     "errNoIndex": "το ευρετήριο πακέτων δεν βρέθηκε· χρησιμοποιήστε --source <dir> που να περιέχει το περιεχόμενο πακέτου (τα πακέτα desktop το συμπεριλαμβάνουν δίπλα στην εφαρμογή)",
     "installed": "το πακέτο \"{name}\" εγκαταστάθηκε και επαληθεύτηκε στο {dir}",
-    "restartHint": "κάντε επανεκκίνηση του διακομιστή OmniRoute (ή της εφαρμογής desktop) ώστε το περιβάλλον εκτέλεσης να αναγνωρίσει το πακέτο",
+    "restartHint": "κάντε επανεκκίνηση του διακομιστή FreeRoute (ή της εφαρμογής desktop) ώστε το περιβάλλον εκτέλεσης να αναγνωρίσει το πακέτο",
     "removed": "το πακέτο \"{name}\" αφαιρέθηκε",
     "notInstalled": "το πακέτο \"{name}\" δεν ήταν εγκατεστημένο",
     "verifyOk": "όλα τα εγκατεστημένα πακέτα επαληθεύτηκαν",

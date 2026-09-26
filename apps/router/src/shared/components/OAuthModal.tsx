@@ -460,7 +460,7 @@ export default function OAuthModal({
         let forceManual = false;
 
         // Claude Code and Cline OAuth flows can finish on provider-hosted pages that
-        // show an auth code instead of redirecting back to OmniRoute.
+        // show an auth code instead of redirecting back to FreeRoute.
         // Start directly in manual mode so users always have an input to paste code/url.
         // zed-hosted's native-app sign-in redirects the browser to a local
         // 127.0.0.1:<native_app_port> callback. On true localhost that port IS the

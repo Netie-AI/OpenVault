@@ -4,17 +4,18 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { cn } from "@/shared/utils/cn";
 import { CliproxyServiceTab } from "./tabs/CliproxyServiceTab";
-import { NinerouterServiceTab } from "./tabs/NinerouterServiceTab";
 import { MuxServiceTab } from "./tabs/MuxServiceTab";
 import { BifrostServiceTab } from "./tabs/BifrostServiceTab";
 import { DarioServiceTab } from "./tabs/DarioServiceTab";
 import { OpenwaServiceTab } from "./tabs/OpenwaServiceTab";
 
-type Tab = "cliproxy" | "9router" | "mux" | "bifrost" | "dario" | "openwa";
+// FreeRoute: the "9router" tab is removed — installing/adopting 9router (a
+// separate upstream product) is hard-disabled (upstream_service_not_included,
+// src/lib/netie/hardDisabledRoutes.ts) at every /api/services/9router/* route.
+type Tab = "cliproxy" | "mux" | "bifrost" | "dario" | "openwa";
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: "cliproxy", label: "CLIProxyAPI", icon: "swap_horiz" },
-  { id: "9router", label: "9Router", icon: "route" },
   { id: "mux", label: "Mux", icon: "hub" },
   { id: "bifrost", label: "Bifrost", icon: "bolt" },
   { id: "dario", label: "Dario", icon: "shield_person" },
@@ -62,7 +63,6 @@ export default function ServicesPage() {
       {/* Tab content */}
       <div>
         {active === "cliproxy" && <CliproxyServiceTab />}
-        {active === "9router" && <NinerouterServiceTab />}
         {active === "mux" && <MuxServiceTab />}
         {active === "bifrost" && <BifrostServiceTab />}
         {active === "dario" && <DarioServiceTab />}

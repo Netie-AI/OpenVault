@@ -1,4 +1,4 @@
-// Parses the `--models` / `--model` options for `omniroute combo create` (#10954).
+// Parses the `--models` / `--model` options for `freeroute combo create` (#10954).
 //
 // Root cause of #10954: `combo create` only ever registered `--strategy`; the
 // HTTP body (POST /api/combos) and the local-db fallback (db.combos.createCombo)

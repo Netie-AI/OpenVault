@@ -1156,7 +1156,7 @@ export function withSessionHeader(response: Response, sessionId: string | null):
   if (!response || !sessionId) return response;
 
   try {
-    response.headers.set("X-OmniRoute-Session-Id", sessionId);
+    response.headers.set("X-FreeRoute-Session-Id", sessionId);
     return response;
   } catch {
     const cloned = new Response(response.body, {
@@ -1164,7 +1164,7 @@ export function withSessionHeader(response: Response, sessionId: string | null):
       statusText: response.statusText,
       headers: response.headers,
     });
-    cloned.headers.set("X-OmniRoute-Session-Id", sessionId);
+    cloned.headers.set("X-FreeRoute-Session-Id", sessionId);
     return inheritTrustedLocalRateLimitResponse(response, cloned);
   }
 }
@@ -1235,7 +1235,7 @@ export function withSelectedConnectionHeader(
   if (!response || !connectionId) return response;
 
   try {
-    response.headers.set("X-OmniRoute-Selected-Connection-Id", connectionId);
+    response.headers.set("X-FreeRoute-Selected-Connection-Id", connectionId);
     return response;
   } catch {
     const cloned = new Response(response.body, {
@@ -1243,7 +1243,7 @@ export function withSelectedConnectionHeader(
       statusText: response.statusText,
       headers: response.headers,
     });
-    cloned.headers.set("X-OmniRoute-Selected-Connection-Id", connectionId);
+    cloned.headers.set("X-FreeRoute-Selected-Connection-Id", connectionId);
     return inheritTrustedLocalRateLimitResponse(response, cloned);
   }
 }

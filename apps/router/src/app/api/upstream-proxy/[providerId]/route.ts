@@ -11,7 +11,7 @@ import { validateBody, isValidationFailure } from "@/shared/validation/helpers";
 
 /**
  * The upstream `dario` project can itself proxy other subscription-based
- * providers (OpenAI, Grok) — but OmniRoute's integration only wires up
+ * providers (OpenAI, Grok) — but FreeRoute's integration only wires up
  * Claude Pro/Max OAuth account management (login-start/login-complete/
  * accounts) and DarioExecutor only implements Claude Code's exact wire
  * shape, added specifically so Claude Code traffic stays undetectable as

@@ -1,8 +1,8 @@
 {
   "common": {
     "error": "Eroare: {message}",
-    "serverOffline": "Serverul OmniRoute este offline. Porniți cu: omniroute serve",
-    "authRequired": "Autentificare necesară. Setați OMNIROUTE_API_KEY sau rulați: omniroute setup",
+    "serverOffline": "Serverul FreeRoute este offline. Porniți cu: freeroute serve",
+    "authRequired": "Autentificare necesară. Setați OMNIROUTE_API_KEY sau rulați: freeroute setup",
     "rateLimited": "Limita de cereri depășită. Încercați din nou după {seconds}s.",
     "timeout": "Cererea a expirat după {ms}ms.",
     "success": "Gata.",
@@ -15,7 +15,7 @@
     "yesOpt": "Omite confirmarea"
   },
   "setup": {
-    "title": "Configurare OmniRoute",
+    "title": "Configurare FreeRoute",
     "passwordPrompt": "Parolă de administrator",
     "providerPrompt": "Furnizor implicit (lăsați necompletat pentru a omite)",
     "done": "Configurare finalizată",
@@ -30,19 +30,19 @@
     "opencode": "Instalați și configurați pachetul @omniroute/opencode-plugin inclus pentru OpenCode"
   },
   "doctor": {
-    "title": "Diagnosticare OmniRoute",
+    "title": "Diagnosticare FreeRoute",
     "dbOk": "Bază de date: OK ({path})",
-    "dbMissing": "Bază de date: neinițializată — rulați `omniroute setup`",
+    "dbMissing": "Bază de date: neinițializată — rulați `freeroute setup`",
     "portOk": "Portul {port}: disponibil",
     "portConflict": "Portul {port}: utilizat de un alt proces",
     "encryptionOk": "Cheie de criptare: configurată",
-    "encryptionMissing": "Cheia de criptare lipsește — rulați `omniroute setup`",
+    "encryptionMissing": "Cheia de criptare lipsește — rulați `freeroute setup`",
     "allGood": "Toate verificările au trecut.",
     "warnings": "{count} avertisment(e) — consultați informațiile de mai sus."
   },
   "providers": {
     "title": "Furnizori",
-    "noProviders": "Nu este configurat niciun furnizor. Rulați: omniroute setup",
+    "noProviders": "Nu este configurat niciun furnizor. Rulați: freeroute setup",
     "testing": "Se testează {name}...",
     "available": "{count} furnizor(i) disponibil(i)",
     "connected": "Conectat",
@@ -71,7 +71,7 @@
       "dryRunOpt": "Afișați ce s-ar modifica fără a scrie",
       "confirmPrompt": "Înlocuiți cheia API pentru conexiunea „{name}” ({id})? [y/N]",
       "dryRunResult": "[dry-run] Cheia pentru „{name}” ({id}) ar fi rotită. Nu s-a efectuat nicio modificare.",
-      "oauthHint": "Conexiune OAuth — rulați: omniroute oauth {provider}",
+      "oauthHint": "Conexiune OAuth — rulați: freeroute oauth {provider}",
       "envVarEmpty": "Variabila de mediu {var} nu este setată sau este goală.",
       "success": "Cheia pentru „{name}” a fost rotită. Rulați `providers test {id}` pentru verificare.",
       "testPassed": "Testul de după rotație a reușit.",
@@ -82,7 +82,7 @@
       "providerOpt": "Filtrați după numele furnizorului",
       "header": "ID         Furnizor      Nume                     Stare expirare  Stare test  Perioadă de așteptare până la",
       "noData": "Nu sunt disponibile date despre conexiunile furnizorilor.",
-      "requiresServer": "Pentru `providers status`, serverul OmniRoute trebuie să ruleze."
+      "requiresServer": "Pentru `providers status`, serverul FreeRoute trebuie să ruleze."
     }
   },
   "keys": {
@@ -90,8 +90,8 @@
     "addDescription": "Adăugați sau actualizați o cheie API pentru un furnizor",
     "listDescription": "Listați toate cheile API configurate",
     "removeDescription": "Eliminați cheia API a unui furnizor",
-    "regenerateDescription": "Regenerați o cheie API OmniRoute",
-    "revokeDescription": "Revocați o cheie API OmniRoute",
+    "regenerateDescription": "Regenerați o cheie API FreeRoute",
+    "revokeDescription": "Revocați o cheie API FreeRoute",
     "revealDescription": "Dezvăluiți valoarea nemascată a cheii API",
     "usageDescription": "Afișați utilizarea recentă a unei chei API",
     "usageLimitOpt": "Numărul solicitărilor recente",
@@ -142,7 +142,7 @@
     "warning": "⚠ Această acțiune afișează/scrie chei API și tokenuri OAuth DECRIPTATE, în text simplu. Asigurați-vă că ecranul, istoricul shell-ului și orice fișier de ieșire rămân private.",
     "confirmHeading": "⚠ AVERTISMENT: această acțiune exportă credențialele DECRIPTATE ale furnizorului în text simplu",
     "confirmBody": "Această comandă decriptează și afișează/scrie apiKey, accessToken, refreshToken și\nidToken pentru conexiunile selectate. Tratați rezultatul ca pe un secret.",
-    "confirmFooter": "Pentru confirmare, rulați:\n  omniroute auth export --force",
+    "confirmFooter": "Pentru confirmare, rulați:\n  freeroute auth export --force",
     "missingKey": "STORAGE_ENCRYPTION_KEY este necesară pentru exportarea credențialelor.",
     "notFound": "Conexiunea nu a fost găsită: {id}",
     "invalidFormat": "Format nevalid: {format}. Utilizați json sau env."
@@ -220,10 +220,10 @@
     "reasoning": "Nivelul efortului de raționare (low|medium|high)",
     "thinking": "Bugetul de tokenuri pentru raționare extinsă",
     "explain": "Afișează în stderr arborele de rezervă și intervalul de costuri",
-    "noCombo": "Nu s-a găsit nicio combinație corespunzătoare. Configurează una cu: omniroute combo create"
+    "noCombo": "Nu s-a găsit nicio combinație corespunzătoare. Configurează una cu: freeroute combo create"
   },
   "chat": {
-    "description": "Trimite o solicitare unică de chat către OmniRoute",
+    "description": "Trimite o solicitare unică de chat către FreeRoute",
     "file": "Citește solicitarea din fișier",
     "stdin": "Citește solicitarea de la stdin",
     "system": "Solicitare de sistem",
@@ -242,8 +242,8 @@
     }
   },
   "serve": {
-    "description": "Pornește serverul OmniRoute (acțiune implicită)",
-    "starting": "Se pornește serverul OmniRoute pe portul {port}...",
+    "description": "Pornește serverul FreeRoute (acțiune implicită)",
+    "starting": "Se pornește serverul FreeRoute pe portul {port}...",
     "ready": "Disponibil la http://localhost:{port}",
     "stopping": "Se oprește serverul (PID {pid})...",
     "stopped": "Serverul a fost oprit.",
@@ -262,7 +262,7 @@
   },
   "backup": {
     "title": "Copie de rezervă",
-    "description": "Creează o copie de rezervă a datelor OmniRoute",
+    "description": "Creează o copie de rezervă a datelor FreeRoute",
     "creating": "Se creează copia de rezervă...",
     "done": "Copia de rezervă a fost salvată în {path}",
     "noFiles": "Nu există fișiere pentru copia de rezervă (baza de date nu este inițializată)",
@@ -274,7 +274,7 @@
     "noBackups": "Nu s-au găsit copii de rezervă.",
     "notFound": "Copia de rezervă nu a fost găsită: {name}",
     "confirmRestore": "Suprascrieți datele curente cu copia de rezervă din {ts}?",
-    "createDescription": "Creează o copie de rezervă a datelor OmniRoute",
+    "createDescription": "Creează o copie de rezervă a datelor FreeRoute",
     "nameOpt": "Nume personalizat pentru copia de rezervă",
     "cloudOpt": "Încarcă copia de rezervă în spațiul de stocare în cloud",
     "encryptOpt": "Criptează copia de rezervă cu AES-256-GCM",
@@ -292,14 +292,14 @@
       "statusDescription": "Afișează starea curentă a programării copiilor de rezervă",
       "cronOpt": "Expresie cron pentru programare (implicit: zilnic la ora 3:00)",
       "enabled": "Copierea de rezervă automată este activată (cron: {cron}).",
-      "hint": "Programarea este citită de omniroute serve la pornire.",
+      "hint": "Programarea este citită de freeroute serve la pornire.",
       "disabled": "Copierea de rezervă automată este dezactivată.",
       "notConfigured": "Nu este configurată nicio programare pentru copiile de rezervă."
     }
   },
   "health": {
     "description": "Verifică starea de funcționare a serverului și starea componentelor",
-    "noServer": "Serverul nu rulează. Porniți-l cu: omniroute serve",
+    "noServer": "Serverul nu rulează. Porniți-l cu: freeroute serve",
     "title": "Stare de funcționare",
     "status": "Stare: {status}",
     "uptime": "Timp de funcționare: {uptime}",
@@ -308,21 +308,21 @@
   },
   "quota": {
     "description": "Afișează utilizarea cotei furnizorului",
-    "noServer": "Serverul nu rulează. Porniți-l cu: omniroute serve",
+    "noServer": "Serverul nu rulează. Porniți-l cu: freeroute serve",
     "noData": "Nu sunt disponibile informații despre cotă."
   },
   "cache": {
     "description": "Gestionează memoria cache pentru răspunsuri",
-    "noServer": "Serverul nu rulează. Porniți-l cu: omniroute serve",
+    "noServer": "Serverul nu rulează. Porniți-l cu: freeroute serve",
     "cleared": "Memoria cache a fost golită.",
     "clearFailed": "Golirea memoriei cache a eșuat."
   },
   "redis": {
-    "description": "Lansează un container Redis local cu un singur clic (Podman sau Docker) pentru cache și urmărirea cotelor OmniRoute"
+    "description": "Lansează un container Redis local cu un singur clic (Podman sau Docker) pentru cache și urmărirea cotelor FreeRoute"
   },
   "test": {
     "description": "Testează conexiunea cu un furnizor",
-    "noServer": "Serverul nu rulează. Porniți-l cu: omniroute serve",
+    "noServer": "Serverul nu rulează. Porniți-l cu: freeroute serve",
     "testing": "Se testează {provider} / {model}...",
     "passed": "Conexiune reușită!",
     "failed": "Conexiunea a eșuat: {error}",
@@ -334,7 +334,7 @@
     "saved": "Rezultatele au fost salvate în {path}",
     "compareTitle": "Compararea modelelor",
     "compareMinTwo": "Sunt necesare cel puțin două modele pentru --compare (separate prin virgulă)",
-    "noProviders": "Nu este configurat niciun furnizor. Adaugă unul cu: omniroute keys add"
+    "noProviders": "Nu este configurat niciun furnizor. Adaugă unul cu: freeroute keys add"
   },
   "update": {
     "checking": "Se verifică dacă există actualizări...",
@@ -348,7 +348,7 @@
     "running": "Serverul MCP rulează ({transport})",
     "stopped": "Serverul MCP s-a oprit.",
     "restarted": "Serverul MCP a fost repornit.",
-    "stoppedHint": "Rulează `omniroute mcp enable` pentru a-l activa.",
+    "stoppedHint": "Rulează `freeroute mcp enable` pentru a-l activa.",
     "enabled": "Serverul MCP a fost activat.",
     "disabled": "Serverul MCP a fost dezactivat.",
     "enable": {
@@ -416,7 +416,7 @@
     }
   },
   "policy": {
-    "description": "Gestionează politicile de autorizare OmniRoute",
+    "description": "Gestionează politicile de autorizare FreeRoute",
     "list": {
       "description": "Listează politicile",
       "kind": "Filtrează după tip (allow|deny|rate-limit|cost-cap)",
@@ -453,7 +453,7 @@
     }
   },
   "compression": {
-    "description": "Configurează și inspectează pipeline-ul de compresie OmniRoute",
+    "description": "Configurează și inspectează pipeline-ul de compresie FreeRoute",
     "status": {
       "description": "Afișează starea și setările actuale ale compresiei"
     },
@@ -507,18 +507,18 @@
     "confirmRotate": "Schimbi URL-ul tunelului {type}? (va fi generat un URL nou)"
   },
   "stop": {
-    "description": "Oprește serverul OmniRoute",
+    "description": "Oprește serverul FreeRoute",
     "stopping": "Se oprește serverul (PID {pid})...",
     "stopped": "Server oprit.",
     "notRunning": "Nu rulează niciun server.",
     "portFallback": "Nu s-a găsit niciun fișier PID, se încearcă oprirea pe baza portului..."
   },
   "restart": {
-    "description": "Repornește serverul OmniRoute",
-    "restarting": "Se repornește serverul OmniRoute..."
+    "description": "Repornește serverul FreeRoute",
+    "restarting": "Se repornește serverul FreeRoute..."
   },
   "dashboard": {
-    "description": "Deschide panoul de control OmniRoute într-un browser",
+    "description": "Deschide panoul de control FreeRoute într-un browser",
     "opening": "Se deschide panoul de control la {url}",
     "urlOnly": "Afișează URL-ul panoului de control fără a deschide browserul",
     "tui": "Deschide panoul de control TUI interactiv (interfață în terminal, 7 file)"
@@ -526,7 +526,7 @@
   "models": {
     "description": "Listează modelele disponibile (necesită serverul)",
     "search": "Filtrează modelele după ID, nume, furnizor sau descriere",
-    "noServer": "Serverul nu rulează. Porniți-l cu: omniroute serve",
+    "noServer": "Serverul nu rulează. Porniți-l cu: freeroute serve",
     "noModels": "Nu s-au găsit modele."
   },
   "audit": {
@@ -558,7 +558,7 @@
     }
   },
   "skills": {
-    "description": "Gestionează abilitățile OmniRoute (sandbox, builtin, custom, hybrid, skillssh)",
+    "description": "Gestionează abilitățile FreeRoute (sandbox, builtin, custom, hybrid, skillssh)",
     "list": {
       "description": "Listează abilitățile instalate",
       "type": "Filtrează după tip (sandbox|custom|builtin|hybrid|skillssh)",
@@ -631,7 +631,7 @@
     }
   },
   "memory": {
-    "description": "Gestionează memoria conversațională OmniRoute (FTS5 + vectorială)",
+    "description": "Gestionează memoria conversațională FreeRoute (FTS5 + vectorială)",
     "search": {
       "description": "Caută intrări în memorie prin interogare semantică",
       "type": "Filtrează după tipul memoriei (user|feedback|project|reference)",
@@ -789,7 +789,7 @@
     }
   },
   "webhooks": {
-    "description": "Gestionează webhook-urile OmniRoute",
+    "description": "Gestionează webhook-urile FreeRoute",
     "events": {
       "description": "Listează toate tipurile disponibile de evenimente webhook"
     },
@@ -821,14 +821,14 @@
     }
   },
   "program": {
-    "description": "OmniRoute — Router AI inteligent cu fallback automat",
+    "description": "FreeRoute — Router AI inteligent cu fallback automat",
     "version": "Afișează versiunea și ieși",
     "output": "Format de ieșire (table, json, jsonl, csv)",
     "quiet": "Suprimă ieșirile neesențiale",
     "no_color": "Dezactivează ieșirea colorată",
     "timeout": "Timeout cereri HTTP în milisecunde",
-    "api_key": "Cheie API pentru serverul OmniRoute",
-    "base_url": "URL de bază al serverului OmniRoute",
+    "api_key": "Cheie API pentru serverul FreeRoute",
+    "base_url": "URL de bază al serverului FreeRoute",
     "context": "Contextul/profilul serverului pentru această comandă",
     "lang": "Setează limba de afișare CLI (suprascrie OMNIROUTE_LANG)"
   },
@@ -1079,7 +1079,7 @@
     }
   },
   "openapi": {
-    "description": "Accesează și testează specificația OpenAPI OmniRoute",
+    "description": "Accesează și testează specificația OpenAPI FreeRoute",
     "dump": {
       "description": "Exportă specificația OpenAPI în stdout sau într-un fișier",
       "format": "Format de ieșire: yaml|json (implicit: yaml)",
@@ -1149,7 +1149,7 @@
     }
   },
   "open": {
-    "description": "Deschide o anumită pagină a panoului de control OmniRoute în browser",
+    "description": "Deschide o anumită pagină a panoului de control FreeRoute în browser",
     "url": "Afișează doar URL-ul, fără a deschide browserul"
   },
   "telemetry": {
@@ -1166,7 +1166,7 @@
     }
   },
   "sync": {
-    "description": "Sincronizează configurația între instanțele OmniRoute",
+    "description": "Sincronizează configurația între instanțele FreeRoute",
     "push": {
       "description": "Trimite configurația în cloud sau către instanța la distanță",
       "target": "Ținta (cloud sau context:name)",
@@ -1222,8 +1222,8 @@
       "listTitle": "Limbi disponibile",
       "current": "Limbă: {code} ({name})",
       "saved": "Limba a fost setată la {code} ({name}).",
-      "noCode": "Codul limbii este obligatoriu. Rulează „omniroute config lang list” pentru a vedea codurile disponibile.",
-      "unknown": "Cod de limbă necunoscut: {code}. Rulează „omniroute config lang list” pentru a vedea codurile disponibile.",
+      "noCode": "Codul limbii este obligatoriu. Rulează „freeroute config lang list” pentru a vedea codurile disponibile.",
+      "unknown": "Cod de limbă necunoscut: {code}. Rulează „freeroute config lang list” pentru a vedea codurile disponibile.",
       "alreadySet": "Limba este deja setată la {code}.",
       "envHint": "Sfat: poți seta și OMNIROUTE_LANG={code} în mediul tău."
     }
@@ -1242,7 +1242,7 @@
     "filter": "Filtrează după nivel (error,warn,info) — valori separate prin virgulă",
     "lines": "Numărul de linii de preluat",
     "timeout": "Timpul de expirare al conexiunii în ms",
-    "baseUrl": "URL-ul de bază al API-ului OmniRoute",
+    "baseUrl": "URL-ul de bază al API-ului FreeRoute",
     "requestId": "Filtrează după ID-ul solicitării",
     "apiKey": "Filtrează după cheia API",
     "combo": "Filtrează după numele combinației",
@@ -1258,10 +1258,10 @@
     "description": "Controlează pictograma din zona de notificare",
     "show": "Afișează pictograma din zona de notificare (dacă serverul rulează cu --tray)",
     "hide": "Ascunde pictograma din zona de notificare",
-    "quit": "Închide OmniRoute din zona de notificare"
+    "quit": "Închide FreeRoute din zona de notificare"
   },
   "autostart": {
-    "description": "Gestionează pornirea automată a OmniRoute la inițializarea sistemului (Linux: serviciu systemd al utilizatorului)",
+    "description": "Gestionează pornirea automată a FreeRoute la inițializarea sistemului (Linux: serviciu systemd al utilizatorului)",
     "enable": "Activează pornirea automată la inițializarea sistemului",
     "disable": "Dezactivează pornirea automată la inițializarea sistemului",
     "toggle": "Comută pornirea automată la inițializarea sistemului",
@@ -1293,19 +1293,19 @@
     "scaffold": "Generează structura de bază pentru un plugin nou"
   },
   "launch": {
-    "description": "Lansează Claude Code configurat pentru OmniRoute (local sau la distanță, cu --profile)",
+    "description": "Lansează Claude Code configurat pentru FreeRoute (local sau la distanță, cu --profile)",
     "token": "Tokenul pe care clientul Claude trebuie să îl trimită (ANTHROPIC_AUTH_TOKEN)",
-    "notRunning": "OmniRoute nu este accesibil la {port}. Pornește-l cu 'omniroute serve'.",
+    "notRunning": "FreeRoute nu este accesibil la {port}. Pornește-l cu 'freeroute serve'.",
     "notFound": "CLI-ul 'claude' nu a fost găsit în PATH."
   },
   "run": {
-    "description": "Lansează o țintă CLI acceptată prin OmniRoute"
+    "description": "Lansează o țintă CLI acceptată prin FreeRoute"
   },
   "setupClaude": {
-    "description": "Generează profiluri Claude Code în ~/.claude/profiles din catalogul de modele OmniRoute"
+    "description": "Generează profiluri Claude Code în ~/.claude/profiles din catalogul de modele FreeRoute"
   },
   "connect": {
-    "description": "Conectează-te la un server OmniRoute la distanță și intră în modul la distanță"
+    "description": "Conectează-te la un server FreeRoute la distanță și intră în modul la distanță"
   },
   "tokens": {
     "description": "Gestionează tokenurile de acces CLI cu domeniu de aplicare (mod la distanță)"
@@ -1314,10 +1314,10 @@
     "description": "Alege un furnizor și un model de pe serverul activ și configurează un CLI local acceptat"
   },
   "launchCodex": {
-    "description": "Lansează Codex CLI configurat pentru OmniRoute (local sau pe un VPS la distanță)"
+    "description": "Lansează Codex CLI configurat pentru FreeRoute (local sau pe un VPS la distanță)"
   },
   "setupCodex": {
-    "description": "Generează fișiere de profil în ~/.codex din catalogul live de modele OmniRoute"
+    "description": "Generează fișiere de profil în ~/.codex din catalogul live de modele FreeRoute"
   },
   "packs": {
     "description": "Gestionează pachetele opționale de execuție (ML / automatizarea browserului)",
@@ -1330,7 +1330,7 @@
     "errUnknown": "pachet necunoscut: {name}",
     "errNoIndex": "indexul de pachete nu a fost găsit; specifică --source <dir> care conține datele pachetului (pachetele desktop îl includ lângă aplicație)",
     "installed": "pachetul „{name}” a fost instalat și verificat în {dir}",
-    "restartHint": "reporniți serverul OmniRoute (sau aplicația desktop) pentru ca mediul de execuție să încarce pachetul",
+    "restartHint": "reporniți serverul FreeRoute (sau aplicația desktop) pentru ca mediul de execuție să încarce pachetul",
     "removed": "pachetul „{name}” a fost eliminat",
     "notInstalled": "pachetul „{name}” nu a fost instalat",
     "verifyOk": "toate pachetele instalate au fost verificate",

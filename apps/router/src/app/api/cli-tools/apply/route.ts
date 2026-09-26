@@ -17,14 +17,14 @@ const applySchema = configRequestSchema.extend({
   dryRun: z.boolean().optional(),
 });
 
-/** The host-side command that does the same job when OmniRoute is containerised. */
+/** The host-side command that does the same job when FreeRoute is containerised. */
 const HOST_SETUP_COMMANDS: Record<string, string> = {
-  claude: "omniroute setup-claude",
-  codex: "omniroute setup-codex",
-  opencode: "omniroute setup-opencode",
-  cline: "omniroute setup-cline",
-  kilo: "omniroute setup-kilo",
-  continue: "omniroute setup-continue",
+  claude: "freeroute setup-claude",
+  codex: "freeroute setup-codex",
+  opencode: "freeroute setup-opencode",
+  cline: "freeroute setup-cline",
+  kilo: "freeroute setup-kilo",
+  continue: "freeroute setup-continue",
 };
 
 function ensureBackup(configPath: string): string | null {

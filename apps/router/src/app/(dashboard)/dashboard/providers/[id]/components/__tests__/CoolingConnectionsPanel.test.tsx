@@ -2,7 +2,7 @@
 //
 // Biting tests for the manual "Clear cooldown" action in
 // CoolingConnectionsPanel (stale-bench case: quota already refreshed upstream,
-// OmniRoute's persisted rate_limited_until still benches the connection).
+// FreeRoute's persisted rate_limited_until still benches the connection).
 //
 // What must NOT regress:
 //   1. Clicking the per-row button fires onClearCooldown with the row's

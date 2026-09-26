@@ -1,8 +1,8 @@
 {
   "common": {
     "error": "שגיאה: {message}",
-    "serverOffline": "שרת OmniRoute אינו מקוון. הפעילו אותו באמצעות: omniroute serve",
-    "authRequired": "נדרש אימות. הגדירו את OMNIROUTE_API_KEY או הריצו: omniroute setup",
+    "serverOffline": "שרת FreeRoute אינו מקוון. הפעילו אותו באמצעות: freeroute serve",
+    "authRequired": "נדרש אימות. הגדירו את OMNIROUTE_API_KEY או הריצו: freeroute setup",
     "rateLimited": "חריגה ממגבלת הקצב. נסו שוב בעוד {seconds} שניות.",
     "timeout": "תם הזמן שהוקצב לבקשה לאחר {ms} אלפיות השנייה.",
     "success": "הושלם.",
@@ -15,7 +15,7 @@
     "yesOpt": "דילוג על בקשת האישור"
   },
   "setup": {
-    "title": "הגדרת OmniRoute",
+    "title": "הגדרת FreeRoute",
     "passwordPrompt": "סיסמת מנהל מערכת",
     "providerPrompt": "ספק ברירת מחדל (השאירו ריק כדי לדלג)",
     "done": "ההגדרה הושלמה",
@@ -30,19 +30,19 @@
     "opencode": "התקנה והגדרה של @omniroute/opencode-plugin המצורף עבור OpenCode"
   },
   "doctor": {
-    "title": "אבחון OmniRoute",
+    "title": "אבחון FreeRoute",
     "dbOk": "מסד הנתונים: תקין ({path})",
-    "dbMissing": "מסד הנתונים: לא אותחל — הריצו `omniroute setup`",
+    "dbMissing": "מסד הנתונים: לא אותחל — הריצו `freeroute setup`",
     "portOk": "יציאה {port}: זמינה",
     "portConflict": "יציאה {port}: נמצאת בשימוש על ידי תהליך אחר",
     "encryptionOk": "מפתח הצפנה: מוגדר",
-    "encryptionMissing": "מפתח ההצפנה חסר — הריצו `omniroute setup`",
+    "encryptionMissing": "מפתח ההצפנה חסר — הריצו `freeroute setup`",
     "allGood": "כל הבדיקות עברו בהצלחה.",
     "warnings": "{count} אזהרות — ראו לעיל."
   },
   "providers": {
     "title": "ספקים",
-    "noProviders": "לא הוגדרו ספקים. הריצו: omniroute setup",
+    "noProviders": "לא הוגדרו ספקים. הריצו: freeroute setup",
     "testing": "מתבצעת בדיקה של {name}...",
     "available": "{count} ספקים זמינים",
     "connected": "מחובר",
@@ -71,7 +71,7 @@
       "dryRunOpt": "הצגת השינויים שהיו מתבצעים מבלי לכתוב אותם",
       "confirmPrompt": "להחליף את מפתח ה-API עבור החיבור \"{name}\" ({id})? [y/N]",
       "dryRunResult": "[dry-run] המפתח עבור \"{name}\" ({id}) היה מוחלף. לא בוצעו שינויים.",
-      "oauthHint": "חיבור OAuth — יש להריץ: omniroute oauth {provider}",
+      "oauthHint": "חיבור OAuth — יש להריץ: freeroute oauth {provider}",
       "envVarEmpty": "משתנה הסביבה {var} אינו מוגדר או ריק.",
       "success": "המפתח עבור \"{name}\" הוחלף. יש להריץ `providers test {id}` כדי לאמת.",
       "testPassed": "הבדיקה שלאחר החלפת המפתח הצליחה.",
@@ -82,7 +82,7 @@
       "providerOpt": "סינון לפי שם ספק",
       "header": "מזהה      ספק           שם                      מצב תפוגה    מצב בדיקה    צינון עד",
       "noData": "אין נתונים זמינים על חיבורי ספקים.",
-      "requiresServer": "הפקודה providers status מחייבת ששרת OmniRoute יהיה פעיל."
+      "requiresServer": "הפקודה providers status מחייבת ששרת FreeRoute יהיה פעיל."
     }
   },
   "keys": {
@@ -90,8 +90,8 @@
     "addDescription": "הוספה או עדכון של מפתח API עבור ספק",
     "listDescription": "הצגת כל מפתחות ה-API שהוגדרו",
     "removeDescription": "הסרת מפתח API עבור ספק",
-    "regenerateDescription": "יצירה מחדש של מפתח API של OmniRoute",
-    "revokeDescription": "ביטול מפתח API של OmniRoute",
+    "regenerateDescription": "יצירה מחדש של מפתח API של FreeRoute",
+    "revokeDescription": "ביטול מפתח API של FreeRoute",
     "revealDescription": "חשיפת הערך הלא מוסתר של מפתח ה-API",
     "usageDescription": "הצגת השימוש האחרון במפתח API",
     "usageLimitOpt": "מספר הבקשות האחרונות",
@@ -142,7 +142,7 @@
     "warning": "⚠ פעולה זו מדפיסה/כותבת מפתחות API ואסימוני OAuth מפוענחים כטקסט גלוי. ודאו שהמסך, היסטוריית המעטפת וכל קובץ פלט נשארים פרטיים.",
     "confirmHeading": "⚠ אזהרה: פעולה זו מייצאת פרטי גישה מפוענחים של ספקים כטקסט גלוי",
     "confirmBody": "פקודה זו מפענחת ומדפיסה/כותבת apiKey, accessToken, refreshToken ו-\nidToken עבור החיבורים שנבחרו. יש להתייחס לפלט כאל סוד.",
-    "confirmFooter": "לאישור, הריצו:\n  omniroute auth export --force",
+    "confirmFooter": "לאישור, הריצו:\n  freeroute auth export --force",
     "missingKey": "STORAGE_ENCRYPTION_KEY נדרש לייצוא פרטי גישה.",
     "notFound": "החיבור לא נמצא: {id}",
     "invalidFormat": "פורמט לא תקין: {format}. השתמשו ב-json או ב-env."
@@ -220,10 +220,10 @@
     "reasoning": "רמת מאמץ החשיבה (low|medium|high)",
     "thinking": "תקציב טוקנים לחשיבה מורחבת",
     "explain": "הדפסת עץ הגיבויים וטווח העלויות אל stderr",
-    "noCombo": "לא נמצא combo תואם. ניתן להגדיר אחד באמצעות: omniroute combo create"
+    "noCombo": "לא נמצא combo תואם. ניתן להגדיר אחד באמצעות: freeroute combo create"
   },
   "chat": {
-    "description": "שליחת הנחיית צ׳אט חד-פעמית אל OmniRoute",
+    "description": "שליחת הנחיית צ׳אט חד-פעמית אל FreeRoute",
     "file": "קריאת ההנחיה מקובץ",
     "stdin": "קריאת ההנחיה מ-stdin",
     "system": "הנחיית מערכת",
@@ -242,8 +242,8 @@
     }
   },
   "serve": {
-    "description": "הפעלת שרת OmniRoute (פעולת ברירת המחדל)",
-    "starting": "שרת OmniRoute מופעל ביציאה {port}...",
+    "description": "הפעלת שרת FreeRoute (פעולת ברירת המחדל)",
+    "starting": "שרת FreeRoute מופעל ביציאה {port}...",
     "ready": "מוכן בכתובת http://localhost:{port}",
     "stopping": "השרת נעצר (PID {pid})...",
     "stopped": "השרת נעצר.",
@@ -262,7 +262,7 @@
   },
   "backup": {
     "title": "גיבוי",
-    "description": "יצירת גיבוי של נתוני OmniRoute",
+    "description": "יצירת גיבוי של נתוני FreeRoute",
     "creating": "הגיבוי נוצר...",
     "done": "הגיבוי נשמר ב-{path}",
     "noFiles": "אין קבצים לגיבוי (מסד הנתונים לא אותחל)",
@@ -274,7 +274,7 @@
     "noBackups": "לא נמצאו גיבויים.",
     "notFound": "הגיבוי לא נמצא: {name}",
     "confirmRestore": "להחליף את הנתונים הנוכחיים בגיבוי מתאריך {ts}?",
-    "createDescription": "יצירת גיבוי של נתוני OmniRoute",
+    "createDescription": "יצירת גיבוי של נתוני FreeRoute",
     "nameOpt": "שם מותאם אישית לגיבוי",
     "cloudOpt": "העלאת הגיבוי לאחסון בענן",
     "encryptOpt": "הצפנת הגיבוי באמצעות AES-256-GCM",
@@ -292,14 +292,14 @@
       "statusDescription": "הצגת המצב הנוכחי של תזמון הגיבויים",
       "cronOpt": "ביטוי Cron לתזמון (ברירת מחדל: מדי יום ב-3 לפנות בוקר)",
       "enabled": "גיבוי אוטומטי הופעל (Cron: {cron}).",
-      "hint": "התזמון נקרא על ידי omniroute serve בעת ההפעלה.",
+      "hint": "התזמון נקרא על ידי freeroute serve בעת ההפעלה.",
       "disabled": "הגיבוי האוטומטי הושבת.",
       "notConfigured": "לא הוגדר תזמון גיבויים."
     }
   },
   "health": {
     "description": "בדיקת תקינות השרת ומצב הרכיבים",
-    "noServer": "השרת אינו פועל. יש להפעיל אותו באמצעות: omniroute serve",
+    "noServer": "השרת אינו פועל. יש להפעיל אותו באמצעות: freeroute serve",
     "title": "תקינות",
     "status": "מצב: {status}",
     "uptime": "זמן פעילות: {uptime}",
@@ -308,21 +308,21 @@
   },
   "quota": {
     "description": "הצגת ניצול המכסה של הספק",
-    "noServer": "השרת אינו פועל. יש להפעיל אותו באמצעות: omniroute serve",
+    "noServer": "השרת אינו פועל. יש להפעיל אותו באמצעות: freeroute serve",
     "noData": "אין מידע זמין על המכסה."
   },
   "cache": {
     "description": "ניהול מטמון התגובות",
-    "noServer": "השרת אינו פועל. יש להפעיל אותו באמצעות: omniroute serve",
+    "noServer": "השרת אינו פועל. יש להפעיל אותו באמצעות: freeroute serve",
     "cleared": "המטמון נוקה.",
     "clearFailed": "ניקוי המטמון נכשל."
   },
   "redis": {
-    "description": "הפעל מכולת Redis מקומית בלחיצה אחת (Podman או Docker) לשמירת מטמון ומעקב מכסות של OmniRoute"
+    "description": "הפעל מכולת Redis מקומית בלחיצה אחת (Podman או Docker) לשמירת מטמון ומעקב מכסות של FreeRoute"
   },
   "test": {
     "description": "בדיקת חיבור לספק",
-    "noServer": "השרת אינו פועל. יש להפעיל אותו באמצעות: omniroute serve",
+    "noServer": "השרת אינו פועל. יש להפעיל אותו באמצעות: freeroute serve",
     "testing": "מתבצעת בדיקה של {provider} / {model}...",
     "passed": "החיבור הצליח!",
     "failed": "החיבור נכשל: {error}",
@@ -334,7 +334,7 @@
     "saved": "התוצאות נשמרו ב-{path}",
     "compareTitle": "השוואת מודלים",
     "compareMinTwo": "נדרשים לפחות שני מודלים עבור --compare (מופרדים בפסיקים)",
-    "noProviders": "לא הוגדרו ספקים. ניתן להוסיף ספק באמצעות: omniroute keys add"
+    "noProviders": "לא הוגדרו ספקים. ניתן להוסיף ספק באמצעות: freeroute keys add"
   },
   "update": {
     "checking": "מתבצעת בדיקה אם קיימים עדכונים...",
@@ -348,7 +348,7 @@
     "running": "שרת MCP פועל ({transport})",
     "stopped": "שרת MCP נעצר.",
     "restarted": "שרת MCP הופעל מחדש.",
-    "stoppedHint": "יש להריץ את `omniroute mcp enable` כדי להפעיל אותו.",
+    "stoppedHint": "יש להריץ את `freeroute mcp enable` כדי להפעיל אותו.",
     "enabled": "שרת MCP הופעל.",
     "disabled": "שרת MCP הושבת.",
     "enable": {
@@ -416,7 +416,7 @@
     }
   },
   "policy": {
-    "description": "ניהול מדיניות ההרשאות של OmniRoute",
+    "description": "ניהול מדיניות ההרשאות של FreeRoute",
     "list": {
       "description": "הצגת מדיניות",
       "kind": "סינון לפי סוג (allow|deny|rate-limit|cost-cap)",
@@ -453,7 +453,7 @@
     }
   },
   "compression": {
-    "description": "הגדרה ובדיקה של תהליך הדחיסה של OmniRoute",
+    "description": "הגדרה ובדיקה של תהליך הדחיסה של FreeRoute",
     "status": {
       "description": "הצגת מצב הדחיסה וההגדרות הנוכחיים"
     },
@@ -507,18 +507,18 @@
     "confirmRotate": "להחליף את כתובת המנהרה מסוג {type}? (תיווצר כתובת URL חדשה)"
   },
   "stop": {
-    "description": "עצירת שרת OmniRoute",
+    "description": "עצירת שרת FreeRoute",
     "stopping": "עוצר את השרת (PID {pid})...",
     "stopped": "השרת נעצר.",
     "notRunning": "אין שרת שפועל.",
     "portFallback": "לא נמצא קובץ PID, מנסה לעצור לפי יציאה..."
   },
   "restart": {
-    "description": "הפעלת שרת OmniRoute מחדש",
-    "restarting": "מפעיל מחדש את שרת OmniRoute..."
+    "description": "הפעלת שרת FreeRoute מחדש",
+    "restarting": "מפעיל מחדש את שרת FreeRoute..."
   },
   "dashboard": {
-    "description": "פתיחת לוח הבקרה של OmniRoute בדפדפן",
+    "description": "פתיחת לוח הבקרה של FreeRoute בדפדפן",
     "opening": "פותח את לוח הבקרה בכתובת {url}",
     "urlOnly": "הדפסת כתובת ה-URL של לוח הבקרה מבלי לפתוח דפדפן",
     "tui": "פתיחת לוח בקרה אינטראקטיבי בממשק TUI (ממשק מסוף, 7 כרטיסיות)"
@@ -526,7 +526,7 @@
   "models": {
     "description": "הצגת המודלים הזמינים (דורש שרת)",
     "search": "סינון מודלים לפי מזהה, שם, ספק או תיאור",
-    "noServer": "השרת אינו פועל. יש להפעילו באמצעות: omniroute serve",
+    "noServer": "השרת אינו פועל. יש להפעילו באמצעות: freeroute serve",
     "noModels": "לא נמצאו מודלים."
   },
   "audit": {
@@ -558,7 +558,7 @@
     }
   },
   "skills": {
-    "description": "ניהול מיומנויות OmniRoute‏ (sandbox, builtin, custom, hybrid, skillssh)",
+    "description": "ניהול מיומנויות FreeRoute‏ (sandbox, builtin, custom, hybrid, skillssh)",
     "list": {
       "description": "הצגת המיומנויות המותקנות",
       "type": "סינון לפי סוג (sandbox|custom|builtin|hybrid|skillssh)",
@@ -631,7 +631,7 @@
     }
   },
   "memory": {
-    "description": "ניהול הזיכרון השיחתי של OmniRoute‏ (FTS5 + vector)",
+    "description": "ניהול הזיכרון השיחתי של FreeRoute‏ (FTS5 + vector)",
     "search": {
       "description": "חיפוש רשומות זיכרון באמצעות שאילתה סמנטית",
       "type": "סינון לפי סוג זיכרון (user|feedback|project|reference)",
@@ -789,7 +789,7 @@
     }
   },
   "webhooks": {
-    "description": "ניהול רכיבי webhook של OmniRoute",
+    "description": "ניהול רכיבי webhook של FreeRoute",
     "events": {
       "description": "הצגת כל סוגי אירועי ה-webhook הזמינים"
     },
@@ -821,14 +821,14 @@
     }
   },
   "program": {
-    "description": "OmniRoute — נתב AI חכם עם מעבר אוטומטי לגיבוי",
+    "description": "FreeRoute — נתב AI חכם עם מעבר אוטומטי לגיבוי",
     "version": "הדפסת הגרסה ויציאה",
     "output": "פורמט פלט (table, json, jsonl, csv)",
     "quiet": "הסתרת פלט שאינו חיוני",
     "no_color": "השבתת פלט צבעוני",
     "timeout": "זמן קצוב לבקשת HTTP באלפיות שנייה",
-    "api_key": "מפתח API עבור שרת OmniRoute",
-    "base_url": "כתובת URL בסיסית של שרת OmniRoute",
+    "api_key": "מפתח API עבור שרת FreeRoute",
+    "base_url": "כתובת URL בסיסית של שרת FreeRoute",
     "context": "הקשר/פרופיל שרת לשימוש עבור פקודה זו",
     "lang": "הגדרת שפת התצוגה של CLI (דורסת את OMNIROUTE_LANG)"
   },
@@ -1079,7 +1079,7 @@
     }
   },
   "openapi": {
-    "description": "גישה למפרט OpenAPI של OmniRoute ובדיקתו",
+    "description": "גישה למפרט OpenAPI של FreeRoute ובדיקתו",
     "dump": {
       "description": "הפקת מפרט OpenAPI אל stdout או לקובץ",
       "format": "פורמט פלט: yaml|json (ברירת מחדל: yaml)",
@@ -1149,7 +1149,7 @@
     }
   },
   "open": {
-    "description": "פתיחת דף ספציפי בלוח הבקרה של OmniRoute בדפדפן",
+    "description": "פתיחת דף ספציפי בלוח הבקרה של FreeRoute בדפדפן",
     "url": "הדפסת כתובת URL בלבד, ללא פתיחת הדפדפן"
   },
   "telemetry": {
@@ -1166,7 +1166,7 @@
     }
   },
   "sync": {
-    "description": "סנכרון התצורה בין מופעי OmniRoute",
+    "description": "סנכרון התצורה בין מופעי FreeRoute",
     "push": {
       "description": "דחיפת התצורה לענן או למופע מרוחק",
       "target": "יעד (cloud או context:name)",
@@ -1222,8 +1222,8 @@
       "listTitle": "שפות זמינות",
       "current": "שפה: {code} ({name})",
       "saved": "השפה הוגדרה ל-{code} ({name}).",
-      "noCode": "נדרש קוד שפה. יש להריץ 'omniroute config lang list' כדי לראות את הקודים הזמינים.",
-      "unknown": "קוד שפה לא מוכר: {code}. יש להריץ 'omniroute config lang list' כדי לראות את הקודים הזמינים.",
+      "noCode": "נדרש קוד שפה. יש להריץ 'freeroute config lang list' כדי לראות את הקודים הזמינים.",
+      "unknown": "קוד שפה לא מוכר: {code}. יש להריץ 'freeroute config lang list' כדי לראות את הקודים הזמינים.",
       "alreadySet": "השפה כבר מוגדרת ל-{code}.",
       "envHint": "טיפ: ניתן גם להגדיר OMNIROUTE_LANG={code} בסביבה שלך."
     }
@@ -1242,7 +1242,7 @@
     "filter": "סינון לפי רמה (error,warn,info) — מופרד בפסיקים",
     "lines": "מספר השורות לאחזור",
     "timeout": "זמן קצוב לחיבור באלפיות השנייה",
-    "baseUrl": "כתובת ה-URL הבסיסית של OmniRoute API",
+    "baseUrl": "כתובת ה-URL הבסיסית של FreeRoute API",
     "requestId": "סינון לפי מזהה בקשה",
     "apiKey": "סינון לפי מפתח API",
     "combo": "סינון לפי שם קומבו",
@@ -1258,10 +1258,10 @@
     "description": "שליטה בסמל מגש המערכת",
     "show": "הצגת סמל מגש המערכת (אם השרת פועל עם --tray)",
     "hide": "הסתרת סמל מגש המערכת",
-    "quit": "יציאה מ-OmniRoute דרך מגש המערכת"
+    "quit": "יציאה מ-FreeRoute דרך מגש המערכת"
   },
   "autostart": {
-    "description": "ניהול ההפעלה האוטומטית של OmniRoute בעת האתחול (Linux: שירות משתמש של systemd)",
+    "description": "ניהול ההפעלה האוטומטית של FreeRoute בעת האתחול (Linux: שירות משתמש של systemd)",
     "enable": "הפעלת הפעלה אוטומטית בעת האתחול",
     "disable": "השבתת הפעלה אוטומטית בעת האתחול",
     "toggle": "החלפת מצב ההפעלה האוטומטית בעת האתחול",
@@ -1293,19 +1293,19 @@
     "scaffold": "יצירת שלד בסיסי לתוסף חדש"
   },
   "launch": {
-    "description": "הפעלת Claude Code כשהוא מופנה אל OmniRoute (מקומי או מרוחק, עם --profile)",
+    "description": "הפעלת Claude Code כשהוא מופנה אל FreeRoute (מקומי או מרוחק, עם --profile)",
     "token": "האסימון שעל לקוח Claude לשלוח (ANTHROPIC_AUTH_TOKEN)",
-    "notRunning": "OmniRoute אינו נגיש ביציאה {port}. הפעילו אותו באמצעות 'omniroute serve'.",
+    "notRunning": "FreeRoute אינו נגיש ביציאה {port}. הפעילו אותו באמצעות 'freeroute serve'.",
     "notFound": "כלי שורת הפקודה 'claude' לא נמצא ב-PATH."
   },
   "run": {
-    "description": "הפעלת יעד CLI נתמך דרך OmniRoute"
+    "description": "הפעלת יעד CLI נתמך דרך FreeRoute"
   },
   "setupClaude": {
-    "description": "יצירת פרופילי Claude Code תחת ~/.claude/profiles מקטלוג המודלים של OmniRoute"
+    "description": "יצירת פרופילי Claude Code תחת ~/.claude/profiles מקטלוג המודלים של FreeRoute"
   },
   "connect": {
-    "description": "התחברות לשרת OmniRoute מרוחק ומעבר למצב מרוחק"
+    "description": "התחברות לשרת FreeRoute מרוחק ומעבר למצב מרוחק"
   },
   "tokens": {
     "description": "ניהול אסימוני גישה מוגדרי-היקף ל-CLI (מצב מרוחק)"
@@ -1314,10 +1314,10 @@
     "description": "בחירת ספק ומודל מהשרת הפעיל והגדרת CLI מקומי נתמך"
   },
   "launchCodex": {
-    "description": "הפעלת Codex CLI כשהוא מופנה אל OmniRoute (מקומי או VPS מרוחק)"
+    "description": "הפעלת Codex CLI כשהוא מופנה אל FreeRoute (מקומי או VPS מרוחק)"
   },
   "setupCodex": {
-    "description": "יצירת קובצי פרופיל תחת ~/.codex מקטלוג המודלים הפעיל של OmniRoute"
+    "description": "יצירת קובצי פרופיל תחת ~/.codex מקטלוג המודלים הפעיל של FreeRoute"
   },
   "packs": {
     "description": "ניהול חבילות זמן ריצה אופציונליות (ML / אוטומציית דפדפן)",
@@ -1330,7 +1330,7 @@
     "errUnknown": "חבילה לא מוכרת: {name}",
     "errNoIndex": "אינדקס החבילות לא נמצא; העבירו --source <dir> שמכיל את מטען החבילה (חבילות שולחן העבודה כוללות אותו לצד היישום)",
     "installed": "החבילה \"{name}\" הותקנה ואומתה ב-{dir}",
-    "restartHint": "הפעילו מחדש את שרת OmniRoute (או את יישום שולחן העבודה) כדי שסביבת זמן הריצה תטען את החבילה",
+    "restartHint": "הפעילו מחדש את שרת FreeRoute (או את יישום שולחן העבודה) כדי שסביבת זמן הריצה תטען את החבילה",
     "removed": "החבילה \"{name}\" הוסרה",
     "notInstalled": "החבילה \"{name}\" לא הייתה מותקנת",
     "verifyOk": "כל החבילות המותקנות אומתו",

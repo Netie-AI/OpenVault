@@ -147,7 +147,7 @@ const hasOmniRouteConfig = (settings: GrokBuildSettings): boolean =>
   settings.model?.base_url !== null &&
   settings.model?.api_backend === "chat_completions";
 
-/** Return Grok Build runtime and OmniRoute config status. */
+/** Return Grok Build runtime and FreeRoute config status. */
 export async function GET(request: Request): Promise<Response> {
   const authError = await requireCliToolsAuth(request);
   if (authError) return authError;
@@ -179,7 +179,7 @@ export async function GET(request: Request): Promise<Response> {
   }
 }
 
-/** Apply OmniRoute model slots to Grok Build. */
+/** Apply FreeRoute model slots to Grok Build. */
 export async function POST(request: Request): Promise<Response> {
   const authError = await requireCliToolsAuth(request);
   if (authError) return authError;
@@ -234,7 +234,7 @@ export async function POST(request: Request): Promise<Response> {
   }
 }
 
-/** Remove OmniRoute model slots from Grok Build. */
+/** Remove FreeRoute model slots from Grok Build. */
 export async function DELETE(request: Request): Promise<Response> {
   const authError = await requireCliToolsAuth(request);
   if (authError) return authError;
@@ -259,7 +259,7 @@ export async function DELETE(request: Request): Promise<Response> {
 
     return NextResponse.json({
       success: true,
-      message: "OmniRoute model slots removed from Grok Build",
+      message: "FreeRoute model slots removed from Grok Build",
     });
   } catch (error) {
     logger.error({ err: error }, "Failed to reset Grok Build settings");

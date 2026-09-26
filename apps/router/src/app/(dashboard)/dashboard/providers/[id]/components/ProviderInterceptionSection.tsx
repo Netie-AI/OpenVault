@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * ProviderInterceptionSection — provider-level toggles for OmniRoute web
+ * ProviderInterceptionSection — provider-level toggles for FreeRoute web
  * search/fetch tool interception (#3384 Phases 1-2 shipped the DB schema +
  * resolvers only; #7339 wires interceptFetch into the chat pipeline and adds
  * this dashboard toggle, covering both interceptSearch and interceptFetch
@@ -9,7 +9,7 @@
  *
  * Renders a card on the provider detail page where operators opt a provider
  * into routing its provider-native web_search / web_fetch tool calls through
- * OmniRoute's own /v1/search and /v1/web/fetch endpoints instead of letting
+ * FreeRoute's own /v1/search and /v1/web/fetch endpoints instead of letting
  * the upstream provider run them natively. Off (undefined) preserves today's
  * native-bypass behavior exactly — this is purely additive opt-in.
  */

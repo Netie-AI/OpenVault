@@ -373,7 +373,7 @@ export const FEATURE_FLAG_DEFINITIONS: FeatureFlagDefinition[] = [
     key: "OMNIROUTE_ALLOW_LOCAL_PROVIDER_URLS",
     label: "Allow Local Provider URLs",
     description:
-      "Allow adding and validating providers on local/private addresses (127.0.0.1, localhost, LAN, private IP ranges) — needed for local OpenAI-compatible models. Enabled by default (OmniRoute is local-first); turn it OFF to enforce strict public-only blocking if you only use public providers. Cloud-metadata endpoints (e.g. 169.254.169.254) stay blocked either way.",
+      "Allow adding and validating providers on local/private addresses (127.0.0.1, localhost, LAN, private IP ranges) — needed for local OpenAI-compatible models. Enabled by default (FreeRoute is local-first); turn it OFF to enforce strict public-only blocking if you only use public providers. Cloud-metadata endpoints (e.g. 169.254.169.254) stay blocked either way.",
     descriptionI18nKey: "featureFlagOmnirouteAllowLocalProviderUrlsDescription",
     category: "network",
     defaultValue: "true",
@@ -421,7 +421,7 @@ export const FEATURE_FLAG_DEFINITIONS: FeatureFlagDefinition[] = [
     key: "DISABLE_CONTEXT_WINDOW_CHECKS",
     label: "Disable Context Window Checks",
     description:
-      "Skip OmniRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers remain responsible for enforcing their actual limits. Off by default.",
+      "Skip FreeRoute's local context-window and max-input-token check for direct single-model requests. Upstream providers remain responsible for enforcing their actual limits. Off by default.",
     descriptionI18nKey: "featureFlagDisableContextWindowChecksDescription",
     category: "policies",
     defaultValue: "false",
@@ -445,7 +445,7 @@ export const FEATURE_FLAG_DEFINITIONS: FeatureFlagDefinition[] = [
     key: "RADAR_ENABLED",
     label: "Radar",
     description:
-      "Enable the OmniRoute Radar module (catalog feed screens and sync). Off by default; enabling only unlocks the UI — data sync remains a separate opt-in.",
+      "Enable the FreeRoute Radar module (catalog feed screens and sync). Off by default; enabling only unlocks the UI — data sync remains a separate opt-in.",
     descriptionI18nKey: "featureFlagRadarEnabledDescription",
     category: "policies",
     defaultValue: "false",

@@ -1,18 +1,8 @@
 import { NextResponse } from "next/server";
-import {
-  getApiKeys,
-  getApiKeysCount,
-  createApiKey,
-  updateApiKeyPermissions,
-} from "@/lib/db/apiKeys";
-import { isCloudEnabled } from "@/lib/db/settings";
-import { getConsistentMachineId } from "@/shared/utils/machineId";
-import { syncToCloud } from "@/lib/cloudSync";
-import { createKeySchema } from "@/shared/validation/schemas";
-import { isValidationFailure, validateBody } from "@/shared/validation/helpers";
+import { getApiKeys, getApiKeysCount } from "@/lib/db/apiKeys";
 import { isApiKeyRevealEnabled, maskStoredApiKey } from "@/lib/apiKeyExposure";
 import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
-import { normalizeSelfServiceScopesForCreate } from "@/shared/constants/selfServiceScopes";
+import { renderClientKeysManagedByOpenVault } from "@omniroute/open-sse/netie/policy.ts";
 import * as log from "@/sse/utils/logger";
 
 function parsePagination(request: Request) {
@@ -57,112 +47,14 @@ export async function GET(request: Request) {
 }
 
 // POST /api/keys - Create new API key
-export async function POST(request) {
+//
+// FreeRoute: router-side inbound-client keys are minted by OpenVault
+// (POST http://127.0.0.1:5000/api/apikeys, surfaced at
+// http://127.0.0.1:3010/keys) — see src/lib/netie/keyvault.ts and
+// validateApiKey()/getApiKeyMetadata() in src/lib/db/apiKeys.ts, which accept
+// an OpenVault-verified token the same way they already accept the env key.
+export async function POST(request: Request) {
   const authError = await requireManagementAuth(request);
   if (authError) return authError;
-
-  try {
-    const body = await request.json();
-
-    // Zod validation
-    const validation = validateBody(createKeySchema, body);
-    if (isValidationFailure(validation)) {
-      return NextResponse.json({ error: validation.error }, { status: 400 });
-    }
-    const {
-      name,
-      modelAccessMode,
-      allowedModels,
-      allowedCombos,
-      noLog,
-      scopes,
-      allowedConnections,
-      allowUsageCommand,
-      usageLimitEnabled,
-      dailyUsageLimitUsd,
-      weeklyUsageLimitUsd,
-      chaosModeEnabled,
-      expiresAt,
-    } = validation.data;
-
-    // Always get machineId from server
-    const machineId = await getConsistentMachineId();
-    const normalizedScopes = normalizeSelfServiceScopesForCreate(scopes);
-    const apiKey = await createApiKey(name, machineId, normalizedScopes, {
-      modelAccessMode,
-      allowedModels,
-      allowedCombos,
-      allowedConnections,
-      expiresAt,
-    });
-    if (
-      noLog === true ||
-      allowUsageCommand === true ||
-      usageLimitEnabled === true ||
-      dailyUsageLimitUsd !== undefined ||
-      weeklyUsageLimitUsd !== undefined ||
-      chaosModeEnabled === true
-    ) {
-      await updateApiKeyPermissions(apiKey.id, {
-        ...(noLog === true && { noLog: true }),
-        ...(allowUsageCommand === true && { allowUsageCommand: true }),
-        ...(usageLimitEnabled === true && { usageLimitEnabled: true }),
-        ...(dailyUsageLimitUsd !== undefined && { dailyUsageLimitUsd }),
-        ...(weeklyUsageLimitUsd !== undefined && { weeklyUsageLimitUsd }),
-        ...(chaosModeEnabled === true && { chaosModeEnabled: true }),
-      });
-    }
-
-    // Auto sync to Cloud if enabled — fire-and-forget. Cloud sync is a
-    // background side-effect, not part of the key-creation contract, and it
-    // performs an outbound network call. Awaiting it here blocked the HTTP
-    // response on a slow/unreachable Cloud endpoint (e.g. a fresh/offline
-    // install with a misconfigured or unreachable CLOUD_URL): the request
-    // would hang until the fetch settled or timed out (#6570). Errors inside
-    // syncKeysToCloudIfEnabled() are already caught and logged internally, so
-    // this is safe to leave unawaited.
-    void syncKeysToCloudIfEnabled();
-
-    return NextResponse.json(
-      {
-        key: apiKey.key,
-        name: apiKey.name,
-        id: apiKey.id,
-        machineId: apiKey.machineId,
-        modelAccessMode: apiKey.modelAccessMode,
-        allowedModels: apiKey.allowedModels,
-        allowedCombos: apiKey.allowedCombos,
-        allowedConnections: apiKey.allowedConnections,
-        noLog: noLog === true,
-        allowUsageCommand: allowUsageCommand === true,
-        usageLimitEnabled: usageLimitEnabled === true,
-        dailyUsageLimitUsd: dailyUsageLimitUsd ?? null,
-        weeklyUsageLimitUsd: weeklyUsageLimitUsd ?? null,
-        chaosModeEnabled: chaosModeEnabled === true,
-        expiresAt: expiresAt ?? null,
-        streamDefaultMode: "legacy",
-        compressionEnabled: true,
-        cacheDefaultMode: "legacy",
-      },
-      { status: 201 }
-    );
-  } catch (error) {
-    log.error("keys", "Error creating key", error);
-    return NextResponse.json({ error: "Failed to create key" }, { status: 500 });
-  }
-}
-
-/**
- * Sync API keys to Cloud if enabled
- */
-async function syncKeysToCloudIfEnabled() {
-  try {
-    const cloudEnabled = await isCloudEnabled();
-    if (!cloudEnabled) return;
-
-    const machineId = await getConsistentMachineId();
-    await syncToCloud(machineId);
-  } catch (error) {
-    log.error("keys", "Error syncing keys to cloud", error);
-  }
+  return renderClientKeysManagedByOpenVault();
 }

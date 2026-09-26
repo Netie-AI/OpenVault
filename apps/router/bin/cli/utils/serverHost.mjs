@@ -4,7 +4,7 @@ import { hostname, platform } from "node:os";
  * Resolve the bind host passed to the standalone Next.js server.
  *
  * HOSTNAME is a standard shell variable on Unix-like systems, so only the
- * dedicated OmniRoute variable is treated as configuration there. Windows
+ * dedicated FreeRoute variable is treated as configuration there. Windows
  * keeps the legacy HOSTNAME fallback for compatibility with existing .env
  * files, while still ignoring the OS-reported machine name.
  *

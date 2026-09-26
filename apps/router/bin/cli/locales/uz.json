@@ -1,8 +1,8 @@
 {
   "common": {
     "error": "Xato: {message}",
-    "serverOffline": "OmniRoute serveri oflayn. Uni quyidagi buyruq bilan ishga tushiring: omniroute serve",
-    "authRequired": "Autentifikatsiya talab qilinadi. OMNIROUTE_API_KEY ni sozlang yoki quyidagi buyruqni bajaring: omniroute setup",
+    "serverOffline": "FreeRoute serveri oflayn. Uni quyidagi buyruq bilan ishga tushiring: freeroute serve",
+    "authRequired": "Autentifikatsiya talab qilinadi. OMNIROUTE_API_KEY ni sozlang yoki quyidagi buyruqni bajaring: freeroute setup",
     "rateLimited": "So‘rovlar tezligi chegarasidan oshib ketildi. {seconds}s dan keyin qayta urinib ko‘ring.",
     "timeout": "So‘rov {ms}ms dan so‘ng vaqt tugashi sababli bekor qilindi.",
     "success": "Tayyor.",
@@ -15,7 +15,7 @@
     "yesOpt": "Tasdiqlash so‘rovini o‘tkazib yuborish"
   },
   "setup": {
-    "title": "OmniRoute sozlamalari",
+    "title": "FreeRoute sozlamalari",
     "passwordPrompt": "Administrator paroli",
     "providerPrompt": "Standart provayder (o‘tkazib yuborish uchun bo‘sh qoldiring)",
     "done": "Sozlash yakunlandi",
@@ -30,19 +30,19 @@
     "opencode": "OpenCode uchun birga taqdim etilgan @omniroute/opencode-plugin ni o‘rnatish va sozlash"
   },
   "doctor": {
-    "title": "OmniRoute diagnostikasi",
+    "title": "FreeRoute diagnostikasi",
     "dbOk": "Ma’lumotlar bazasi: OK ({path})",
-    "dbMissing": "Ma’lumotlar bazasi ishga tushirilmagan — `omniroute setup` buyrug‘ini bajaring",
+    "dbMissing": "Ma’lumotlar bazasi ishga tushirilmagan — `freeroute setup` buyrug‘ini bajaring",
     "portOk": "{port}-port: mavjud",
     "portConflict": "{port}-port: boshqa jarayon tomonidan ishlatilmoqda",
     "encryptionOk": "Shifrlash kaliti: sozlangan",
-    "encryptionMissing": "Shifrlash kaliti yo‘q — `omniroute setup` buyrug‘ini bajaring",
+    "encryptionMissing": "Shifrlash kaliti yo‘q — `freeroute setup` buyrug‘ini bajaring",
     "allGood": "Barcha tekshiruvlardan muvaffaqiyatli o‘tildi.",
     "warnings": "{count} ta ogohlantirish — yuqoriga qarang."
   },
   "providers": {
     "title": "Provayderlar",
-    "noProviders": "Hech qanday provayder sozlanmagan. Quyidagi buyruqni bajaring: omniroute setup",
+    "noProviders": "Hech qanday provayder sozlanmagan. Quyidagi buyruqni bajaring: freeroute setup",
     "testing": "{name} sinovdan o‘tkazilmoqda...",
     "available": "{count} ta provayder mavjud",
     "connected": "Ulangan",
@@ -71,7 +71,7 @@
       "dryRunOpt": "Yozmasdan, qanday o‘zgarishlar bo‘lishini chiqarish",
       "confirmPrompt": "\"{name}\" ({id}) ulanishi uchun API kaliti almashtirilsinmi? [y/N]",
       "dryRunResult": "[dry-run] \"{name}\" ({id}) uchun kalit almashtirilgan bo‘lardi. Hech qanday o‘zgartirish kiritilmadi.",
-      "oauthHint": "OAuth ulanishi — bajaring: omniroute oauth {provider}",
+      "oauthHint": "OAuth ulanishi — bajaring: freeroute oauth {provider}",
       "envVarEmpty": "{var} muhit o‘zgaruvchisi o‘rnatilmagan yoki bo‘sh.",
       "success": "\"{name}\" uchun kalit almashtirildi. Tekshirish uchun `providers test {id}` buyrug‘ini bajaring.",
       "testPassed": "Almashtirishdan keyingi sinov muvaffaqiyatli o‘tdi.",
@@ -82,7 +82,7 @@
       "providerOpt": "Provayder nomi bo‘yicha filtrlash",
       "header": "ID         Provayder      Nomi                     Muddat Holati  Sinov holati  Kutish muddati",
       "noData": "Provayder ulanishlari haqidagi ma’lumotlar mavjud emas.",
-      "requiresServer": "providers status buyrug‘i OmniRoute serveri ishlab turishini talab qiladi."
+      "requiresServer": "providers status buyrug‘i FreeRoute serveri ishlab turishini talab qiladi."
     }
   },
   "keys": {
@@ -90,8 +90,8 @@
     "addDescription": "Provayder uchun API kalitini qo‘shish yoki yangilash",
     "listDescription": "Barcha sozlangan API kalitlarini ro‘yxatlash",
     "removeDescription": "Provayder uchun API kalitini olib tashlash",
-    "regenerateDescription": "OmniRoute API kalitini qayta yaratish",
-    "revokeDescription": "OmniRoute API kalitini bekor qilish",
+    "regenerateDescription": "FreeRoute API kalitini qayta yaratish",
+    "revokeDescription": "FreeRoute API kalitini bekor qilish",
     "revealDescription": "Niqoblanmagan API kaliti qiymatini ko‘rsatish",
     "usageDescription": "API kalitidan yaqindagi foydalanish ma’lumotlarini ko‘rsatish",
     "usageLimitOpt": "Yaqindagi so‘rovlar soni",
@@ -142,7 +142,7 @@
     "warning": "⚠ Bu SHIFRI YECHILGAN API kalitlari va OAuth tokenlarini oddiy matn ko‘rinishida chiqaradi yoki yozadi. Ekraningiz, qobiq tarixi va har qanday chiqish fayli maxfiy saqlanishiga ishonch hosil qiling.",
     "confirmHeading": "⚠ OGOHLANTIRISH: bu amal SHIFRI YECHILGAN provayder hisob ma’lumotlarini oddiy matn ko‘rinishida eksport qiladi",
     "confirmBody": "Bu buyruq tanlangan ulanish(lar) uchun apiKey, accessToken, refreshToken va\nidToken qiymatlarini shifrdan chiqarib, ekranga chiqaradi yoki faylga yozadi. Chiqishni maxfiy ma’lumot sifatida saqlang.",
-    "confirmFooter": "Tasdiqlash uchun quyidagini ishga tushiring:\n  omniroute auth export --force",
+    "confirmFooter": "Tasdiqlash uchun quyidagini ishga tushiring:\n  freeroute auth export --force",
     "missingKey": "Hisob maʼlumotlarini eksport qilish uchun STORAGE_ENCRYPTION_KEY talab qilinadi.",
     "notFound": "Ulanish topilmadi: {id}",
     "invalidFormat": "Notoʻgʻri format: {format}. json yoki env dan foydalaning."
@@ -220,10 +220,10 @@
     "reasoning": "Mulohaza yuritish darajasi (low|medium|high)",
     "thinking": "Kengaytirilgan fikrlash tokenlari limiti",
     "explain": "Zaxira variantlar daraxti va narx oralig‘ini stderr oqimiga chiqarish",
-    "noCombo": "Mos kombinatsiya topilmadi. Uni quyidagi buyruq bilan sozlang: omniroute combo create"
+    "noCombo": "Mos kombinatsiya topilmadi. Uni quyidagi buyruq bilan sozlang: freeroute combo create"
   },
   "chat": {
-    "description": "OmniRoute’ga bir martalik chat so‘rovini yuborish",
+    "description": "FreeRoute’ga bir martalik chat so‘rovini yuborish",
     "file": "So‘rov matnini fayldan o‘qish",
     "stdin": "So‘rov matnini stdin oqimidan o‘qish",
     "system": "Tizim so‘rovi",
@@ -242,8 +242,8 @@
     }
   },
   "serve": {
-    "description": "OmniRoute serverini ishga tushirish (standart amal)",
-    "starting": "OmniRoute serveri {port}-portda ishga tushirilmoqda...",
+    "description": "FreeRoute serverini ishga tushirish (standart amal)",
+    "starting": "FreeRoute serveri {port}-portda ishga tushirilmoqda...",
     "ready": "http://localhost:{port} manzilida tayyor",
     "stopping": "Server to‘xtatilmoqda (PID {pid})...",
     "stopped": "Server to‘xtatildi.",
@@ -262,7 +262,7 @@
   },
   "backup": {
     "title": "Zaxira nusxasi",
-    "description": "OmniRoute ma’lumotlarining zaxira nusxasini yaratish",
+    "description": "FreeRoute ma’lumotlarining zaxira nusxasini yaratish",
     "creating": "Zaxira nusxasi yaratilmoqda...",
     "done": "Zaxira nusxasi {path} manziliga saqlandi",
     "noFiles": "Zaxiralash uchun fayllar yo‘q (ma’lumotlar bazasi ishga tayyorlanmagan)",
@@ -274,7 +274,7 @@
     "noBackups": "Zaxira nusxalari topilmadi.",
     "notFound": "Zaxira nusxasi topilmadi: {name}",
     "confirmRestore": "Joriy ma’lumotlar {ts} sanasidagi zaxira nusxasi bilan almashtirilsinmi?",
-    "createDescription": "OmniRoute ma’lumotlarining zaxira nusxasini yaratish",
+    "createDescription": "FreeRoute ma’lumotlarining zaxira nusxasini yaratish",
     "nameOpt": "Zaxira nusxasi uchun maxsus nom",
     "cloudOpt": "Zaxira nusxasini bulutli xotiraga yuklash",
     "encryptOpt": "Zaxira nusxasini AES-256-GCM bilan shifrlash",
@@ -292,14 +292,14 @@
       "statusDescription": "Joriy zaxiralash jadvali holatini ko‘rsatish",
       "cronOpt": "Jadval uchun Cron ifodasi (standart: har kuni soat 03:00 da)",
       "enabled": "Avtomatik zaxiralash yoqildi (cron: {cron}).",
-      "hint": "Jadval omniroute serve ishga tushganda o‘qiladi.",
+      "hint": "Jadval freeroute serve ishga tushganda o‘qiladi.",
       "disabled": "Avtomatik zaxiralash o‘chirildi.",
       "notConfigured": "Zaxiralash jadvali sozlanmagan."
     }
   },
   "health": {
     "description": "Server ishlashi va komponentlar holatini tekshirish",
-    "noServer": "Server ishlamayapti. Quyidagi buyruq bilan ishga tushiring: omniroute serve",
+    "noServer": "Server ishlamayapti. Quyidagi buyruq bilan ishga tushiring: freeroute serve",
     "title": "Holat",
     "status": "Holat: {status}",
     "uptime": "Ishlash vaqti: {uptime}",
@@ -308,21 +308,21 @@
   },
   "quota": {
     "description": "Provayder kvotasidan foydalanishni koʻrsatish",
-    "noServer": "Server ishlamayapti. Quyidagi buyruq bilan ishga tushiring: omniroute serve",
+    "noServer": "Server ishlamayapti. Quyidagi buyruq bilan ishga tushiring: freeroute serve",
     "noData": "Kvota haqida maʼlumot mavjud emas."
   },
   "cache": {
     "description": "Javoblar keshini boshqarish",
-    "noServer": "Server ishlamayapti. Quyidagi buyruq bilan ishga tushiring: omniroute serve",
+    "noServer": "Server ishlamayapti. Quyidagi buyruq bilan ishga tushiring: freeroute serve",
     "cleared": "Kesh tozalandi.",
     "clearFailed": "Keshni tozalab boʻlmadi."
   },
   "redis": {
-    "description": "OmniRoute keshlashi va kvota kuzatuvi uchun bir bosishda mahalliy Redis konteynerini (Podman yoki Docker) ishga tushirish"
+    "description": "FreeRoute keshlashi va kvota kuzatuvi uchun bir bosishda mahalliy Redis konteynerini (Podman yoki Docker) ishga tushirish"
   },
   "test": {
     "description": "Provayderga ulanishni sinash",
-    "noServer": "Server ishlamayapti. Quyidagi buyruq bilan ishga tushiring: omniroute serve",
+    "noServer": "Server ishlamayapti. Quyidagi buyruq bilan ishga tushiring: freeroute serve",
     "testing": "{provider} / {model} sinalmoqda...",
     "passed": "Ulanish muvaffaqiyatli!",
     "failed": "Ulanish amalga oshmadi: {error}",
@@ -334,7 +334,7 @@
     "saved": "Natijalar {path} manziliga saqlandi",
     "compareTitle": "Modellarni taqqoslash",
     "compareMinTwo": "--compare uchun kamida ikkita model talab qilinadi (vergul bilan ajratilgan)",
-    "noProviders": "Hech qanday provayder sozlanmagan. Quyidagi buyruq bilan qoʻshing: omniroute keys add"
+    "noProviders": "Hech qanday provayder sozlanmagan. Quyidagi buyruq bilan qoʻshing: freeroute keys add"
   },
   "update": {
     "checking": "Yangilanishlar tekshirilmoqda...",
@@ -348,7 +348,7 @@
     "running": "MCP serveri ishlamoqda ({transport})",
     "stopped": "MCP serveri toʻxtatildi.",
     "restarted": "MCP serveri qayta ishga tushirildi.",
-    "stoppedHint": "Uni yoqish uchun `omniroute mcp enable` buyrugʻini ishga tushiring.",
+    "stoppedHint": "Uni yoqish uchun `freeroute mcp enable` buyrugʻini ishga tushiring.",
     "enabled": "MCP serveri yoqildi.",
     "disabled": "MCP serveri oʻchirildi.",
     "enable": {
@@ -416,7 +416,7 @@
     }
   },
   "policy": {
-    "description": "OmniRoute avtorizatsiya siyosatlarini boshqarish",
+    "description": "FreeRoute avtorizatsiya siyosatlarini boshqarish",
     "list": {
       "description": "Siyosatlarni roʻyxatlash",
       "kind": "Tur boʻyicha filtrlash (allow|deny|rate-limit|cost-cap)",
@@ -453,7 +453,7 @@
     }
   },
   "compression": {
-    "description": "OmniRoute siqish konveyerini sozlash va tekshirish",
+    "description": "FreeRoute siqish konveyerini sozlash va tekshirish",
     "status": {
       "description": "Joriy siqish holati va sozlamalarini ko‘rsatish"
     },
@@ -507,18 +507,18 @@
     "confirmRotate": "{type} tunneli yangilansinmi? (yangi URL yaratiladi)"
   },
   "stop": {
-    "description": "OmniRoute serverini to‘xtatish",
+    "description": "FreeRoute serverini to‘xtatish",
     "stopping": "Server to‘xtatilmoqda (PID {pid})...",
     "stopped": "Server to‘xtatildi.",
     "notRunning": "Hech qanday server ishlamayapti.",
     "portFallback": "PID fayli topilmadi, port asosida to‘xtatishga urinilmoqda..."
   },
   "restart": {
-    "description": "OmniRoute serverini qayta ishga tushirish",
-    "restarting": "OmniRoute serveri qayta ishga tushirilmoqda..."
+    "description": "FreeRoute serverini qayta ishga tushirish",
+    "restarting": "FreeRoute serveri qayta ishga tushirilmoqda..."
   },
   "dashboard": {
-    "description": "OmniRoute boshqaruv panelini brauzerda ochish",
+    "description": "FreeRoute boshqaruv panelini brauzerda ochish",
     "opening": "Boshqaruv paneli {url} manzilida ochilmoqda",
     "urlOnly": "Brauzerni ochmasdan boshqaruv paneli URL manzilini chiqarish",
     "tui": "Interaktiv TUI boshqaruv panelini ochish (terminal interfeysi, 7 ta ichki oyna)"
@@ -526,7 +526,7 @@
   "models": {
     "description": "Mavjud modellarni roʻyxatlash (server talab qilinadi)",
     "search": "Modellarni identifikator, nom, provayder yoki tavsif boʻyicha filtrlash",
-    "noServer": "Server ishlamayapti. Quyidagi buyruq bilan ishga tushiring: omniroute serve",
+    "noServer": "Server ishlamayapti. Quyidagi buyruq bilan ishga tushiring: freeroute serve",
     "noModels": "Hech qanday model topilmadi."
   },
   "audit": {
@@ -558,7 +558,7 @@
     }
   },
   "skills": {
-    "description": "OmniRoute koʻnikmalarini boshqarish (sandbox, builtin, custom, hybrid, skillssh)",
+    "description": "FreeRoute koʻnikmalarini boshqarish (sandbox, builtin, custom, hybrid, skillssh)",
     "list": {
       "description": "Oʻrnatilgan koʻnikmalarni roʻyxatlash",
       "type": "Tur boʻyicha filtrlash (sandbox|custom|builtin|hybrid|skillssh)",
@@ -631,7 +631,7 @@
     }
   },
   "memory": {
-    "description": "OmniRoute suhbat xotirasini boshqarish (FTS5 + vector)",
+    "description": "FreeRoute suhbat xotirasini boshqarish (FTS5 + vector)",
     "search": {
       "description": "Semantik so‘rov orqali xotira yozuvlarini qidirish",
       "type": "Xotira turi bo‘yicha filtrlash (user|feedback|project|reference)",
@@ -789,7 +789,7 @@
     }
   },
   "webhooks": {
-    "description": "OmniRoute vebhuklarini boshqarish",
+    "description": "FreeRoute vebhuklarini boshqarish",
     "events": {
       "description": "Barcha mavjud vebhuk hodisasi turlarini ro‘yxatlash"
     },
@@ -821,14 +821,14 @@
     }
   },
   "program": {
-    "description": "OmniRoute — avtomatik zaxira yo‘naltirishga ega aqlli AI routeri",
+    "description": "FreeRoute — avtomatik zaxira yo‘naltirishga ega aqlli AI routeri",
     "version": "Versiyani ko‘rsatish va chiqish",
     "output": "Chiqish formati (table, json, jsonl, csv)",
     "quiet": "Muhim bo‘lmagan chiqishni yashirish",
     "no_color": "Rangli chiqishni o‘chirish",
     "timeout": "HTTP so‘rovi uchun kutish vaqti, millisekundlarda",
-    "api_key": "OmniRoute serveri uchun API kaliti",
-    "base_url": "OmniRoute serverining asosiy URL manzili",
+    "api_key": "FreeRoute serveri uchun API kaliti",
+    "base_url": "FreeRoute serverining asosiy URL manzili",
     "context": "Ushbu buyruq uchun ishlatiladigan server konteksti/profili",
     "lang": "CLI interfeysi tilini belgilash (OMNIROUTE_LANG qiymatini bekor qiladi)"
   },
@@ -1079,7 +1079,7 @@
     }
   },
   "openapi": {
-    "description": "OmniRoute OpenAPI spetsifikatsiyasiga kirish va uni sinash",
+    "description": "FreeRoute OpenAPI spetsifikatsiyasiga kirish va uni sinash",
     "dump": {
       "description": "OpenAPI spetsifikatsiyasini stdout yoki faylga chiqarish",
       "format": "Chiqish formati: yaml|json (standart: yaml)",
@@ -1149,7 +1149,7 @@
     }
   },
   "open": {
-    "description": "Brauzerda muayyan OmniRoute boshqaruv paneli sahifasini ochish",
+    "description": "Brauzerda muayyan FreeRoute boshqaruv paneli sahifasini ochish",
     "url": "Faqat URL ni chiqarish, brauzerni ochmaslik"
   },
   "telemetry": {
@@ -1166,7 +1166,7 @@
     }
   },
   "sync": {
-    "description": "OmniRoute nusxalari oʻrtasida konfiguratsiyani sinxronlash",
+    "description": "FreeRoute nusxalari oʻrtasida konfiguratsiyani sinxronlash",
     "push": {
       "description": "Konfiguratsiyani bulutga yoki masofaviy nusxaga yuborish",
       "target": "Maqsad (cloud yoki context:name)",
@@ -1222,8 +1222,8 @@
       "listTitle": "Mavjud tillar",
       "current": "Til: {code} ({name})",
       "saved": "Til {code} ({name}) etib o‘rnatildi.",
-      "noCode": "Til kodi talab qilinadi. Mavjud kodlarni ko‘rish uchun 'omniroute config lang list' buyrug‘ini bajaring.",
-      "unknown": "Noma’lum til kodi: {code}. Mavjud kodlarni ko‘rish uchun 'omniroute config lang list' buyrug‘ini bajaring.",
+      "noCode": "Til kodi talab qilinadi. Mavjud kodlarni ko‘rish uchun 'freeroute config lang list' buyrug‘ini bajaring.",
+      "unknown": "Noma’lum til kodi: {code}. Mavjud kodlarni ko‘rish uchun 'freeroute config lang list' buyrug‘ini bajaring.",
       "alreadySet": "Til allaqachon {code} etib o‘rnatilgan.",
       "envHint": "Maslahat: muhitda OMNIROUTE_LANG={code} qiymatini ham o‘rnatishingiz mumkin."
     }
@@ -1242,7 +1242,7 @@
     "filter": "Daraja bo‘yicha filtrlash (error,warn,info) — vergul bilan ajratilgan",
     "lines": "Olinadigan qatorlar soni",
     "timeout": "Ulanishning kutish vaqti, ms da",
-    "baseUrl": "OmniRoute API asosiy URL manzili",
+    "baseUrl": "FreeRoute API asosiy URL manzili",
     "requestId": "So‘rov IDsi bo‘yicha filtrlash",
     "apiKey": "API kaliti bo‘yicha filtrlash",
     "combo": "Kombo nomi bo‘yicha filtrlash",
@@ -1258,10 +1258,10 @@
     "description": "Tizim treyi belgisini boshqarish",
     "show": "Trey belgisini ko‘rsatish (agar server --tray bilan ishlayotgan bo‘lsa)",
     "hide": "Trey belgisini yashirish",
-    "quit": "OmniRoute’dan trey orqali chiqish"
+    "quit": "FreeRoute’dan trey orqali chiqish"
   },
   "autostart": {
-    "description": "OmniRoute’ning tizim yuklanishidagi avtomatik ishga tushishini boshqarish (Linux: systemd foydalanuvchi xizmati)",
+    "description": "FreeRoute’ning tizim yuklanishidagi avtomatik ishga tushishini boshqarish (Linux: systemd foydalanuvchi xizmati)",
     "enable": "Tizim yuklanishida avtomatik ishga tushishni yoqish",
     "disable": "Tizim yuklanishida avtomatik ishga tushishni o‘chirish",
     "toggle": "Tizim yuklanishida avtomatik ishga tushishni almashtirish",
@@ -1293,19 +1293,19 @@
     "scaffold": "Yangi plagin uchun boshlang‘ich shablon yaratish"
   },
   "launch": {
-    "description": "OmniRoute’ga yo‘naltirilgan Claude Code’ni ishga tushirish (mahalliy yoki masofaviy, --profile bilan)",
+    "description": "FreeRoute’ga yo‘naltirilgan Claude Code’ni ishga tushirish (mahalliy yoki masofaviy, --profile bilan)",
     "token": "Claude mijozi yuborishi kerak bo‘lgan token (ANTHROPIC_AUTH_TOKEN)",
-    "notRunning": "OmniRoute’ga {port} portida ulanib bo‘lmadi. Uni 'omniroute serve' bilan ishga tushiring.",
+    "notRunning": "FreeRoute’ga {port} portida ulanib bo‘lmadi. Uni 'freeroute serve' bilan ishga tushiring.",
     "notFound": "'claude' CLI PATH ichidan topilmadi."
   },
   "run": {
-    "description": "OmniRoute orqali qoʻllab-quvvatlanadigan CLI nishonini ishga tushirish"
+    "description": "FreeRoute orqali qoʻllab-quvvatlanadigan CLI nishonini ishga tushirish"
   },
   "setupClaude": {
-    "description": "OmniRoute modellar katalogidan ~/.claude/profiles uchun Claude Code profillarini yaratish"
+    "description": "FreeRoute modellar katalogidan ~/.claude/profiles uchun Claude Code profillarini yaratish"
   },
   "connect": {
-    "description": "Masofaviy OmniRoute serveriga ulanish va masofaviy rejimga oʻtish"
+    "description": "Masofaviy FreeRoute serveriga ulanish va masofaviy rejimga oʻtish"
   },
   "tokens": {
     "description": "Muayyan doiradagi CLI kirish tokenlarini boshqarish (masofaviy rejim)"
@@ -1314,10 +1314,10 @@
     "description": "Faol serverdan provayder va modelni tanlash hamda qoʻllab-quvvatlanadigan mahalliy CLI vositasini sozlash"
   },
   "launchCodex": {
-    "description": "OmniRoute manziliga yoʻnaltirilgan Codex CLI vositasini ishga tushirish (mahalliy yoki masofaviy VPS)"
+    "description": "FreeRoute manziliga yoʻnaltirilgan Codex CLI vositasini ishga tushirish (mahalliy yoki masofaviy VPS)"
   },
   "setupCodex": {
-    "description": "OmniRoute jonli modellar katalogidan ~/.codex profil fayllarini yaratish"
+    "description": "FreeRoute jonli modellar katalogidan ~/.codex profil fayllarini yaratish"
   },
   "packs": {
     "description": "Ixtiyoriy bajarilish paketlarini boshqarish (ML / brauzerni avtomatlashtirish)",
@@ -1330,7 +1330,7 @@
     "errUnknown": "nomaʼlum paket: {name}",
     "errNoIndex": "paket indeksi topilmadi; paket tarkibi saqlanadigan katalogni --source <dir> orqali koʻrsating (u ish stoli toʻplamlarida ilova yonida joylashadi)",
     "installed": "\"{name}\" paketi oʻrnatildi va {dir} manzilida tekshirildi",
-    "restartHint": "bajarilish muhiti paketni aniqlashi uchun OmniRoute serverini (yoki ish stoli ilovasini) qayta ishga tushiring",
+    "restartHint": "bajarilish muhiti paketni aniqlashi uchun FreeRoute serverini (yoki ish stoli ilovasini) qayta ishga tushiring",
     "removed": "\"{name}\" paketi olib tashlandi",
     "notInstalled": "\"{name}\" paketi oʻrnatilmagan",
     "verifyOk": "barcha oʻrnatilgan paketlar tekshiruvdan oʻtdi",

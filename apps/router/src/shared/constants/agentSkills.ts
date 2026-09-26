@@ -4,19 +4,22 @@
 
 import type { AgentSkill, SkillArea, SkillCategory } from "@/lib/agentSkills/types";
 
-const REPO = "diegosouzapw/OmniRoute";
-const BRANCH = "main";
-const SKILL_PATH = "skills";
-
-export const AGENT_SKILLS_RAW_BASE = `https://raw.githubusercontent.com/${REPO}/refs/heads/${BRANCH}/${SKILL_PATH}`;
-export const AGENT_SKILLS_BLOB_BASE = `https://github.com/${REPO}/blob/${BRANCH}/${SKILL_PATH}`;
+// FreeRoute: these used to point at the upstream OmniRoute repo
+// (raw.githubusercontent.com/diegosouzapw/OmniRoute and its GitHub blob view)
+// so the catalog and `fetchSkillMarkdown()`'s network fallback fetched SKILL.md
+// content from upstream. FreeRoute does not bundle that upstream `skills/`
+// directory and must not fetch it live, so both URLs now stay in-product:
+// `rawUrl` is FreeRoute's own `/api/agent-skills/[id]/raw` route (which itself
+// no longer calls out to GitHub — see src/lib/agentSkills/catalog.ts), and
+// `githubUrl` points at FreeRoute's own repo instead of upstream's.
+const FREEROUTE_REPO_URL = "https://github.com/Netie-AI/Netie";
 
 export function getAgentSkillRawUrl(id: string): string {
-  return `${AGENT_SKILLS_RAW_BASE}/${id}/SKILL.md`;
+  return `/api/agent-skills/${id}/raw`;
 }
 
-export function getAgentSkillBlobUrl(id: string): string {
-  return `${AGENT_SKILLS_BLOB_BASE}/${id}/SKILL.md`;
+export function getAgentSkillBlobUrl(_id: string): string {
+  return FREEROUTE_REPO_URL;
 }
 
 // ── Curated entry shape ───────────────────────────────────────────────────────
@@ -45,7 +48,7 @@ export const CURATED_SKILLS: CuratedSkillEntry[] = [
     id: "omni-auth",
     name: "Authentication",
     description:
-      "Manage API key authentication and session tokens. Start here to authenticate requests via Bearer token, obtain session cookies, and configure login requirements for the OmniRoute API.",
+      "Manage API key authentication and session tokens. Start here to authenticate requests via Bearer token, obtain session cookies, and configure login requirements for the FreeRoute API.",
     category: "api",
     area: "auth",
     icon: "lock",
@@ -55,7 +58,7 @@ export const CURATED_SKILLS: CuratedSkillEntry[] = [
     id: "omni-providers",
     name: "Providers",
     description:
-      "Manage provider connections, API keys, OAuth flows, and connection tests via the REST API. List, add, update, remove, and test AI provider integrations across OmniRoute's 327-provider catalog.",
+      "Manage provider connections, API keys, OAuth flows, and connection tests via the REST API. List, add, update, remove, and test AI provider integrations across FreeRoute's 327-provider catalog.",
     category: "api",
     area: "providers",
     icon: "key",
@@ -83,7 +86,7 @@ export const CURATED_SKILLS: CuratedSkillEntry[] = [
     id: "omni-api-keys",
     name: "API Keys",
     description:
-      "Create, list, rotate, and revoke OmniRoute API keys. Control per-key scopes, spending limits, and expiration. Keys gate access to all proxy and management endpoints.",
+      "Create, list, rotate, and revoke FreeRoute API keys. Control per-key scopes, spending limits, and expiration. Keys gate access to all proxy and management endpoints.",
     category: "api",
     area: "api-keys",
     icon: "vpn_key",
@@ -167,7 +170,7 @@ export const CURATED_SKILLS: CuratedSkillEntry[] = [
     id: "omni-cli-tools",
     name: "CLI Tools",
     description:
-      "Manage CLI tool integrations exposed via the API. List, configure, and invoke CLI tool plugins that extend OmniRoute's automation surface.",
+      "Manage CLI tool integrations exposed via the API. List, configure, and invoke CLI tool plugins that extend FreeRoute's automation surface.",
     category: "api",
     area: "cli-tools",
     icon: "terminal",
@@ -176,7 +179,7 @@ export const CURATED_SKILLS: CuratedSkillEntry[] = [
     id: "omni-tunnels",
     name: "Tunnels",
     description:
-      "Create and manage secure tunnels (ngrok, Cloudflare Tunnel, custom) to expose OmniRoute to the internet or share access with remote agents and CI pipelines.",
+      "Create and manage secure tunnels (ngrok, Cloudflare Tunnel, custom) to expose FreeRoute to the internet or share access with remote agents and CI pipelines.",
     category: "api",
     area: "tunnels",
     icon: "vpn_lock",
@@ -185,7 +188,7 @@ export const CURATED_SKILLS: CuratedSkillEntry[] = [
     id: "omni-sync-cloud",
     name: "Cloud Sync",
     description:
-      "Synchronise OmniRoute configuration, provider connections, and settings to/from cloud storage. Manage cloud worker authentication and remote backup targets.",
+      "Synchronise FreeRoute configuration, provider connections, and settings to/from cloud storage. Manage cloud worker authentication and remote backup targets.",
     category: "api",
     area: "sync-cloud",
     icon: "cloud_sync",
@@ -212,7 +215,7 @@ export const CURATED_SKILLS: CuratedSkillEntry[] = [
     id: "omni-mcp",
     name: "MCP Server",
     description:
-      "Connect to the OmniRoute MCP server (110 tools, 3 transports: SSE/stdio/HTTP). Covers routing, cache, compression, memory, skills, providers, and audit tools across 33 permission scopes.",
+      "Connect to the FreeRoute MCP server (110 tools, 3 transports: SSE/stdio/HTTP). Covers routing, cache, compression, memory, skills, providers, and audit tools across 33 permission scopes.",
     category: "api",
     area: "mcp",
     icon: "electrical_services",
@@ -221,7 +224,7 @@ export const CURATED_SKILLS: CuratedSkillEntry[] = [
     id: "omni-agents-a2a",
     name: "Agents & A2A Protocol",
     description:
-      "Interact with OmniRoute via JSON-RPC 2.0 agent-to-agent protocol. 6 built-in A2A skills: smart-routing, quota-management, provider-discovery, cost-analysis, health-report, list-capabilities.",
+      "Interact with FreeRoute via JSON-RPC 2.0 agent-to-agent protocol. 6 built-in A2A skills: smart-routing, quota-management, provider-discovery, cost-analysis, health-report, list-capabilities.",
     category: "api",
     area: "agents-a2a",
     icon: "device_hub",
@@ -251,7 +254,7 @@ export const CURATED_SKILLS: CuratedSkillEntry[] = [
     id: "cli-serve",
     name: "CLI: Serve",
     description:
-      "Start, stop, and restart the OmniRoute server from the CLI. Manage daemon mode, port configuration, auto-recovery, system tray integration, and the dashboard open shortcut.",
+      "Start, stop, and restart the FreeRoute server from the CLI. Manage daemon mode, port configuration, auto-recovery, system tray integration, and the dashboard open shortcut.",
     category: "cli",
     area: "cli-serve",
     icon: "play_circle",
@@ -279,7 +282,7 @@ export const CURATED_SKILLS: CuratedSkillEntry[] = [
     id: "cli-keys",
     name: "CLI: API Keys",
     description:
-      "Create, list, rotate, and revoke OmniRoute API keys from the CLI. Manage OAuth flows for provider authentication and inspect key scopes and expiration.",
+      "Create, list, rotate, and revoke FreeRoute API keys from the CLI. Manage OAuth flows for provider authentication and inspect key scopes and expiration.",
     category: "cli",
     area: "cli-keys",
     icon: "vpn_key",
@@ -297,7 +300,7 @@ export const CURATED_SKILLS: CuratedSkillEntry[] = [
     id: "cli-chat",
     name: "CLI: Chat",
     description:
-      "Send chat completions, stream responses, and start an interactive REPL session from the CLI. Supports all OmniRoute providers, combo routing, and system prompt configuration.",
+      "Send chat completions, stream responses, and start an interactive REPL session from the CLI. Supports all FreeRoute providers, combo routing, and system prompt configuration.",
     category: "cli",
     area: "cli-chat",
     icon: "chat",
@@ -360,7 +363,7 @@ export const CURATED_SKILLS: CuratedSkillEntry[] = [
     id: "cli-a2a",
     name: "CLI: A2A Protocol",
     description:
-      "Interact with the OmniRoute A2A server from the CLI. Send tasks, inspect skill execution history, and test the JSON-RPC 2.0 agent-to-agent protocol interactively.",
+      "Interact with the FreeRoute A2A server from the CLI. Send tasks, inspect skill execution history, and test the JSON-RPC 2.0 agent-to-agent protocol interactively.",
     category: "cli",
     area: "cli-a2a",
     icon: "device_hub",
@@ -378,7 +381,7 @@ export const CURATED_SKILLS: CuratedSkillEntry[] = [
     id: "cli-backup-sync",
     name: "CLI: Backup & Sync",
     description:
-      "Backup and restore OmniRoute data from the CLI. Trigger incremental snapshots, sync to cloud storage, manage backup schedules, and restore from archive files.",
+      "Backup and restore FreeRoute data from the CLI. Trigger incremental snapshots, sync to cloud storage, manage backup schedules, and restore from archive files.",
     category: "cli",
     area: "cli-backup-sync",
     icon: "backup",
@@ -432,7 +435,7 @@ export const CURATED_SKILLS: CuratedSkillEntry[] = [
     id: "cli-skill-collector",
     name: "CLI: Agent Skill Collector",
     description:
-      "Detect installed CLI coding tools (Claude Code, Codex, Cursor, Copilot, Cline and more), search GitHub for matching agent skills, and install them to the detected tools via OmniRoute's built-in APIs.",
+      "Detect installed CLI coding tools (Claude Code, Codex, Cursor, Copilot, Cline and more), search GitHub for matching agent skills, and install them to the detected tools via FreeRoute's built-in APIs.",
     category: "cli",
     area: "cli-setup",
     icon: "extension",
@@ -444,7 +447,7 @@ export const CURATED_SKILLS: CuratedSkillEntry[] = [
     id: "config-codex-cli",
     name: "Config: Codex CLI",
     description:
-      "Step-by-step agent workflow to configure the OpenAI Codex CLI on any machine (Linux, macOS, Windows) to use OmniRoute as an OpenAI-compatible backend. Detects OS and shell, writes config.toml and 7 named profiles, sets environment variables, and verifies the setup.",
+      "Step-by-step agent workflow to configure the OpenAI Codex CLI on any machine (Linux, macOS, Windows) to use FreeRoute as an OpenAI-compatible backend. Detects OS and shell, writes config.toml and 7 named profiles, sets environment variables, and verifies the setup.",
     category: "config",
     area: "config-codex-cli",
     icon: "terminal",

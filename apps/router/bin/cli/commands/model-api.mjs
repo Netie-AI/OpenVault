@@ -20,7 +20,7 @@ export async function modelRequest(path, opts, init = {}) {
     });
   } catch (error) {
     throw new ModelCommandError(
-      "Unable to reach the selected OmniRoute server.",
+      "Unable to reach the selected FreeRoute server.",
       error.exitCode === 124 ? 124 : 1
     );
   }

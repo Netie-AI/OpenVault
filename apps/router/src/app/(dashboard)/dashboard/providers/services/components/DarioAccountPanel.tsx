@@ -3,14 +3,14 @@
 /**
  * Dario account panel — drives the headless Claude OAuth login flow against the
  * server-side admin-proxy routes (/api/services/dario/admin/*). The real
- * DARIO_ADMIN_TOKEN never reaches this component; the OmniRoute routes attach it.
+ * DARIO_ADMIN_TOKEN never reaches this component; the FreeRoute routes attach it.
  *
  * Flow: "Start Login" → render the returned Claude authorize_url as an external
  * link + expiry countdown + a code input → "Complete Login" posts the pasted
  * code → on success the account is routable immediately (Dario hot-reloads) and
  * the account list refreshes. Each row has a "Remove" button.
  *
- * Also offers "Import from OmniRoute": lists any existing OmniRoute `claude`
+ * Also offers "Import from FreeRoute": lists any existing FreeRoute `claude`
  * provider connection (OAuth-based) and imports its access+refresh token pair
  * directly into Dario's account store, skipping the browser OAuth round trip
  * entirely — valid because both tools authenticate against the same public
@@ -314,11 +314,11 @@ export function DarioAccountPanel() {
           )}
         </div>
 
-        {/* Import from OmniRoute */}
+        {/* Import from FreeRoute */}
         <div className="space-y-2 border-t border-border pt-3">
-          <p className="text-xs font-medium">Import from OmniRoute</p>
+          <p className="text-xs font-medium">Import from FreeRoute</p>
           <p className="text-xs text-text-muted">
-            Reuse an existing OmniRoute Claude connection&apos;s OAuth tokens instead of logging in
+            Reuse an existing FreeRoute Claude connection&apos;s OAuth tokens instead of logging in
             again — skips the browser approval step entirely.
           </p>
           {omniLoading && omniConnections.length === 0 ? (
@@ -326,9 +326,9 @@ export function DarioAccountPanel() {
           ) : omniConnections.length === 0 ? (
             <div className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2">
               <p className="text-xs text-text-muted">
-                No eligible OmniRoute Claude connections found.
+                No eligible FreeRoute Claude connections found.
               </p>
-              <Tooltip content="Will be active once a Claude connection exists in OmniRoute.">
+              <Tooltip content="Will be active once a Claude connection exists in FreeRoute.">
                 <Button size="sm" disabled>
                   Import
                 </Button>

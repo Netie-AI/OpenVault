@@ -1,8 +1,8 @@
 {
   "common": {
     "error": "Ошибка: {message}",
-    "serverOffline": "Сервер OmniRoute отключён. Запустите: omniroute serve",
-    "authRequired": "Требуется аутентификация. Установите OMNIROUTE_API_KEY или выполните: omniroute setup",
+    "serverOffline": "Сервер FreeRoute отключён. Запустите: freeroute serve",
+    "authRequired": "Требуется аутентификация. Установите OMNIROUTE_API_KEY или выполните: freeroute setup",
     "rateLimited": "Превышен лимит запросов. Повторите через {seconds}с.",
     "timeout": "Запрос истёк через {ms}мс.",
     "success": "Готово.",
@@ -15,7 +15,7 @@
     "yesOpt": "Пропустить подтверждение"
   },
   "setup": {
-    "title": "Настройка OmniRoute",
+    "title": "Настройка FreeRoute",
     "passwordPrompt": "Пароль администратора",
     "providerPrompt": "Провайдер по умолчанию (оставьте пустым, чтобы пропустить)",
     "done": "Настройка завершена",
@@ -30,19 +30,19 @@
     "opencode": "Установить и настроить встроенный плагин @omniroute/opencode-plugin для OpenCode"
   },
   "doctor": {
-    "title": "Диагностика OmniRoute",
+    "title": "Диагностика FreeRoute",
     "dbOk": "База данных: ОК ({path})",
-    "dbMissing": "База данных: не инициализирована — выполните `omniroute setup`",
+    "dbMissing": "База данных: не инициализирована — выполните `freeroute setup`",
     "portOk": "Порт {port}: доступен",
     "portConflict": "Порт {port}: используется другим процессом",
     "encryptionOk": "Ключ шифрования: настроен",
-    "encryptionMissing": "Ключ шифрования отсутствует — выполните `omniroute setup`",
+    "encryptionMissing": "Ключ шифрования отсутствует — выполните `freeroute setup`",
     "allGood": "Все проверки пройдены.",
     "warnings": "Предупреждений: {count} — см. выше."
   },
   "providers": {
     "title": "Провайдеры",
-    "noProviders": "Провайдеры не настроены. Выполните: omniroute setup",
+    "noProviders": "Провайдеры не настроены. Выполните: freeroute setup",
     "testing": "Проверка {name}...",
     "available": "Доступно провайдеров: {count}",
     "connected": "Подключено",
@@ -71,7 +71,7 @@
       "dryRunOpt": "Показать изменения без их применения",
       "confirmPrompt": "Заменить API-ключ для подключения «{name}» ({id})? [y/N]",
       "dryRunResult": "[dry-run] Будет выполнена ротация ключа для «{name}» ({id}). Изменения не внесены.",
-      "oauthHint": "OAuth-подключение — выполните: omniroute oauth {provider}",
+      "oauthHint": "OAuth-подключение — выполните: freeroute oauth {provider}",
       "envVarEmpty": "Переменная окружения {var} не задана или пуста.",
       "success": "Ключ для «{name}» ротирован. Выполните `providers test {id}` для проверки.",
       "testPassed": "Проверка после ротации успешно пройдена.",
@@ -82,7 +82,7 @@
       "providerOpt": "Фильтровать по имени провайдера",
       "header": "ID         Провайдер      Имя                      Срок действия Статус  Статус проверки  Ожидание до",
       "noData": "Данные о подключениях к провайдерам отсутствуют.",
-      "requiresServer": "Для выполнения providers status сервер OmniRoute должен быть запущен."
+      "requiresServer": "Для выполнения providers status сервер FreeRoute должен быть запущен."
     }
   },
   "keys": {
@@ -90,8 +90,8 @@
     "addDescription": "Добавить или обновить API-ключ провайдера",
     "listDescription": "Показать все настроенные API-ключи",
     "removeDescription": "Удалить API-ключ провайдера",
-    "regenerateDescription": "Создать новый API-ключ OmniRoute",
-    "revokeDescription": "Отозвать API-ключ OmniRoute",
+    "regenerateDescription": "Создать новый API-ключ FreeRoute",
+    "revokeDescription": "Отозвать API-ключ FreeRoute",
     "revealDescription": "Показать незамаскированное значение API-ключа",
     "usageDescription": "Показать недавнее использование API-ключа",
     "usageLimitOpt": "Количество недавних запросов",
@@ -142,7 +142,7 @@
     "warning": "⚠ Команда выводит или записывает РАСШИФРОВАННЫЕ API-ключи и OAuth-токены открытым текстом. Убедитесь, что ваш экран, история команд оболочки и любой выходной файл недоступны посторонним.",
     "confirmHeading": "⚠ ПРЕДУПРЕЖДЕНИЕ: эта команда экспортирует РАСШИФРОВАННЫЕ учётные данные провайдера открытым текстом",
     "confirmBody": "Эта команда расшифровывает и выводит или записывает apiKey, accessToken, refreshToken и\nidToken для выбранных подключений. Обращайтесь с выводом как с секретными данными.",
-    "confirmFooter": "Для подтверждения выполните:\n  omniroute auth export --force",
+    "confirmFooter": "Для подтверждения выполните:\n  freeroute auth export --force",
     "missingKey": "Для экспорта учётных данных требуется STORAGE_ENCRYPTION_KEY.",
     "notFound": "Подключение не найдено: {id}",
     "invalidFormat": "Недопустимый формат: {format}. Используйте json или env."
@@ -220,10 +220,10 @@
     "reasoning": "Уровень глубины рассуждений (low|medium|high)",
     "thinking": "Бюджет токенов для расширенного мышления",
     "explain": "Вывести дерево резервных вариантов и диапазон стоимости в stderr",
-    "noCombo": "Подходящая комбинация не найдена. Настройте её с помощью команды: omniroute combo create"
+    "noCombo": "Подходящая комбинация не найдена. Настройте её с помощью команды: freeroute combo create"
   },
   "chat": {
-    "description": "Отправить одноразовый запрос чата в OmniRoute",
+    "description": "Отправить одноразовый запрос чата в FreeRoute",
     "file": "Прочитать запрос из файла",
     "stdin": "Прочитать запрос из stdin",
     "system": "Системный промпт",
@@ -242,8 +242,8 @@
     }
   },
   "serve": {
-    "description": "Запустить сервер OmniRoute (действие по умолчанию)",
-    "starting": "Запуск сервера OmniRoute на порту {port}...",
+    "description": "Запустить сервер FreeRoute (действие по умолчанию)",
+    "starting": "Запуск сервера FreeRoute на порту {port}...",
     "ready": "Доступен по адресу http://localhost:{port}",
     "stopping": "Остановка сервера (PID {pid})...",
     "stopped": "Сервер остановлен.",
@@ -262,7 +262,7 @@
   },
   "backup": {
     "title": "Резервная копия",
-    "description": "Создать резервную копию данных OmniRoute",
+    "description": "Создать резервную копию данных FreeRoute",
     "creating": "Создание резервной копии...",
     "done": "Резервная копия сохранена в {path}",
     "noFiles": "Нет файлов для резервного копирования (база данных не инициализирована)",
@@ -274,7 +274,7 @@
     "noBackups": "Резервные копии не найдены.",
     "notFound": "Резервная копия не найдена: {name}",
     "confirmRestore": "Перезаписать текущие данные резервной копией от {ts}?",
-    "createDescription": "Создать резервную копию данных OmniRoute",
+    "createDescription": "Создать резервную копию данных FreeRoute",
     "nameOpt": "Пользовательское имя резервной копии",
     "cloudOpt": "Загрузить резервную копию в облачное хранилище",
     "encryptOpt": "Зашифровать резервную копию с помощью AES-256-GCM",
@@ -292,14 +292,14 @@
       "statusDescription": "Показать текущее состояние расписания резервного копирования",
       "cronOpt": "Cron-выражение для расписания (по умолчанию: ежедневно в 3:00)",
       "enabled": "Автоматическое резервное копирование включено (cron: {cron}).",
-      "hint": "Расписание считывается командой omniroute serve при запуске.",
+      "hint": "Расписание считывается командой freeroute serve при запуске.",
       "disabled": "Автоматическое резервное копирование отключено.",
       "notConfigured": "Расписание резервного копирования не настроено."
     }
   },
   "health": {
     "description": "Проверить работоспособность сервера и состояние компонентов",
-    "noServer": "Сервер не запущен. Запустите его командой: omniroute serve",
+    "noServer": "Сервер не запущен. Запустите его командой: freeroute serve",
     "title": "Работоспособность",
     "status": "Состояние: {status}",
     "uptime": "Время работы: {uptime}",
@@ -308,21 +308,21 @@
   },
   "quota": {
     "description": "Показать использование квоты провайдера",
-    "noServer": "Сервер не запущен. Запустите его командой: omniroute serve",
+    "noServer": "Сервер не запущен. Запустите его командой: freeroute serve",
     "noData": "Информация о квоте недоступна."
   },
   "cache": {
     "description": "Управление кешем ответов",
-    "noServer": "Сервер не запущен. Запустите его командой: omniroute serve",
+    "noServer": "Сервер не запущен. Запустите его командой: freeroute serve",
     "cleared": "Кеш очищен.",
     "clearFailed": "Не удалось очистить кеш."
   },
   "redis": {
-    "description": "Запустить локальный контейнер Redis одним нажатием (Podman или Docker) для кэширования и отслеживания квот OmniRoute"
+    "description": "Запустить локальный контейнер Redis одним нажатием (Podman или Docker) для кэширования и отслеживания квот FreeRoute"
   },
   "test": {
     "description": "Проверить подключение к провайдеру",
-    "noServer": "Сервер не запущен. Запустите его командой: omniroute serve",
+    "noServer": "Сервер не запущен. Запустите его командой: freeroute serve",
     "testing": "Тестирование {provider} / {model}...",
     "passed": "Подключение успешно!",
     "failed": "Не удалось подключиться: {error}",
@@ -334,7 +334,7 @@
     "saved": "Результаты сохранены в {path}",
     "compareTitle": "Сравнение моделей",
     "compareMinTwo": "Для --compare требуется не менее двух моделей (через запятую)",
-    "noProviders": "Нет настроенных провайдеров. Добавьте провайдера командой: omniroute keys add"
+    "noProviders": "Нет настроенных провайдеров. Добавьте провайдера командой: freeroute keys add"
   },
   "update": {
     "checking": "Проверка обновлений...",
@@ -348,7 +348,7 @@
     "running": "Сервер MCP запущен ({transport})",
     "stopped": "Сервер MCP остановлен.",
     "restarted": "Сервер MCP перезапущен.",
-    "stoppedHint": "Выполните `omniroute mcp enable`, чтобы включить его.",
+    "stoppedHint": "Выполните `freeroute mcp enable`, чтобы включить его.",
     "enabled": "Сервер MCP включён.",
     "disabled": "Сервер MCP отключён.",
     "enable": {
@@ -416,7 +416,7 @@
     }
   },
   "policy": {
-    "description": "Управление политиками авторизации OmniRoute",
+    "description": "Управление политиками авторизации FreeRoute",
     "list": {
       "description": "Показать список политик",
       "kind": "Фильтровать по типу (allow|deny|rate-limit|cost-cap)",
@@ -453,7 +453,7 @@
     }
   },
   "compression": {
-    "description": "Настройка и проверка конвейера сжатия OmniRoute",
+    "description": "Настройка и проверка конвейера сжатия FreeRoute",
     "status": {
       "description": "Показать текущий статус и настройки сжатия"
     },
@@ -507,18 +507,18 @@
     "confirmRotate": "Обновить URL туннеля {type}? (будет создан новый URL)"
   },
   "stop": {
-    "description": "Остановить сервер OmniRoute",
+    "description": "Остановить сервер FreeRoute",
     "stopping": "Остановка сервера (PID {pid})...",
     "stopped": "Сервер остановлен.",
     "notRunning": "Сервер не запущен.",
     "portFallback": "PID-файл не найден, выполняется попытка остановки по порту..."
   },
   "restart": {
-    "description": "Перезапустить сервер OmniRoute",
-    "restarting": "Перезапуск сервера OmniRoute..."
+    "description": "Перезапустить сервер FreeRoute",
+    "restarting": "Перезапуск сервера FreeRoute..."
   },
   "dashboard": {
-    "description": "Открыть панель управления OmniRoute в браузере",
+    "description": "Открыть панель управления FreeRoute в браузере",
     "opening": "Открытие панели управления по адресу {url}",
     "urlOnly": "Вывести URL панели управления, не открывая браузер",
     "tui": "Открыть интерактивную TUI-панель управления (терминальный интерфейс, 7 вкладок)"
@@ -526,7 +526,7 @@
   "models": {
     "description": "Показать доступные модели (требуется сервер)",
     "search": "Фильтровать модели по идентификатору, названию, провайдеру или описанию",
-    "noServer": "Сервер не запущен. Запустите его командой: omniroute serve",
+    "noServer": "Сервер не запущен. Запустите его командой: freeroute serve",
     "noModels": "Модели не найдены."
   },
   "audit": {
@@ -558,7 +558,7 @@
     }
   },
   "skills": {
-    "description": "Управление навыками OmniRoute (sandbox, builtin, custom, hybrid, skillssh)",
+    "description": "Управление навыками FreeRoute (sandbox, builtin, custom, hybrid, skillssh)",
     "list": {
       "description": "Показать список установленных навыков",
       "type": "Фильтровать по типу (sandbox|custom|builtin|hybrid|skillssh)",
@@ -631,7 +631,7 @@
     }
   },
   "memory": {
-    "description": "Управление памятью диалогов OmniRoute (FTS5 + vector)",
+    "description": "Управление памятью диалогов FreeRoute (FTS5 + vector)",
     "search": {
       "description": "Поиск записей в памяти по семантическому запросу",
       "type": "Фильтр по типу памяти (user|feedback|project|reference)",
@@ -789,7 +789,7 @@
     }
   },
   "webhooks": {
-    "description": "Управление вебхуками OmniRoute",
+    "description": "Управление вебхуками FreeRoute",
     "events": {
       "description": "Показать все доступные типы событий вебхуков"
     },
@@ -821,14 +821,14 @@
     }
   },
   "program": {
-    "description": "OmniRoute — Умный AI-маршрутизатор с автоматическим переключением",
+    "description": "FreeRoute — Умный AI-маршрутизатор с автоматическим переключением",
     "version": "Вывести версию и выйти",
     "output": "Формат вывода (table, json, jsonl, csv)",
     "quiet": "Подавить несущественный вывод",
     "no_color": "Отключить цветной вывод",
     "timeout": "Таймаут HTTP-запросов в миллисекундах",
-    "api_key": "API-ключ для сервера OmniRoute",
-    "base_url": "Базовый URL сервера OmniRoute",
+    "api_key": "API-ключ для сервера FreeRoute",
+    "base_url": "Базовый URL сервера FreeRoute",
     "context": "Контекст/профиль сервера для этой команды",
     "lang": "Установить язык отображения CLI (переопределяет OMNIROUTE_LANG)"
   },
@@ -1079,7 +1079,7 @@
     }
   },
   "openapi": {
-    "description": "Доступ к спецификации OmniRoute OpenAPI и её тестирование",
+    "description": "Доступ к спецификации FreeRoute OpenAPI и её тестирование",
     "dump": {
       "description": "Вывести спецификацию OpenAPI в stdout или файл",
       "format": "Формат вывода: yaml|json (по умолчанию: yaml)",
@@ -1149,7 +1149,7 @@
     }
   },
   "open": {
-    "description": "Открыть указанную страницу панели управления OmniRoute в браузере",
+    "description": "Открыть указанную страницу панели управления FreeRoute в браузере",
     "url": "Только вывести URL, не открывая браузер"
   },
   "telemetry": {
@@ -1166,7 +1166,7 @@
     }
   },
   "sync": {
-    "description": "Синхронизировать конфигурацию между экземплярами OmniRoute",
+    "description": "Синхронизировать конфигурацию между экземплярами FreeRoute",
     "push": {
       "description": "Отправить конфигурацию в облако или удалённый экземпляр",
       "target": "Цель (cloud или context:name)",
@@ -1222,8 +1222,8 @@
       "listTitle": "Доступные языки",
       "current": "Язык: {code} ({name})",
       "saved": "Установлен язык {code} ({name}).",
-      "noCode": "Необходимо указать код языка. Выполните «omniroute config lang list», чтобы просмотреть доступные коды.",
-      "unknown": "Неизвестный код языка: {code}. Выполните «omniroute config lang list», чтобы просмотреть доступные коды.",
+      "noCode": "Необходимо указать код языка. Выполните «freeroute config lang list», чтобы просмотреть доступные коды.",
+      "unknown": "Неизвестный код языка: {code}. Выполните «freeroute config lang list», чтобы просмотреть доступные коды.",
       "alreadySet": "Язык уже установлен на {code}.",
       "envHint": "Совет: вы также можете задать OMNIROUTE_LANG={code} в переменных окружения."
     }
@@ -1242,7 +1242,7 @@
     "filter": "Фильтр по уровню (error,warn,info), значения разделяются запятыми",
     "lines": "Количество строк для получения",
     "timeout": "Время ожидания подключения в мс",
-    "baseUrl": "Базовый URL API OmniRoute",
+    "baseUrl": "Базовый URL API FreeRoute",
     "requestId": "Фильтр по идентификатору запроса",
     "apiKey": "Фильтр по ключу API",
     "combo": "Фильтр по названию комбинации",
@@ -1258,10 +1258,10 @@
     "description": "Управление значком в системном трее",
     "show": "Показать значок в трее (если сервер запущен с параметром --tray)",
     "hide": "Скрыть значок в трее",
-    "quit": "Завершить работу OmniRoute через трей"
+    "quit": "Завершить работу FreeRoute через трей"
   },
   "autostart": {
-    "description": "Управление автозапуском OmniRoute при загрузке системы (Linux: пользовательская служба systemd)",
+    "description": "Управление автозапуском FreeRoute при загрузке системы (Linux: пользовательская служба systemd)",
     "enable": "Включить автозапуск при загрузке системы",
     "disable": "Отключить автозапуск при загрузке системы",
     "toggle": "Переключить автозапуск при загрузке системы",
@@ -1293,19 +1293,19 @@
     "scaffold": "Создать шаблон нового плагина"
   },
   "launch": {
-    "description": "Запустить Claude Code с подключением к OmniRoute (локально или удалённо, с --profile)",
+    "description": "Запустить Claude Code с подключением к FreeRoute (локально или удалённо, с --profile)",
     "token": "Токен, который должен отправлять клиент Claude (ANTHROPIC_AUTH_TOKEN)",
-    "notRunning": "OmniRoute недоступен на порте {port}. Запустите его командой 'omniroute serve'.",
+    "notRunning": "FreeRoute недоступен на порте {port}. Запустите его командой 'freeroute serve'.",
     "notFound": "CLI 'claude' не найден в PATH."
   },
   "run": {
-    "description": "Запустить поддерживаемый целевой CLI через OmniRoute"
+    "description": "Запустить поддерживаемый целевой CLI через FreeRoute"
   },
   "setupClaude": {
-    "description": "Создать профили Claude Code в ~/.claude/profiles на основе каталога моделей OmniRoute"
+    "description": "Создать профили Claude Code в ~/.claude/profiles на основе каталога моделей FreeRoute"
   },
   "connect": {
-    "description": "Подключиться к удалённому серверу OmniRoute и перейти в удалённый режим"
+    "description": "Подключиться к удалённому серверу FreeRoute и перейти в удалённый режим"
   },
   "tokens": {
     "description": "Управление токенами доступа CLI с ограниченной областью действия (удалённый режим)"
@@ -1314,10 +1314,10 @@
     "description": "Выбрать провайдера и модель на активном сервере и настроить поддерживаемый локальный CLI"
   },
   "launchCodex": {
-    "description": "Запустить Codex CLI с подключением к OmniRoute (локально или на удалённом VPS)"
+    "description": "Запустить Codex CLI с подключением к FreeRoute (локально или на удалённом VPS)"
   },
   "setupCodex": {
-    "description": "Создать файлы профилей в ~/.codex на основе актуального каталога моделей OmniRoute"
+    "description": "Создать файлы профилей в ~/.codex на основе актуального каталога моделей FreeRoute"
   },
   "packs": {
     "description": "Управление дополнительными пакетами среды выполнения (ML / автоматизация браузера)",
@@ -1330,7 +1330,7 @@
     "errUnknown": "неизвестный пакет: {name}",
     "errNoIndex": "индекс пакетов не найден; укажите --source <dir>, содержащий данные пакета (в настольных сборках он поставляется рядом с приложением)",
     "installed": "пакет \"{name}\" установлен и проверен в {dir}",
-    "restartHint": "перезапустите сервер OmniRoute (или настольное приложение), чтобы среда выполнения подхватила пакет",
+    "restartHint": "перезапустите сервер FreeRoute (или настольное приложение), чтобы среда выполнения подхватила пакет",
     "removed": "пакет «{name}» удалён",
     "notInstalled": "пакет «{name}» не был установлен",
     "verifyOk": "все установленные пакеты проверены",
