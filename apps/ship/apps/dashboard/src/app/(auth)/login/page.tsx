@@ -1,0 +1,337 @@
+"use client";
+
+import { Icon as UiIcon } from "@repo/ui/icons";
+
+import { Suspense, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { signIn } from "@/lib/auth-client";
+import { useToast } from "@/components/toast";
+import { useI18n, interpolate } from "@/components/i18n-provider";
+import { useAuthContext } from "../providers";
+import { AuthShell } from "@/components/auth-shell";
+import { OAuthButtons } from "@/components/oauth-buttons";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { isNetworkError } from "@/lib/api";
+import { getApiBaseUrl } from "@/lib/api/client";
+import { getApiOrigin } from "@/lib/api/urls";
+import {
+  clearZeroAuthAttempt,
+  markZeroAuthAttempt,
+  readZeroAuthAttempt,
+  resolveZeroAuthLogin,
+  type ZeroAuthDecision,
+} from "@/lib/zero-auth";
+import {
+  buildAuthPageHref,
+  buildDesktopAuthorizeUrl,
+  getPostAuthRedirect,
+  preparePkceFlow,
+  startDesktopCloudAuth,
+} from "@/lib/cloud-auth";
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <AuthShell>
+        <div className="flex justify-center py-8"><UiIcon name="spinner" className="size-6 animate-spin text-muted-foreground" /></div>
+      </AuthShell>
+    }>
+      <LoginPageInner />
+    </Suspense>
+  );
+}
+
+function LoginPageInner() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { toast } = useToast();
+  const { t } = useI18n();
+  const { authMode, cloudAuthUrl, selfHosted, authProviders } = useAuthContext();
+
+  const isDesktop = typeof window !== "undefined" && !!window.desktop?.isDesktop;
+  const handleBack = isDesktop ? () => { void window.desktop?.reset?.(); } : undefined;
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const callbackError = searchParams.get("error");
+
+  const postLoginUrl = getPostAuthRedirect(searchParams);
+
+  // Zero-auth mode has no form — the page exists only to bounce the browser at
+  // desktop-login. Decide that BEFORE navigating, so a browser the server will
+  // never mint a session for is told why instead of being sent to its own
+  // loopback address (#484).
+  const zeroAuth = useMemo<ZeroAuthDecision>(() => {
+    if (authMode !== "none") return { action: "wait" };
+    return resolveZeroAuthLogin({
+      pageOrigin: typeof window !== "undefined" ? window.location.origin : undefined,
+      // The same base every other API call uses: correct under the single-port
+      // proxy and on the desktop's dynamic port, both of which a target-table
+      // lookup of window.location gets wrong.
+      apiBaseUrl: getApiBaseUrl(),
+      attemptedAt: readZeroAuthAttempt(),
+      now: Date.now(),
+    });
+  }, [authMode]);
+
+  useEffect(() => {
+    if (zeroAuth.action !== "redirect") return;
+    markZeroAuthAttempt(Date.now());
+    window.location.href = zeroAuth.url;
+  }, [zeroAuth]);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const result = await signIn.email({ email, password });
+      if (result.error) {
+        // Sign-in is blocked until the email is verified (SaaS requires it).
+        // Route to the verify page (resend + status) instead of a dead-end toast.
+        const err = result.error;
+        if (err.code === "EMAIL_NOT_VERIFIED" || err.message?.toLowerCase().includes("verify")) {
+          router.push(`/verify-email?email=${encodeURIComponent(email)}`);
+          return; // navigating away — keep the spinner until this page unmounts
+        }
+        // Stayed on the login page → stop the spinner so they can retry.
+        toast("error", err.message ?? t.auth.errors.invalidCredentials);
+        setLoading(false);
+        return;
+      }
+      // Success → navigate. Deliberately DO NOT clear loading: router.push only
+      // *starts* the client transition, and the dashboard takes a moment to
+      // render. Keeping the button in its loading state until this page unmounts
+      // avoids the dead "idle button, no navigation yet" gap.
+      if (postLoginUrl) {
+        window.location.href = postLoginUrl;
+      } else {
+        router.push("/");
+      }
+    } catch (err) {
+      toast("error", isNetworkError(err)
+        ? t.auth.errors.serverUnreachable
+        : t.auth.errors.generic);
+      setLoading(false); // stayed on the page — re-enable the form
+    }
+  }
+
+  async function handleCloudSignIn(callbackUrl: string) {
+    if (!isDesktop || !window.desktop?.onboarding) {
+      // Mint + stash a fresh PKCE verifier so cloud-callback can finish
+      // a PKCE exchange instead of accepting a bearer code.
+      const { state, codeChallenge } = await preparePkceFlow();
+      const cloudLoginUrl = buildDesktopAuthorizeUrl({
+        cloudAuthUrl,
+        callbackUrl,
+        state,
+        codeChallenge,
+      });
+      window.location.href = cloudLoginUrl;
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const result = await startDesktopCloudAuth({ desktop: window.desktop });
+      if (!result.ok) {
+        toast("error", result.reason === "start_failed"
+          ? "Could not start cloud authentication."
+          : "Authentication failed. Please try again.");
+        return;
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  /* ── Zero-auth mode (desktop): auto-redirect to create session ── */
+  if (authMode === "none") {
+    if (zeroAuth.action === "explain") {
+      const pageOrigin = typeof window !== "undefined" ? window.location.origin : "";
+      return (
+        <AuthShell onBack={handleBack}>
+          <div className="text-center">
+            <h1 className="text-xl font-semibold tracking-tight text-foreground">
+              {t.auth.zeroAuth.title}
+            </h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {zeroAuth.reason === "remote_browser"
+                ? interpolate(t.auth.zeroAuth.remoteBrowser, { origin: pageOrigin })
+                : t.auth.zeroAuth.refused}
+            </p>
+          </div>
+
+          <div className="mt-6 rounded-xl border border-warning-border bg-warning-bg p-4 text-start">
+            <p className="text-sm text-warning">{t.auth.zeroAuth.remedy}</p>
+            <code
+              dir="ltr"
+              className="mt-2 block rounded-md bg-background/60 px-2 py-1.5 font-mono text-xs text-foreground"
+            >
+              OPENSHIP_AUTH_MODE=local
+            </code>
+            <p className="mt-2 text-sm text-warning">{t.auth.zeroAuth.remedyAdmin}</p>
+          </div>
+
+          <Button
+            variant="outline"
+            className="mt-4 w-full"
+            onClick={() => {
+              clearZeroAuthAttempt();
+              window.location.reload();
+            }}
+          >
+            {t.auth.zeroAuth.retry}
+          </Button>
+        </AuthShell>
+      );
+    }
+    // Redirecting (see the effect above) — or server-rendering, where there's no
+    // origin to judge yet.
+    return (
+      <AuthShell>
+        <div className="flex items-center justify-center py-8">
+          <UiIcon name="spinner" className="size-6 animate-spin text-muted-foreground" />
+        </div>
+      </AuthShell>
+    );
+  }
+
+  /* ── Cloud mode (desktop): redirect to Openship Cloud for all auth ── */
+  if (authMode === "cloud") {
+    const apiUrl = getApiOrigin(typeof window !== "undefined" ? window.location.origin : undefined);
+    const callbackUrl = `${apiUrl}/api/auth/cloud-callback`;
+    // The actual cloud-authorize URL is built inside handleCloudSignIn so
+    // PKCE state can be minted + stashed in localStorage just before the
+    // redirect (must happen in a click handler, not render).
+
+    return (
+      <AuthShell onBack={handleBack}>
+        <div className="mb-6 text-center">
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">
+            {t.auth.login.title}
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Sign in with your Openship account to continue.
+          </p>
+        </div>
+
+        {callbackError && (
+          <div className="mb-4 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+            {callbackError === "missing_code"
+              ? "Authentication was cancelled."
+              : callbackError === "missing_state"
+                ? "Authentication request expired. Please try again."
+                : "Authentication failed. Please try again."}
+          </div>
+        )}
+
+        <Button
+          className="w-full"
+          size="lg"
+          disabled={loading}
+          onClick={() => { void handleCloudSignIn(callbackUrl); }}
+        >
+          {loading ? <UiIcon name="spinner" className="me-2 size-4 animate-spin" /> : <UiIcon name="external-link" className="me-2 size-4" />}
+          {loading ? "Opening Openship Cloud..." : "Sign in with Openship"}
+        </Button>
+      </AuthShell>
+    );
+  }
+
+  /* ── Local mode: email/password form ── */
+  return (
+    <AuthShell onBack={handleBack}>
+      <div className="mb-6">
+        <h1 className="text-xl font-semibold tracking-tight text-foreground">
+          {t.auth.login.title}
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {t.auth.login.subtitle}
+        </p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-3">
+        <div className="space-y-1.5">
+          <Label htmlFor="login-email">{t.auth.login.emailLabel}</Label>
+          <Input
+            id="login-email"
+            type="email"
+            autoComplete="email"
+            placeholder={t.auth.login.emailPlaceholder}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="login-password">{t.auth.login.passwordLabel}</Label>
+            <Link
+              href="/forgot-password"
+              className="text-xs text-muted-foreground transition-colors hover:text-foreground"
+            >
+              {t.auth.login.forgot}
+            </Link>
+          </div>
+          <div className="relative">
+            <Input
+              id="login-password"
+              type={showPassword ? "text" : "password"}
+              autoComplete="current-password"
+              placeholder={t.auth.login.passwordPlaceholder}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="pe-10"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              tabIndex={-1}
+              className="absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+              aria-label={showPassword ? t.auth.hidePassword : t.auth.showPassword}
+            >
+              {showPassword ? <UiIcon name="eye-off" className="size-4" /> : <UiIcon name="eye" className="size-4" />}
+            </button>
+          </div>
+        </div>
+
+        <Button type="submit" disabled={loading} className="mt-1 w-full">
+          {loading && <UiIcon name="spinner" className="animate-spin" />}
+          {loading ? t.auth.login.submitting : t.auth.login.submit}
+        </Button>
+      </form>
+
+      {/* Whatever the SERVER says it has credentials for. It used to be
+          `!selfHosted &&` — a stand-in for "are any providers configured?" that
+          hid working buttons from every self-hosted operator who had set
+          GITHUB_CLIENT_ID/SECRET. OAuthButtons renders nothing (not even the
+          divider) when the list is empty, which is the default self-hosted
+          instance, so this is safe to mount unconditionally. */}
+      <OAuthButtons providers={authProviders} callbackURL={postLoginUrl ?? "/"} />
+
+      {/* Public sign-up is a SaaS-only front door. On a self-hosted instance the
+          only account is the CLI-created admin; everyone else joins via an
+          invitation link (server also enforces invite-only signup), so there's
+          no public "create account" entry here. */}
+      {!selfHosted && (
+        <p className="mt-8 text-center text-sm text-muted-foreground">
+          {t.auth.login.noAccount}{" "}
+          <Link
+            href={buildAuthPageHref("/register", searchParams)}
+            className="font-medium text-foreground transition-colors hover:underline"
+          >
+            {t.auth.login.createOne}
+          </Link>
+        </p>
+      )}
+    </AuthShell>
+  );
+}

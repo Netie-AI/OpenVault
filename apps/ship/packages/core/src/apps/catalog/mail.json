@@ -1,0 +1,21 @@
+{
+  "available": true,
+  "verified": true,
+  "id": "mail",
+  "name": "Openship Mail",
+  "description": "Your own mail on your own domain — SMTP/IMAP, mailboxes and webmail on one server. Or keep the mailboxes you already have and just run the webmail.",
+  "kind": "flow",
+  "logo": "mail",
+  "category": "mail",
+  "tags": [
+    "mail",
+    "email",
+    "smtp",
+    "imap"
+  ],
+  "flowHref": "/apps/new/mail",
+  "management": {
+    "kind": "custom",
+    "href": "/emails"
+  }
+}

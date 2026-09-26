@@ -1,0 +1,9 @@
+{
+  "wizard": {
+    "edgeReview": {
+      "detected": "{proxy} detectado no servidor de origem",
+      "handoff": "Confira os domínios associados abaixo. A migração configura o proxy de entrada do servidor de destino e pede confirmação caso seja necessário substituir um proxy existente.",
+      "warnings": "Revisar {count} avisos de descoberta"
+    }
+  }
+}

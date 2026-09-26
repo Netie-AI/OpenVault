@@ -1,0 +1,415 @@
+import {
+  getRouteRegistry,
+  isPublicSpec,
+  parsePermissionTag,
+  ORG_SINGLETON_RESOURCES,
+  CONDITIONAL_SINGLETON_RESOURCES,
+  DEFAULT_ID_PARAMS,
+  type RegisteredRoute,
+} from "../../lib/route-permission";
+import {
+  PROJECT_ROOTED,
+  permitsAction,
+  roleAllowsResourceType,
+  type CheckedResourceType,
+} from "../../lib/permission";
+import type { Permission } from "@repo/db";
+import { Type, type TSchema } from "@sinclair/typebox";
+import { Value } from "@sinclair/typebox/value";
+import { env } from "@repo/platform/engine/config/index";
+import { mcpToolName } from "./mcp-name.mjs";
+
+/** IDs become HTTP headers: reject empty, whitespace and control characters. */
+export const McpOrganizationIdSchema = Type.String({
+  minLength: 1,
+  maxLength: 512,
+  // Unlike $, the final assertion cannot match before a trailing newline.
+  pattern: "^[!-~]+(?![\\s\\S])",
+  description:
+    "Openship workspace ID from get_permissions_workspaces. Fixes this call to that workspace within the credential's access. Omit to use the credential/account default.",
+});
+
+/**
+ * MCP tool generation from the HTTP route registry. A route is exposed as a
+ * tool ONLY if its spec declares an `mcp` block (opt-in allowlist) — the
+ * description and argument schemas are co-located with the route.
+ * Each tool's handler dispatches an internal request through the real Hono app
+ * (see mcp-dispatch.ts), so no business logic is duplicated here.
+ */
+
+export interface McpToolDef {
+  name: string;
+  description: string;
+  inputSchema: Record<string, unknown>;
+  annotations: { readOnlyHint: boolean; destructiveHint: boolean };
+  // Dispatch metadata (not sent to the client):
+  method: string;
+  path: string; // full path with :params, e.g. /api/projects/:id
+  pathParams: string[];
+  hasBody: boolean;
+  /** Parsed permission metadata for capability-aware listing (not sent to client). */
+  perm: {
+    root: string;
+    leaf: string;
+    action: string;
+    /** Operates on the whole org ("*") — list / create / org-singleton. A
+     *  restricted principal can never pass these (checkPermission "*" → false). */
+    wildcard: boolean;
+    /** Resource type a grant must be on to enable this tool for a restricted
+     *  principal (project-rooted sub-resources resolve to "project"). */
+    grantRoot: string;
+    /** The dedicated project-create route (POST /projects, POST /apps install).
+     *  Reachable by an "own projects" create-capable grant — see the
+     *  canCreateProjects arm in filterToolsForPrincipal. */
+    projectCreate: boolean;
+    /** Repo content tier this route requires, mirrored from PermissionSpec.source.
+     *  Set ⇒ the tool touches repository CONTENT and needs a source capability
+     *  beyond the repo grant itself. Undefined ⇒ metadata tier. */
+    source?: "content" | "content-tree" | "content-whole" | "write";
+  };
+}
+
+/** The caller's effective capability, resolved once per MCP request for `tools/list` filtering. */
+export interface McpPrincipal {
+  role: "owner" | "admin" | "member" | "restricted";
+  readOnly: boolean;
+  /** Resource types the token holds grants on — only consulted when role === "restricted". */
+  grantedRootTypes: ReadonlySet<string>;
+  /**
+   * The token's WILDCARD grants (resourceId "*"), keyed by resource type, holding
+   * each one's permission array.
+   *
+   * Separate from `grantedRootTypes` because that set cannot tell `{server,"*"}`
+   * from `{server,"S1"}`, and only the former satisfies a collection op — so it
+   * cannot mirror the wildcard arm of `checkPermission`. Carrying the permissions
+   * (not just the type) is what lets this filter answer the verb question the arm
+   * answers: a `{job,"*",[read]}` grant lists the job GETs and hides `post_jobs`.
+   *
+   * REQUIRED, unlike `sourceCapabilities`: an omitted map would silently deny
+   * every collection tool, and a filter that quietly under-advertises is the same
+   * advertise/enforce drift as one that over-advertises. Making it required means
+   * the compiler names every construction site instead.
+   */
+  wildcardGrants: ReadonlyMap<string, readonly Permission[]>;
+  /** True when the token holds a create-capable project wildcard grant
+   *  ({project, "*", permissions:["create"]}) — the "own projects" scope. Lets a
+   *  restricted token see the project-create routes and the project list (which
+   *  it may call, filtered to its self-created projects). Mirrors permission.ts. */
+  canCreateProjects: boolean;
+  /**
+   * Repo source capabilities the token holds anywhere in its grants — `content`
+   * for file reads, `write` for writes. A repo grant is metadata-only by default,
+   * so a token can hold github grants and still have NEITHER.
+   *
+   * Coarse by design, matching this filter's existing doctrine: a tool is listed
+   * if the caller could succeed at it for SOME input, and `tools/call` narrows to
+   * the specific repo and path. Optional so existing test principals stay valid.
+   */
+  sourceCapabilities?: ReadonlySet<"content" | "write">;
+}
+
+/**
+ * Modules that must NEVER be tools even if a route is mistakenly annotated —
+ * credential/auth surfaces. `tokens` in particular would let a full-access MCP
+ * token mint a fresh PAT and escape its own scope. Everything else is gated by
+ * opt-in (no `mcp` block → not a tool), so this stays minimal.
+ */
+const HARD_DENY = new Set(["tokens", "auth", "mcp"]);
+
+function includeRoute(route: RegisteredRoute): boolean {
+  const spec = route.spec;
+  if (isPublicSpec(spec)) return false;
+  if (HARD_DENY.has(route.module)) return false;
+  // A `localOnly` route 404s on the hosted control plane, so advertising it there
+  // hands the agent a tool that can only ever fail. Not hypothetical: the jobs
+  // router is localOnly while `app.ts` mounts it unconditionally, so all 11 jobs
+  // tools were listed on the SaaS. Reading it from the spec is why router-level
+  // `localOnly` had to become a `secureRouter` option — as middleware it never
+  // reached the registry.
+  if (spec.localOnly && env.CLOUD_MODE) return false;
+  return spec.mcp != null; // opt-in allowlist
+}
+
+function extractPathParams(path: string): string[] {
+  return path
+    .split("/")
+    .filter((s) => s.startsWith(":"))
+    .map((s) => s.slice(1));
+}
+
+/** Stable, unique, MCP-safe tool name from method + path. */
+function toolName(route: RegisteredRoute, taken: Set<string>): string {
+  const name = mcpToolName(route.method, route.path);
+  if (taken.has(name)) throw new Error(`MCP tool name collision: ${name}`);
+  taken.add(name);
+  return name;
+}
+
+function inputSchema(
+  pathParams: string[],
+  bodySchema?: TSchema,
+  querySchema?: TSchema,
+): Record<string, unknown> {
+  const properties: Record<string, TSchema> = {};
+  for (const p of pathParams) {
+    properties[p] = Type.String({
+      minLength: 1,
+      // encodeURIComponent leaves these unchanged, and URL normalization would
+      // select a different endpoint before the request reaches authorization.
+      pattern: "^(?!\\.{1,2}$)",
+      description: `The ${p} from the resource's list or detail response.`,
+    });
+  }
+  properties.organizationId = Type.Optional(McpOrganizationIdSchema);
+  const query =
+    querySchema ??
+    Type.Record(
+      Type.String(),
+      Type.Union([Type.String(), Type.Number(), Type.Boolean(), Type.Null()]),
+      { description: "Query-string parameters supported by this endpoint." },
+    );
+  properties.query = Value.Check(query, {}) ? Type.Optional(query) : query;
+  if (bodySchema) {
+    // Optional all-default inputs are sent as {}. Required inputs, including
+    // revision/sequence guards on DELETE, must be supplied by the caller.
+    properties.body = Value.Check(bodySchema, {}) ? Type.Optional(bodySchema) : bodySchema;
+  }
+  return Type.Object(properties, { additionalProperties: false });
+}
+
+function annotationsFor(route: RegisteredRoute): {
+  readOnlyHint: boolean;
+  destructiveHint: boolean;
+} {
+  const spec = route.spec;
+  if (isPublicSpec(spec)) return { readOnlyHint: true, destructiveHint: false };
+  const parsed = parsePermissionTag(spec.tag);
+  const readOnlyHint = route.method === "GET" || spec.readOnly === true;
+  const destructiveHint =
+    !readOnlyHint &&
+    (spec.mcp?.destructive ??
+      (route.method === "DELETE" ||
+        parsed.action === "admin" ||
+        /delete|teardown|destroy|remove|wipe|revoke/i.test(route.path)));
+  return { readOnlyHint, destructiveHint };
+}
+
+let cached: McpToolDef[] | null = null;
+let cachedMode: boolean | undefined;
+let cachedRouteCount = -1;
+
+/**
+ * Drop the memo. The registry is populated as a side effect of importing route
+ * modules, several of which `app.ts` imports lazily and mode-dependently, so a tool
+ * list built too early is permanently short. In production the first
+ * `getMcpTools()` call happens inside a request handler, long after mounting — but
+ * a test that calls it before importing its route modules caches an empty array and
+ * then passes vacuously. Exported so such a test can reset instead of being ordered
+ * around the cache.
+ */
+export function resetMcpToolCache(): void {
+  cached = null;
+}
+
+/** All curated tools, generated once from the route registry. */
+export function getMcpTools(): McpToolDef[] {
+  const routes = getRouteRegistry();
+  if (cached && cachedMode === env.CLOUD_MODE && cachedRouteCount === routes.length) return cached;
+  cachedMode = env.CLOUD_MODE;
+  cachedRouteCount = routes.length;
+  const taken = new Set<string>();
+  const endpoints = new Set<string>();
+  cached = routes
+    .filter(includeRoute)
+    .filter((route) => {
+      // Mode-specific billing routers share a method/path and handler contract.
+      // Importing public plans registers the Cloud router even on self-hosted
+      // instances. Advertise the endpoint once, never an order-dependent _2 tool.
+      const key = `${route.method} ${route.path.replace(/\/+$/, "")}`;
+      if (endpoints.has(key)) return false;
+      endpoints.add(key);
+      return true;
+    })
+    .map((route): McpToolDef => {
+      const spec = route.spec;
+      // includeRoute already excluded public specs, so spec is a PermissionSpec.
+      const mcp = isPublicSpec(spec) ? undefined : spec.mcp;
+      const parsed = isPublicSpec(spec) ? null : parsePermissionTag(spec.tag);
+      const collection = !isPublicSpec(spec) && spec.collection === true;
+      const collectionProject = !isPublicSpec(spec) && !!spec.collectionProject;
+      const leaf = parsed?.leaf ?? "";
+      const pathParams = extractPathParams(route.path);
+      const leafParam =
+        (isPublicSpec(spec) ? undefined : spec.ids?.[leaf]) ?? DEFAULT_ID_PARAMS[leaf] ?? "id";
+      const namedGithubTarget =
+        leaf === "github" && (pathParams.includes("owner") || pathParams.includes("org"));
+      const bodySchema = isPublicSpec(spec) ? undefined : spec.body;
+      const hasBody = !!bodySchema && route.method !== "GET";
+      return {
+        name: toolName(route, taken),
+        description: mcp?.description ?? `${route.method} ${route.path}`,
+        inputSchema: inputSchema(
+          pathParams,
+          hasBody ? bodySchema : undefined,
+          isPublicSpec(spec) ? undefined : spec.query,
+        ),
+        annotations: annotationsFor(route),
+        method: route.method,
+        path: route.path,
+        pathParams,
+        hasBody,
+        perm: {
+          root: parsed?.root ?? "",
+          leaf,
+          action: (parsed?.action ?? "read") as string,
+          // "wildcard" = operates on the whole org and needs an explicit
+          // wildcard grant for a restricted principal, including its action.
+          // Network operations use collection authority even with operation IDs
+          // in the path. GitHub repository paths are the singleton exception:
+          // their shared operations authorize the named repository/account.
+          // A top-level :list still requires a wildcard when its path contains
+          // a catalog/mail-server ID. Conditional singletons use the same
+          // resource-ID parameter mapping as requirePermission.
+          // A `collectionProject` route is org-wide in SHAPE (no :id) but scoped
+          // in EFFECT — its handler authorizes the project named in the body, so
+          // a grant on that project is enough and it must stay listable.
+          wildcard:
+            !collectionProject &&
+            ((collection && parsed?.root === parsed?.leaf) ||
+              ((ORG_SINGLETON_RESOURCES.has(leaf) || (parsed?.isList && parsed.root === leaf)) &&
+                !namedGithubTarget) ||
+              (CONDITIONAL_SINGLETON_RESOURCES.has(leaf) && !pathParams.includes(leafParam))),
+          grantRoot: PROJECT_ROOTED.has(leaf as CheckedResourceType)
+            ? "project"
+            : (parsed?.root ?? ""),
+          projectCreate: !isPublicSpec(spec) && spec.projectCreate === true,
+          // Repo content tier, declared once on the route and consumed both here
+          // (advertisement) and by requirePermission (enforcement).
+          source: isPublicSpec(spec) ? undefined : spec.source,
+        },
+      };
+    });
+  return cached;
+}
+
+/**
+ * GitHub is granted at three widths that all key off the same route root
+ * ("github"): the org-wide `github`, per-account `github_installation`, and
+ * per-repo `github_repository`. Any of them satisfies a github-rooted tool for
+ * `tools/list` purposes (call-time still resolves the exact width — see
+ * github-access.ts). Without this, a repo-scoped token (grant type
+ * `github_repository`) would advertise ZERO github tools even though it can
+ * call the per-repo ones.
+ */
+const GITHUB_GRANT_FAMILY: ReadonlySet<string> = new Set([
+  "github",
+  "github_installation",
+  "github_repository",
+]);
+
+/**
+ * The action the route layer actually asserts for a tag.
+ *
+ * A `:list` tag asserts `read` — `requirePermission`'s isList branch hardcodes it
+ * rather than passing `"list"` through, because "list" is a scope, not a verb. The
+ * other branches pass the tag's action unchanged. Mapping it here keeps this
+ * filter reading the same verb the enforcement path will.
+ */
+function assertedAction(tagAction: string): Permission {
+  return (tagAction === "list" ? "read" : tagAction) as Permission;
+}
+
+/** Does the principal hold a grant whose root type enables this tool? */
+function principalHasGrantFor(granted: ReadonlySet<string>, grantRoot: string): boolean {
+  if (grantRoot === "github") {
+    for (const t of GITHUB_GRANT_FAMILY) if (granted.has(t)) return true;
+    return false;
+  }
+  return granted.has(grantRoot);
+}
+
+/**
+ * Filter the full tool set to what a caller can actually use — capability
+ * hygiene on `tools/list`. Reuses the SAME authority as call-time: read-only is
+ * gated by HTTP method (matching the MUTATION_METHODS check in authMiddleware),
+ * owner/admin/member by `roleAllowsResourceType`, and a restricted principal by
+ * its grant set. `tools/call` still enforces per call — this only trims what's
+ * advertised. A tool is listed iff the caller could succeed at it for some input.
+ *
+ * The "own projects" scope ({project, "*", create}) is handled explicitly via
+ * `principal.canCreateProjects`: such a token may CREATE projects and LIST its
+ * own, mirroring both arms of the runtime check in permission.ts.
+ */
+export function filterToolsForPrincipal(
+  tools: McpToolDef[],
+  principal: McpPrincipal,
+): McpToolDef[] {
+  return tools.filter((t) => {
+    // Read-only tokens can only call GET — the runtime gate rejects mutations by
+    // HTTP method, so mirror that exactly rather than guessing from the tag.
+    if (principal.readOnly && t.method !== "GET") return false;
+
+    // Self-discovery needs no resource grant. Its shared identity operation
+    // validates membership and confines the result to the credential's scope.
+    // Keep this exception exact; other permission-management routes stay gated.
+    if (t.method === "GET" && t.path === "/api/permissions/workspaces") return true;
+
+    // Repo CONTENT is a capability of its own, orthogonal to role: a repo grant
+    // authorises deploying and inspecting metadata, not crawling files. Hide the
+    // content tools from any principal without the capability — including an
+    // owner-role token whose grants say metadata-only — so a deploy-only agent
+    // isn't handed tools that will 404. `tools/call` still enforces per repo+path.
+    if (t.perm.source) {
+      const needed = t.perm.source === "write" ? "write" : "content";
+      const caps = principal.sourceCapabilities;
+      // A non-restricted principal acts with its own role, whose GitHub access is
+      // resolved by github-access.ts (owner ⇒ everything), so don't hide from it.
+      if (principal.role === "restricted" && !caps?.has(needed)) return false;
+    }
+
+    if (principal.role !== "restricted") {
+      return roleAllowsResourceType(principal.role, t.perm.leaf as CheckedResourceType);
+    }
+    // "Own projects" scope: the create-capable project wildcard grant reaches the
+    // dedicated create routes (POST /projects, POST /apps) and the project list
+    // (which the caller filters to its self-created projects). Checked before the
+    // wildcard gate, since these are exactly the wildcard ops it can pass.
+    if (principal.canCreateProjects) {
+      if (t.perm.projectCreate) return true;
+      if (t.perm.leaf === "project" && t.perm.action === "list") return true;
+    }
+    // Restricted: a per-resource op needs a grant on its root type (github grants
+    // matched as a family).
+    if (t.perm.wildcard) {
+      // A wildcard op — :list, collection write, or org-singleton — is authorized
+      // by a WILDCARD grant on the asserted type and nothing else. Same rule, same
+      // authority (`permitsAction`) as the wildcard arm of `checkPermission`, so
+      // "is listed" and "can call" cannot drift.
+      //
+      // This is verb-aware where the old org-singleton-only test was not: it
+      // advertised any singleton tool whose type had a grant, so a
+      // `{job,"*",[read]}` token was shown `post_jobs` (job:write) and got a 404
+      // on calling it. It also no longer hard-denies non-singleton collections —
+      // a `{server,"*",read}` token can genuinely enumerate servers now.
+      //
+      // A per-id grant still fails here, correctly: `wildcardGrants` holds only
+      // resourceId "*" rows.
+      const held = principal.wildcardGrants.get(t.perm.leaf);
+      return held ? permitsAction(held, assertedAction(t.perm.action)) : false;
+    }
+    return principalHasGrantFor(principal.grantedRootTypes, t.perm.grantRoot);
+  });
+}
+
+/** Client-facing tool descriptor (no dispatch internals). */
+export function toClientTool(t: McpToolDef) {
+  return {
+    name: t.name,
+    description: t.description,
+    inputSchema: t.inputSchema,
+    annotations: {
+      readOnlyHint: t.annotations.readOnlyHint,
+      destructiveHint: t.annotations.destructiveHint,
+    },
+  };
+}

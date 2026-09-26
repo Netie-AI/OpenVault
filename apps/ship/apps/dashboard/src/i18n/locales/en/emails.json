@@ -1,0 +1,200 @@
+{
+  "page": {
+    "title": "Email Server",
+    "subtitle": "Set up a self-hosted mail server with a few clicks",
+    "backToServers": "Back to mail servers",
+    "backToAdmin": "Back to mail admin",
+    "addServer": "Add mail server",
+    "removeModal": {
+      "title": "Remove this mail server?",
+      "description": "Removes {label} from the mail list only. The mail stack keeps running and nothing is uninstalled — re-add it anytime with \"Adopt\" for an existing install.",
+      "submit": "Remove from list",
+      "submitting": "Removing…",
+      "body": "Because the on-server install is left intact, re-adopting it later restores full management with no reinstall."
+    },
+    "errors": {
+      "resetFailed": "Reset failed",
+      "ackDns": "Could not acknowledge DNS",
+      "ackPtr": "Could not acknowledge PTR",
+      "selectServer": "Select a server first",
+      "resolutionFailed": "Resolution failed"
+    }
+  },
+  "adopt": {
+    "title": "Adopt existing mail server",
+    "intro": "Already set up a mail server with Openship on one of your servers? Pick it and scan — if a mail stack is found, it's re-adopted into the dashboard without reinstalling or touching your data.",
+    "scanning": "Scanning…",
+    "scan": "Scan server",
+    "detected": "Mail server detected",
+    "domainLabel": "Domain:",
+    "unknown": "unknown",
+    "stats": "iRedMail running: {iredmail} · Install: {install} · Webmail: {webmail}",
+    "yes": "yes",
+    "no": "no",
+    "complete": "complete",
+    "inProgress": "in progress",
+    "present": "present",
+    "notDeployed": "not deployed",
+    "cancel": "Cancel",
+    "adopt": "Adopt",
+    "noInstall": "No mail server installation was found on this server.",
+    "scanFailed": "Scan failed — is the server reachable?",
+    "adoptFailed": "Adopt failed"
+  },
+  "dns": {
+    "heading": "Publish DNS records before continuing",
+    "bodyBefore": "Mail delivery breaks without these. Add them at your DNS provider, then click ",
+    "action": "I've set the records - continue",
+    "bodyAfterResume": " below. The install resumes from step {resumeStep} (SSL certificate).",
+    "bodyAfter": " below.",
+    "autoConfigure": "Auto-configure DNS",
+    "autoConfigureDesc": "Pick the provider hosting your domain's DNS. We'll push the records for you using their API.",
+    "otherManual": "Other / set manually",
+    "otherManualDesc": "Copy each record from the banner and paste into your provider's UI",
+    "pickAnother": "Pick another provider",
+    "comingSoon": "{provider} integration - coming soon",
+    "comingSoonBefore": "Direct API integration with this provider isn't shipped yet. For now, copy each record from the banner and paste it into your DNS provider's UI. Once that's done, click ",
+    "comingSoonAfter": ".",
+    "gotIt": "Got it",
+    "providers": {
+      "cloudflare": "Free DNS, fast propagation. Most common choice.",
+      "hostinger": "If you bought the domain through Hostinger.",
+      "route53": "AWS-hosted DNS zones.",
+      "digitalocean": "DigitalOcean-managed zones.",
+      "namecheap": "Default Namecheap DNS.",
+      "google": "Google-managed zones."
+    }
+  },
+  "recordCard": {
+    "priority": "Priority: {priority}",
+    "copyValue": "Copy value"
+  },
+  "progress": {
+    "liveLogs": "Live logs",
+    "lineOne": "{count} line",
+    "lineOther": "{count} lines",
+    "cancel": "Cancel",
+    "resetTitle": "Wipe install state on the server and start fresh",
+    "confirmReset": "Click again to confirm",
+    "reset": "Reset",
+    "waiting": "Waiting for output…",
+    "noBuffered": "No buffered output for this run.",
+    "willStream": "Logs will stream here once setup starts.",
+    "jumpToLatest": "Jump to latest",
+    "setupFailed": "Setup failed",
+    "retryFromStep": "Retry from step {resumeStep}",
+    "resumePausedTitle": "Setup paused",
+    "stepLabel": "Step {step}",
+    "continueFromStep": "Continue from step {step}"
+  },
+  "serverList": {
+    "title": "Mail servers",
+    "addServer": "Add mail server",
+    "removeFromList": "Remove from list",
+    "removeAria": "Remove {name} from the mail list",
+    "installing": "Installing",
+    "running": "Running",
+    "incomplete": "Incomplete",
+    "stoppedAt": "Stopped · step {step}",
+    "open": "Open",
+    "openAria": "Open {name}",
+    "actionsAria": "Actions for {name}",
+    "overviewTitle": "Mail overview",
+    "hint": "Removing a server only detaches it from this list — the install keeps running and can be re-adopted."
+  },
+  "setup": {
+    "title": "Mail Server Setup",
+    "subtitle": "Deploy a complete self-hosted mail stack on this server",
+    "domainLabel": "Domain",
+    "domainPlaceholder": "example.com",
+    "willBeAtBefore": "Your mail server will be at ",
+    "adminPasswordLabel": "Admin Password",
+    "passwordPlaceholder": "Strong password - or click Generate",
+    "passwordHint": "At least 12 characters. Used to log into the mailbox after setup — change it later from the admin panel below.",
+    "relay": {
+      "toggle": "Relay outbound through an email provider",
+      "hint": "Recommended. Send through a provider's trusted IPs — fresh-server IPs are often blocklisted, and many hosts block outbound port 25. Receiving stays on this server.",
+      "region": "Region",
+      "username": "SMTP username",
+      "password": "SMTP password",
+      "perDomainNote": "Applies to all domains. Per-domain routing and each domain's provider DKIM / MAIL FROM records are configured after install in the Sending tab."
+    },
+    "startSetup": "Start Setup",
+    "startFailed": "Setup couldn't start",
+    "startFailedFallback": "Setup couldn't start, and the server gave no reason. Check the API logs.",
+    "adoptCta": "Already have a mail server? Adopt it",
+    "whatInstalled": "What gets installed",
+    "features": {
+      "stackLabel": "Mail server stack",
+      "stackDesc": "Postfix, Dovecot, anti-spam",
+      "sslLabel": "SSL Certificate",
+      "sslDesc": "Let's Encrypt auto-SSL",
+      "dnsLabel": "DNS Configuration",
+      "dnsDesc": "DKIM, SPF, DMARC records",
+      "adminLabel": "Admin Panel",
+      "adminDesc": "Manage mailboxes, domains, and aliases"
+    },
+    "prerequisites": "Prerequisites",
+    "prereq1": "A domain with DNS access",
+    "prereq2": "Port 25 not blocked by your provider",
+    "prereq2Relay": "Port 25 open for incoming mail (outbound goes through your relay)",
+    "prereq3": "Clean Ubuntu/Debian server (recommended)",
+    "hide": "Hide",
+    "reveal": "Reveal",
+    "generateTitle": "Generate a strong random password",
+    "generate": "Generate"
+  },
+  "sidebar": {
+    "portConflict": {
+      "title": "Port Conflict Detected",
+      "subtitle": "Ports 80/443 are needed for the mail server",
+      "managed": "Managed",
+      "known": "Known Service",
+      "unknown": "Unknown",
+      "container": "Container: {name}",
+      "killWarning": "Make sure this process is not needed before killing it. This action cannot be undone.",
+      "allResolved": "All conflicts resolved",
+      "rerun": "Re-run the port check and continue the setup.",
+      "resumeStep3": "Resume from Step 3"
+    },
+    "completion": {
+      "ready": "Mail Server Ready!",
+      "webmail": "Webmail",
+      "adminPanel": "Admin Panel"
+    },
+    "dnsRef": {
+      "title": "Required DNS Records",
+      "subtitle": "Reference - tap to view the records you published"
+    },
+    "steps": {
+      "title": "All steps",
+      "interrupted": "Install was interrupted before step {step}. Resume to pick up where it left off.",
+      "resume": "Resume",
+      "retry": "Retry"
+    },
+    "details": {
+      "title": "Setup Details",
+      "domain": "Domain",
+      "mailServer": "Mail Server",
+      "started": "Started"
+    }
+  },
+  "ptr": {
+    "heading": "Set reverse DNS (PTR) before continuing",
+    "bodyBefore": "PTRs are configured at your ",
+    "bodyStrongPanel": "VPS provider's panel",
+    "bodyMid": " (Hostinger, DigitalOcean, AWS, etc.), ",
+    "bodyStrongNot": "not",
+    "bodyAfter": " at your DNS provider. Without matching rDNS, Gmail and Outlook reject your outbound mail. The install resumes from step {resumeStep} (SSL).",
+    "recommended": "recommended",
+    "ipLabel": "IP",
+    "setTo": "Set to",
+    "copy": "Copy",
+    "howTo": "How to set it:",
+    "howToBody": " log into your VPS provider, find the server's networking / DNS / rDNS settings, and set the PTR record for each IP to ",
+    "howToAfter": ". Propagation usually takes 5–15 minutes.",
+    "verifyWith": "Verify with:",
+    "shouldReturn": " should return ",
+    "action": "I've set the PTRs - continue"
+  }
+}

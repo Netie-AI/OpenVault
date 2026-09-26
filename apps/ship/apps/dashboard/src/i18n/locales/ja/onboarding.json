@@ -1,0 +1,139 @@
+{
+  "common": {
+    "goBack": "戻る",
+    "continue": "続ける",
+    "back": "戻る",
+    "optional": "（任意）"
+  },
+  "topBar": {
+    "website": "ウェブサイト",
+    "github": "GitHub"
+  },
+  "choose": {
+    "title": "Openship へようこそ",
+    "subtitle": "Openship の実行方法を選択してください。どちらを選んでもすべての機能をご利用いただけます。いつでも切り替え可能です。",
+    "cloud": {
+      "name": "Openship Cloud",
+      "desc": "インフラ、アップデート、バックアップはすべて当社が管理します。サインインするだけですぐにデプロイを開始できます。",
+      "perk1": "サーバー不要",
+      "perk2": "無料プランを含む",
+      "perk3": "フルマネージドで常に最新",
+      "cta": "Cloud で続ける"
+    },
+    "or": "または",
+    "selfhost": {
+      "name": "セルフホスト",
+      "desc": "Openship をご自身のハードウェアで実行します。リモートサーバーに接続するか、このマシンを利用できます。",
+      "perk1": "データを完全に自己管理",
+      "perk2": "リモートサーバーまたはこの Mac",
+      "perk3": "残りは当社にお任せ",
+      "cta": "サーバーをセットアップ"
+    },
+    "migrateNote": "Cloud とセルフホストはワンクリックでいつでも切り替えられます。ロックインは一切ありません。"
+  },
+  "selfhost": {
+    "title": "Openship をどこで実行しますか？",
+    "subtitleLine1": "Openship プラットフォームをインストールする場所を選択してください。",
+    "subtitleLine2": "どちらを選んでも、完全なコントロールとデータの自己管理が可能です。",
+    "local": {
+      "title": "このマシン",
+      "badge": "ベータ",
+      "desc": "Openship をここに直接インストールします。SSH やリモート設定は不要です"
+    },
+    "remote": {
+      "title": "別のサーバー",
+      "desc": "リモートサーバー、VPS、またはネットワーク上の任意のマシンに SSH で接続します"
+    }
+  },
+  "ssh": {
+    "title": "サーバーに接続",
+    "subtitleLine1": "サーバーの詳細を入力し、認証方法を選択してください。",
+    "subtitleLine2": "すべて自動でインストールおよび設定を行います。",
+    "serverNameLabel": "サーバー名",
+    "serverNamePlaceholder": "本番、ステージング、開発...",
+    "serverIpLabel": "サーバー IP アドレス",
+    "usernameLabel": "ユーザー名",
+    "methodPassword": "パスワード",
+    "methodKey": "SSH キー",
+    "methodAgent": "エージェント",
+    "agentHint": "VSCode のように、このマシンの SSH エージェントを使用して接続します。パスワードやキーは不要です。Openship を実行しているホストが、すでにこのサーバーへのアクセス権（ssh-agent に読み込まれたキー）を持っている必要があります。",
+    "passwordLabel": "パスワード",
+    "passwordPlaceholder": "サーバーのパスワード",
+    "keyPathLabel": "キーのパス",
+    "browse": "参照",
+    "passphraseLabel": "パスフレーズ",
+    "passphrasePlaceholder": "ない場合は空欄のままにしてください",
+    "advanced": "詳細設定",
+    "sshPortLabel": "SSH ポート",
+    "jumpHostLabel": "踏み台ホスト",
+    "extraArgsLabel": "追加の SSH 引数",
+    "submit": "保存して続ける",
+    "tutorial": "ステップバイステップのセットアップチュートリアル"
+  },
+  "tunnel": {
+    "title": "インターネットアクセス",
+    "subtitle": "Webhook、SSL、公開アクセスのために、サーバーがインターネットから到達可能である必要があります。",
+    "providers": {
+      "edge": {
+        "title": "Openship Edge",
+        "desc": "設定不要。自動 SSL、高可用性、DDoS 保護をすべて標準搭載しています。",
+        "badge": "推奨"
+      },
+      "cloudflare": {
+        "title": "Cloudflare Tunnel",
+        "desc": "ご自身の Cloudflare アカウントを使用します。無料プランもご利用いただけます。"
+      },
+      "ngrok": {
+        "title": "ngrok",
+        "desc": "ngrok の認証トークンでサービスを公開します。"
+      }
+    },
+    "cloudflareTokenLabel": "Cloudflare Tunnel トークン",
+    "ngrokTokenLabel": "ngrok 認証トークン",
+    "cloudflarePlaceholder": "トンネルトークンを貼り付けてください",
+    "ngrokPlaceholder": "ngrok 認証トークンを貼り付けてください",
+    "edgeHint": "Openship Edge を利用するには Openship アカウントが必要です。続行するにはサインインしてください。",
+    "signInContinue": "サインインして続ける"
+  },
+  "preferences": {
+    "title": "ビルド設定",
+    "subtitleLine1": "デプロイ時にプロジェクトをビルドする方法を選択してください。",
+    "subtitleLine2": "この設定は後で設定画面から変更できます。",
+    "options": {
+      "auto": {
+        "title": "自動",
+        "desc": "フレームワークごとに最適なオプションを選択します"
+      },
+      "server": {
+        "title": "リモート",
+        "desc": "デプロイサーバー上で直接ビルドします"
+      },
+      "local": {
+        "title": "ローカル",
+        "desc": "この Mac でビルドしてからサーバーにプッシュします"
+      }
+    },
+    "hint": "Git プッシュによるデプロイは常にサーバー上でビルドされます。これは手動デプロイにのみ適用されます。"
+  },
+  "loading": {
+    "connecting": "接続中…",
+    "verifying": "サーバーを検証しています",
+    "retry": "再試行",
+    "openingCloud": "Openship Cloud を開いています…",
+    "waitingAuth": "認証の完了を待っています",
+    "couldNotStartAuthTitle": "クラウド認証を開始できませんでした",
+    "authFailedTitle": "クラウド認証に失敗しました",
+    "couldNotStartAuthMsg": "デスクトップ認証フローを開始できませんでした。",
+    "authFailedMsg": "もう一度お試しいただき、ブラウザでサインインを完了してください。",
+    "completingSignIn": "サインインを完了しています…",
+    "returningToOpenship": "Openship に戻っています",
+    "redirectingCloud": "Openship Cloud にリダイレクトしています…",
+    "newTabSignIn": "新しいタブでサインインを完了します",
+    "couldNotSaveTitle": "設定を保存できませんでした",
+    "couldNotSaveMsg": "API が応答しませんでした。サービスが実行中であることを確認してください。",
+    "savingConfig": "設定を保存しています…",
+    "almostThere": "もう少しで完了です",
+    "settingUpAccount": "アカウントをセットアップしています…",
+    "creatingSession": "セッションを作成しています"
+  }
+}

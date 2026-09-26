@@ -1,0 +1,816 @@
+"use client";
+
+import { Icon as UiIcon, type IconName } from "@repo/ui/icons";
+
+import { useState, useEffect, useCallback, useRef } from "react";
+import { BlurIp } from "@/components/BlurIp";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { ApiError, getApiErrorMessage, isAbortError, systemApi } from "@/lib/api";
+import { useToast } from "@/context/ToastContext";
+import { useModal } from "@/context/ModalContext";
+import { useI18n, interpolate } from "@/components/i18n-provider";
+import { PageContainer } from "@/components/ui/PageContainer";
+import { Tabs } from "@/components/ui/Tabs";
+import { ResourceNotFound } from "@/components/resource-not-found";
+import { useSetupStream } from "@/hooks/useSetupStream";
+import { useMonitorStream } from "@/hooks/useMonitorStream";
+import { useServerTunnels } from "@/hooks/useServerTunnels";
+import type { ServerInfo, ComponentStatus, SetupComponentProgress, SetupLogEvent } from "@/lib/api/system";
+import { PromptDetails } from "@/components/import-project/PromptDetails";
+import { ServerForm } from "@/components/servers/server-form";
+import { OverviewTab } from "./_components/overview-tab";
+import { ComponentsTab } from "./_components/components-tab";
+import { ServerModuleUpdates } from "./_components/module-updates";
+import { ServerContainerUpdates } from "./_components/container-updates";
+import { TerminalTab } from "./_components/terminal-tab";
+import {
+  ConnectionBanner,
+  classifyConnectionError,
+  readConnectionDiagnosis,
+  type ConnectionDiagnosis,
+  type ConnectionErrorKind,
+} from "./_components/connection-banner";
+
+import { RateLimitSettings } from "./_components/rate-limit-settings";
+import { ExposedPortsCard } from "./_components/exposed-ports-card";
+import { PortForwardingCard } from "./_components/port-forwarding-card";
+import { ServerGitHubConnect } from "@/components/github/ServerGitHubConnect";
+import { MigrationsTab } from "@/components/migration/MigrationsTab";
+import { ServerConnectionCard } from "./_components/connection-card";
+import { ServerDeletionModal } from "@/components/servers/ServerDeletionModal";
+import { usePlatform } from "@/context/PlatformContext";
+import { ServerInfrastructure } from "@/components/servers/ServerInfrastructure";
+
+
+type Tab = "overview" | "migrations" | "components" | "github" | "security" | "ports" | "terminal";
+type ManualActionMode = "remove" | null;
+
+interface TabDef {
+  key: Tab;
+  /** Narrower than ElementType so these feed the shared <Tabs> directly. */
+  icon: IconName;
+  /** Desktop-only tabs are filtered out in non-desktop deployments. */
+  desktopOnly?: boolean;
+}
+
+// Mail management lives in /emails - that page picks any server and reads
+// its mail-install state at runtime. We don't repeat that UI here.
+const TABS: TabDef[] = [
+  { key: "overview",   icon: "grid" },
+  { key: "migrations", icon: "migration" },
+  { key: "components", icon: "server-settings" },
+  { key: "github",     icon: "git-branch" },
+  { key: "security",   icon: "shield" },
+  // Port forwarding is meaningful only in desktop mode (the orchestrator IS
+  // the user's machine); hidden elsewhere.
+  { key: "ports",      icon: "port-forwarding", desktopOnly: true },
+  { key: "terminal",   icon: "terminal" },
+];
+
+export default function ServerDetailPage({
+  params,
+}: {
+  params: Promise<{ serverId: string }>;
+}) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const editing = searchParams.get("edit") === "true";
+  const { showToast } = useToast();
+  const { showModal, hideModal } = useModal();
+  const { t } = useI18n();
+  // Port forwarding is meaningful only in desktop mode (the orchestrator IS
+  // the user's machine). Backend routes are independently gated by assertDesktop.
+  const { deployMode } = usePlatform();
+  const isDesktop = deployMode === "desktop";
+  const [serverId, setServerId] = useState<string>("");
+  // Single source of truth for saved port-forwards: drives the "Ports" tab
+  // count badge (live even when the card is unmounted) AND the card's list.
+  // No-ops off desktop, where the feature is gated away.
+  const {
+    tunnels,
+    loading: tunnelsLoading,
+    refresh: refreshTunnels,
+  } = useServerTunnels(isDesktop ? serverId : null);
+  const [server, setServer] = useState<ServerInfo | null>(null);
+  const [components, setComponents] = useState<ComponentStatus[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [checking, setChecking] = useState(false);
+  const [checkError, setCheckError] = useState<string | null>(null);
+  const [checkErrorKind, setCheckErrorKind] = useState<ConnectionErrorKind | null>(null);
+  /** Endpoint + remedy the API attached to the failure (host-channel case). */
+  const [checkDiagnosis, setCheckDiagnosis] = useState<ConnectionDiagnosis | undefined>(undefined);
+  const [installLogs, setInstallLogs] = useState<SetupLogEvent[]>([]);
+  const [activeTab, setActiveTab] = useState<Tab>("overview");
+  // Deep-link support: honour ?tab= once on mount (e.g. ?tab=github to land
+  // straight on the GitHub connect tab).
+  const tabParamApplied = useRef(false);
+  useEffect(() => {
+    if (tabParamApplied.current) return;
+    tabParamApplied.current = true;
+    const tab = searchParams.get("tab");
+    if (tab && TABS.some((td) => td.key === tab)) setActiveTab(tab as Tab);
+  }, [searchParams]);
+  // Switch tab AND persist it in the URL (?tab=), so a reload / "service restart"
+  // reopens the same tab. Shallow replace (no scroll) preserves other params.
+  const changeTab = useCallback(
+    (key: Tab) => {
+      setActiveTab(key);
+      const params = new URLSearchParams(Array.from(searchParams.entries()));
+      params.set("tab", key);
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    },
+    [searchParams, router, pathname],
+  );
+  // Real URL for each tab (`?tab=`, other params preserved) so the tabs are
+  // proper links — cmd/ctrl/middle-click opens the tab in a new browser tab,
+  // and the link is copyable. Plain clicks still switch client-side via changeTab.
+  const tabHref = useCallback(
+    (key: Tab) => {
+      const params = new URLSearchParams(Array.from(searchParams.entries()));
+      params.set("tab", key);
+      return `${pathname}?${params.toString()}`;
+    },
+    [searchParams, pathname],
+  );
+  const [showMenu, setShowMenu] = useState(false);
+  const [isRemoving, setIsRemoving] = useState(false);
+  const [activeActionComponent, setActiveActionComponent] = useState<string | null>(null);
+  const [manualActionComponents, setManualActionComponents] = useState<SetupComponentProgress[]>([]);
+  const [manualActionMode, setManualActionMode] = useState<ManualActionMode>(null);
+  const [manualActionDone, setManualActionDone] = useState(false);
+  const [manualActionFinalStatus, setManualActionFinalStatus] = useState<"completed" | "failed" | null>(null);
+
+  const setupStream = useSetupStream({
+    onComplete: (event) => {
+      // Re-run health check after install finishes
+      void (async () => {
+        try {
+          if (!serverId) return;
+          const result = await systemApi.checkServer(serverId);
+          setComponents(result.components);
+          setActiveActionComponent(null);
+          if (event.status === "completed") {
+            showToast(t.servers.detail.toastComponentActionCompleted, "success", t.servers.toastTitles.serverSetup);
+          } else {
+            showToast(t.servers.detail.toastSomeActionsFailed, "error", t.servers.toastTitles.serverSetup);
+          }
+        } catch (err) {
+          const message = getApiErrorMessage(err, t.servers.detail.toastHealthCheckFailedAfterInstall);
+          setCheckError(message);
+          showToast(message, "error", t.servers.toastTitles.serverSetup);
+        }
+      })();
+    },
+    onLog: (entry) => {
+      setInstallLogs((prev) => [...prev, entry]);
+    },
+  });
+
+  const monitor = useMonitorStream(serverId || null, activeTab === "overview");
+
+  // Mid-install prompt (e.g. OpenResty edge takeover) — the SAME generic prompt
+  // modal the deploy pipeline uses. Surfaced only when an install hits a
+  // port-80/443 conflict; answering it resumes the install.
+  const promptModalRef = useRef<string | null>(null);
+  const pendingPrompt = setupStream.pendingPrompt;
+  const respondToPrompt = setupStream.respondToPrompt;
+  useEffect(() => {
+    if (!pendingPrompt) {
+      promptModalRef.current = null;
+      return;
+    }
+    if (promptModalRef.current === pendingPrompt.promptId) return;
+    promptModalRef.current = pendingPrompt.promptId;
+
+    const modalId = showModal({
+      title: pendingPrompt.title,
+      icon: "warning",
+      width: "100%",
+      maxWidth: "34rem",
+      customContent: (
+        <div className="p-6 space-y-5">
+          <div className="space-y-2">
+            <h3 className="text-lg font-semibold text-foreground">{pendingPrompt.title}</h3>
+            <p className="text-sm leading-relaxed text-muted-foreground">{pendingPrompt.message}</p>
+          </div>
+          <PromptDetails details={pendingPrompt.details} />
+          <div className="flex items-center justify-end gap-3 pt-2">
+            {pendingPrompt.actions.map((action) => {
+              const variant = (action.variant || "secondary") as "secondary" | "danger" | "primary";
+              const styles =
+                variant === "danger"
+                  ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  : variant === "primary"
+                    ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                    : "border border-border bg-muted text-foreground hover:bg-muted/80";
+              return (
+                <button
+                  key={action.id}
+                  type="button"
+                  className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${styles}`}
+                  onClick={() => {
+                    hideModal(modalId);
+                    void respondToPrompt(action.id);
+                  }}
+                >
+                  {action.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ),
+    });
+  }, [pendingPrompt, respondToPrompt, showModal, hideModal]);
+
+  useEffect(() => {
+    params.then((p) => setServerId(p.serverId));
+  }, [params]);
+
+  const fetchData = useCallback(async () => {
+    if (!serverId) return;
+    try {
+      setLoading(true);
+      const s = await systemApi.getServerById(serverId);
+      setServer(s);
+    } catch {
+      setServer(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [serverId]);
+
+  const runHealthCheck = useCallback(async () => {
+    if (!serverId) return;
+    setChecking(true);
+    setCheckError(null);
+    setCheckErrorKind(null);
+    setCheckDiagnosis(undefined);
+    try {
+      const result = await systemApi.checkServer(serverId);
+      setComponents(result.components);
+    } catch (err) {
+      const message = getApiErrorMessage(err, t.servers.detail.toastHealthCheckFailed);
+      const body = err instanceof ApiError ? err.body : undefined;
+      const kind = classifyConnectionError(body, message);
+      setComponents([]);
+      setCheckError(message);
+      setCheckErrorKind(kind);
+      setCheckDiagnosis(readConnectionDiagnosis(body));
+      // The inline banner is the primary surface - only toast for unexpected
+      // shapes so the user isn't getting both a toast and a banner for the
+      // same problem.
+      if (kind === "unknown") {
+        showToast(message, "error", t.servers.toastTitles.serverCheck);
+      }
+    } finally {
+      setChecking(false);
+    }
+  }, [serverId, showToast, t]);
+
+  const installMissingComponents = useCallback(async () => {
+    const missing = components.filter(
+      (component) =>
+        !component.healthy && component.installable,
+    );
+
+    if (missing.length === 0) {
+      showToast(t.servers.detail.toastNoInstallableMissing, "success", t.servers.toastTitles.serverSetup);
+      return;
+    }
+
+    setActiveActionComponent(null);
+    setManualActionComponents([]);
+    setManualActionMode(null);
+    setManualActionDone(false);
+    setManualActionFinalStatus(null);
+    setCheckError(null);
+    setInstallLogs([]);
+    setActiveTab("components");
+
+    try {
+      if (!serverId) {
+        showToast(t.servers.detail.toastServerMissing, "error", t.servers.toastTitles.serverSetup);
+        return;
+      }
+      await setupStream.startInstall(serverId, missing.map((c) => c.name));
+    } catch (err) {
+      const message = getApiErrorMessage(err, t.servers.detail.toastFailedStartInstall);
+      setCheckError(message);
+      showToast(message, "error", t.servers.toastTitles.serverSetup);
+    }
+  }, [components, serverId, showToast, setupStream, t]);
+
+  const startComponentAction = useCallback(async (component: ComponentStatus) => {
+    if (!serverId) {
+      showToast(t.servers.detail.toastServerMissing, "error", t.servers.toastTitles.serverSetup);
+      return;
+    }
+
+    setActiveActionComponent(component.name);
+    setManualActionComponents([]);
+    setManualActionMode(null);
+    setManualActionDone(false);
+    setManualActionFinalStatus(null);
+    setCheckError(null);
+    setInstallLogs([]);
+    setActiveTab("components");
+
+    try {
+      // This button reads "Reinstall"/"Update" on an installed component, so it
+      // means it: installers that skip an already-working component (Docker, #491)
+      // need the explicit opt-in to run at all. Install-missing and the setup flow
+      // never send it, which is the point — they get the skip.
+      await setupStream.startInstall(
+        serverId,
+        [component.name],
+        component.installed ? { reinstall: true } : undefined,
+      );
+    } catch (err) {
+      const message = getApiErrorMessage(err, interpolate(t.servers.detail.toastFailedRun, { label: component.label }));
+      setCheckError(message);
+      showToast(message, "error", t.servers.toastTitles.serverSetup);
+    }
+  }, [serverId, setupStream, showToast, t]);
+
+  const runComponentAction = useCallback(async (component: ComponentStatus) => {
+    // Reinstalling Docker restarts the daemon, which restarts every container on
+    // the box — Openship's own stack included. That used to happen as an invisible
+    // side effect of steps that merely needed Docker present (#491); now it happens
+    // only here, and only after the operator is told what it costs.
+    if (component.name === "docker" && component.installed) {
+      const modalId = showModal({
+        title: t.servers.detail.reinstallDockerTitle,
+        message: t.servers.detail.reinstallDockerMessage,
+        icon: "warning",
+        width: "100%",
+        maxWidth: "32rem",
+        buttons: [
+          {
+            label: t.servers.detail.cancel,
+            variant: "secondary",
+            onClick: () => hideModal(modalId),
+          },
+          {
+            label: t.servers.components.reinstall,
+            variant: "danger",
+            onClick: () => {
+              hideModal(modalId);
+              void startComponentAction(component);
+            },
+          },
+        ],
+      });
+      return;
+    }
+    await startComponentAction(component);
+  }, [hideModal, showModal, startComponentAction, t]);
+
+  const removeComponentAction = useCallback((component: ComponentStatus) => {
+    const modalId = showModal({
+      title: interpolate(t.servers.detail.removeComponentTitle, { label: component.label }),
+      message:
+        component.name === "edge"
+          ? t.servers.detail.removeOpenrestyMessage
+          : interpolate(t.servers.detail.removeComponentMessage, { label: component.label }),
+      icon: "warning",
+      width: "100%",
+      maxWidth: "32rem",
+      buttons: [
+        {
+          label: t.servers.detail.cancel,
+          variant: "secondary",
+          onClick: () => hideModal(modalId),
+        },
+        {
+          label: t.servers.detail.remove,
+          variant: "danger",
+          onClick: async () => {
+            hideModal(modalId);
+            if (!serverId) {
+              showToast(t.servers.detail.toastServerMissing, "error", t.servers.toastTitles.serverSetup);
+              return;
+            }
+
+            try {
+              setActiveActionComponent(component.name);
+              setIsRemoving(true);
+              setManualActionMode("remove");
+              setManualActionDone(false);
+              setManualActionFinalStatus(null);
+              setManualActionComponents([
+                {
+                  name: component.name,
+                  label: component.label,
+                  status: "removing",
+                },
+              ]);
+              setCheckError(null);
+              setInstallLogs([]);
+              setActiveTab("components");
+              const result = await systemApi.removeComponent(serverId, component.name);
+              if (!result.success) {
+                setInstallLogs((result.logs ?? []).map((message) => ({
+                  type: "log",
+                  timestamp: new Date().toISOString(),
+                  component: component.name,
+                  message,
+                  level: "error" as const,
+                })));
+                setManualActionComponents([
+                  {
+                    name: component.name,
+                    label: component.label,
+                    status: "failed",
+                    error: result.error || interpolate(t.servers.detail.toastFailedRemove, { label: component.label }),
+                  },
+                ]);
+                setManualActionDone(true);
+                setManualActionFinalStatus("failed");
+                throw new Error(result.error || interpolate(t.servers.detail.toastFailedRemove, { label: component.label }));
+              }
+
+              setInstallLogs((result.logs ?? []).map((message) => ({
+                type: "log",
+                timestamp: new Date().toISOString(),
+                component: component.name,
+                message,
+                level: "info" as const,
+              })));
+              setManualActionComponents([
+                {
+                  name: component.name,
+                  label: component.label,
+                  status: "removed",
+                },
+              ]);
+              setManualActionDone(true);
+              setManualActionFinalStatus("completed");
+
+              const next = await systemApi.checkServer(serverId);
+              setComponents(next.components);
+              showToast(interpolate(t.servers.detail.toastComponentRemoved, { label: component.label }), "success", t.servers.toastTitles.serverSetup);
+            } catch (err) {
+              if (isAbortError(err)) {
+                // Request timed out but removal may still be running server-side
+                setManualActionComponents([{
+                  name: component.name,
+                  label: component.label,
+                  status: "failed",
+                  error: t.servers.detail.removalTakingLonger,
+                }]);
+                setManualActionDone(true);
+                setManualActionFinalStatus("failed");
+                setCheckError(t.servers.detail.removalTimedOutError);
+                showToast(t.servers.detail.toastRemovalTimedOut, "error", t.servers.toastTitles.serverSetup);
+              } else {
+                const message = getApiErrorMessage(err, interpolate(t.servers.detail.toastFailedRemove, { label: component.label }));
+                setCheckError(message);
+                showToast(message, "error", t.servers.toastTitles.serverSetup);
+              }
+            } finally {
+              setActiveActionComponent(null);
+              setIsRemoving(false);
+            }
+          },
+        },
+      ],
+    });
+  }, [hideModal, serverId, showModal, showToast, t]);
+
+  useEffect(() => {
+    if (!serverId) return;
+    fetchData();
+    runHealthCheck();
+
+    // Check for active install session (page reload recovery)
+    void (async () => {
+      try {
+        const session = await systemApi.getInstallSession();
+        if (
+          session.active &&
+          session.status === "running" &&
+          session.sessionId &&
+          session.serverId === serverId
+        ) {
+          setActiveTab("components");
+          void setupStream.attachToSession(session.sessionId);
+        }
+      } catch {
+        // No active session
+      }
+    })();
+  }, [serverId, fetchData, runHealthCheck]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const [removeOpen, setRemoveOpen] = useState(false);
+  const handleDelete = useCallback(() => setRemoveOpen(true), []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <UiIcon name="spinner" className="size-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!server) {
+    return (
+      <PageContainer>
+        <div className="flex min-h-[60vh] items-center justify-center p-6">
+          <ResourceNotFound
+            icon={<UiIcon name="server-error" className="size-7" />}
+            title={t.servers.detail.serverNotFound}
+            description={t.servers.detail.serverNotFoundDesc}
+            detail={serverId}
+            detailCopyLabel={t.chrome.notFound.copyId}
+            actions={[
+              {
+                label: t.servers.setup.goToServers,
+                icon: <UiIcon name="arrow-left" className="size-4 rtl:rotate-180" />,
+                onClick: () => router.push("/servers"),
+              },
+            ]}
+          />
+        </div>
+      </PageContainer>
+    );
+  }
+
+  // Edit view shares the same route as the detail page (?edit=true) and reuses
+  // the credentials form so add/edit stay in sync.
+  if (editing) {
+    return (
+      <PageContainer>
+          <div className="flex items-center gap-3 mb-6">
+            <button
+              onClick={() => router.push(`/servers/${serverId}`)}
+              className="w-8 h-8 rounded-lg hover:bg-muted flex items-center justify-center transition-colors"
+            >
+              <UiIcon name="arrow-left" className="size-4 text-muted-foreground rtl:rotate-180" />
+            </button>
+            <div>
+              <h1
+                className="text-2xl font-medium text-foreground/80"
+                style={{ letterSpacing: "-0.2px" }}
+              >
+                {t.servers.detail.editServer}
+              </h1>
+              <p className="text-sm text-muted-foreground/70 mt-0.5">
+                {interpolate(t.servers.detail.editSubtitle, { name: server.name || server.sshHost })}
+              </p>
+            </div>
+          </div>
+
+          <div className="max-w-2xl">
+            <ServerForm
+              key={server.id}
+              server={server}
+              submitLabel={t.servers.detail.saveChanges}
+              onSaved={({ server: updated }) => {
+                setServer(updated);
+                router.push(`/servers/${serverId}`);
+              }}
+            />
+          </div>
+      </PageContainer>
+    );
+  }
+
+  const allHealthy =
+    components.length > 0 && components.every((c) => c.healthy);
+  const actionBusy = setupStream.isConnected || setupStream.isConnecting || isRemoving;
+  const visibleActionComponents = manualActionComponents.length > 0
+    ? manualActionComponents
+    : setupStream.components;
+  const visibleActionMode = manualActionComponents.length > 0
+    ? manualActionMode ?? "remove"
+    : "install";
+  const visibleActionDone = manualActionComponents.length > 0
+    ? manualActionDone
+    : setupStream.isDone;
+  const visibleActionFinalStatus = manualActionComponents.length > 0
+    ? manualActionFinalStatus
+    : setupStream.finalStatus;
+
+  return (
+    <PageContainer>
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-6">
+          {/* `app-nav-fallback` hides this in the desktop app, where the titlebar
+              already carries back/forward. It stays on web/SaaS, which has no
+              titlebar and would otherwise leave no way out of this page. */}
+          <button
+            onClick={() => router.push("/servers")}
+            className="app-nav-fallback w-8 h-8 rounded-lg hover:bg-muted flex items-center justify-center transition-colors"
+            aria-label={t.servers.setup.goToServers}
+          >
+            <UiIcon name="arrow-left" className="size-4 text-muted-foreground rtl:rotate-180" />
+          </button>
+          <div className="flex-1 min-w-0">
+            <h1
+              className="text-2xl font-medium text-foreground/80 truncate"
+              style={{ letterSpacing: "-0.2px" }}
+            >
+              {server.name || <BlurIp>{server.sshHost}</BlurIp>}
+            </h1>
+            {/* Connection line: user@host + a clean status pill (no loud dot).
+                The country flag lives on the connection card's Host row — beside
+                the value it describes — and the SSH port lives there too. */}
+            <div className="mt-1 flex items-center gap-2">
+              <p className="text-sm text-muted-foreground/70 font-mono">
+                {server.sshUser ?? "root"}@<BlurIp>{server.sshHost}</BlurIp>
+              </p>
+              {allHealthy ? (
+                <span className="shrink-0 inline-flex items-center rounded-full bg-success/10 px-2 py-0.5 text-[11px] font-medium text-success">
+                  {t.servers.detail.healthy}
+                </span>
+              ) : components.length > 0 ? (
+                <span className="shrink-0 inline-flex items-center rounded-full bg-warning/10 px-2 py-0.5 text-[11px] font-medium text-warning">
+                  {t.servers.detail.issues}
+                </span>
+              ) : null}
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => router.push(`/servers/${serverId}?edit=true`)}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-muted/50 text-foreground text-sm font-medium rounded-xl hover:bg-muted transition-colors"
+            >
+              <UiIcon name="sliders" className="size-4" />
+              {t.servers.detail.edit}
+            </button>
+            <div className="relative">
+              <button
+                onClick={() => setShowMenu((v) => !v)}
+                className="w-8 h-8 rounded-lg hover:bg-muted flex items-center justify-center transition-colors text-muted-foreground hover:text-foreground"
+              >
+                <UiIcon name="more" className="size-4" />
+              </button>
+              {showMenu && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setShowMenu(false)}
+                  />
+                  <div className="absolute end-0 top-full mt-1 z-50 w-48 bg-popover border border-border rounded-xl shadow-lg py-1">
+                    <button
+                      onClick={() => {
+                        setShowMenu(false);
+                        handleDelete();
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-danger hover:bg-danger-bg transition-colors"
+                    >
+                      <UiIcon name="trash" className="size-3.5" />
+                      {t.servers.detail.removeServer}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Connection error banner - surfaces SSH-unreachable / auth-failed /
+            mis-configured state above the tabs so the user has context the
+            moment they open the page, not just a toast that disappears. */}
+        {checkErrorKind && checkError && (
+          <ConnectionBanner
+            serverId={serverId}
+            kind={checkErrorKind}
+            host={server.sshHost}
+            port={server.sshPort ?? 22}
+            message={checkError}
+            retrying={checking}
+            onRetry={runHealthCheck}
+            diagnosis={checkDiagnosis}
+          />
+        )}
+
+        {/* Tabs — the SHARED <Tabs> component, the same one the servers LIST uses,
+            so the two pages can't drift apart in size/spacing (this bar used to be
+            a hand-rolled copy of it). `href` keeps the tabs deep-linkable and
+            cmd-clickable; a plain click still switches client-side. */}
+        <Tabs
+          className="mb-6"
+          value={activeTab}
+          onChange={(key) => changeTab(key)}
+          tabs={TABS.map(({ key, icon, desktopOnly }) => ({
+            key,
+            label: t.servers.detail.tabs[key],
+            icon,
+            href: tabHref(key),
+            hidden: desktopOnly && !isDesktop,
+            // Show how many forwards (running + stopped) are saved on this server.
+            count: key === "ports" && isDesktop ? tunnels.length : undefined,
+          }))}
+        />
+
+        {/* Main Grid — the Migrations tab spans full width (its flow renders its
+            own right column: connection card → migrate config / live progress). */}
+        <div className={`grid grid-cols-1 gap-6 items-start ${activeTab === "migrations" ? "" : "lg:grid-cols-[1fr_340px]"}`}>
+          {/* Left column */}
+          <div className="min-w-0">
+
+            {/* Tab content */}
+            {activeTab === "overview" && (
+              <OverviewTab
+                stats={monitor.stats}
+                components={components}
+                checking={checking}
+                monitorConnected={monitor.isConnected}
+                monitorError={monitor.error}
+                onReconnectMonitor={monitor.reconnect}
+              />
+            )}
+
+            {activeTab === "components" && (
+              <>
+              {serverId && <ServerContainerUpdates serverId={serverId} />}
+              {serverId && <ServerModuleUpdates serverId={serverId} />}
+              <ComponentsTab
+                components={components}
+                checking={checking}
+                checkError={checkError}
+                onRecheck={runHealthCheck}
+                onInstallMissing={installMissingComponents}
+                onRunComponentAction={runComponentAction}
+                onRemoveComponentAction={removeComponentAction}
+                busy={actionBusy}
+                activeActionComponent={activeActionComponent}
+                installDone={visibleActionDone}
+                installFinalStatus={visibleActionFinalStatus}
+                installComponents={visibleActionComponents}
+                actionMode={visibleActionMode}
+                installLogs={installLogs}
+                onDismissInstall={() => {
+                  setInstallLogs([]);
+                  setManualActionComponents([]);
+                  setManualActionMode(null);
+                  setManualActionDone(false);
+                  setManualActionFinalStatus(null);
+                }}
+              />
+              </>
+            )}
+
+            {activeTab === "github" && serverId && (
+              <ServerGitHubConnect serverId={serverId} variant="card" />
+            )}
+
+            {activeTab === "security" && (
+              <div className="space-y-6">
+                <ExposedPortsCard serverId={serverId} />
+                <RateLimitSettings serverId={serverId} />
+              </div>
+            )}
+
+            {activeTab === "ports" && isDesktop && serverId && (
+              <PortForwardingCard
+                serverId={serverId}
+                tunnels={tunnels}
+                loading={tunnelsLoading}
+                refresh={refreshTunnels}
+              />
+            )}
+
+            {activeTab === "terminal" && (
+              <TerminalTab
+                serverId={serverId}
+                serverName={server?.name ?? undefined}
+                enabled={activeTab === "terminal"}
+              />
+            )}
+
+            {/* Migrations — durable run list (rows like a project's deployments)
+                that opens each run's steps + logs IN-PAGE, plus the scan-first
+                migrate flow (both are the reused ServerMigrationWizard). Kept
+                MOUNTED (visibility-toggled) so a scan/flow survives tab switches. */}
+            {serverId && (
+              <div className={activeTab === "migrations" ? "" : "hidden"}>
+                <MigrationsTab serverId={serverId} server={server} />
+              </div>
+            )}
+          </div>
+
+          {/* Right sidebar — connection summary. Hidden on the Migrations tab,
+              whose flow renders its own right column. */}
+          {activeTab !== "migrations" && (
+            <div className="space-y-4 lg:sticky lg:top-6 lg:self-start">
+              <ServerConnectionCard server={server} />
+              <ServerInfrastructure serverId={serverId} />
+            </div>
+          )}
+        </div>
+
+        <ServerDeletionModal
+          isOpen={removeOpen}
+          onClose={() => setRemoveOpen(false)}
+          onRemoved={() => router.push("/servers")}
+          key={serverId}
+          serverId={serverId}
+          serverName={server?.name ?? ""}
+        />
+    </PageContainer>
+  );
+}

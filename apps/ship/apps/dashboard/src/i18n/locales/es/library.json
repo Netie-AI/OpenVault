@@ -1,0 +1,171 @@
+{
+  "ghCliConsent": {
+    "title": "¿Leer tus repositorios?",
+    "body": "OpenShip puede listar tus repositorios de GitHub usando la CLI de gh en la que ya has iniciado sesión.",
+    "bodyWithLogin": "OpenShip puede listar tus repositorios de GitHub usando la CLI de gh con la sesión de @{login}.",
+    "pointNoCloud": "No se envía nada a la nube: la lista nunca sale de esta máquina.",
+    "pointDesktopOnly": "Solo funciona en la app de escritorio, con tu autenticación local de gh.",
+    "pointReadOnly": "Solo lectura: lista los repos para que elijas uno para desplegar.",
+    "allow": "Permitir"
+  },
+  "page": {
+    "title": "Nuevo proyecto",
+    "subtitle": "Importa un repositorio, pega una URL o parte de una plantilla",
+    "tabs": {
+      "folder": "Carpeta",
+      "github": "GitHub",
+      "url": "URL de Git",
+      "template": "Plantilla"
+    }
+  },
+  "connect": {
+    "connectGithub": "Conectar GitHub",
+    "manageInSettings": "Gestionar en Ajustes",
+    "terminal": {
+      "title": "Conectar GitHub",
+      "checkConnection": "Comprobar conexión",
+      "afterLogin": "Tras iniciar sesión, haz clic en \"Comprobar conexión\" para continuar."
+    },
+    "deviceFlow": {
+      "title": "Introduce este código en GitHub",
+      "goToPrefix": "Ve a",
+      "goToSuffix": "e introduce el código de arriba.",
+      "waiting": "Esperando la autorización…"
+    },
+    "default": {
+      "title": "Conecta GitHub para desplegar",
+      "descSelfHosted": "Elige cómo accede Openship a tus repositorios.",
+      "descSaas": "Vincula tu cuenta de GitHub para explorar repos y desplegar en cada push.",
+      "recommended": "Recomendado",
+      "cloudApp": "Openship Cloud App",
+      "cloudAppDesc": "Despliega en servidores remotos con tokens de corta duración.",
+      "connectCloud": "Conectar Openship Cloud",
+      "localBuilds": "Compilaciones locales",
+      "ghCli": "Inicia sesión con la CLI de gh",
+      "ghCliDesc": "Usa el inicio de sesión de GitHub de tu equipo. No hace falta la nube.",
+      "useGhCli": "Usar la CLI de gh",
+      "connecting": "Conectando…"
+    }
+  },
+  "folderUpload": {
+    "emptyFolder": "Esa carpeta parece vacía (o todo quedó ignorado). Elige una carpeta de proyecto.",
+    "uploadError": "No se pudo subir la carpeta",
+    "stackTitle": "¿Qué vas a desplegar?",
+    "stackDesc": "Elige el stack para tu carpeta: esto define el entorno de compilación. La subirás a continuación.",
+    "backToStack": "Volver a la selección de stack",
+    "uploadTitle": "Sube tu carpeta de {stack}",
+    "uploadSubtitle": "Empaquetada en tu navegador: se omiten node_modules, .git y la salida de compilación",
+    "dropTitle": "Suelta tu carpeta de proyecto o haz clic para explorar",
+    "dropSubtitle": "Se sube toda la carpeta y se compila como una app de {stack}",
+    "filesSingular": "{count} archivo",
+    "filesPlural": "{count} archivos",
+    "clearSelection": "Borrar selección",
+    "packing": "Empaquetando la carpeta…",
+    "uploading": "Subiendo…",
+    "continue": "Continuar"
+  },
+  "localProjects": {
+    "title": "Proyectos locales",
+    "loading": "Cargando...",
+    "projectCountSingular": "{count} proyecto",
+    "projectCountPlural": "{count} proyectos",
+    "import": "Importar",
+    "empty": {
+      "title": "Aún no hay proyectos locales",
+      "description": "Importa una carpeta de proyecto desde tu equipo para escanearla, compilarla y desplegarla localmente",
+      "importProject": "Importar proyecto",
+      "howItWorks": "Cómo funciona",
+      "dropTitle": "Suelta o explora",
+      "dropDesc": "Selecciona cualquier carpeta de proyecto",
+      "autoDetectTitle": "Detección automática",
+      "autoDetectDesc": "Framework y configuración detectados",
+      "deployTitle": "Desplegar localmente",
+      "deployDesc": "Compila y ejecuta en tu equipo"
+    },
+    "form": {
+      "title": "Importar desde carpeta",
+      "scanErrorDefault": "No se pudo escanear el directorio",
+      "dropTitle": "Suelta una carpeta aquí o haz clic para explorar",
+      "dropSubtitle": "Selecciona tu carpeta de proyecto para detectar automáticamente el framework",
+      "folderViaBrowser": "Carpeta seleccionada mediante el navegador: introduce la ruta absoluta completa y pulsa Escanear",
+      "folderDropped": "Carpeta soltada: introduce la ruta absoluta completa y pulsa Escanear",
+      "pathPlaceholder": "/ruta/a/tu/proyecto",
+      "browse": "Explorar",
+      "scan": "Escanear",
+      "importError": "No se pudo importar el proyecto",
+      "projectName": "Nombre del proyecto",
+      "detected": "Detectado",
+      "build": "Compilación:",
+      "install": "Instalación:",
+      "output": "Salida:",
+      "start": "Inicio:",
+      "importing": "Importando...",
+      "importProject": "Importar proyecto"
+    }
+  },
+  "repositoryList": {
+    "searchPlaceholder": "Buscar repositorios...",
+    "visibility": {
+      "all": "Todos",
+      "public": "Públicos",
+      "private": "Privados"
+    },
+    "sort": {
+      "recent": "Recientes",
+      "name": "Nombre",
+      "stars": "Estrellas"
+    },
+    "addAccount": "Añadir cuenta de GitHub",
+    "installTitle": "Instala la GitHub App",
+    "installDesc": "Instala la GitHub App en tu cuenta u organización para conceder acceso a tus repositorios.",
+    "installButton": "Instalar GitHub App",
+    "noMatching": "No hay repositorios que coincidan",
+    "noRepos": "No se encontraron repositorios",
+    "noMatchingDesc": "Prueba con otro término de búsqueda o ajusta tus filtros",
+    "noReposDesc": "Esta cuenta todavía no tiene ningún repositorio",
+    "privateBadge": "Privado",
+    "localOnly": "Solo local",
+    "localOnlyTooltip": "La Openship App no está instalada en {owner}. Solo compilaciones locales: instala la App en este propietario para habilitar despliegues remotos.",
+    "repoCountSingular": "{count} repositorio",
+    "repoCountPlural": "{count} repositorios",
+    "matching": "que coinciden con \"{query}\"",
+    "pagination": {
+      "previous": "Anterior",
+      "next": "Siguiente",
+      "pageOf": "Página {page} de {total}"
+    },
+    "time": {
+      "justNow": "justo ahora",
+      "minutesAgo": "hace {n} min",
+      "hoursAgo": "hace {n} h",
+      "daysAgo": "hace {n} d",
+      "monthsAgo": "hace {n} mes"
+    }
+  },
+  "sidebar": {
+    "overview": "Resumen",
+    "total": "Total",
+    "public": "Públicos",
+    "private": "Privados",
+    "quickTip": "Consejo rápido",
+    "quickTipDesc": "Selecciona cualquier repositorio para desplegarlo al instante. Configura despliegues automáticos en cada push.",
+    "connection": "Conexión",
+    "openshipGithubApp": "Openship GitHub App",
+    "connected": "Conectado",
+    "notConnected": "No conectado",
+    "ghCli": "CLI de gh",
+    "runGhAuth": "Ejecuta `gh auth login`",
+    "openshipCloudApp": "Openship Cloud App",
+    "checking": "Comprobando…",
+    "notConnectedManage": "No conectado — gestiona en Ajustes",
+    "optional": "Opcional",
+    "footnote": "Gestiona las conexiones de GitHub para explorar y desplegar repositorios.",
+    "manageGithubSettings": "gestionar GitHub en Ajustes"
+  },
+  "urlImport": {
+    "invalidUrl": "Introduce una URL válida de repositorio de GitHub",
+    "title": "Importar desde URL de Git",
+    "description": "Pega la URL de un repositorio público para importarlo. No requiere conexión con GitHub.",
+    "importButton": "Importar repositorio"
+  }
+}

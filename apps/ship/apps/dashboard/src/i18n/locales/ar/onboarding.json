@@ -1,0 +1,139 @@
+{
+  "common": {
+    "goBack": "الرجوع",
+    "continue": "متابعة",
+    "back": "رجوع",
+    "optional": "(اختياري)"
+  },
+  "topBar": {
+    "website": "الموقع الإلكتروني",
+    "github": "GitHub"
+  },
+  "choose": {
+    "title": "مرحبًا بك في Openship",
+    "subtitle": "اختر الطريقة التي تريد بها تشغيل Openship. كلا الخيارين يمنحك جميع الميزات — ويمكنك التبديل في أي وقت.",
+    "cloud": {
+      "name": "Openship Cloud",
+      "desc": "نحن نتولى البنية التحتية والتحديثات والنسخ الاحتياطي. ما عليك سوى تسجيل الدخول والبدء بالنشر.",
+      "perk1": "لا حاجة إلى خادم",
+      "perk2": "يتضمن باقة مجانية",
+      "perk3": "مُدار ومحدَّث دائمًا",
+      "cta": "المتابعة مع السحابة"
+    },
+    "or": "أو",
+    "selfhost": {
+      "name": "الاستضافة الذاتية",
+      "desc": "شغّل Openship على أجهزتك الخاصة. اتصل بخادم بعيد أو استخدم هذا الجهاز.",
+      "perk1": "ملكية كاملة للبيانات",
+      "perk2": "خادم بعيد أو جهاز Mac هذا",
+      "perk3": "نحن نتولى الباقي",
+      "cta": "إعداد الخادم"
+    },
+    "migrateNote": "بدّل بين السحابة والاستضافة الذاتية في أي وقت بنقرة واحدة — دون أي قيود، أبدًا."
+  },
+  "selfhost": {
+    "title": "أين ينبغي تشغيل Openship؟",
+    "subtitleLine1": "اختر المكان الذي تريد تثبيت منصة Openship فيه.",
+    "subtitleLine2": "كلا الخيارين يمنحك التحكم الكامل وملكية البيانات.",
+    "local": {
+      "title": "هذا الجهاز",
+      "badge": "تجريبي",
+      "desc": "ثبّت Openship هنا مباشرة — دون SSH أو أي إعداد بعيد"
+    },
+    "remote": {
+      "title": "خادم آخر",
+      "desc": "اتصل بخادم بعيد أو خادم افتراضي خاص (VPS) أو أي جهاز على شبكتك عبر SSH"
+    }
+  },
+  "ssh": {
+    "title": "اتصل بخادمك",
+    "subtitleLine1": "أدخل تفاصيل خادمك واختر طريقة المصادقة.",
+    "subtitleLine2": "سنتولى التثبيت والإعداد بالكامل تلقائيًا.",
+    "serverNameLabel": "اسم الخادم",
+    "serverNamePlaceholder": "الإنتاج، التجهيز، التطوير...",
+    "serverIpLabel": "عنوان IP للخادم",
+    "usernameLabel": "اسم المستخدم",
+    "methodPassword": "كلمة المرور",
+    "methodKey": "مفتاح SSH",
+    "methodAgent": "الوكيل",
+    "agentHint": "يتصل باستخدام وكيل SSH على هذا الجهاز — مثل VSCode، دون الحاجة إلى كلمة مرور أو مفتاح. يجب أن يمتلك المضيف الذي يشغّل Openship وصولاً إلى هذا الخادم مسبقًا (مفتاح محمَّل في ssh-agent الخاص به).",
+    "passwordLabel": "كلمة المرور",
+    "passwordPlaceholder": "كلمة مرور الخادم",
+    "keyPathLabel": "مسار المفتاح",
+    "browse": "استعراض",
+    "passphraseLabel": "عبارة المرور",
+    "passphrasePlaceholder": "اتركه فارغًا إن لم توجد",
+    "advanced": "خيارات متقدمة",
+    "sshPortLabel": "منفذ SSH",
+    "jumpHostLabel": "المضيف الوسيط",
+    "extraArgsLabel": "وسائط SSH إضافية",
+    "submit": "حفظ ومتابعة",
+    "tutorial": "دليل الإعداد خطوة بخطوة"
+  },
+  "tunnel": {
+    "title": "الوصول من الإنترنت",
+    "subtitle": "يحتاج خادمك إلى وسيلة للوصول إليه من الإنترنت لأجل webhooks وشهادات SSL والوصول العام.",
+    "providers": {
+      "edge": {
+        "title": "Openship Edge",
+        "desc": "دون أي إعداد. شهادات SSL تلقائية وتوافر عالٍ وحماية من هجمات DDoS — كل ذلك مدمج.",
+        "badge": "موصى به"
+      },
+      "cloudflare": {
+        "title": "Cloudflare Tunnel",
+        "desc": "استخدم حساب Cloudflare الخاص بك. تتوفر باقة مجانية."
+      },
+      "ngrok": {
+        "title": "ngrok",
+        "desc": "اعرض خدماتك باستخدام رمز مصادقة ngrok."
+      }
+    },
+    "cloudflareTokenLabel": "رمز نفق Cloudflare",
+    "ngrokTokenLabel": "رمز مصادقة ngrok",
+    "cloudflarePlaceholder": "الصق رمز النفق الخاص بك",
+    "ngrokPlaceholder": "الصق رمز مصادقة ngrok الخاص بك",
+    "edgeHint": "يتطلب Openship Edge حساب Openship. ستقوم بتسجيل الدخول للمتابعة.",
+    "signInContinue": "تسجيل الدخول والمتابعة"
+  },
+  "preferences": {
+    "title": "تفضيلات البناء",
+    "subtitleLine1": "اختر كيفية بناء مشاريعك عند النشر.",
+    "subtitleLine2": "يمكنك تغيير ذلك لاحقًا في الإعدادات.",
+    "options": {
+      "auto": {
+        "title": "تلقائي",
+        "desc": "نختار الخيار الأفضل حسب إطار العمل"
+      },
+      "server": {
+        "title": "بعيد",
+        "desc": "البناء على خادم النشر مباشرة"
+      },
+      "local": {
+        "title": "محلي",
+        "desc": "البناء على جهاز Mac هذا، ثم الدفع إلى الخادم"
+      }
+    },
+    "hint": "عمليات النشر عبر Git push تُبنى دائمًا على الخادم — ينطبق هذا على عمليات النشر اليدوية فقط."
+  },
+  "loading": {
+    "connecting": "جارٍ الاتصال…",
+    "verifying": "جارٍ التحقق من خادمك",
+    "retry": "إعادة المحاولة",
+    "openingCloud": "جارٍ فتح Openship Cloud…",
+    "waitingAuth": "بانتظار اكتمال المصادقة",
+    "couldNotStartAuthTitle": "تعذّر بدء مصادقة السحابة",
+    "authFailedTitle": "فشلت مصادقة السحابة",
+    "couldNotStartAuthMsg": "تعذّر بدء تدفق مصادقة سطح المكتب.",
+    "authFailedMsg": "يرجى المحاولة مرة أخرى وإكمال تسجيل الدخول في متصفحك.",
+    "completingSignIn": "جارٍ إكمال تسجيل الدخول…",
+    "returningToOpenship": "العودة إلى Openship",
+    "redirectingCloud": "جارٍ إعادة التوجيه إلى Openship Cloud…",
+    "newTabSignIn": "ستُكمل تسجيل الدخول في علامة تبويب جديدة",
+    "couldNotSaveTitle": "تعذّر حفظ الإعداد",
+    "couldNotSaveMsg": "لم تستجب واجهة برمجة التطبيقات. تأكد من تشغيل الخدمات.",
+    "savingConfig": "جارٍ حفظ الإعداد…",
+    "almostThere": "أوشكنا على الانتهاء",
+    "settingUpAccount": "جارٍ إعداد حسابك…",
+    "creatingSession": "جارٍ إنشاء جلستك"
+  }
+}

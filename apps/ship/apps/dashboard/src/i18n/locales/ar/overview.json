@@ -1,0 +1,102 @@
+{
+  "activity": {
+    "title": "النشاط",
+    "thisWeek": "هذا الأسبوع",
+    "deploymentSingular": "{count} عملية نشر",
+    "deploymentPlural": "{count} عمليات نشر"
+  },
+  "apiRequests": {
+    "title": "طلبات API",
+    "last7Days": "آخر 7 أيام",
+    "totalRequests": "إجمالي الطلبات",
+    "requestsTooltip": "{count} طلب"
+  },
+  "credits": {
+    "title": "رصيد الائتمان",
+    "availableToUse": "متاح للاستخدام",
+    "spentThisMonth": "المُنفَق هذا الشهر",
+    "add": "إضافة"
+  },
+  "deployments": {
+    "title": "عمليات النشر",
+    "lastNDays": "آخر {period} يوم",
+    "deploymentSingular": "{count} عملية نشر",
+    "deploymentPlural": "{count} عمليات نشر"
+  },
+  "homeTip": {
+    "quickTip": "نصيحة سريعة",
+    "connectText": "اربط مستودع GitHub الخاص بك للنشر التلقائي عند كل دفعة.",
+    "connectLabel": "ربط GitHub",
+    "createText": "أنشئ مشروعك الأول لبدء النشر.",
+    "createLabel": "مشروع جديد",
+    "settingsText": "قم بإعداد متغيرات البيئة والنطاقات المخصصة في إعدادات المشروع.",
+    "settingsLabel": "إعدادات المشروع",
+    "connected": "متصل"
+  },
+  "welcome": {
+    "title": "أطلق مشروعك الأول",
+    "subtitle": "اربط مستودعًا أو ابدأ من قالب — يقوم Openship ببنائه ونشره ويمنحك رابطًا مباشرًا في دقائق.",
+    "createProject": "إنشاء مشروع",
+    "importGithub": "استيراد من GitHub",
+    "tipPrefix": "نصيحة: اضغط",
+    "tipSuffix": "للانتقال إلى أي مكان"
+  },
+  "header": {
+    "goodMorning": "صباح الخير",
+    "goodAfternoon": "مساء الخير",
+    "goodEvening": "مساء الخير",
+    "greetingWithName": "{greeting}، {name}",
+    "overview": "نظرة عامة",
+    "subtitle": "راقب استخدام منصتك وأدر مواردك",
+    "creditsBalance": "رصيد الائتمان",
+    "topUp": "إضافة رصيد"
+  },
+  "hero": {
+    "title": "نشاط المنصة",
+    "subtitle": "استخدام الرموز وطلبات API",
+    "tokens": "الرموز",
+    "requests": "الطلبات",
+    "lastNDays": "آخر {period} يوم",
+    "agents": "الوكلاء",
+    "environments": "البيئات",
+    "total": "الإجمالي",
+    "production": "الإنتاج",
+    "testing": "الاختبار",
+    "prodCount": "{count} إنتاج",
+    "testCount": "{count} اختبار"
+  },
+  "projects": {
+    "title": "المشاريع",
+    "activeDeployments": "عمليات النشر النشطة",
+    "total": "الإجمالي",
+    "live": "مباشر",
+    "building": "قيد البناء",
+    "needAttentionSingular": "{count} مشروع يحتاج إلى انتباه",
+    "needAttentionPlural": "{count} مشاريع تحتاج إلى انتباه"
+  },
+  "sandboxes": {
+    "title": "بيئات معزولة",
+    "developmentEnvironments": "بيئات التطوير",
+    "totalSandboxes": "إجمالي البيئات المعزولة",
+    "active": "نشط",
+    "runningCount": "{count} قيد التشغيل",
+    "stoppedCount": "{count} متوقف"
+  },
+  "stats": {
+    "creditsBalance": "رصيد الائتمان",
+    "tokenUsage": "استخدام الرموز",
+    "thisMonth": "هذا الشهر",
+    "apiRequests": "طلبات API",
+    "last7Days": "آخر 7 أيام",
+    "deployments": "عمليات النشر",
+    "successfulCount": "{count} ناجحة",
+    "activeProjects": "المشاريع النشطة",
+    "sandboxes": "بيئات معزولة",
+    "activeCount": "{count} نشط"
+  },
+  "tokenUsage": {
+    "title": "استخدام الرموز",
+    "lastNDays": "آخر {period} يوم",
+    "tokensTooltip": "{count} رمز"
+  }
+}

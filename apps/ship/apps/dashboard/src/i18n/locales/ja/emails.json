@@ -1,0 +1,190 @@
+{
+  "page": {
+    "title": "メールサーバー",
+    "subtitle": "数クリックでセルフホスト型メールサーバーをセットアップ",
+    "backToServers": "メールサーバー一覧に戻る",
+    "backToAdmin": "メール管理に戻る",
+    "addServer": "メールサーバーを追加",
+    "removeModal": {
+      "title": "このメールサーバーを削除しますか？",
+      "description": "{label} をメール一覧からのみ削除します。メールスタックは稼働し続け、何もアンインストールされません。既存のインストールは「アダプト」でいつでも再追加できます。",
+      "submit": "一覧から削除",
+      "submitting": "削除中…",
+      "body": "サーバー上のインストールはそのまま残るため、後で再アダプトすれば再インストールなしで完全な管理を復元できます。"
+    },
+    "errors": {
+      "resetFailed": "リセットに失敗しました",
+      "ackDns": "DNS を確認できませんでした",
+      "ackPtr": "PTR を確認できませんでした",
+      "selectServer": "先にサーバーを選択してください",
+      "resolutionFailed": "解決に失敗しました"
+    }
+  },
+  "adopt": {
+    "title": "既存のメールサーバーをアダプト",
+    "intro": "すでにいずれかのサーバーで Openship を使ってメールサーバーをセットアップ済みですか？そのサーバーを選択してスキャンしてください。メールスタックが見つかれば、再インストールもデータへの変更もなくダッシュボードに再アダプトされます。",
+    "scanning": "スキャン中…",
+    "scan": "サーバーをスキャン",
+    "detected": "メールサーバーを検出しました",
+    "domainLabel": "ドメイン:",
+    "unknown": "不明",
+    "stats": "iRedMail 稼働中: {iredmail} · インストール: {install} · Webmail: {webmail}",
+    "yes": "はい",
+    "no": "いいえ",
+    "complete": "完了",
+    "inProgress": "進行中",
+    "present": "あり",
+    "notDeployed": "未デプロイ",
+    "cancel": "キャンセル",
+    "adopt": "アダプト",
+    "noInstall": "このサーバーではメールサーバーのインストールが見つかりませんでした。",
+    "scanFailed": "スキャンに失敗しました — サーバーに到達できますか？",
+    "adoptFailed": "アダプトに失敗しました"
+  },
+  "dns": {
+    "heading": "続行する前に DNS レコードを公開してください",
+    "bodyBefore": "これらがないとメール配信が機能しません。DNS プロバイダーで追加してから、次をクリックしてください: ",
+    "action": "レコードを設定しました - 続行",
+    "bodyAfterResume": " 以下。インストールはステップ {resumeStep}（SSL 証明書）から再開します。",
+    "bodyAfter": " 以下。",
+    "autoConfigure": "DNS を自動設定",
+    "autoConfigureDesc": "ドメインの DNS をホストしているプロバイダーを選択してください。そのプロバイダーの API を使ってレコードを自動的に登録します。",
+    "otherManual": "その他 / 手動で設定",
+    "otherManualDesc": "バナーから各レコードをコピーし、プロバイダーの UI に貼り付けてください",
+    "pickAnother": "別のプロバイダーを選択",
+    "comingSoon": "{provider} 連携 - 近日提供",
+    "comingSoonBefore": "このプロバイダーとの直接的な API 連携はまだ提供されていません。当面は、バナーから各レコードをコピーして DNS プロバイダーの UI に貼り付けてください。完了したら、次をクリックしてください: ",
+    "comingSoonAfter": "。",
+    "gotIt": "了解しました",
+    "providers": {
+      "cloudflare": "無料 DNS、高速な伝播。最も一般的な選択肢です。",
+      "hostinger": "Hostinger 経由でドメインを購入した場合。",
+      "route53": "AWS でホストされる DNS ゾーン。",
+      "digitalocean": "DigitalOcean が管理するゾーン。",
+      "namecheap": "Namecheap のデフォルト DNS。",
+      "google": "Google が管理するゾーン。"
+    }
+  },
+  "recordCard": {
+    "priority": "優先度: {priority}",
+    "copyValue": "値をコピー"
+  },
+  "progress": {
+    "liveLogs": "ライブログ",
+    "lineOne": "{count} 行",
+    "lineOther": "{count} 行",
+    "cancel": "キャンセル",
+    "resetTitle": "サーバー上のインストール状態を消去して最初からやり直す",
+    "confirmReset": "確認するにはもう一度クリック",
+    "reset": "リセット",
+    "waiting": "出力を待機中…",
+    "noBuffered": "この実行にはバッファされた出力がありません。",
+    "willStream": "セットアップが開始されると、ここにログがストリーミングされます。",
+    "jumpToLatest": "最新へ移動",
+    "setupFailed": "セットアップに失敗しました",
+    "retryFromStep": "ステップ {resumeStep} から再試行",
+    "resumePausedTitle": "セットアップを一時停止しました",
+    "stepLabel": "ステップ {step}",
+    "continueFromStep": "ステップ {step} から続行"
+  },
+  "serverList": {
+    "title": "メールサーバー",
+    "addServer": "メールサーバーを追加",
+    "removeFromList": "一覧から削除",
+    "removeAria": "{name} をメール一覧から削除",
+    "installing": "インストール中",
+    "running": "稼働中",
+    "incomplete": "未完了",
+    "stoppedAt": "停止 · ステップ {step}",
+    "open": "開く",
+    "openAria": "{name} を開く",
+    "actionsAria": "{name} の操作",
+    "overviewTitle": "メールの概要",
+    "hint": "削除してもこの一覧から切り離すだけです。インストールは動作し続け、いつでも再取り込みできます。"
+  },
+  "setup": {
+    "title": "メールサーバーのセットアップ",
+    "subtitle": "このサーバーに完全なセルフホスト型メールスタックをデプロイ",
+    "domainLabel": "ドメイン",
+    "domainPlaceholder": "example.com",
+    "willBeAtBefore": "メールサーバーは次の場所に配置されます: ",
+    "adminPasswordLabel": "管理者パスワード",
+    "passwordPlaceholder": "強力なパスワード - または「生成」をクリック",
+    "passwordHint": "12文字以上。セットアップ後にメールボックスへログインするために使用します。後で下の管理パネルから変更できます。",
+    "startSetup": "セットアップを開始",
+    "adoptCta": "すでにメールサーバーをお持ちですか？アダプトする",
+    "whatInstalled": "インストールされる内容",
+    "features": {
+      "stackLabel": "メールサーバースタック",
+      "stackDesc": "Postfix、Dovecot、スパム対策",
+      "sslLabel": "SSL 証明書",
+      "sslDesc": "Let's Encrypt 自動 SSL",
+      "dnsLabel": "DNS 設定",
+      "dnsDesc": "DKIM、SPF、DMARC レコード",
+      "adminLabel": "管理パネル",
+      "adminDesc": "メールボックス、ドメイン、エイリアスを管理"
+    },
+    "prerequisites": "前提条件",
+    "prereq1": "DNS にアクセスできるドメイン",
+    "prereq2": "プロバイダーによってポート 25 がブロックされていないこと",
+    "prereq2Relay": "受信メール用にポート 25 を開放（送信はリレー経由）",
+    "prereq3": "クリーンな Ubuntu/Debian サーバー（推奨）",
+    "hide": "非表示",
+    "reveal": "表示",
+    "generateTitle": "強力なランダムパスワードを生成",
+    "generate": "生成"
+  },
+  "sidebar": {
+    "portConflict": {
+      "title": "ポート競合を検出しました",
+      "subtitle": "メールサーバーにはポート 80/443 が必要です",
+      "managed": "管理対象",
+      "known": "既知のサービス",
+      "unknown": "不明",
+      "container": "コンテナ: {name}",
+      "killWarning": "終了する前に、このプロセスが不要であることを確認してください。この操作は元に戻せません。",
+      "allResolved": "すべての競合が解決されました",
+      "rerun": "ポートチェックを再実行してセットアップを続行します。",
+      "resumeStep3": "ステップ 3 から再開"
+    },
+    "completion": {
+      "ready": "メールサーバーの準備が完了しました！",
+      "webmail": "Webmail",
+      "adminPanel": "管理パネル"
+    },
+    "dnsRef": {
+      "title": "必要な DNS レコード",
+      "subtitle": "参照 - タップして公開したレコードを表示"
+    },
+    "steps": {
+      "title": "すべてのステップ",
+      "interrupted": "インストールはステップ {step} の前に中断されました。再開すると、中断した箇所から続行します。",
+      "resume": "再開",
+      "retry": "再試行"
+    },
+    "details": {
+      "title": "セットアップの詳細",
+      "domain": "ドメイン",
+      "mailServer": "メールサーバー",
+      "started": "開始日時"
+    }
+  },
+  "ptr": {
+    "heading": "続行する前に逆引き DNS（PTR）を設定してください",
+    "bodyBefore": "PTR は次の場所で設定します: ",
+    "bodyStrongPanel": "VPS プロバイダーのパネル",
+    "bodyMid": "（Hostinger、DigitalOcean、AWS など）、",
+    "bodyStrongNot": "ではなく",
+    "bodyAfter": " DNS プロバイダー側ではありません。一致する rDNS がないと、Gmail や Outlook は送信メールを拒否します。インストールはステップ {resumeStep}（SSL）から再開します。",
+    "recommended": "推奨",
+    "ipLabel": "IP",
+    "setTo": "設定先",
+    "copy": "コピー",
+    "howTo": "設定方法:",
+    "howToBody": " VPS プロバイダーにログインし、サーバーのネットワーク / DNS / rDNS 設定を見つけ、各 IP の PTR レコードを次に設定してください: ",
+    "howToAfter": "。伝播には通常 5〜15 分かかります。",
+    "verifyWith": "確認方法:",
+    "shouldReturn": " は次を返すはずです: ",
+    "action": "PTR を設定しました - 続行"
+  }
+}

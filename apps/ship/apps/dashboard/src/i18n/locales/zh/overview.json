@@ -1,0 +1,102 @@
+{
+  "activity": {
+    "title": "活动",
+    "thisWeek": "本周",
+    "deploymentSingular": "{count} 次部署",
+    "deploymentPlural": "{count} 次部署"
+  },
+  "apiRequests": {
+    "title": "API 请求",
+    "last7Days": "最近 7 天",
+    "totalRequests": "请求总数",
+    "requestsTooltip": "{count} 次请求"
+  },
+  "credits": {
+    "title": "额度余额",
+    "availableToUse": "可用额度",
+    "spentThisMonth": "本月已用",
+    "add": "添加"
+  },
+  "deployments": {
+    "title": "部署",
+    "lastNDays": "最近 {period} 天",
+    "deploymentSingular": "{count} 次部署",
+    "deploymentPlural": "{count} 次部署"
+  },
+  "homeTip": {
+    "quickTip": "快速提示",
+    "connectText": "连接你的 GitHub 仓库，即可在每次推送时自动部署。",
+    "connectLabel": "连接 GitHub",
+    "createText": "创建你的第一个项目以开始部署。",
+    "createLabel": "新建项目",
+    "settingsText": "在项目设置中配置环境变量和自定义域名。",
+    "settingsLabel": "项目设置",
+    "connected": "已连接"
+  },
+  "welcome": {
+    "title": "启动你的第一个项目",
+    "subtitle": "连接仓库或从模板开始 —— Openship 会构建、发布，并在几分钟内为你提供一个可访问的 URL。",
+    "createProject": "创建项目",
+    "importGithub": "从 GitHub 导入",
+    "tipPrefix": "提示：按",
+    "tipSuffix": "可跳转到任意位置"
+  },
+  "header": {
+    "goodMorning": "早上好",
+    "goodAfternoon": "下午好",
+    "goodEvening": "晚上好",
+    "greetingWithName": "{greeting}，{name}",
+    "overview": "概览",
+    "subtitle": "监控你的平台使用情况并管理资源",
+    "creditsBalance": "额度余额",
+    "topUp": "充值"
+  },
+  "hero": {
+    "title": "平台活动",
+    "subtitle": "Token 用量与 API 请求",
+    "tokens": "Token",
+    "requests": "请求",
+    "lastNDays": "最近 {period} 天",
+    "agents": "代理",
+    "environments": "环境",
+    "total": "总计",
+    "production": "生产",
+    "testing": "测试",
+    "prodCount": "{count} 个生产",
+    "testCount": "{count} 个测试"
+  },
+  "projects": {
+    "title": "项目",
+    "activeDeployments": "活动部署",
+    "total": "总计",
+    "live": "已上线",
+    "building": "构建中",
+    "needAttentionSingular": "{count} 个项目需要关注",
+    "needAttentionPlural": "{count} 个项目需要关注"
+  },
+  "sandboxes": {
+    "title": "沙盒",
+    "developmentEnvironments": "开发环境",
+    "totalSandboxes": "沙盒总数",
+    "active": "活动中",
+    "runningCount": "{count} 个运行中",
+    "stoppedCount": "{count} 个已停止"
+  },
+  "stats": {
+    "creditsBalance": "额度余额",
+    "tokenUsage": "Token 用量",
+    "thisMonth": "本月",
+    "apiRequests": "API 请求",
+    "last7Days": "最近 7 天",
+    "deployments": "部署",
+    "successfulCount": "{count} 次成功",
+    "activeProjects": "活动项目",
+    "sandboxes": "沙盒",
+    "activeCount": "{count} 个活动中"
+  },
+  "tokenUsage": {
+    "title": "Token 用量",
+    "lastNDays": "最近 {period} 天",
+    "tokensTooltip": "{count} 个 token"
+  }
+}

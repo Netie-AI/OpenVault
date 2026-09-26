@@ -1,0 +1,86 @@
+{
+  "accountSwitcher": {
+    "workspacesCount": "{count} Arbeitsbereiche",
+    "newWorkspace": "Neuer Arbeitsbereich",
+    "createTitle": "Arbeitsbereich erstellen",
+    "createDescription": "Eine separate Organisation für Projekte, Deployments, Server und Mitglieder.",
+    "nameLabel": "Name",
+    "namePlaceholder": "Acme Corp",
+    "cancel": "Abbrechen",
+    "create": "Erstellen",
+    "toastTitle": "Organisation",
+    "switchFailed": "Wechsel fehlgeschlagen",
+    "createFailed": "Erstellen fehlgeschlagen"
+  },
+  "sidebar": {
+    "workspaceFallback": "Arbeitsbereich",
+    "workspacesCount": "{count} Arbeitsbereiche",
+    "switchOrganization": "Organisation wechseln",
+    "current": "Aktuell",
+    "cloudLabel": "Cloud: {email}",
+    "linkedToCloud": "Mit Openship Cloud verknüpft als {email}",
+    "backToSetup": "Zurück zur Einrichtung",
+    "personal": "Persönlich"
+  },
+  "mailRail": {
+    "selectServer": "Mailserver auswählen",
+    "switchServer": "Mailserver wechseln",
+    "setupIncomplete": "Einrichtung unvollständig"
+  },
+  "migration": {
+    "inProgressTitle": "Migration läuft",
+    "inProgressBody": "Deine Daten werden übertragen. Diese Seite wird aktualisiert, sobald die Umstellung abgeschlossen ist — in der Regel 30 bis 90 Sekunden.",
+    "inProgressHint": "Schließe diesen Tab nicht. Wir prüfen den Migrationsstatus alle paar Sekunden und laden die Seite automatisch neu.",
+    "newLocation": "Neuer Speicherort",
+    "switchBackPrompt": "Benötigst du den Einzelbenutzermodus auf diesem Gerät zurück?",
+    "switchBackAction": "Zurück zum Einzelbenutzer wechseln",
+    "cloudTitle": "Diese Instanz ist zu Openship Cloud umgezogen",
+    "cloudBody": "Dein Team arbeitet jetzt unter der untenstehenden URL zusammen. Diese lokale Instanz enthält deine Projekte, Einstellungen und Deployments nicht mehr — öffne das Cloud-Dashboard, um fortzufahren.",
+    "cloudCta": "Cloud-Dashboard öffnen",
+    "tunneledTitle": "Dein Openship ist jetzt über den Tunnel erreichbar",
+    "tunneledBody": "Teammitglieder können sich unter der untenstehenden URL anmelden, wenn dein Gerät online ist. Die Daten liegen weiterhin auf diesem Gerät — der Tunnel stellt sie lediglich über den Oblien-Edge bereit.",
+    "tunneledCta": "Tunnel-URL öffnen",
+    "serverTitle": "Diese Instanz ist auf deinen Server umgezogen",
+    "serverBody": "Dein Team arbeitet jetzt unter der untenstehenden URL zusammen. Diese lokale Instanz enthält deine Projekte, Einstellungen und Deployments nicht mehr — öffne das Team-Dashboard, um fortzufahren.",
+    "serverCta": "Team-Dashboard öffnen"
+  },
+  "notFound": {
+    "title": "Seite nicht gefunden",
+    "descGlobal": "Die gesuchte Seite existiert nicht oder wurde verschoben.",
+    "descDashboard": "Diese Seite existiert nicht oder wurde möglicherweise verschoben. Überprüfe die URL oder kehre zu deinem Dashboard zurück.",
+    "backToDashboard": "Zurück zum Dashboard",
+    "viewDeployments": "Deployments anzeigen",
+    "copyId": "ID kopieren"
+  },
+  "window": {
+    "back": "Zurück",
+    "forward": "Vorwärts",
+    "reload": "Neu laden",
+    "minimize": "Minimieren",
+    "maximize": "Maximieren",
+    "restore": "Wiederherstellen",
+    "close": "Schließen",
+    "devTools": "Entwicklertools",
+    "navigation": "Navigation"
+  },
+  "apiDown": {
+    "title": "API nicht erreichbar",
+    "description": "Das Dashboard läuft, kann aber die Openship-API nicht erreichen — daher gibt es noch nichts anzuzeigen. Deine Deployments laufen davon unabhängig weiter.",
+    "hintStatus": "Prüfe, ob die API läuft: führe `openship status` auf dem Host aus.",
+    "hintStart": "Läuft nicht? Starte es mit `openship up`.",
+    "hintRemote": "Verwaltest du einen Remote-Server? Prüfe dessen URL und ob der API-Port von hier erreichbar ist.",
+    "docs": "Self-Hosting-Dokumentation",
+    "retry": "Erneut versuchen"
+  },
+  "error": {
+    "title": "Auf dieser Seite ist ein Fehler aufgetreten",
+    "description": "Ein Teil dieser Ansicht konnte nicht gerendert werden. Ein neuer Versuch behebt das meist — an deinen Deployments hat sich nichts geändert.",
+    "tryAgain": "Erneut versuchen",
+    "goToProjects": "Zu den Projekten",
+    "refCode": "Ref"
+  },
+  "errorLinks": {
+    "docs": "Dokumentation",
+    "github": "Problem melden"
+  }
+}

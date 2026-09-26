@@ -1,0 +1,139 @@
+{
+  "common": {
+    "goBack": "Zurück",
+    "continue": "Weiter",
+    "back": "Zurück",
+    "optional": "(optional)"
+  },
+  "topBar": {
+    "website": "Website",
+    "github": "GitHub"
+  },
+  "choose": {
+    "title": "Willkommen bei Openship",
+    "subtitle": "Wählen Sie, wie Sie Openship betreiben möchten. Beide Optionen bieten Ihnen alle Funktionen – und Sie können jederzeit wechseln.",
+    "cloud": {
+      "name": "Openship Cloud",
+      "desc": "Wir kümmern uns um Infrastruktur, Updates und Backups. Melden Sie sich einfach an und legen Sie mit dem Deployment los.",
+      "perk1": "Kein Server erforderlich",
+      "perk2": "Kostenloses Kontingent inklusive",
+      "perk3": "Verwaltet und immer auf dem neuesten Stand",
+      "cta": "Mit Cloud fortfahren"
+    },
+    "or": "oder",
+    "selfhost": {
+      "name": "Selbst gehostet",
+      "desc": "Betreiben Sie Openship auf Ihrer eigenen Hardware. Verbinden Sie einen Remote-Server oder nutzen Sie diesen Rechner.",
+      "perk1": "Vollständige Datenhoheit",
+      "perk2": "Remote-Server oder dieser Mac",
+      "perk3": "Um den Rest kümmern wir uns",
+      "cta": "Meinen Server einrichten"
+    },
+    "migrateNote": "Wechseln Sie jederzeit mit einem Klick zwischen Cloud und Selbst-Hosting – keine Bindung, niemals."
+  },
+  "selfhost": {
+    "title": "Wo soll Openship laufen?",
+    "subtitleLine1": "Wählen Sie, wo die Openship-Plattform installiert werden soll.",
+    "subtitleLine2": "Beide Optionen bieten Ihnen volle Kontrolle und Datenhoheit.",
+    "local": {
+      "title": "Dieser Rechner",
+      "badge": "Beta",
+      "desc": "Installieren Sie Openship direkt hier – kein SSH, keine Remote-Einrichtung nötig"
+    },
+    "remote": {
+      "title": "Anderer Server",
+      "desc": "Verbinden Sie sich über SSH mit einem Remote-Server, VPS oder einem beliebigen Rechner in Ihrem Netzwerk"
+    }
+  },
+  "ssh": {
+    "title": "Mit Ihrem Server verbinden",
+    "subtitleLine1": "Geben Sie Ihre Serverdaten ein und wählen Sie eine Authentifizierungsmethode.",
+    "subtitleLine2": "Wir installieren und konfigurieren alles automatisch.",
+    "serverNameLabel": "Servername",
+    "serverNamePlaceholder": "Produktion, Staging, Dev...",
+    "serverIpLabel": "Server-IP-Adresse",
+    "usernameLabel": "Benutzername",
+    "methodPassword": "Passwort",
+    "methodKey": "SSH-Schlüssel",
+    "methodAgent": "Agent",
+    "agentHint": "Verbindet über den SSH-Agent dieses Rechners – wie bei VSCode, ohne Passwort oder Schlüssel. Der Host, auf dem Openship läuft, muss bereits Zugriff auf diesen Server haben (ein im ssh-agent geladener Schlüssel).",
+    "passwordLabel": "Passwort",
+    "passwordPlaceholder": "Server-Passwort",
+    "keyPathLabel": "Schlüsselpfad",
+    "browse": "Durchsuchen",
+    "passphraseLabel": "Passphrase",
+    "passphrasePlaceholder": "Leer lassen, falls keine",
+    "advanced": "Erweitert",
+    "sshPortLabel": "SSH-Port",
+    "jumpHostLabel": "Jump-Host",
+    "extraArgsLabel": "Zusätzliche SSH-Argumente",
+    "submit": "Speichern & Fortfahren",
+    "tutorial": "Schritt-für-Schritt-Einrichtungsanleitung"
+  },
+  "tunnel": {
+    "title": "Internetzugang",
+    "subtitle": "Ihr Server benötigt eine Möglichkeit, aus dem Internet erreichbar zu sein – für Webhooks, SSL und öffentlichen Zugriff.",
+    "providers": {
+      "edge": {
+        "title": "Openship Edge",
+        "desc": "Keine Konfiguration. Automatisches SSL, hohe Verfügbarkeit und DDoS-Schutz – alles integriert.",
+        "badge": "Empfohlen"
+      },
+      "cloudflare": {
+        "title": "Cloudflare Tunnel",
+        "desc": "Nutzen Sie Ihr eigenes Cloudflare-Konto. Kostenloses Kontingent verfügbar."
+      },
+      "ngrok": {
+        "title": "ngrok",
+        "desc": "Stellen Sie Dienste mit Ihrem ngrok-Auth-Token bereit."
+      }
+    },
+    "cloudflareTokenLabel": "Cloudflare-Tunnel-Token",
+    "ngrokTokenLabel": "ngrok-Auth-Token",
+    "cloudflarePlaceholder": "Fügen Sie Ihren Tunnel-Token ein",
+    "ngrokPlaceholder": "Fügen Sie Ihren ngrok-Auth-Token ein",
+    "edgeHint": "Openship Edge erfordert ein Openship-Konto. Sie melden sich an, um fortzufahren.",
+    "signInContinue": "Anmelden & Fortfahren"
+  },
+  "preferences": {
+    "title": "Build-Einstellungen",
+    "subtitleLine1": "Wählen Sie, wie Ihre Projekte beim Deployment gebaut werden.",
+    "subtitleLine2": "Sie können dies später in den Einstellungen ändern.",
+    "options": {
+      "auto": {
+        "title": "Automatisch",
+        "desc": "Wir wählen die beste Option pro Framework"
+      },
+      "server": {
+        "title": "Remote",
+        "desc": "Direkt auf dem Deployment-Server bauen"
+      },
+      "local": {
+        "title": "Lokal",
+        "desc": "Auf diesem Mac bauen und dann auf den Server übertragen"
+      }
+    },
+    "hint": "Git-Push-Deployments werden immer auf dem Server gebaut – dies gilt nur für manuelle Deployments."
+  },
+  "loading": {
+    "connecting": "Verbinden…",
+    "verifying": "Ihr Server wird überprüft",
+    "retry": "Erneut versuchen",
+    "openingCloud": "Openship Cloud wird geöffnet…",
+    "waitingAuth": "Warten auf Abschluss der Authentifizierung",
+    "couldNotStartAuthTitle": "Cloud-Authentifizierung konnte nicht gestartet werden",
+    "authFailedTitle": "Cloud-Authentifizierung fehlgeschlagen",
+    "couldNotStartAuthMsg": "Der Desktop-Authentifizierungsablauf konnte nicht gestartet werden.",
+    "authFailedMsg": "Bitte versuchen Sie es erneut und schließen Sie die Anmeldung in Ihrem Browser ab.",
+    "completingSignIn": "Anmeldung wird abgeschlossen…",
+    "returningToOpenship": "Zurück zu Openship",
+    "redirectingCloud": "Weiterleitung zu Openship Cloud…",
+    "newTabSignIn": "Sie schließen die Anmeldung in einem neuen Tab ab",
+    "couldNotSaveTitle": "Konfiguration konnte nicht gespeichert werden",
+    "couldNotSaveMsg": "Die API hat nicht geantwortet. Stellen Sie sicher, dass die Dienste laufen.",
+    "savingConfig": "Konfiguration wird gespeichert…",
+    "almostThere": "Fast geschafft",
+    "settingUpAccount": "Ihr Konto wird eingerichtet…",
+    "creatingSession": "Ihre Sitzung wird erstellt"
+  }
+}

@@ -1,0 +1,102 @@
+{
+  "activity": {
+    "title": "アクティビティ",
+    "thisWeek": "今週",
+    "deploymentSingular": "{count}件のデプロイ",
+    "deploymentPlural": "{count}件のデプロイ"
+  },
+  "apiRequests": {
+    "title": "APIリクエスト",
+    "last7Days": "過去7日間",
+    "totalRequests": "合計リクエスト数",
+    "requestsTooltip": "{count}件のリクエスト"
+  },
+  "credits": {
+    "title": "クレジット残高",
+    "availableToUse": "利用可能",
+    "spentThisMonth": "今月の使用分",
+    "add": "追加"
+  },
+  "deployments": {
+    "title": "デプロイ",
+    "lastNDays": "過去{period}日間",
+    "deploymentSingular": "{count}件のデプロイ",
+    "deploymentPlural": "{count}件のデプロイ"
+  },
+  "homeTip": {
+    "quickTip": "ヒント",
+    "connectText": "GitHubリポジトリを接続すると、プッシュのたびに自動でデプロイされます。",
+    "connectLabel": "GitHubを接続",
+    "createText": "最初のプロジェクトを作成してデプロイを始めましょう。",
+    "createLabel": "新規プロジェクト",
+    "settingsText": "環境変数とカスタムドメインはプロジェクト設定で構成できます。",
+    "settingsLabel": "プロジェクト設定",
+    "connected": "接続済み"
+  },
+  "welcome": {
+    "title": "最初のプロジェクトを立ち上げましょう",
+    "subtitle": "リポジトリを接続するか、テンプレートから始めましょう。Openshipがビルドしてデプロイし、数分で公開URLをお渡しします。",
+    "createProject": "プロジェクトを作成",
+    "importGithub": "GitHubからインポート",
+    "tipPrefix": "ヒント: 押す",
+    "tipSuffix": "でどこへでも移動できます"
+  },
+  "header": {
+    "goodMorning": "おはようございます",
+    "goodAfternoon": "こんにちは",
+    "goodEvening": "こんばんは",
+    "greetingWithName": "{greeting}、{name}さん",
+    "overview": "概要",
+    "subtitle": "プラットフォームの利用状況を監視し、リソースを管理します",
+    "creditsBalance": "クレジット残高",
+    "topUp": "チャージ"
+  },
+  "hero": {
+    "title": "プラットフォームのアクティビティ",
+    "subtitle": "トークン使用量とAPIリクエスト",
+    "tokens": "トークン",
+    "requests": "リクエスト",
+    "lastNDays": "過去{period}日間",
+    "agents": "エージェント",
+    "environments": "環境",
+    "total": "合計",
+    "production": "本番",
+    "testing": "テスト",
+    "prodCount": "本番{count}件",
+    "testCount": "テスト{count}件"
+  },
+  "projects": {
+    "title": "プロジェクト",
+    "activeDeployments": "アクティブなデプロイ",
+    "total": "合計",
+    "live": "稼働中",
+    "building": "ビルド中",
+    "needAttentionSingular": "{count}件のプロジェクトに対応が必要です",
+    "needAttentionPlural": "{count}件のプロジェクトに対応が必要です"
+  },
+  "sandboxes": {
+    "title": "サンドボックス",
+    "developmentEnvironments": "開発環境",
+    "totalSandboxes": "サンドボックス合計",
+    "active": "アクティブ",
+    "runningCount": "{count}件実行中",
+    "stoppedCount": "{count}件停止中"
+  },
+  "stats": {
+    "creditsBalance": "クレジット残高",
+    "tokenUsage": "トークン使用量",
+    "thisMonth": "今月",
+    "apiRequests": "APIリクエスト",
+    "last7Days": "過去7日間",
+    "deployments": "デプロイ",
+    "successfulCount": "{count}件成功",
+    "activeProjects": "アクティブなプロジェクト",
+    "sandboxes": "サンドボックス",
+    "activeCount": "{count}件アクティブ"
+  },
+  "tokenUsage": {
+    "title": "トークン使用量",
+    "lastNDays": "過去{period}日間",
+    "tokensTooltip": "{count}トークン"
+  }
+}

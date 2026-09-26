@@ -1,0 +1,86 @@
+{
+  "accountSwitcher": {
+    "workspacesCount": "{count}個のワークスペース",
+    "newWorkspace": "新しいワークスペース",
+    "createTitle": "ワークスペースを作成",
+    "createDescription": "プロジェクト、デプロイ、サーバー、メンバーのための独立した組織です。",
+    "nameLabel": "名前",
+    "namePlaceholder": "Acme Corp",
+    "cancel": "キャンセル",
+    "create": "作成",
+    "toastTitle": "組織",
+    "switchFailed": "切り替えに失敗しました",
+    "createFailed": "作成に失敗しました"
+  },
+  "sidebar": {
+    "workspaceFallback": "ワークスペース",
+    "workspacesCount": "{count}個のワークスペース",
+    "switchOrganization": "組織を切り替える",
+    "current": "現在",
+    "cloudLabel": "クラウド: {email}",
+    "linkedToCloud": "{email} として Openship Cloud に連携済み",
+    "backToSetup": "セットアップに戻る",
+    "personal": "個人"
+  },
+  "mailRail": {
+    "selectServer": "メールサーバーを選択",
+    "switchServer": "メールサーバーを切り替える",
+    "setupIncomplete": "セットアップ未完了"
+  },
+  "migration": {
+    "inProgressTitle": "移行中",
+    "inProgressBody": "データを移動しています。切り替えが完了するとこのページは更新されます — 通常は30〜90秒かかります。",
+    "inProgressHint": "このタブを閉じないでください。数秒ごとに移行状況を確認し、自動的に再読み込みします。",
+    "newLocation": "新しい場所",
+    "switchBackPrompt": "このマシンでシングルユーザーモードに戻す必要がありますか？",
+    "switchBackAction": "シングルユーザーに戻す",
+    "cloudTitle": "このインスタンスは Openship Cloud に移行しました",
+    "cloudBody": "チームは以下のURLで共同作業できるようになりました。このローカルインスタンスにはプロジェクト、設定、デプロイが保持されなくなりました — 続行するにはクラウドダッシュボードを開いてください。",
+    "cloudCta": "クラウドダッシュボードを開く",
+    "tunneledTitle": "お使いの openship はトンネル経由でアクセス可能になりました",
+    "tunneledBody": "お使いのマシンがオンラインのとき、チームメンバーは以下のURLからサインインできます。データは引き続きこのデバイス上に保存され、トンネルは Oblien エッジ経由でそれを公開するだけです。",
+    "tunneledCta": "トンネルURLを開く",
+    "serverTitle": "このインスタンスはお使いのサーバーに移行しました",
+    "serverBody": "チームは以下のURLで共同作業できるようになりました。このローカルインスタンスにはプロジェクト、設定、デプロイが保持されなくなりました — 続行するにはチームダッシュボードを開いてください。",
+    "serverCta": "チームダッシュボードを開く"
+  },
+  "notFound": {
+    "title": "ページが見つかりません",
+    "descGlobal": "お探しのページは存在しないか、移動されました。",
+    "descDashboard": "このページは存在しないか、移動された可能性があります。URLを確認するか、ダッシュボードに戻ってください。",
+    "backToDashboard": "ダッシュボードに戻る",
+    "viewDeployments": "デプロイを表示",
+    "copyId": "IDをコピー"
+  },
+  "window": {
+    "back": "戻る",
+    "forward": "進む",
+    "reload": "再読み込み",
+    "minimize": "最小化",
+    "maximize": "最大化",
+    "restore": "元のサイズに戻す",
+    "close": "閉じる",
+    "devTools": "開発者ツール",
+    "navigation": "ナビゲーション"
+  },
+  "apiDown": {
+    "title": "API に接続できません",
+    "description": "ダッシュボードは動作していますが、Openship API と通信できないため、まだ表示できるものがありません。デプロイはそのまま稼働し続けます。",
+    "hintStatus": "API が稼働しているか確認します: ホストで `openship status` を実行してください。",
+    "hintStart": "起動していませんか？`openship up` で起動してください。",
+    "hintRemote": "リモートサーバーを管理していますか？その URL と、API ポートにここから到達できるかを確認してください。",
+    "docs": "セルフホスティングのドキュメント",
+    "retry": "再試行"
+  },
+  "error": {
+    "title": "このページでエラーが発生しました",
+    "description": "この画面の一部を描画できませんでした。多くの場合、再試行すれば解消します。デプロイ済みのものには影響ありません。",
+    "tryAgain": "再試行",
+    "goToProjects": "プロジェクトへ移動",
+    "refCode": "参照 ID"
+  },
+  "errorLinks": {
+    "docs": "ドキュメント",
+    "github": "問題を報告"
+  }
+}

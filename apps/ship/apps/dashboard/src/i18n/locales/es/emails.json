@@ -1,0 +1,190 @@
+{
+  "page": {
+    "title": "Servidor de correo",
+    "subtitle": "Configura un servidor de correo autoalojado con unos pocos clics",
+    "backToServers": "Volver a los servidores de correo",
+    "backToAdmin": "Volver a la administración de correo",
+    "addServer": "Añadir servidor de correo",
+    "removeModal": {
+      "title": "¿Eliminar este servidor de correo?",
+      "description": "Elimina {label} solo de la lista de correo. El stack de correo sigue funcionando y no se desinstala nada; vuelve a añadirlo cuando quieras con \"Adoptar\" para una instalación existente.",
+      "submit": "Eliminar de la lista",
+      "submitting": "Eliminando…",
+      "body": "Como la instalación en el servidor queda intacta, volver a adoptarla más tarde restaura la gestión completa sin reinstalar."
+    },
+    "errors": {
+      "resetFailed": "Error al restablecer",
+      "ackDns": "No se pudo confirmar el DNS",
+      "ackPtr": "No se pudo confirmar el PTR",
+      "selectServer": "Selecciona primero un servidor",
+      "resolutionFailed": "Error de resolución"
+    }
+  },
+  "adopt": {
+    "title": "Adoptar servidor de correo existente",
+    "intro": "¿Ya configuraste un servidor de correo con Openship en uno de tus servidores? Selecciónalo y escanéalo: si se encuentra un stack de correo, se vuelve a adoptar en el panel sin reinstalar ni tocar tus datos.",
+    "scanning": "Escaneando…",
+    "scan": "Escanear servidor",
+    "detected": "Servidor de correo detectado",
+    "domainLabel": "Dominio:",
+    "unknown": "desconocido",
+    "stats": "iRedMail en ejecución: {iredmail} · Instalación: {install} · Webmail: {webmail}",
+    "yes": "sí",
+    "no": "no",
+    "complete": "completa",
+    "inProgress": "en curso",
+    "present": "presente",
+    "notDeployed": "no desplegado",
+    "cancel": "Cancelar",
+    "adopt": "Adoptar",
+    "noInstall": "No se encontró ninguna instalación de servidor de correo en este servidor.",
+    "scanFailed": "Error al escanear: ¿está el servidor accesible?",
+    "adoptFailed": "Error al adoptar"
+  },
+  "dns": {
+    "heading": "Publica los registros DNS antes de continuar",
+    "bodyBefore": "La entrega de correo falla sin estos registros. Añádelos en tu proveedor de DNS y luego haz clic en ",
+    "action": "Ya configuré los registros: continuar",
+    "bodyAfterResume": " a continuación. La instalación se reanuda desde el paso {resumeStep} (certificado SSL).",
+    "bodyAfter": " a continuación.",
+    "autoConfigure": "Configurar DNS automáticamente",
+    "autoConfigureDesc": "Elige el proveedor que aloja el DNS de tu dominio. Publicaremos los registros por ti usando su API.",
+    "otherManual": "Otro / configurar manualmente",
+    "otherManualDesc": "Copia cada registro del banner y pégalo en la interfaz de tu proveedor",
+    "pickAnother": "Elegir otro proveedor",
+    "comingSoon": "Integración con {provider}: próximamente",
+    "comingSoonBefore": "La integración directa por API con este proveedor aún no está disponible. Por ahora, copia cada registro del banner y pégalo en la interfaz de tu proveedor de DNS. Una vez hecho, haz clic en ",
+    "comingSoonAfter": ".",
+    "gotIt": "Entendido",
+    "providers": {
+      "cloudflare": "DNS gratuito, propagación rápida. La opción más común.",
+      "hostinger": "Si compraste el dominio a través de Hostinger.",
+      "route53": "Zonas DNS alojadas en AWS.",
+      "digitalocean": "Zonas gestionadas por DigitalOcean.",
+      "namecheap": "DNS predeterminado de Namecheap.",
+      "google": "Zonas gestionadas por Google."
+    }
+  },
+  "recordCard": {
+    "priority": "Prioridad: {priority}",
+    "copyValue": "Copiar valor"
+  },
+  "progress": {
+    "liveLogs": "Registros en vivo",
+    "lineOne": "{count} línea",
+    "lineOther": "{count} líneas",
+    "cancel": "Cancelar",
+    "resetTitle": "Borrar el estado de instalación en el servidor y empezar de cero",
+    "confirmReset": "Haz clic de nuevo para confirmar",
+    "reset": "Restablecer",
+    "waiting": "Esperando salida…",
+    "noBuffered": "No hay salida almacenada para esta ejecución.",
+    "willStream": "Los registros se transmitirán aquí una vez que comience la configuración.",
+    "jumpToLatest": "Ir a lo más reciente",
+    "setupFailed": "Error en la configuración",
+    "retryFromStep": "Reintentar desde el paso {resumeStep}",
+    "resumePausedTitle": "Configuración en pausa",
+    "stepLabel": "Paso {step}",
+    "continueFromStep": "Continuar desde el paso {step}"
+  },
+  "serverList": {
+    "title": "Servidores de correo",
+    "addServer": "Añadir servidor de correo",
+    "removeFromList": "Eliminar de la lista",
+    "removeAria": "Eliminar {name} de la lista de correo",
+    "installing": "Instalando",
+    "running": "En ejecución",
+    "incomplete": "Incompleto",
+    "stoppedAt": "Detenido · paso {step}",
+    "open": "Abrir",
+    "openAria": "Abrir {name}",
+    "actionsAria": "Acciones para {name}",
+    "overviewTitle": "Resumen de correo",
+    "hint": "Eliminar un servidor solo lo desvincula de esta lista: la instalación sigue funcionando y puede volver a adoptarse."
+  },
+  "setup": {
+    "title": "Configuración del servidor de correo",
+    "subtitle": "Despliega un stack de correo autoalojado completo en este servidor",
+    "domainLabel": "Dominio",
+    "domainPlaceholder": "ejemplo.com",
+    "willBeAtBefore": "Tu servidor de correo estará en ",
+    "adminPasswordLabel": "Contraseña de administrador",
+    "passwordPlaceholder": "Contraseña segura, o haz clic en Generar",
+    "passwordHint": "Al menos 12 caracteres. Se usa para iniciar sesión en el buzón después de la configuración — puedes cambiarla más tarde desde el panel de administración de abajo.",
+    "startSetup": "Iniciar configuración",
+    "adoptCta": "¿Ya tienes un servidor de correo? Adóptalo",
+    "whatInstalled": "Qué se instala",
+    "features": {
+      "stackLabel": "Stack del servidor de correo",
+      "stackDesc": "Postfix, Dovecot, antispam",
+      "sslLabel": "Certificado SSL",
+      "sslDesc": "SSL automático de Let's Encrypt",
+      "dnsLabel": "Configuración de DNS",
+      "dnsDesc": "Registros DKIM, SPF, DMARC",
+      "adminLabel": "Panel de administración",
+      "adminDesc": "Gestiona buzones, dominios y alias"
+    },
+    "prerequisites": "Requisitos previos",
+    "prereq1": "Un dominio con acceso al DNS",
+    "prereq2": "Puerto 25 no bloqueado por tu proveedor",
+    "prereq2Relay": "Puerto 25 abierto para el correo entrante (el saliente usa tu relay)",
+    "prereq3": "Servidor Ubuntu/Debian limpio (recomendado)",
+    "hide": "Ocultar",
+    "reveal": "Mostrar",
+    "generateTitle": "Generar una contraseña aleatoria segura",
+    "generate": "Generar"
+  },
+  "sidebar": {
+    "portConflict": {
+      "title": "Conflicto de puertos detectado",
+      "subtitle": "Los puertos 80/443 son necesarios para el servidor de correo",
+      "managed": "Gestionado",
+      "known": "Servicio conocido",
+      "unknown": "Desconocido",
+      "container": "Contenedor: {name}",
+      "killWarning": "Asegúrate de que este proceso no sea necesario antes de finalizarlo. Esta acción no se puede deshacer.",
+      "allResolved": "Todos los conflictos resueltos",
+      "rerun": "Vuelve a ejecutar la comprobación de puertos y continúa la configuración.",
+      "resumeStep3": "Reanudar desde el paso 3"
+    },
+    "completion": {
+      "ready": "¡Servidor de correo listo!",
+      "webmail": "Webmail",
+      "adminPanel": "Panel de administración"
+    },
+    "dnsRef": {
+      "title": "Registros DNS requeridos",
+      "subtitle": "Referencia: toca para ver los registros que publicaste"
+    },
+    "steps": {
+      "title": "Todos los pasos",
+      "interrupted": "La instalación se interrumpió antes del paso {step}. Reanuda para retomar donde se quedó.",
+      "resume": "Reanudar",
+      "retry": "Reintentar"
+    },
+    "details": {
+      "title": "Detalles de la configuración",
+      "domain": "Dominio",
+      "mailServer": "Servidor de correo",
+      "started": "Iniciado"
+    }
+  },
+  "ptr": {
+    "heading": "Configura el DNS inverso (PTR) antes de continuar",
+    "bodyBefore": "Los PTR se configuran en el ",
+    "bodyStrongPanel": "panel de tu proveedor de VPS",
+    "bodyMid": " (Hostinger, DigitalOcean, AWS, etc.), ",
+    "bodyStrongNot": "no",
+    "bodyAfter": " en tu proveedor de DNS. Sin un rDNS coincidente, Gmail y Outlook rechazan tu correo saliente. La instalación se reanuda desde el paso {resumeStep} (SSL).",
+    "recommended": "recomendado",
+    "ipLabel": "IP",
+    "setTo": "Establecer en",
+    "copy": "Copiar",
+    "howTo": "Cómo configurarlo:",
+    "howToBody": " inicia sesión en tu proveedor de VPS, busca la configuración de red / DNS / rDNS del servidor y establece el registro PTR de cada IP en ",
+    "howToAfter": ". La propagación suele tardar de 5 a 15 minutos.",
+    "verifyWith": "Verifica con:",
+    "shouldReturn": " debería devolver ",
+    "action": "Ya configuré los PTR: continuar"
+  }
+}

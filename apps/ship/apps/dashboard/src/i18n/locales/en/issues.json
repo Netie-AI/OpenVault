@@ -1,0 +1,105 @@
+{
+  "title": "Monitoring",
+  "subtitle": "Health, updates and activity across your projects, servers and domains.",
+  "tabs": {
+    "open": "Overview",
+    "health": "Health",
+    "resolved": "History"
+  },
+  "monitoringHint": {
+    "description": "See service status and manage background monitoring.",
+    "action": "Manage monitoring"
+  },
+  "resolvedNote": "History covers container and server incidents — the other checks report current state, so a fixed certificate or deploy simply stops appearing here.",
+  "rescan": "Re-scan",
+  "rescanning": "Scanning",
+  "filters": {
+    "searchPlaceholder": "Search monitoring",
+    "all": "All",
+    "outage": "Outage",
+    "action_required": "Action needed",
+    "advisory": "Advisory",
+    "clear": "Clear filters"
+  },
+  "scopes": {
+    "platform": "Openship",
+    "server": "Servers",
+    "project": "Projects",
+    "domain": "Domains"
+  },
+  "scopeSubtitles": {
+    "platform": "This installation itself",
+    "server": "The machines your workloads run on",
+    "project": "Deployed projects and their containers",
+    "domain": "Custom hostnames and certificates"
+  },
+  "kinds": {
+    "deploy_blocked": "Deploy blocked",
+    "prompt": "Waiting for a decision",
+    "partial_decision": "Partial release",
+    "routing_unsynced": "Routing not synced",
+    "domain_unverified": "Domain not verified",
+    "ssl_error": "Certificate problem",
+    "port_advisory": "Port advisory",
+    "workload_unhealthy": "Failing health checks",
+    "workload_crash_loop": "Crash looping",
+    "workload_down": "Container down",
+    "server_unreachable": "Server unreachable",
+    "edge_down": "Edge down",
+    "edge_absent": "Edge not installed",
+    "mail_down": "Mail engine down",
+    "update_available": "Update available",
+    "component_behind": "Component update available",
+    "monitoring_offline": "Desktop offline"
+  },
+  "since": "Started {when}",
+  "resolvedWhen": "Resolved {when}",
+  "expiresIn": "Aborts in {n} min",
+  "view": "View",
+  "fix": "Fix",
+  "install": "Install",
+  "update": "Update",
+  "mailSetup": "Mail setup",
+  "selfUpdateNote": "This installation updates itself from the command line.",
+  "empty": {
+    "openTitle": "Nothing needs attention",
+    "openBody": "No deploys blocked or waiting, no certificate or domain problems, nothing behind, nothing on the wrong port. Checks keep running in the background.",
+    "resolvedTitle": "No resolved incidents",
+    "resolvedBody": "Container and server incidents appear here once they recover, and are kept for 30 days.",
+    "filteredTitle": "No matches",
+    "filteredBody": "Some issues are open — none match this filter."
+  },
+  "summary": {
+    "title": "Overview",
+    "subtitle": "Health at a glance",
+    "totalOpen": "open",
+    "totalResolved": "resolved",
+    "bySeverity": "By severity",
+    "byArea": "By area"
+  },
+  "home": {
+    "attentionTitle": "Needs attention",
+    "attentionSubtitle": "Something is broken or waiting on you",
+    "updatesTitle": "Updates available",
+    "updatesSubtitle": "New releases ready to apply",
+    "more": "{n} more",
+    "hide": "Hide until something changes"
+  },
+  "loadFailed": "Couldn't load monitoring",
+  "toast": {
+    "title": "Monitoring",
+    "rescanned": "Re-scan finished",
+    "rescanPartial": "Re-scan finished, {n} check(s) have incomplete coverage",
+    "rescanFailed": "Re-scan failed",
+    "resolved": "Done",
+    "resolveFailed": "Couldn't apply that fix",
+    "confirmDestructive": "This has a side effect that can't be undone. Continue?"
+  },
+  "connectivity": {
+    "offlineTitle": "This device is offline",
+    "offlineHint": "Monitoring may be out of date. Reconnect to refresh and recheck the servers.",
+    "retryStatus": "Retry status",
+    "recheck": "Recheck",
+    "unknownHealth": "Container health is unknown until Openship can reach this server."
+  }
+}

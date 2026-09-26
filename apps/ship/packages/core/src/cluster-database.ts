@@ -1,0 +1,204 @@
+import { AppError } from "./errors";
+import type { SetupLog, SetupStepProgress } from "./cluster-runtime";
+
+/** Deployable database capabilities. Deliberately separate from the canvas planner. */
+export const CLUSTER_DATABASE_TEMPLATES = [
+  {
+    id: "postgres",
+    name: "PostgreSQL",
+    operator: "CloudNativePG",
+    port: 5432,
+    envKey: "DATABASE_URL",
+    modes: ["standalone", "cluster"],
+    clusterDescription: "One primary with streaming replicas and automatic failover.",
+    clusterAwareClient: false,
+  },
+  {
+    id: "redis",
+    name: "Redis",
+    operator: "Redis Operator",
+    port: 6379,
+    envKey: "REDIS_URL",
+    modes: ["standalone", "cluster"],
+    clusterDescription:
+      "Three or more shards, each with a replica. Requires a Redis Cluster client.",
+    clusterAwareClient: true,
+  },
+] as const;
+
+export type ClusterDatabaseEngine = "postgres" | "redis";
+export interface ClusterDatabaseConfig {
+  engine: ClusterDatabaseEngine;
+  mode: "standalone" | "cluster";
+  /** PostgreSQL instances, or Redis shards (one follower per shard). */
+  instances: number;
+  storageGiB: number;
+  storageClass: string;
+  cpuMillis: number;
+  memoryMiB: number;
+  databaseName: string;
+  backup?: {
+    destinationId: string;
+    schedule: "daily" | "hourly" | "manual";
+    retentionDays: number;
+  };
+}
+/** Server-derived restore identity; the client never supplies archive paths. */
+export interface ClusterDatabaseRestoreSource {
+  databaseId: string;
+  backupName: string;
+  backupId: string;
+  destinationId: string;
+  destinationPath: string;
+  serverName: string;
+  endpoint: string | null;
+}
+export interface ClusterDatabaseBackup {
+  name: string;
+  phase: string;
+  startedAt: string | null;
+  completedAt: string | null;
+  error: string | null;
+  backupId: string | null;
+}
+export const CLUSTER_DATABASE_STEPS = [
+  "connect",
+  "operators",
+  "storage",
+  "database",
+  "verify",
+] as const;
+export type ClusterDatabaseStep = (typeof CLUSTER_DATABASE_STEPS)[number] | "remove" | "backup";
+export type ClusterDatabaseStatus =
+  | "provisioning"
+  | "ready"
+  | "failed"
+  | "interrupted"
+  | "deleting"
+  | "retained"
+  | "deleted";
+export interface ClusterDatabaseProgress {
+  steps: SetupStepProgress<ClusterDatabaseStep>[];
+  logs: SetupLog<ClusterDatabaseStep>[];
+}
+export interface ClusterDatabaseObservation {
+  ready: boolean;
+  message: string;
+  observedAt: string;
+  primary: string | null;
+  pods: Array<{
+    name: string;
+    serverId: string | null;
+    serverName: string | null;
+    nodeName: string | null;
+    role: string;
+    ready: boolean;
+    phase: string;
+    restarts: number;
+  }>;
+  volumes: Array<{ name: string; phase: string; capacity: string | null }>;
+  backups?: ClusterDatabaseBackup[];
+  archive?: { healthy: boolean | null; message: string; lastSuccessfulBackup: string | null };
+}
+export const clusterDatabaseRunning = (status: string) =>
+  status === "provisioning" || status === "deleting";
+export const CLUSTER_DATABASE_LEASE_MS = 90_000;
+
+export function clusterDatabasePodCount(config: ClusterDatabaseConfig): number {
+  return config.instances * (config.engine === "redis" && config.mode === "cluster" ? 2 : 1);
+}
+
+export function validateClusterDatabase(config: ClusterDatabaseConfig): void {
+  const invalid = (message: string): never => {
+    throw new AppError(message, 422, "CLUSTER_DATABASE_CONFIG");
+  };
+  if (!["postgres", "redis"].includes(config.engine))
+    invalid("Choose a supported database engine.");
+  if (!["standalone", "cluster"].includes(config.mode)) invalid("Choose standalone or cluster.");
+  if (
+    !Number.isInteger(config.instances) ||
+    (config.mode === "standalone"
+      ? config.instances !== 1
+      : config.instances < 3 || config.instances > 9)
+  )
+    invalid(
+      "Standalone databases use one instance. Clusters need between 3 and 9 instances or shards.",
+    );
+  if (!Number.isInteger(config.storageGiB) || config.storageGiB < 1 || config.storageGiB > 16384)
+    invalid("Choose between 1 and 16384 GiB of storage per instance.");
+  if (
+    !/^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$/.test(config.storageClass) ||
+    config.storageClass.length > 63
+  )
+    invalid("Choose a valid storage class.");
+  if (!Number.isInteger(config.cpuMillis) || config.cpuMillis < 100 || config.cpuMillis > 64000)
+    invalid("CPU must be between 100 and 64000 millicores per instance.");
+  if (!Number.isInteger(config.memoryMiB) || config.memoryMiB < 256 || config.memoryMiB > 262144)
+    invalid("Memory must be between 256 and 262144 MiB per instance.");
+  if (
+    !/^[a-z][a-z0-9_]{0,47}$/.test(config.databaseName) ||
+    ["postgres", "template0", "template1"].includes(config.databaseName)
+  )
+    invalid(
+      "Use a database name starting with a letter, followed by letters, digits or underscores.",
+    );
+  if (config.backup) {
+    if (config.engine !== "postgres")
+      invalid("Automated archive backups are currently supported by the PostgreSQL template.");
+    if (!config.backup.destinationId || config.backup.destinationId.length > 128)
+      invalid("Choose an existing S3 backup destination.");
+    if (!["daily", "hourly", "manual"].includes(config.backup.schedule))
+      invalid("Choose a supported backup schedule.");
+    if (
+      !Number.isInteger(config.backup.retentionDays) ||
+      config.backup.retentionDays < 7 ||
+      config.backup.retentionDays > 365
+    )
+      invalid("Keep PostgreSQL archives for between 7 and 365 days.");
+  }
+}
+
+/** No silent major upgrade, topology conversion, volume shrink, or Redis resharding. */
+export function validateClusterDatabaseUpdate(
+  before: ClusterDatabaseConfig,
+  after: ClusterDatabaseConfig,
+) {
+  validateClusterDatabase(after);
+  if (
+    ["engine", "mode", "storageClass", "databaseName"].some(
+      (key) =>
+        before[key as keyof ClusterDatabaseConfig] !== after[key as keyof ClusterDatabaseConfig],
+    )
+  )
+    throw new AppError(
+      "The engine, topology, storage class and database name cannot be changed in place. Create another database and restore into it.",
+      422,
+      "CLUSTER_DATABASE_IMMUTABLE",
+    );
+  if (after.storageGiB < before.storageGiB)
+    throw new AppError("Database volumes cannot be shrunk.", 422, "CLUSTER_DATABASE_IMMUTABLE");
+  if (after.storageClass === "openship-local" && after.storageGiB !== before.storageGiB)
+    throw new AppError(
+      "Local storage reservations cannot be resized. For resizable PostgreSQL volumes, select an expandable storage class when creating the database.",
+      422,
+      "CLUSTER_DATABASE_IMMUTABLE",
+    );
+  if (after.engine === "redis" && after.storageGiB !== before.storageGiB)
+    throw new AppError(
+      "Redis volume resizing is not supported by this template yet. Keep the existing storage size.",
+      422,
+      "CLUSTER_DATABASE_IMMUTABLE",
+    );
+  if (after.engine === "redis" && after.instances !== before.instances)
+    throw new AppError(
+      "Changing the shard count requires a reviewed data migration. Redis shard counts cannot be changed by an application scale operation.",
+      422,
+      "CLUSTER_DATABASE_IMMUTABLE",
+    );
+  if (before.backup && after.backup?.destinationId !== before.backup.destinationId)
+    throw new AppError(
+      "Keep this database's archive destination to preserve its recovery history. You can change the schedule or restore into a new database with a different destination.",
+      422,
+      "CLUSTER_DATABASE_IMMUTABLE",
+    );
+}

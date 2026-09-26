@@ -1,0 +1,222 @@
+{
+  "home": {
+    "goodMorning": "Bonjour",
+    "goodAfternoon": "Bon après-midi",
+    "goodEvening": "Bonsoir",
+    "subtitle": "Voici ce qui se passe dans vos projets",
+    "statsProjects": "Projets",
+    "statsDeployments": "Déploiements",
+    "statsSuccessful": "Réussis",
+    "statsFailed": "Échoués",
+    "recentProjects": "Projets récents",
+    "yourLatestActivity": "Votre activité récente",
+    "viewAll": "Tout voir",
+    "noProjectsYet": "Aucun projet pour le moment",
+    "createFirstProject": "Créez votre premier projet",
+    "justNow": "à l'instant",
+    "minutesAgo": "il y a {n} min",
+    "hoursAgo": "il y a {n} h",
+    "daysAgo": "il y a {n} j",
+    "monthsAgo": "il y a {n} mois",
+    "statusLive": "En ligne",
+    "statusPaused": "En pause",
+    "yourProjects": "Vos projets",
+    "loading": "Chargement...",
+    "projectCountOne": "{count} projet",
+    "projectCountOther": "{count} projets",
+    "viewAllProjects": "Voir les {count} projets →",
+    "viewAllApps": "Voir les {count} applications →",
+    "greetingName": "{greeting}, {name}",
+    "importGit": "Importer depuis Git",
+    "importGitDesc": "Depuis un dépôt",
+    "mcpDeploy": "Déploiement MCP",
+    "mcpDeployDesc": "Connecter un agent IA",
+    "settingsCard": "Paramètres",
+    "settingsCardDesc": "Compte et équipe",
+    "docs": "Documentation",
+    "docsDesc": "En savoir plus",
+    "activityTitle": "Activité",
+    "systemStatus": "État du système",
+    "operational": "Opérationnel",
+    "oneIssue": "1 problème",
+    "manyIssues": "{n} problèmes",
+    "recentTitle": "Récent",
+    "activityEmpty": "Votre activité apparaîtra ici",
+    "allSystemsOperational": "Tous les systèmes sont opérationnels",
+    "runningSmoothly": "Vos projets fonctionnent sans problème",
+    "time": {
+      "justNow": "à l'instant",
+      "minutes": "il y a {n} min",
+      "hours": "il y a {n} h",
+      "days": "il y a {n} j",
+      "months": "il y a {n} mois"
+    },
+    "appsEmptyTitle": "Aucune application pour le moment",
+    "appsEmptyDesc": "En un clic, entièrement auto-hébergé — bases de données, automatisation, analytique, coffres de mots de passe et plus encore, sur vos propres serveurs."
+  },
+  "nav": {
+    "scale": "Mise à l’échelle",
+    "home": "Accueil",
+    "new-project": "Nouveau projet",
+    "projects": "Projets",
+    "deployments": "Déploiements",
+    "issues": "Surveillance",
+    "backups": "Sauvegardes",
+    "domains": "Domaines",
+    "monitoring": "Supervision",
+    "servers": "Serveurs",
+    "emails": "E-mails",
+    "settings": "Paramètres",
+    "billing": "Facturation et utilisation",
+    "audit": "Journal d'audit",
+    "mailSetup": "Configurer la messagerie",
+    "mailSetupProgress": "Progression de la configuration",
+    "addMailbox": "Ajouter une boîte aux lettres",
+    "webmail": "Webmail",
+    "sections": {
+      "main": "Principal",
+      "settings": "Paramètres",
+      "infrastructure": "Infrastructure",
+      "mail": "Messagerie",
+      "delivery": "Distribution",
+      "system": "Système",
+      "account": "Compte"
+    },
+    "apps": "Applications",
+    "jobs": "Tâches"
+  },
+  "sidebar": {
+    "expand": "Développer la barre latérale",
+    "collapse": "Réduire la barre latérale"
+  },
+  "user": {
+    "logout": "Se déconnecter",
+    "loggingOut": "Déconnexion…",
+    "profile": "Profil",
+    "preferences": "Préférences"
+  },
+  "pages": {
+    "projects": {
+      "title": "Projets",
+      "description": "Déployez et gérez vos applications en toute simplicité",
+      "createButton": "Créer un projet",
+      "stats": {
+        "totalProjects": "Total des projets",
+        "liveNow": "En ligne actuellement",
+        "avgPerDay": "Moyenne par jour",
+        "successRate": "Taux de réussite"
+      },
+      "searchPlaceholder": "Rechercher des projets...",
+      "pinnedProjects": "Projets épinglés",
+      "otherProjects": "Autres projets",
+      "noResultsFound": "Aucun projet trouvé correspondant à « {query} »",
+      "emptyState": {
+        "title": "Démarrez votre premier projet",
+        "description": "Importez un dépôt Git, utilisez un modèle ou déployez depuis la CLI. Vos projets apparaîtront ici.",
+        "createProject": "Créer un projet",
+        "browseTemplates": "Parcourir les modèles",
+        "zeroConfig": "Déploiement sans configuration",
+        "instant": "Instantané",
+        "instantDesc": "Déployez en quelques secondes",
+        "global": "Mondial",
+        "globalDesc": "Plus de 100 régions edge",
+        "previews": "Aperçus",
+        "previewsDesc": "Une URL par branche",
+        "rollbacks": "Restaurations",
+        "rollbacksDesc": "Rétablissement en un clic",
+        "commandPalette": "Ou appuyez sur {key} pour ouvrir la palette de commandes"
+      },
+      "view": {
+        "label": "Affichage",
+        "list": "Liste",
+        "grid": "Grille"
+      }
+    },
+    "deployments": {
+      "title": "Déploiements",
+      "description": "Consultez et gérez l'historique de vos déploiements."
+    },
+    "domains": {
+      "title": "Domaines",
+      "description": "Gérez les domaines personnalisés et les enregistrements DNS."
+    },
+    "monitoring": {
+      "title": "Supervision",
+      "description": "Journaux, métriques et contrôles de santé pour vos services."
+    },
+    "servers": {
+      "title": "Serveurs",
+      "description": "Gérez vos serveurs de déploiement et votre infrastructure."
+    },
+    "settings": {
+      "title": "Paramètres",
+      "description": "Paramètres du compte, de l'équipe et de la plateforme."
+    },
+    "billing": {
+      "title": "Facturation et utilisation",
+      "description": "Gérez votre abonnement, votre consommation et vos moyens de paiement."
+    },
+    "apps": {
+      "title": "Applications",
+      "description": "Services gérés en un clic — installez et exécutez Convex, WordPress, la messagerie, et plus encore.",
+      "createButton": "Installer une application",
+      "loading": "Chargement des applications…",
+      "countOne": "{count} application installée",
+      "countOther": "{count} applications installées",
+      "emptyTitle": "Installez votre première application",
+      "emptyDescription": "Démarrez Convex, n8n, Ghost et plus encore — en un clic, entièrement auto-hébergé. Choisissez-en une pour commencer.",
+      "popular": "Applications populaires",
+      "alsoDeploy": "Vous pouvez aussi déployer",
+      "browseAll": "Parcourir toutes les applications",
+      "moreApps": "+{count} de plus",
+      "catalogTitle": "Installer une application",
+      "catalogDescription": "Services gérés en un clic. Choisissez-en une pour l'installer comme application.",
+      "catalogSearchPlaceholder": "Rechercher des applications…",
+      "catalogNoResults": "Aucune application ne correspond à votre recherche.",
+      "categories": {
+        "all": "Toutes",
+        "backend": "Backend",
+        "database": "Base de données",
+        "cms": "CMS",
+        "analytics": "Analytique",
+        "automation": "Automatisation",
+        "mail": "Messagerie",
+        "other": "Outils"
+      },
+      "installing": "Installation…",
+      "install": "Installer",
+      "cancel": "Annuler",
+      "nameLabel": "Nom",
+      "configTitle": "Configurer {app}",
+      "comingSoon": "Bientôt disponible"
+    }
+  },
+  "quickLinks": {
+    "title": "Actions rapides",
+    "subtitle": "Accédez aux tâches courantes",
+    "deployProject": {
+      "title": "Déployer un projet",
+      "description": "Importer depuis Git"
+    },
+    "projects": {
+      "title": "Projets",
+      "description": "Tous les projets"
+    },
+    "deployments": {
+      "title": "Déploiements",
+      "description": "Historique des builds"
+    },
+    "settings": {
+      "title": "Paramètres",
+      "description": "Gérer les accès"
+    },
+    "domains": {
+      "title": "Domaines",
+      "description": "Domaines personnalisés"
+    },
+    "billing": {
+      "title": "Facturation et utilisation",
+      "description": "Consommation et forfaits"
+    }
+  }
+}

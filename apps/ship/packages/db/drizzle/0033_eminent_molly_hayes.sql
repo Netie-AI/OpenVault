@@ -1,0 +1,2 @@
+ALTER TABLE "personal_access_token" ADD COLUMN "oauth_client_id" text;--> statement-breakpoint
+CREATE UNIQUE INDEX "personal_access_token_oauth_binding_idx" ON "personal_access_token" USING btree ("user_id","oauth_client_id");

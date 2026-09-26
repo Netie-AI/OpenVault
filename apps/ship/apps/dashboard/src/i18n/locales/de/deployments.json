@@ -1,0 +1,205 @@
+{
+  "time": {
+    "secondsAgo": "vor {n} s",
+    "minutesAgo": "vor {n} min",
+    "hoursAgo": "vor {n} Std.",
+    "daysAgo": "vor {n} T.",
+    "monthsAgo": "vor {n} Mon.",
+    "yearsAgo": "vor {n} J."
+  },
+  "header": {
+    "title": "Deployments",
+    "loading": "Wird geladen…",
+    "countProjectOne": "{count} Deployment",
+    "countProjectOther": "{count} Deployments",
+    "countAllOne": "{deployments} insgesamt über {projects} Projekt",
+    "countAllOther": "{deployments} insgesamt über {projects} Projekte"
+  },
+  "filters": {
+    "searchPlaceholder": "Deployments suchen...",
+    "all": "Alle",
+    "success": "Erfolgreich",
+    "failed": "Fehlgeschlagen",
+    "building": "Wird gebaut",
+    "canceled": "Abgebrochen"
+  },
+  "projectFilter": {
+    "allProjects": "Alle Projekte"
+  },
+  "sidebar": {
+    "overview": {
+      "title": "Übersicht",
+      "total": "Gesamt",
+      "successful": "Erfolgreich",
+      "failed": "Fehlgeschlagen",
+      "inProgress": "In Bearbeitung",
+      "pageTitle": "Auf dieser Seite"
+    },
+    "autoDeploy": {
+      "title": "Auto-Deploy",
+      "description": "Aktiviere Auto-Deploy, um Deployments bei jedem Push in deinen Haupt-Branch automatisch auszulösen.",
+      "cta": "Zu den Projekteinstellungen"
+    },
+    "getStarted": {
+      "title": "Erste Schritte",
+      "description": "Importiere ein Git-Repository oder verwende eine Vorlage, um dein erstes Deployment zu erstellen.",
+      "cta": "Projekt deployen"
+    },
+    "recent": {
+      "title": "Zuletzt",
+      "empty": "Deine Deployments erscheinen hier",
+      "unknown": "Unbekannt"
+    }
+  },
+  "stats": {
+    "total": "Gesamt",
+    "projectCountOne": "{count} Projekt",
+    "projectCountOther": "{count} Projekte",
+    "success": "Erfolgreich",
+    "failed": "Fehlgeschlagen",
+    "inProgress": "In Bearbeitung",
+    "buildingNow": "wird gerade gebaut"
+  },
+  "status": {
+    "deployed": "Bereitgestellt",
+    "failed": "Fehlgeschlagen",
+    "canceled": "Abgebrochen",
+    "building": "Wird gebaut",
+    "deploying": "Wird bereitgestellt",
+    "partial": "Teilweise",
+    "actionRequired": "Aktion erforderlich",
+    "rejected": "Abgelehnt",
+    "verifying": "Wird überprüft",
+    "noChanges": "Keine Änderungen",
+    "pending": "Ausstehend"
+  },
+  "serviceStatus": {
+    "deployed": "Bereitgestellt",
+    "failed": "Fehlgeschlagen",
+    "cancelled": "Abgebrochen",
+    "skipped": "Übersprungen",
+    "building": "Wird gebaut",
+    "deploying": "Wird bereitgestellt",
+    "running": "Läuft",
+    "removedOnHost": "Auf dem Host entfernt",
+    "verifying": "Wird überprüft",
+    "pending": "Ausstehend"
+  },
+  "card": {
+    "unknownProject": "Unbekanntes Projekt",
+    "versionTitle": "Version {version}",
+    "active": "Aktiv",
+    "activeTitle": "Dies ist das Deployment, das das Projekt derzeit ausliefert",
+    "pinned": "Angeheftet",
+    "pinnedTitle": "Angeheftet — von der Aufbewahrungsbereinigung ausgenommen. Bleibt unbegrenzt per Rollback wiederherstellbar.",
+    "snapshotted": "Snapshot erstellt",
+    "snapshottedTitle": "Artefakt archiviert — auf diese Version kann zurückgesetzt werden",
+    "manualDeploy": "Manuelles Deploy",
+    "serviceTitle": "{name}: {label}",
+    "serviceTitleReason": "{name}: {label} ({reason})"
+  },
+  "empty": {
+    "filtered": {
+      "title": "Keine Deployments gefunden",
+      "description": "Passe deine Filter an oder setze deine Suche zurück."
+    },
+    "none": {
+      "title": "Noch keine Deployments",
+      "description": "Deploye dein erstes Projekt, und es erscheint hier mit Build-Status, Commit-Details und Performance-Metriken.",
+      "deployButton": "Projekt deployen",
+      "browseButton": "Vorlagen durchsuchen"
+    }
+  },
+  "modal": {
+    "title": "Commit-Details",
+    "project": "Projekt",
+    "unknownProject": "Unbekanntes Projekt",
+    "domain": "Domain",
+    "noDomain": "Keine Domain",
+    "status": "Status",
+    "environment": "Umgebung",
+    "statusName": {
+      "success": "Erfolgreich",
+      "failed": "Fehlgeschlagen",
+      "building": "Wird gebaut",
+      "deploying": "Wird bereitgestellt",
+      "canceled": "Abgebrochen",
+      "pending": "Ausstehend"
+    },
+    "changedFiles": "Geänderte Dateien ({count})",
+    "fileTypes": {
+      "added": "+ Hinzugefügt",
+      "modified": "~ Geändert",
+      "removed": "- Entfernt"
+    },
+    "viewOnGithub": "Auf GitHub ansehen",
+    "visitSite": "Website besuchen",
+    "manual": {
+      "title": "Manuelles Deployment",
+      "description": "Dieses Deployment wurde manuell ausgelöst und enthält keine Commit-Informationen.",
+      "deploymentId": "Deployment-ID",
+      "created": "Erstellt",
+      "type": "Typ",
+      "typeManual": "Manuell"
+    }
+  },
+  "menu": {
+    "openDeployment": "Deployment öffnen",
+    "viewRepository": "Repository ansehen",
+    "copyDomainUrl": "Domain-URL kopieren",
+    "copyBuildId": "Build-ID kopieren",
+    "cancelDeployment": "Deployment abbrechen",
+    "rollback": "Auf diese Version zurücksetzen",
+    "rollbackTitle": {
+      "enabled": "Das Projekt auf diese Version zurücksetzen (nur Code — Daten bleiben unverändert)",
+      "active": "Dies ist bereits die aktive Version",
+      "pruned": "Dieses Deployment hat kein aufbewahrtes Image und keinen Commit zum Neubauen",
+      "notReady": "Es kann nur auf fertige Deployments zurückgesetzt werden",
+      "rebuildOnly": "Diese Version durch Neubau ihres Commits wiederherstellen (ihr Image wurde entfernt)"
+    },
+    "pin": "Anheften",
+    "unpin": "Lösen",
+    "pinTitle": {
+      "pin": "Dieses Deployment unbegrenzt per Rollback wiederherstellbar halten (Limit: 10 angeheftet pro Projekt)",
+      "unpin": "Zulassen, dass dieses Deployment bereinigt wird, wenn die Aufbewahrung überläuft",
+      "pruned": "Anheften nicht möglich — das Artefakt wurde bereits bereinigt"
+    },
+    "deleteDeployment": "Deployment löschen",
+    "rollbackFailed": "Rollback fehlgeschlagen",
+    "pinFailed": "Deployment konnte nicht angeheftet werden",
+    "unpinFailed": "Anheftung des Deployments konnte nicht aufgehoben werden",
+    "rollbackModeInstant": "Sofortige Wiederherstellung — nutzt das aufbewahrte Image dieser Version, kein Neubau.",
+    "rollbackModeRebuild": "Neubau — das Image dieser Version liegt nicht mehr auf dem Host, ihr Commit wird neu gebaut.",
+    "rollbackModeReacquireImage": "Registry-Wiederherstellung — lädt die exakt für diese Version gespeicherte Image-Referenz erneut; kein Quellcode-Neubau.",
+    "rollbackModeMixed": "Größtenteils sofort — {count} Service(s) haben ihr Image verloren und werden neu gebaut."
+  },
+  "rollbackConfirm": {
+    "title": "Auf diese Version zurücksetzen?",
+    "dataUnchanged": "Stellt nur den Anwendungscode wieder her. Datenbank- und Volume-Daten bleiben unverändert.",
+    "envHeading": "Umgebungsvariablen",
+    "envSummaryOverlay": "{count} Variable(n) ändern sich — die Werte dieser Version werden über die aktuellen gelegt.",
+    "envSummaryReplace": "{count} Variable(n) ändern sich — die Umgebung dieser Version wird genau so verwendet, wie sie erfasst wurde.",
+    "envNoChanges": "Keine Umgebungsvariable ändert sich.",
+    "envUnchanged": "Der bestehende Container wird neu gestartet statt neu erstellt, seine Umgebung bleibt unberührt.",
+    "envNoValues": "Werte werden hier nie angezeigt.",
+    "envTruncated": "{shown} von {total} angezeigt.",
+    "dirFrozenWins": "kehrt zum Wert dieser Version zurück",
+    "dirRemovedSince": "kommt zurück — seit dieser Version gelöscht",
+    "dirAddedSinceKept": "bleibt wie jetzt — nach dieser Version hinzugefügt",
+    "dirAddedSinceDropped": "entfällt — nach dieser Version hinzugefügt",
+    "scopeAmbiguous": "ohne Service-Zuordnung erfasst, daher gilt ein Wert für alle Services",
+    "untouchedHeading": "Nach dieser Version hinzugefügte Services",
+    "untouchedNote": "Diese laufen weiter und werden nicht angetastet: {names}",
+    "confirm": "Zurücksetzen",
+    "cancel": "Abbrechen"
+  },
+  "loadFailed": "Bereitstellungen konnten nicht geladen werden.",
+  "retry": "Erneut versuchen",
+  "pagination": {
+    "label": "Seiten des Bereitstellungsverlaufs",
+    "previous": "Vorherige Seite",
+    "next": "Nächste Seite",
+    "pageOf": "Seite {page} von {total}",
+    "range": "Bereitstellungen {from}–{to} von {total}"
+  }
+}

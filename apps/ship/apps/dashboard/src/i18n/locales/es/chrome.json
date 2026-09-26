@@ -1,0 +1,86 @@
+{
+  "accountSwitcher": {
+    "workspacesCount": "{count} espacios de trabajo",
+    "newWorkspace": "Nuevo espacio de trabajo",
+    "createTitle": "Crear un espacio de trabajo",
+    "createDescription": "Una organización independiente para proyectos, despliegues, servidores y miembros.",
+    "nameLabel": "Nombre",
+    "namePlaceholder": "Acme Corp",
+    "cancel": "Cancelar",
+    "create": "Crear",
+    "toastTitle": "Organización",
+    "switchFailed": "No se pudo cambiar",
+    "createFailed": "No se pudo crear"
+  },
+  "sidebar": {
+    "workspaceFallback": "Espacio de trabajo",
+    "workspacesCount": "{count} espacios de trabajo",
+    "switchOrganization": "Cambiar de organización",
+    "current": "Actual",
+    "cloudLabel": "Cloud: {email}",
+    "linkedToCloud": "Vinculado a Openship Cloud como {email}",
+    "backToSetup": "Volver a la configuración",
+    "personal": "Personal"
+  },
+  "mailRail": {
+    "selectServer": "Selecciona un servidor de correo",
+    "switchServer": "Cambiar de servidor de correo",
+    "setupIncomplete": "Configuración incompleta"
+  },
+  "migration": {
+    "inProgressTitle": "Migración en curso",
+    "inProgressBody": "Tus datos se están trasladando. Esta página se actualizará cuando finalice la transición, normalmente en 30-90 segundos.",
+    "inProgressHint": "No cierres esta pestaña. Estamos comprobando el estado de la migración cada pocos segundos y se recargará automáticamente.",
+    "newLocation": "Nueva ubicación",
+    "switchBackPrompt": "¿Necesitas volver al modo de usuario único en esta máquina?",
+    "switchBackAction": "Volver al modo de usuario único",
+    "cloudTitle": "Esta instancia se trasladó a Openship Cloud",
+    "cloudBody": "Tu equipo ahora colabora en la URL de abajo. Esta instancia local ya no contiene tus proyectos, ajustes ni despliegues; abre el panel de la nube para continuar.",
+    "cloudCta": "Abrir panel de la nube",
+    "tunneledTitle": "Tu openship ahora es accesible a través del túnel",
+    "tunneledBody": "Tus compañeros pueden iniciar sesión en la URL de abajo cuando tu máquina esté en línea. Los datos siguen residiendo en este dispositivo; el túnel solo los expone a través del edge de Oblien.",
+    "tunneledCta": "Abrir URL del túnel",
+    "serverTitle": "Esta instancia se trasladó a tu servidor",
+    "serverBody": "Tu equipo ahora colabora en la URL de abajo. Esta instancia local ya no contiene tus proyectos, ajustes ni despliegues; abre el panel del equipo para continuar.",
+    "serverCta": "Abrir panel del equipo"
+  },
+  "notFound": {
+    "title": "Página no encontrada",
+    "descGlobal": "La página que buscas no existe o se ha movido.",
+    "descDashboard": "Esta página no existe o puede que se haya movido. Comprueba la URL o vuelve a tu panel.",
+    "backToDashboard": "Volver al panel",
+    "viewDeployments": "Ver despliegues",
+    "copyId": "Copiar ID"
+  },
+  "window": {
+    "back": "Atrás",
+    "forward": "Adelante",
+    "reload": "Recargar",
+    "minimize": "Minimizar",
+    "maximize": "Maximizar",
+    "restore": "Restaurar",
+    "close": "Cerrar",
+    "devTools": "Herramientas de desarrollo",
+    "navigation": "Navegación"
+  },
+  "apiDown": {
+    "title": "No se puede conectar con la API",
+    "description": "El panel está funcionando, pero no puede comunicarse con la API de Openship, así que todavía no hay nada que mostrar. Tus despliegues siguen funcionando igualmente.",
+    "hintStatus": "Comprueba que la API esté activa: ejecuta `openship status` en el host.",
+    "hintStart": "¿No está en ejecución? Inícialo con `openship up`.",
+    "hintRemote": "¿Gestionas un servidor remoto? Comprueba su URL y que el puerto de la API sea accesible desde aquí.",
+    "docs": "Documentación de autoalojamiento",
+    "retry": "Reintentar"
+  },
+  "error": {
+    "title": "Esta página encontró un error",
+    "description": "Algo de esta pantalla no se pudo renderizar. Reintentar suele solucionarlo; nada de lo que has desplegado se ha visto afectado.",
+    "tryAgain": "Intentar de nuevo",
+    "goToProjects": "Ir a proyectos",
+    "refCode": "Ref."
+  },
+  "errorLinks": {
+    "docs": "Documentación",
+    "github": "Informar de un problema"
+  }
+}

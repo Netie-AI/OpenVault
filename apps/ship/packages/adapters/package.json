@@ -1,0 +1,53 @@
+{
+  "name": "@repo/adapters",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    },
+    "./proxy": {
+      "types": "./src/system/proxy/cli.ts",
+      "import": "./src/system/proxy/cli.ts"
+    },
+    "./container-logging": {
+      "types": "./src/container-logging.ts",
+      "import": "./src/container-logging.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --clean",
+    "dev": "tsup src/index.ts --format esm --dts --watch",
+    "embed:lua": "bun scripts/embed-lua.ts",
+    "embed:catalog": "bun scripts/embed-catalog.ts",
+    "edge:conf": "bun scripts/generate-edge-conf.ts",
+    "lint": "tsc --noEmit",
+    "test": "vitest run",
+    "test:bun": "bun test --preload ./test/bun-vitest-shim.ts src/runtime/docker-ssh-agent.test.ts",
+    "clean": "rm -rf dist .turbo node_modules"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.668.0",
+    "@aws-sdk/lib-storage": "^3.668.0",
+    "@aws-sdk/s3-request-presigner": "^3.668.0",
+    "@repo/core": "workspace:*",
+    "dockerode": "^4.0.9",
+    "ignore": "^7.0.5",
+    "oblien": "2.4.0",
+    "ssh2": "^1.17.0",
+    "tar-fs": "^2.1.4",
+    "undici": "^7.29.1",
+    "yaml": "^2.8.2"
+  },
+  "devDependencies": {
+    "@types/dockerode": "^4.0.1",
+    "@types/node": "^22.13.0",
+    "@types/ssh2": "^1.15.5",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
+  }
+}

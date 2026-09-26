@@ -1,0 +1,86 @@
+{
+  "accountSwitcher": {
+    "workspacesCount": "{count} workspaces",
+    "newWorkspace": "New workspace",
+    "createTitle": "Create a workspace",
+    "createDescription": "A separate org for projects, deployments, servers, and members.",
+    "nameLabel": "Name",
+    "namePlaceholder": "Acme Corp",
+    "cancel": "Cancel",
+    "create": "Create",
+    "toastTitle": "Organization",
+    "switchFailed": "Failed to switch",
+    "createFailed": "Failed to create"
+  },
+  "sidebar": {
+    "workspaceFallback": "Workspace",
+    "workspacesCount": "{count} workspaces",
+    "switchOrganization": "Switch organization",
+    "current": "Current",
+    "cloudLabel": "Cloud: {email}",
+    "linkedToCloud": "Linked to Openship Cloud as {email}",
+    "backToSetup": "Back to setup",
+    "personal": "Personal"
+  },
+  "mailRail": {
+    "selectServer": "Select a mail server",
+    "switchServer": "Switch mail server",
+    "setupIncomplete": "Setup incomplete"
+  },
+  "migration": {
+    "inProgressTitle": "Migration in progress",
+    "inProgressBody": "Your data is being moved. This page will refresh when the cutover finishes — typically 30-90 seconds.",
+    "inProgressHint": "Don't close this tab. We're checking the migration status every few seconds and will reload automatically.",
+    "newLocation": "New location",
+    "switchBackPrompt": "Need single-user mode back on this machine?",
+    "switchBackAction": "Switch back to single user",
+    "cloudTitle": "This instance moved to Openship Cloud",
+    "cloudBody": "Your team now collaborates at the URL below. This local instance no longer holds your projects, settings, or deployments — open the cloud dashboard to continue.",
+    "cloudCta": "Open cloud dashboard",
+    "tunneledTitle": "Your openship is now reachable via the tunnel",
+    "tunneledBody": "Teammates can sign in at the URL below when your machine is online. Data still lives on this device — the tunnel just exposes it through the Oblien edge.",
+    "tunneledCta": "Open tunnel URL",
+    "serverTitle": "This instance moved to your server",
+    "serverBody": "Your team now collaborates at the URL below. This local instance no longer holds your projects, settings, or deployments — open the team dashboard to continue.",
+    "serverCta": "Open team dashboard"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "descGlobal": "The page you're looking for doesn't exist or has moved.",
+    "descDashboard": "This page doesn't exist or may have moved. Check the URL, or head back to your dashboard.",
+    "backToDashboard": "Back to dashboard",
+    "viewDeployments": "View deployments",
+    "copyId": "Copy ID"
+  },
+  "error": {
+    "title": "This page hit an error",
+    "description": "Something in this screen failed to render. Trying again usually clears it — nothing you deployed was affected.",
+    "tryAgain": "Try again",
+    "goToProjects": "Go to projects",
+    "refCode": "Ref"
+  },
+  "apiDown": {
+    "title": "Can't reach the API",
+    "description": "The dashboard is running, but it can't talk to the Openship API — so there's nothing to show yet. Your deployments keep running regardless.",
+    "hintStatus": "Check that the API is up: run `openship status` on the host.",
+    "hintStart": "Not running? Start it with `openship up`.",
+    "hintRemote": "Managing a remote box? Confirm its URL and that the API port is reachable from here.",
+    "retry": "Retry",
+    "docs": "Self-hosting docs"
+  },
+  "errorLinks": {
+    "docs": "Documentation",
+    "github": "Report an issue"
+  },
+  "window": {
+    "minimize": "Minimize",
+    "maximize": "Maximize",
+    "restore": "Restore",
+    "close": "Close",
+    "navigation": "Navigation",
+    "back": "Back",
+    "forward": "Forward",
+    "reload": "Reload",
+    "devTools": "Developer tools"
+  }
+}

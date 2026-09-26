@@ -1,0 +1,86 @@
+{
+  "accountSwitcher": {
+    "workspacesCount": "{count} 个工作区",
+    "newWorkspace": "新建工作区",
+    "createTitle": "创建工作区",
+    "createDescription": "为项目、部署、服务器和成员单独设立的组织。",
+    "nameLabel": "名称",
+    "namePlaceholder": "Acme Corp",
+    "cancel": "取消",
+    "create": "创建",
+    "toastTitle": "组织",
+    "switchFailed": "切换失败",
+    "createFailed": "创建失败"
+  },
+  "sidebar": {
+    "workspaceFallback": "工作区",
+    "workspacesCount": "{count} 个工作区",
+    "switchOrganization": "切换组织",
+    "current": "当前",
+    "cloudLabel": "云端：{email}",
+    "linkedToCloud": "已作为 {email} 关联到 Openship Cloud",
+    "backToSetup": "返回设置",
+    "personal": "个人"
+  },
+  "mailRail": {
+    "selectServer": "选择邮件服务器",
+    "switchServer": "切换邮件服务器",
+    "setupIncomplete": "设置未完成"
+  },
+  "migration": {
+    "inProgressTitle": "迁移进行中",
+    "inProgressBody": "正在迁移你的数据。切换完成后本页面将自动刷新——通常需要 30-90 秒。",
+    "inProgressHint": "请勿关闭此标签页。我们每隔几秒检查一次迁移状态，并会自动重新加载。",
+    "newLocation": "新位置",
+    "switchBackPrompt": "需要在这台机器上恢复单用户模式？",
+    "switchBackAction": "切换回单用户",
+    "cloudTitle": "此实例已迁移到 Openship Cloud",
+    "cloudBody": "你的团队现在通过下方的网址进行协作。此本地实例不再保存你的项目、设置或部署——请打开云端控制台以继续。",
+    "cloudCta": "打开云端控制台",
+    "tunneledTitle": "现在可以通过隧道访问你的 openship",
+    "tunneledBody": "当你的机器在线时，团队成员可以通过下方的网址登录。数据仍保存在此设备上——隧道只是通过 Oblien 边缘节点将其对外开放。",
+    "tunneledCta": "打开隧道网址",
+    "serverTitle": "此实例已迁移到你的服务器",
+    "serverBody": "你的团队现在通过下方的网址进行协作。此本地实例不再保存你的项目、设置或部署——请打开团队控制台以继续。",
+    "serverCta": "打开团队控制台"
+  },
+  "notFound": {
+    "title": "找不到页面",
+    "descGlobal": "你要访问的页面不存在或已被移动。",
+    "descDashboard": "此页面不存在或可能已被移动。请检查网址，或返回你的控制台。",
+    "backToDashboard": "返回控制台",
+    "viewDeployments": "查看部署",
+    "copyId": "复制 ID"
+  },
+  "window": {
+    "back": "后退",
+    "forward": "前进",
+    "reload": "重新加载",
+    "minimize": "最小化",
+    "maximize": "最大化",
+    "restore": "还原",
+    "close": "关闭",
+    "devTools": "开发者工具",
+    "navigation": "导航"
+  },
+  "apiDown": {
+    "title": "无法连接 API",
+    "description": "仪表盘正在运行，但无法与 Openship API 通信，因此暂时没有内容可显示。你的部署仍会继续运行。",
+    "hintStatus": "确认 API 已启动：在主机上运行 `openship status`。",
+    "hintStart": "没有在运行？用 `openship up` 启动它。",
+    "hintRemote": "在管理远程主机？请确认它的 URL，以及此处能否访问 API 端口。",
+    "docs": "自托管文档",
+    "retry": "重试"
+  },
+  "error": {
+    "title": "此页面出现错误",
+    "description": "此界面的部分内容未能渲染。重试通常就能恢复——你已部署的内容不受影响。",
+    "tryAgain": "重试",
+    "goToProjects": "前往项目",
+    "refCode": "编号"
+  },
+  "errorLinks": {
+    "docs": "文档",
+    "github": "报告问题"
+  }
+}

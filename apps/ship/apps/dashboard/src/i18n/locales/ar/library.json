@@ -1,0 +1,171 @@
+{
+  "ghCliConsent": {
+    "title": "قراءة مستودعاتك؟",
+    "body": "يستطيع OpenShip سرد مستودعات GitHub الخاصة بك باستخدام gh CLI الذي سجّلت الدخول به بالفعل.",
+    "bodyWithLogin": "يستطيع OpenShip سرد مستودعات GitHub الخاصة بك باستخدام gh CLI المسجَّل باسم @{login}.",
+    "pointNoCloud": "لا يُرسَل أي شيء إلى السحابة — القائمة لا تغادر هذا الجهاز أبداً.",
+    "pointDesktopOnly": "يعمل فقط في تطبيق سطح المكتب، باستخدام مصادقة gh المحلية لديك.",
+    "pointReadOnly": "للقراءة فقط: يسرد المستودعات لتختار واحداً لنشره.",
+    "allow": "السماح"
+  },
+  "page": {
+    "title": "مشروع جديد",
+    "subtitle": "استورد مستودعًا، أو الصق رابطًا، أو ابدأ من قالب",
+    "tabs": {
+      "folder": "مجلد",
+      "github": "GitHub",
+      "url": "رابط Git",
+      "template": "قالب"
+    }
+  },
+  "connect": {
+    "connectGithub": "الاتصال بـ GitHub",
+    "manageInSettings": "الإدارة من الإعدادات",
+    "terminal": {
+      "title": "الاتصال بـ GitHub",
+      "checkConnection": "التحقق من الاتصال",
+      "afterLogin": "بعد تسجيل الدخول، انقر على \"التحقق من الاتصال\" للمتابعة."
+    },
+    "deviceFlow": {
+      "title": "أدخل هذا الرمز في GitHub",
+      "goToPrefix": "انتقل إلى",
+      "goToSuffix": "وأدخل الرمز أعلاه.",
+      "waiting": "في انتظار التفويض…"
+    },
+    "default": {
+      "title": "اتصل بـ GitHub للنشر",
+      "descSelfHosted": "اختر كيف يصل Openship إلى مستودعاتك.",
+      "descSaas": "اربط حساب GitHub الخاص بك لتصفح المستودعات والنشر مع كل دفعة.",
+      "recommended": "موصى به",
+      "cloudApp": "تطبيق Openship السحابي",
+      "cloudAppDesc": "انشر على الخوادم البعيدة برموز قصيرة الأجل.",
+      "connectCloud": "الاتصال بسحابة Openship",
+      "localBuilds": "عمليات بناء محلية",
+      "ghCli": "سجّل الدخول عبر gh CLI",
+      "ghCliDesc": "استخدم تسجيل دخول GitHub على جهازك. لا حاجة إلى السحابة.",
+      "useGhCli": "استخدم gh CLI",
+      "connecting": "جارٍ الاتصال…"
+    }
+  },
+  "folderUpload": {
+    "emptyFolder": "يبدو هذا المجلد فارغًا (أو تم تجاهل كل شيء). اختر مجلد مشروع.",
+    "uploadError": "فشل رفع المجلد",
+    "stackTitle": "ماذا تريد أن تنشر؟",
+    "stackDesc": "اختر حزمة التقنيات لمجلدك — يحدد ذلك بيئة البناء. ستقوم برفعه بعد ذلك.",
+    "backToStack": "العودة إلى اختيار الحزمة",
+    "uploadTitle": "ارفع مجلد {stack} الخاص بك",
+    "uploadSubtitle": "مُحزَّم في متصفحك — يتم تخطي node_modules و‏.git ومخرجات البناء",
+    "dropTitle": "أفلت مجلد مشروعك أو انقر للتصفح",
+    "dropSubtitle": "يُرفع المجلد بأكمله ويُبنى كتطبيق {stack}",
+    "filesSingular": "ملف واحد",
+    "filesPlural": "{count} ملف",
+    "clearSelection": "مسح التحديد",
+    "packing": "جارٍ حزم المجلد…",
+    "uploading": "جارٍ الرفع…",
+    "continue": "متابعة"
+  },
+  "localProjects": {
+    "title": "المشاريع المحلية",
+    "loading": "جارٍ التحميل...",
+    "projectCountSingular": "مشروع واحد",
+    "projectCountPlural": "{count} مشروع",
+    "import": "استيراد",
+    "empty": {
+      "title": "لا توجد مشاريع محلية بعد",
+      "description": "استورد مجلد مشروع من جهازك لفحصه وبنائه ونشره محليًا",
+      "importProject": "استيراد مشروع",
+      "howItWorks": "كيف يعمل",
+      "dropTitle": "أفلت أو تصفح",
+      "dropDesc": "اختر أي مجلد مشروع",
+      "autoDetectTitle": "كشف تلقائي",
+      "autoDetectDesc": "تم العثور على إطار العمل والإعدادات",
+      "deployTitle": "النشر محليًا",
+      "deployDesc": "ابنِ وشغّل على جهازك"
+    },
+    "form": {
+      "title": "استيراد من مجلد",
+      "scanErrorDefault": "فشل فحص المجلد",
+      "dropTitle": "أفلت مجلدًا هنا أو انقر للتصفح",
+      "dropSubtitle": "اختر مجلد مشروعك للكشف التلقائي عن إطار العمل",
+      "folderViaBrowser": "تم اختيار المجلد عبر المتصفح - يرجى إدخال المسار المطلق الكامل والضغط على فحص",
+      "folderDropped": "تم إفلات المجلد - يرجى إدخال المسار المطلق الكامل والضغط على فحص",
+      "pathPlaceholder": "/path/to/your/project",
+      "browse": "تصفح",
+      "scan": "فحص",
+      "importError": "فشل استيراد المشروع",
+      "projectName": "اسم المشروع",
+      "detected": "تم الكشف عن",
+      "build": "البناء:",
+      "install": "التثبيت:",
+      "output": "المخرجات:",
+      "start": "التشغيل:",
+      "importing": "جارٍ الاستيراد...",
+      "importProject": "استيراد مشروع"
+    }
+  },
+  "repositoryList": {
+    "searchPlaceholder": "البحث في المستودعات...",
+    "visibility": {
+      "all": "الكل",
+      "public": "عام",
+      "private": "خاص"
+    },
+    "sort": {
+      "recent": "الأحدث",
+      "name": "الاسم",
+      "stars": "النجوم"
+    },
+    "addAccount": "إضافة حساب GitHub",
+    "installTitle": "تثبيت تطبيق GitHub",
+    "installDesc": "ثبّت تطبيق GitHub على حسابك أو مؤسستك لمنح الوصول إلى مستودعاتك.",
+    "installButton": "تثبيت تطبيق GitHub",
+    "noMatching": "لا توجد مستودعات مطابقة",
+    "noRepos": "لم يتم العثور على مستودعات",
+    "noMatchingDesc": "جرّب مصطلح بحث مختلفًا أو عدّل عوامل التصفية",
+    "noReposDesc": "لا يحتوي هذا الحساب على أي مستودعات بعد",
+    "privateBadge": "خاص",
+    "localOnly": "محلي فقط",
+    "localOnlyTooltip": "تطبيق Openship غير مثبّت على {owner}. عمليات بناء محلية فقط — ثبّت التطبيق على هذا المالك لتمكين النشر عن بُعد.",
+    "repoCountSingular": "مستودع واحد",
+    "repoCountPlural": "{count} مستودع",
+    "matching": "المطابقة لـ \"{query}\"",
+    "pagination": {
+      "previous": "السابق",
+      "next": "التالي",
+      "pageOf": "صفحة {page} من {total}"
+    },
+    "time": {
+      "justNow": "الآن",
+      "minutesAgo": "منذ {n} دقيقة",
+      "hoursAgo": "منذ {n} ساعة",
+      "daysAgo": "منذ {n} يوم",
+      "monthsAgo": "منذ {n} شهر"
+    }
+  },
+  "sidebar": {
+    "overview": "نظرة عامة",
+    "total": "الإجمالي",
+    "public": "عام",
+    "private": "خاص",
+    "quickTip": "نصيحة سريعة",
+    "quickTipDesc": "اختر أي مستودع لنشره فورًا. أعدّ عمليات النشر التلقائية مع كل دفعة.",
+    "connection": "الاتصال",
+    "openshipGithubApp": "تطبيق Openship على GitHub",
+    "connected": "متصل",
+    "notConnected": "غير متصل",
+    "ghCli": "gh CLI",
+    "runGhAuth": "شغّل `gh auth login`",
+    "openshipCloudApp": "تطبيق Openship السحابي",
+    "checking": "جارٍ التحقق…",
+    "notConnectedManage": "غير متصل — الإدارة من الإعدادات",
+    "optional": "اختياري",
+    "footnote": "إدارة اتصالات GitHub المستخدمة لتصفح المستودعات ونشرها.",
+    "manageGithubSettings": "إدارة GitHub من الإعدادات"
+  },
+  "urlImport": {
+    "invalidUrl": "أدخل رابط مستودع GitHub صالحًا",
+    "title": "استيراد من رابط Git",
+    "description": "الصق رابط مستودع عام لاستيراده. لا حاجة إلى اتصال GitHub.",
+    "importButton": "استيراد المستودع"
+  }
+}

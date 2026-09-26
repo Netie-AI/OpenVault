@@ -1,0 +1,1133 @@
+"use client";
+import type { IconName } from "@repo/ui/icons";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  ReactNode,
+  useRef,
+  useMemo,
+} from "react";
+import type { ReleaseSource, WorkloadType } from "@repo/core";
+import { useRouter } from "next/navigation";
+import { useI18n } from "@/components/i18n-provider";
+import { usePlatform } from "@/context/PlatformContext";
+import { projectsApi, servicesApi, type Service } from "@/lib/api";
+import {
+  invalidateProjectCachesFor,
+  PROJECT_INFO_NOT_FOUND,
+  useProjectInfo,
+} from "@/hooks/useProjectEndpoints";
+import type { ActiveMigration } from "@/utils/project-status";
+import { dedupeServerLogs } from "./server-log-dedup";
+import {
+  projectEnvironmentIds,
+  reconcileCreatedProjectEnvironment,
+  removeProjectEnvironment,
+} from "./project-environments";
+import { beginServicesFetch, failServicesFetch } from "./services-fetch-state";
+
+interface ProjectDomain {
+  domain: string;
+  primary?: boolean;
+  [key: string]: any;
+}
+
+/** The server-computed canonical access URL (see api resolveProjectAccess).
+ *  `url` is a full href, `host` the bare display hostname, `urls` every public
+ *  href (primary first). The single source of truth for "where does this
+ *  project live" across the sidebar and the Domains card. */
+export interface ProjectAccess {
+  url: string | null;
+  host: string | null;
+  kind: "custom" | "free" | "local" | "none";
+  isLocal: boolean;
+  urls: string[];
+}
+
+interface ProjectOptions {
+  buildCommand?: string;
+  outputDirectory?: string;
+  productionPaths?: string;
+  /** Declared persistent mounts; null = inheriting the framework's defaults. */
+  volumes?: string[] | null;
+  /** What a deploy would actually mount (declaration OR framework default). */
+  resolvedVolumes?: string[];
+  installCommand?: string;
+  startCommand?: string;
+  productionPort?: string;
+  rootDirectory?: string;
+  hasBuild?: boolean;
+  hasServer?: boolean;
+  [key: string]: any;
+}
+
+interface BasicProjectData {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  framework: string;
+  options?: ProjectOptions;
+  domains?: ProjectDomain[];
+  access?: ProjectAccess;
+  buildImage?: string;
+  hasMultipleServices?: boolean;
+  serviceCount?: number;
+  activeDeploymentId?: string | null;
+  /** Operator switch, derived server-side from `disabled_at` (enrichProject). */
+  enabled?: boolean;
+  /**
+   * WHY the routes didn't sync, in the server's own words (`routeIssuesWarning`), or null.
+   *
+   * The routing banner carried ONE hardcoded sentence — about a free `.opsh.io` URL failing to
+   * route through Openship Cloud's edge — and showed it for every cause, including custom
+   * domains merely waiting on a certificate. The accurate sentence was already computed
+   * server-side and written to the deployment meta; it just had no way through to the UI.
+   */
+  routingWarning?: string | null;
+  /**
+   * The in-flight migration run for this project, or null (server-side
+   * `readActiveMigration`). Typed here rather than left to the interface's index signature
+   * because it drives BOTH the status pill and whether the Advanced tab shows the migration
+   * session — a run is part of the project's state, not something a panel fetches.
+   */
+  activeMigration?: ActiveMigration | null;
+  deployTarget?: "cloud" | "server" | "local" | "cluster";
+  clusterId?: string | null;
+  clusterConfig?: import("@repo/core").ClusterWorkloadConfig | null;
+  cloudWorkspaceId?: string | null;
+  deletedAt?: string | null;
+  packageManager?: string;
+  /** Source metadata for prebuilt release/image projects. */
+  releaseSource?: ReleaseSource | null;
+  /**
+   * Push auto-deploy, straight from the `auto_deploy` column — the same field
+   * the push webhook handler gates on. Typed here (not left to the index
+   * signature) because the Overview reads it: the Source tab's `gitData` mirror
+   * is only fetched when that tab mounts, which is why Overview used to show
+   * "off" for projects whose pushes were deploying. `webhookActive` is the
+   * server-derived companion: whether GitHub has a delivery path at all.
+   */
+  autoDeploy?: boolean;
+  webhookActive?: boolean;
+  webhookStrategy?: "app" | "domain" | "repo" | "none" | null;
+  /** How many recent versions retain their build artifact for rollback (snapshot strategy). null = instance default. */
+  rollbackWindow?: number | null;
+  [key: string]: any;
+}
+
+interface DomainsData {
+  domains: any[];
+  isLoading: boolean;
+  error: string | null;
+}
+
+interface EnvironmentData {
+  envVars: any;
+  isLoading: boolean;
+  error: string | null;
+}
+
+interface GitData {
+  repository: any;
+  branch: string;
+  recentCommits: any[];
+  isLoading: boolean;
+  error: string | null;
+  autoDeployEnabled?: boolean;
+  webhookActive?: boolean;
+  webhookStrategy?: "app" | "domain" | "repo" | "none";
+  webhookDomain?: string | null;
+  availableStrategies?: string[];
+  verifiedDomains?: Array<{ hostname: string; ssl: boolean }>;
+  installationInstalled?: boolean;
+  installUrl?: string;
+  defaultRollbackStrategy?: "git" | "snapshot";
+}
+
+interface ProjectEnvironment {
+  id: string;
+  name: string;
+  slug: string;
+  type: "production" | "preview" | "development";
+  gitBranch: string;
+  projectSlug: string;
+  activeDeploymentId: string | null;
+  latestDeploymentStatus: string | null;
+  primaryDomain: string | null;
+  // App axis: version instead of git branch (null for git projects).
+  version?: string | null;
+  isApp?: boolean;
+  gitProvider?: string | null;
+}
+
+interface BuildData {
+  buildCommand: string;
+  outputDirectory: string;
+  productionPaths: string;
+  volumes: string[] | null;
+  resolvedVolumes: string[];
+  installCommand: string;
+  startCommand: string;
+  productionPort: string;
+  buildImage: string;
+  rootDirectory: string;
+  /** Explicit compose file location; "" when the root is detected normally. */
+  composePath: string;
+  hasBuild: boolean;
+  hasServer: boolean;
+  /** Resolved runtime workload (#538). Flows in from `projectData.options`
+   *  (getInfo sets it). A worker shares `hasServer=false` with a static site;
+   *  only this distinguishes "runs a process" from "edge-served files". */
+  workloadType?: WorkloadType;
+  isLoading: boolean;
+  error: string | null;
+}
+
+// Defaults applied when project.options has no value for a field.
+// Used by the `buildData` view in the provider — defaults first,
+// then server values override via spread.
+const BUILD_OPTION_DEFAULTS = {
+  buildCommand: "",
+  outputDirectory: ".",
+  productionPaths: "",
+  volumes: null as string[] | null,
+  resolvedVolumes: [] as string[],
+  installCommand: "bun install",
+  startCommand: "npm start",
+  productionPort: "",
+  rootDirectory: "./",
+  hasBuild: true,
+  hasServer: true,
+} as const;
+
+interface TerminalLogsData {
+  logs: string[];
+  isStreaming: boolean;
+  sseConnection: { disconnect: () => void } | null;
+  xtermInstance: any | null;
+}
+
+interface ServerLogsData {
+  logs: any[];
+  mockInterval: NodeJS.Timeout | null;
+}
+
+interface ServicesData {
+  services: Service[];
+  isLoading: boolean;
+  error: string | null;
+}
+
+interface ProjectTab {
+  id: string;
+  label: string;
+  icon: IconName;
+  /** Sections keep their existing routes inside a shared navigation group. */
+  sections?: { id: string; label: string }[];
+}
+
+function findTabGroup(tabs: ProjectTab[], tabId: string) {
+  return tabs.find((tab) => tab.id === tabId || tab.sections?.some((section) => section.id === tabId));
+}
+
+interface ProjectSettingsContextType {
+  // Project basic data
+  projectData: BasicProjectData;
+  setProjectData: React.Dispatch<React.SetStateAction<BasicProjectData>>;
+  // Update helpers below mutate context state only — they do NOT persist.
+  // Callers must hit projectsApi.* themselves and only invoke these on
+  // success. Synchronous to make that contract explicit.
+  updateProjectData: (updates: Partial<BasicProjectData>) => void;
+
+  // Domains
+  domainsData: DomainsData;
+  updateDomains: (domains: ProjectDomain[]) => void;
+
+  // Environment
+  environmentData: EnvironmentData;
+  updateEnvironment: (envVars: any) => void;
+  refreshEnvironment: () => Promise<void>;
+
+  // Git
+  gitData: GitData;
+  refreshGit: () => Promise<void>;
+
+  // Build
+  buildData: BuildData;
+  updateBuild: (buildInfo: Partial<BuildData>) => void;
+
+  // Terminal Logs
+  terminalLogsData: TerminalLogsData;
+  addTerminalLog: (log: string) => void;
+  clearTerminalLogs: () => void;
+  setTerminalStreaming: (isStreaming: boolean) => void;
+  setTerminalXtermInstance: (instance: any) => void;
+
+  // Server Logs
+  serverLogsData: ServerLogsData;
+  addServerLog: (log: any) => void;
+  mergeServerLogs: (logs: any[]) => void;
+  setServerLogs: (logs: any[]) => void;
+  clearServerLogs: () => void;
+
+  // Services
+  servicesData: ServicesData;
+  refreshServices: () => Promise<Service[]>;
+  hasMultipleServices: boolean;
+
+  // Global state
+  projectNotFound: boolean;
+  errorType: "project-not-found" | "repo-not-found" | "access-denied" | null;
+  id: string;
+  environments: ProjectEnvironment[];
+  createEnvironment: (input: {
+    environmentName: string;
+    environmentSlug?: string;
+    environmentType?: "production" | "preview" | "development";
+    gitBranch?: string;
+    sourceMode?: "branch" | "manual";
+  }) => Promise<ProjectEnvironment | null>;
+  /** Apply a confirmed server-side deletion to the shared list and caches. */
+  removeEnvironment: (environmentId: string) => void;
+  domain: string;
+  /** The canonical access URL — server-computed, correct for service-scoped-only
+   *  projects and target-aware for the localhost fallback. What display surfaces
+   *  (sidebar, Domains card) should read instead of deriving their own. */
+  access: ProjectAccess;
+  /** Shared domain selection driving the overview URL + analytics (multi-domain projects). */
+  selectedDomain: string;
+  setSelectedDomain: (domain: string) => void;
+  slug?: string[]; // Optional array for catch-all routes
+  activeTab: string;
+  activeTabGroup: string;
+  setActiveTab: (tab: string) => void;
+  /** One-shot intent from the sidebar's "Add domain" affordance: the Domains
+   *  tab opens its add-domain form on arrival, then clears it back to null. */
+  pendingDomainAction: "add" | null;
+  setPendingDomainAction: (action: "add" | null) => void;
+  tabs: ProjectTab[];
+}
+
+const ProjectSettingsContext = createContext<ProjectSettingsContextType | undefined>(undefined);
+
+interface ProviderProps {
+  children: ReactNode;
+  id: string;
+  slug?: string[]; // Optional array for catch-all routes
+  initialProjectData?: BasicProjectData;
+}
+
+export const ProjectSettingsProvider: React.FC<ProviderProps> = ({
+  children,
+  id,
+  slug,
+  initialProjectData,
+}) => {
+  const { t } = useI18n();
+  // Both server and desktop installations can watch local/SSH Docker workloads.
+  const { selfHosted } = usePlatform();
+  const [projectData, setProjectData] = useState<BasicProjectData>(
+    initialProjectData || {
+      id: "",
+      slug: "",
+      name: "",
+      description: "",
+      framework: "",
+    },
+  );
+
+  // Analytics + projectInfo state moved to `@/hooks/useProjectEndpoints`.
+  // The provider no longer fires those fetches — consumers call the
+  // hooks directly and the module-level cache dedups across components.
+
+  const [environmentData, setEnvironmentData] = useState<EnvironmentData>({
+    envVars: {},
+    isLoading: false,
+    error: null,
+  });
+
+  const [gitData, setGitData] = useState<GitData>({
+    repository: null,
+    branch: "",
+    recentCommits: [],
+    isLoading: false,
+    error: null,
+  });
+
+  const [environments, setEnvironments] = useState<ProjectEnvironment[]>([]);
+
+  const [terminalLogsData, setTerminalLogsData] = useState<TerminalLogsData>({
+    logs: [],
+    isStreaming: false,
+    sseConnection: null,
+    xtermInstance: null,
+  });
+
+  const [serverLogsData, setServerLogsData] = useState<ServerLogsData>({
+    logs: [],
+    mockInterval: null,
+  });
+
+  const [servicesData, setServicesData] = useState<ServicesData>({
+    services: [],
+    isLoading: false,
+    error: null,
+  });
+
+  const [projectNotFound, setProjectNotFound] = useState(false);
+  const [errorType, setErrorType] = useState<
+    "project-not-found" | "repo-not-found" | "access-denied" | null
+  >(null);
+
+  // ─── Single source of truth: useProjectInfo ────────────────────────────
+  //
+  // /projects/:id/info is the canonical source for the whole project
+  // payload (basics + options + domains + environments). The hook gives
+  // us cache + dedup + invalidation via `invalidateProjectCaches(id)`.
+  //
+  // - `projectData` is a useState seeded from the hook so consumers can
+  //   still call `setProjectData(prev => ...)` for optimistic local
+  //   updates (delete flow, name edits, etc.). The effect below
+  //   re-seeds on every fresh fetch — the canonical server data wins
+  //   after an invalidation.
+  //
+  // - `buildData`, `domainsData`, `domain` are NOT state. They are
+  //   `useMemo` views over `projectData` (and the hook's loading state).
+  //   This kills the previous five-state mirror-via-effect anti-pattern:
+  //   one place to write, derived views update automatically.
+  //
+  // - `updateBuild` and `updateDomains` write back through
+  //   `setProjectData` into `projectData.options.*` and
+  //   `projectData.domains` respectively, where the data actually lives.
+  const {
+    data: projectInfo,
+    isLoading: isLoadingProjectInfo,
+    error: projectInfoError,
+  } = useProjectInfo(id);
+
+  const router = useRouter();
+
+  // When the user navigates from /projects/A to /projects/B, the layout
+  // (and this provider) stays mounted — Next.js just re-renders with a
+  // new `id` prop. `useProjectInfo` keeps the previous project's data
+  // until B's fetch resolves, which would otherwise leak project A's
+  // values into B's UI (build settings, domains, etc.) during the
+  // loading window. Clearing on `id` change closes that window.
+  const lastIdRef = useRef(id);
+  useEffect(() => {
+    if (lastIdRef.current === id) return;
+    lastIdRef.current = id;
+    setProjectData(
+      initialProjectData || { id: "", slug: "", name: "", description: "", framework: "" },
+    );
+    setEnvironments([]);
+    // gitData too: it is fetched ONCE per GitSettings mount, so without this the
+    // previous project's repo, branch, commits and auto-deploy state stayed on
+    // screen under project B's name until B's Source tab fetch landed.
+    setGitData({
+      repository: null,
+      branch: "",
+      recentCommits: [],
+      isLoading: false,
+      error: null,
+    });
+  }, [id, initialProjectData]);
+
+  // 404 cold-load: the project was deleted (other tab, force flow, direct
+  // DB). useProjectInfo surfaces the sentinel PROJECT_INFO_NOT_FOUND via
+  // `error` — we redirect to /projects rather than render the half-empty
+  // layout (no name, no right rail, "not found" body) that confused users.
+  // Guarded per-id so React re-renders during the navigation don't loop.
+  // The hook also pins isLoading=true while this sentinel is set, so the
+  // page-level skeleton covers the tick before the route change lands.
+  const redirectedForIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!id) return;
+    if (projectInfoError !== PROJECT_INFO_NOT_FOUND) return;
+    if (redirectedForIdRef.current === id) return;
+    redirectedForIdRef.current = id;
+    router.replace("/projects");
+  }, [id, projectInfoError, router]);
+
+  useEffect(() => {
+    if (projectInfo?.project) setProjectData(projectInfo.project);
+    if (projectInfo?.environments) setEnvironments(projectInfo.environments);
+  }, [projectInfo]);
+
+  const buildData = useMemo<BuildData>(
+    () => ({
+      ...BUILD_OPTION_DEFAULTS,
+      ...projectData.options,
+      // buildImage lives at top-level on the project, not in options.
+      buildImage: projectData.buildImage || "node:22",
+      // Same — a top-level column. Shown read-only; edited through the deploy
+      // wizard, since changing it has to re-scan the repo for services.
+      composePath: projectData.composePath || "",
+      isLoading: isLoadingProjectInfo,
+      error: projectInfoError,
+    }),
+    [projectData, isLoadingProjectInfo, projectInfoError],
+  );
+
+  const domainsData = useMemo<DomainsData>(
+    () => ({
+      domains: projectData.domains || [],
+      isLoading: isLoadingProjectInfo,
+      error: projectInfoError,
+    }),
+    [projectData.domains, isLoadingProjectInfo, projectInfoError],
+  );
+
+  const domain = useMemo(
+    () =>
+      projectData.domains?.find((d: any) => d.primary)?.domain ||
+      projectData.domains?.[0]?.domain ||
+      "",
+    [projectData.domains],
+  );
+
+  // The canonical access URL. Server-computed (resolveProjectAccess) is the
+  // truth; the fallback below is the ONE remaining client derivation, kept only
+  // for cloud version-skew — an older SaaS getInfo won't send `access`. It
+  // mirrors the server precedence: a verified domain wins; else localhost only
+  // when the project is purely local; else "none" (never a misleading localhost).
+  const access = useMemo<ProjectAccess>(() => {
+    if (projectData.access) return projectData.access;
+
+    const rows = (projectData.domains || []) as any[];
+    const verified = rows.filter((d) => d?.verified);
+    const primary = verified.find((d) => d.primary || d.isPrimary) ?? verified[0] ?? null;
+    if (primary) {
+      const host = String(primary.domain || primary.hostname || "").trim();
+      if (host) {
+        const urls = Array.from(
+          new Set(
+            [primary, ...verified.filter((d) => d !== primary)]
+              .map((d) => String(d.domain || d.hostname || "").trim())
+              .filter(Boolean),
+          ),
+        ).map((h) => `https://${h}`);
+        return {
+          url: `https://${host}`,
+          host,
+          kind: primary.domainType === "custom" ? "custom" : "free",
+          isLocal: false,
+          urls,
+        };
+      }
+    }
+
+    const target = projectData.cloudWorkspaceId
+      ? "cloud"
+      : (projectData as any).serverId
+        ? "server"
+        : (projectData.deployTarget ?? "local");
+    if (target === "local") {
+      const port = Number((projectData as any).port ?? projectData.options?.productionPort) || 3000;
+      const host = `localhost:${port}`;
+      return { url: `http://${host}`, host, kind: "local", isLocal: true, urls: [] };
+    }
+    return { url: null, host: null, kind: "none", isLocal: false, urls: [] };
+  }, [projectData]);
+
+  // Derive the default during render: a parent effect runs after its children
+  // and would let Overview start an expensive unscoped analytics request first.
+  // Keep explicit choices tied to the project, and use the primary if removed.
+  const [domainChoice, setDomainChoice] = useState<{ projectId: string; domain: string } | null>(null);
+  const availableDomains = projectData.id === id ? projectData.domains ?? [] : [];
+  const selectedDomain = projectData.id !== id ? "" :
+    domainChoice?.projectId === id && availableDomains.some((d) => d.domain === domainChoice.domain)
+      ? domainChoice.domain : domain;
+  const setSelectedDomain = useCallback((domain: string) => {
+    setDomainChoice({ projectId: id, domain });
+  }, [id]);
+
+  // Derived: do we have multi-service rendering paths to enable?
+  // projectData hint OR serviceCount > 1 OR loaded services > 1.
+  const hasMultipleServices =
+    projectData.hasMultipleServices === true ||
+    Number(projectData.serviceCount ?? 0) > 1 ||
+    servicesData.services.length > 1;
+
+  const isLoadingEnvironmentRef = useRef(false);
+  // Fetch environment
+  const refreshEnvironment = useCallback(async () => {
+    try {
+      if (isLoadingEnvironmentRef.current) return;
+      isLoadingEnvironmentRef.current = true;
+      setEnvironmentData((prev) => ({ ...prev, isLoading: true, error: null }));
+
+      if (!id) {
+        setEnvironmentData((prev) => ({ ...prev, isLoading: false }));
+        return;
+      }
+
+      const response = await projectsApi.getEnv(id);
+
+      if (response.data) {
+        // Convert array format to expected format
+        const envVarsArray = response.data || [];
+        const envVars = {
+          development: envVarsArray.map((env: any, index: number) => ({
+            id: Date.now() + index,
+            key: env.key,
+            value: env.value,
+            encrypted: true,
+          })),
+          preview: [],
+          production: [],
+        };
+
+        setEnvironmentData({
+          envVars: envVars,
+          isLoading: false,
+          error: null,
+        });
+      } else {
+        setEnvironmentData((prev) => ({
+          ...prev,
+          isLoading: false,
+        }));
+      }
+    } catch (error) {
+      console.error("Failed to fetch environment variables:", error);
+      setEnvironmentData((prev) => ({
+        ...prev,
+        isLoading: false,
+      }));
+    } finally {
+      isLoadingEnvironmentRef.current = false;
+    }
+  }, [id]);
+
+  // Fetch git
+  const isLoadingGitRef = useRef(false);
+  // True once git info has loaded for the CURRENT project. Re-opening the Source
+  // tab remounts GitSettings and re-calls refreshGit; without this that flashed
+  // the skeleton on every visit even though the context already had the data.
+  // Now a re-open refreshes in the BACKGROUND (data stays visible). Reset on id
+  // change so a different project still shows the skeleton once.
+  const gitLoadedRef = useRef(false);
+  useEffect(() => {
+    gitLoadedRef.current = false;
+  }, [id]);
+  const refreshGit = useCallback(async () => {
+    try {
+      if (isLoadingGitRef.current) return;
+      isLoadingGitRef.current = true;
+      // Only the first load shows the skeleton; later refreshes update in place.
+      setGitData((prev) => ({ ...prev, isLoading: !gitLoadedRef.current, error: null }));
+
+      if (!id) {
+        setGitData((prev) => ({ ...prev, isLoading: false }));
+        return;
+      }
+
+      const response = await projectsApi.getGit(id);
+
+      if (response.success) {
+        // Map commits from API response
+        const mappedCommits = (response.commits || []).map((commit: any) => ({
+          id: commit.sha,
+          message: commit.message || "No message",
+          author: commit.author || "Unknown",
+          authorAvatar: commit.author_avatar || "",
+          time: commit.date ? new Date(commit.date).toLocaleString() : "",
+          url: commit.url,
+        }));
+
+        setGitData({
+          repository: {
+            name: `${response.owner}/${response.repo}`,
+            // `full_name` is the GitHub-canonical field the Source tab's
+            // auto-deploy switch gates on; without it that control was hidden
+            // for every git project.
+            full_name: `${response.owner}/${response.repo}`,
+            provider: "GitHub",
+            url: `https://github.com/${response.owner}/${response.repo}`,
+          },
+          branch: response.branch || "main",
+          recentCommits: mappedCommits,
+          isLoading: false,
+          error: null,
+          autoDeployEnabled: response.auto_deploy,
+          webhookActive: response.webhook_active,
+          webhookStrategy: response.webhook_strategy,
+          webhookDomain: response.webhook_domain,
+          availableStrategies: response.available_strategies,
+          verifiedDomains: response.verified_domains,
+          installationInstalled: response.installation_installed,
+          installUrl: response.install_url,
+          defaultRollbackStrategy: response.default_rollback_strategy,
+        });
+      } else {
+        // "No repository connected" is the NORMAL state for upload/local
+        // projects, not a failure — let GitSettings render its inline
+        // "connect a repository" empty state (repository: null) instead of
+        // hijacking the whole layout with the full-page repo-not-found
+        // ErrorState. Only a genuine repo-not-found on a git-backed project
+        // (repo deleted / access lost) escalates to the full-page error.
+        const noRepoConnected =
+          response.code === "NO_REPOSITORY" ||
+          response.error?.toLowerCase().includes("no repository connected");
+        const isRepoError =
+          !noRepoConnected &&
+          (response.error?.toLowerCase().includes("repository") ||
+            response.error?.toLowerCase().includes("repo"));
+
+        if (isRepoError) {
+          setProjectNotFound(true);
+          setErrorType("repo-not-found");
+        }
+
+        setGitData((prev) => ({
+          ...prev,
+          isLoading: false,
+          error: noRepoConnected ? null : response.error || "Failed to load git data",
+          repository: null,
+          recentCommits: [],
+        }));
+      }
+    } catch (error) {
+      console.error("Failed to fetch git data:", error);
+      setGitData((prev) => ({
+        ...prev,
+        isLoading: false,
+        error: "Failed to load git data",
+        repository: null,
+        recentCommits: [],
+      }));
+    } finally {
+      isLoadingGitRef.current = false;
+      // Fetch attempt completed for this project → subsequent refreshGit calls
+      // (tab re-open, post-action refresh) update in the background, no skeleton.
+      gitLoadedRef.current = true;
+    }
+  }, [id]);
+
+  // ─── Local-state update helpers ────────────────────────────────────────
+  //
+  // These mutate context state only — they do NOT persist to the API. The
+  // calling component is responsible for calling projectsApi.* first and
+  // then invoking the helper on success (and/or `invalidateProjectCaches`
+  // to force a refetch). Kept synchronous + useCallback-stabilized so the
+  // value-memo identity below stays stable across renders.
+
+  const updateProjectData = useCallback((updates: Partial<BasicProjectData>) => {
+    setProjectData((prev) => ({ ...prev, ...updates }));
+  }, []);
+
+  const updateDomains = useCallback((domains: ProjectDomain[]) => {
+    // Domains live on the project itself, so we mutate projectData
+    // directly. The `domainsData` view is a useMemo that re-derives
+    // from projectData.domains, so consumers update automatically.
+    setProjectData((prev) => ({ ...prev, domains }));
+  }, []);
+
+  const updateEnvironment = useCallback((envVars: any) => {
+    setEnvironmentData((prev) => ({ ...prev, envVars }));
+  }, []);
+
+  const updateBuild = useCallback((buildInfo: Partial<BuildData>) => {
+    // BuildData is a flat view but the underlying fields live in two
+    // places on the project: `buildImage` is top-level, everything
+    // else nests under `project.options`. Split the input, drop the
+    // view-only `isLoading`/`error`, and merge each piece into the
+    // right slot. The `buildData` useMemo re-derives from projectData
+    // on the next render.
+    const { buildImage, isLoading: _il, error: _err, ...optionUpdates } = buildInfo;
+    void _il;
+    void _err;
+    setProjectData((prev) => ({
+      ...prev,
+      ...(buildImage !== undefined && { buildImage }),
+      options: { ...(prev.options || {}), ...optionUpdates },
+    }));
+  }, []);
+
+  const servicesRequestRef = useRef<{ projectId: string; promise: Promise<Service[]> } | null>(
+    null,
+  );
+  const servicesRequestIdRef = useRef(0);
+  /** Which project the list in `servicesData` belongs to. null = holds nothing. */
+  const servicesLoadedIdRef = useRef<string | null>(null);
+
+  const refreshServices = useCallback(async () => {
+    if (!id || id === "undefined") {
+      servicesRequestIdRef.current += 1;
+      servicesRequestRef.current = null;
+      servicesLoadedIdRef.current = null;
+      setServicesData({ services: [], isLoading: false, error: null });
+      return [];
+    }
+
+    if (servicesRequestRef.current?.projectId === id) {
+      return servicesRequestRef.current.promise;
+    }
+
+    const requestId = servicesRequestIdRef.current + 1;
+    servicesRequestIdRef.current = requestId;
+
+    let promise!: Promise<Service[]>;
+    promise = (async () => {
+      const loadedId = servicesLoadedIdRef.current;
+      setServicesData((prev) => beginServicesFetch(prev, loadedId, id));
+
+      const fail = () => {
+        if (servicesRequestIdRef.current !== requestId) return;
+        setServicesData((prev) => failServicesFetch(prev, loadedId, id));
+        if (loadedId !== id) servicesLoadedIdRef.current = null;
+      };
+
+      try {
+        const response = await servicesApi.list(id);
+        if (!response.success) {
+          fail();
+          return [];
+        }
+        const services = response.services ?? [];
+        if (servicesRequestIdRef.current === requestId) {
+          servicesLoadedIdRef.current = id;
+          setServicesData({ services, isLoading: false, error: null });
+        }
+        return services;
+      } catch (error) {
+        console.error("Failed to fetch project services:", error);
+        fail();
+        return [];
+      } finally {
+        if (servicesRequestRef.current?.promise === promise) {
+          servicesRequestRef.current = null;
+        }
+      }
+    })();
+
+    servicesRequestRef.current = { projectId: id, promise };
+    return promise;
+  }, [id]);
+
+  const fetchEnvironments = useCallback(async (): Promise<ProjectEnvironment[]> => {
+    if (!id) return [];
+    const response = await projectsApi.getEnvironments(id);
+    if (!response.success) {
+      throw new Error("Failed to refresh environments");
+    }
+    return (response.data || []) as ProjectEnvironment[];
+  }, [id]);
+
+  const createEnvironment = useCallback(
+    async (input: {
+      environmentName: string;
+      environmentSlug?: string;
+      environmentType?: "production" | "preview" | "development";
+      gitBranch?: string;
+      sourceMode?: "branch" | "manual";
+    }) => {
+      if (!id) return null;
+      const response = await projectsApi.createEnvironment(id, input);
+      if (!response.success || !response.data) {
+        throw new Error(response.error || "Failed to create environment");
+      }
+      const created = response.data as ProjectEnvironment;
+      await reconcileCreatedProjectEnvironment({
+        currentId: id,
+        environments,
+        created,
+        refresh: fetchEnvironments,
+        commit: setEnvironments,
+        invalidate: invalidateProjectCachesFor,
+        onRefreshError: (error) =>
+          console.warn("Failed to reconcile project environments after create", error),
+      });
+
+      return created;
+    },
+    [environments, fetchEnvironments, id],
+  );
+
+  const removeEnvironment = useCallback(
+    (environmentId: string) => {
+      const remaining = removeProjectEnvironment(environments, environmentId);
+      setEnvironments(remaining);
+      invalidateProjectCachesFor(projectEnvironmentIds(environmentId, environments));
+    },
+    [environments],
+  );
+
+  // Terminal Logs Management
+  const MAX_TERMINAL_LOGS = 1000;
+
+  const addTerminalLog = useCallback((log: string) => {
+    setTerminalLogsData((prev) => ({
+      ...prev,
+      logs: [...prev.logs, log].slice(-MAX_TERMINAL_LOGS),
+    }));
+  }, []);
+
+  const clearTerminalLogs = useCallback(() => {
+    setTerminalLogsData((prev) => ({
+      ...prev,
+      logs: [],
+    }));
+  }, []);
+
+  const setTerminalStreaming = useCallback((isStreaming: boolean) => {
+    setTerminalLogsData((prev) => {
+      if (prev.isStreaming === isStreaming) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        isStreaming,
+      };
+    });
+  }, []);
+
+  const setTerminalXtermInstance = useCallback((instance: any) => {
+    setTerminalLogsData((prev) => ({
+      ...prev,
+      xtermInstance: instance,
+    }));
+  }, []);
+
+  // Server Logs Management — dedup/sort logic lives in ./server-log-dedup (pure, unit-tested).
+  const addServerLog = useCallback((log: any) => {
+    setServerLogsData((prev) => ({
+      ...prev,
+      logs: dedupeServerLogs([log, ...prev.logs]),
+    }));
+  }, []);
+
+  const mergeServerLogs = useCallback((logs: any[]) => {
+    setServerLogsData((prev) => ({
+      ...prev,
+      logs: dedupeServerLogs([...prev.logs, ...logs]),
+    }));
+  }, []);
+
+  const setServerLogs = useCallback((logs: any[]) => {
+    setServerLogsData((prev) => ({
+      ...prev,
+      logs: dedupeServerLogs(logs),
+    }));
+  }, []);
+
+  const clearServerLogs = useCallback(() => {
+    setServerLogsData((prev) => ({
+      ...prev,
+      logs: [],
+    }));
+  }, []);
+
+  // Cleanup on unmount - use refs to avoid re-running on data changes
+  const terminalSSERef = useRef(terminalLogsData.sseConnection);
+  const serverIntervalRef = useRef(serverLogsData.mockInterval);
+
+  // Keep refs in sync
+  useEffect(() => {
+    terminalSSERef.current = terminalLogsData.sseConnection;
+  }, [terminalLogsData.sseConnection]);
+
+  useEffect(() => {
+    serverIntervalRef.current = serverLogsData.mockInterval;
+  }, [serverLogsData.mockInterval]);
+
+  // Cleanup on unmount only
+  useEffect(() => {
+    return () => {
+      // Cleanup terminal SSE connection
+      if (terminalSSERef.current) {
+        terminalSSERef.current.disconnect();
+      }
+      // Cleanup server mock interval
+      if (serverIntervalRef.current) {
+        clearInterval(serverIntervalRef.current);
+      }
+    };
+  }, []); // Empty deps - only run on mount/unmount
+
+  // Map legacy tab IDs to new ones
+  const resolveTab = (tab?: string) => {
+    if (tab === "general") return "overview";
+    if (tab === "git") return "source";
+    if (tab === "settings" || tab === "build" || tab === "runtime") return "advanced";
+    return tab || undefined; // let default be set by tab list below
+  };
+
+  const tabs = useMemo<ProjectTab[]>(() => {
+    const tl = t.projects.sidebar.tabs;
+    const healthAvailable = selfHosted && projectData.deployTarget !== "cloud";
+    return [
+      { id: "overview", label: tl.overview, icon: "chart-pie" },
+      { id: "topology", label: tl.topology, icon: "topology" },
+      { id: "services", label: tl.services, icon: "layers" },
+      { id: "domains", label: tl.domains, icon: "globe" },
+      { id: "deployments", label: tl.deployments, icon: "rocket" },
+      // Shown on cloud AND self-hosted, deliberately: both halves of the tab work
+      // in both modes through adapters that already exist — resource usage via
+      // RuntimeAdapter.getUsage (dockerode | Oblien metrics) and visitor geography
+      // via the traffic-source resolver (OpenResty mgmt API | Oblien analytics).
+      {
+        id: "monitoring",
+        label: tl.monitoring,
+        icon: "activity",
+        // Incidents belong beside metrics. The health watch covers local/SSH
+        // workloads; cloud monitoring continues to use its existing adapters.
+        sections: healthAvailable ? [
+          { id: "monitoring", label: tl.monitoring },
+          { id: "health", label: tl.health },
+        ] : undefined,
+      },
+      {
+        id: "source",
+        label: tl.sourceAndTriggers,
+        icon: "git-branch",
+        sections: [
+          { id: "source", label: tl.source },
+          { id: "webhooks", label: tl.webhooks },
+        ],
+      },
+      { id: "logs", label: tl.logs, icon: "file-text" },
+      { id: "backup", label: tl.backup, icon: "database-backup" },
+      { id: "advanced", label: tl.settings, icon: "wrench" },
+    ];
+  }, [t, projectData.deployTarget, selfHosted]);
+
+  const defaultTab = tabs[0].id;
+  const [activeTab, setActiveTab] = useState(() => {
+    const resolved = resolveTab(slug?.[0]) || defaultTab;
+    return findTabGroup(tabs, resolved) ? resolved : defaultTab;
+  });
+  const activeTabGroup = findTabGroup(tabs, activeTab)?.id || defaultTab;
+  const [pendingDomainAction, setPendingDomainAction] = useState<"add" | null>(null);
+
+  useEffect(() => {
+    void refreshServices();
+  }, [refreshServices]);
+
+  // Sync activeTab with slug changes (for browser back/forward navigation)
+  const slugTab = slug?.[0];
+  useEffect(() => {
+    const resolved = resolveTab(slugTab) || defaultTab;
+    // If the resolved tab isn't valid for this project type, fall back to default
+    const target = findTabGroup(tabs, resolved) ? resolved : defaultTab;
+    if (target !== activeTab) {
+      setActiveTab(target);
+    }
+  }, [slugTab, defaultTab, tabs]); // Only watch slug[0] to avoid array reference issues
+
+  const value: ProjectSettingsContextType = useMemo(
+    () => ({
+      projectData,
+      setProjectData,
+      updateProjectData,
+
+      domainsData,
+      updateDomains,
+
+      environmentData,
+      updateEnvironment,
+      refreshEnvironment,
+
+      gitData,
+      refreshGit,
+
+      buildData,
+      updateBuild,
+
+      terminalLogsData,
+      addTerminalLog,
+      clearTerminalLogs,
+      setTerminalStreaming,
+      setTerminalXtermInstance,
+
+      serverLogsData,
+      addServerLog,
+      mergeServerLogs,
+      setServerLogs,
+      clearServerLogs,
+
+      servicesData,
+      refreshServices,
+      hasMultipleServices,
+
+      projectNotFound,
+      errorType,
+      id,
+      environments,
+      createEnvironment,
+      removeEnvironment,
+      domain,
+      access,
+      selectedDomain,
+      setSelectedDomain,
+      slug,
+      activeTab,
+      activeTabGroup,
+      setActiveTab,
+      pendingDomainAction,
+      setPendingDomainAction,
+      tabs,
+    }),
+    [
+      projectData,
+      domainsData,
+      updateDomains,
+      environmentData,
+      updateEnvironment,
+      refreshEnvironment,
+      gitData,
+      refreshGit,
+      buildData,
+      updateBuild,
+      terminalLogsData,
+      addTerminalLog,
+      clearTerminalLogs,
+      setTerminalStreaming,
+      setTerminalXtermInstance,
+      serverLogsData,
+      addServerLog,
+      mergeServerLogs,
+      setServerLogs,
+      clearServerLogs,
+      servicesData,
+      refreshServices,
+      hasMultipleServices,
+      projectNotFound,
+      errorType,
+      id,
+      environments,
+      createEnvironment,
+      removeEnvironment,
+      domain,
+      access,
+      selectedDomain,
+      setSelectedDomain,
+      slug,
+      activeTab,
+      activeTabGroup,
+      pendingDomainAction,
+      tabs,
+    ],
+  );
+
+  return (
+    <ProjectSettingsContext.Provider value={value}>{children}</ProjectSettingsContext.Provider>
+  );
+};
+
+/** Service panels can also be opened from a server, outside the project route tree. */
+export const useOptionalProjectSettings = () => useContext(ProjectSettingsContext);
+
+export const useProjectSettings = () => {
+  const context = useContext(ProjectSettingsContext);
+  if (context === undefined) {
+    throw new Error("useProjectSettings must be used within a ProjectSettingsProvider");
+  }
+  return context;
+};

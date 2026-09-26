@@ -1,0 +1,190 @@
+{
+  "page": {
+    "title": "Serveur de messagerie",
+    "subtitle": "Configurez un serveur de messagerie auto-hébergé en quelques clics",
+    "backToServers": "Retour aux serveurs de messagerie",
+    "backToAdmin": "Retour à l'administration de la messagerie",
+    "addServer": "Ajouter un serveur de messagerie",
+    "removeModal": {
+      "title": "Retirer ce serveur de messagerie ?",
+      "description": "Retire {label} de la liste de messagerie uniquement. La pile de messagerie continue de fonctionner et rien n'est désinstallé — réajoutez-la à tout moment avec « Adopter » pour une installation existante.",
+      "submit": "Retirer de la liste",
+      "submitting": "Retrait en cours…",
+      "body": "Comme l'installation sur le serveur reste intacte, sa réadoption ultérieure restaure une gestion complète sans réinstallation."
+    },
+    "errors": {
+      "resetFailed": "Échec de la réinitialisation",
+      "ackDns": "Impossible de confirmer le DNS",
+      "ackPtr": "Impossible de confirmer le PTR",
+      "selectServer": "Sélectionnez d'abord un serveur",
+      "resolutionFailed": "Échec de la résolution"
+    }
+  },
+  "adopt": {
+    "title": "Adopter un serveur de messagerie existant",
+    "intro": "Vous avez déjà configuré un serveur de messagerie avec Openship sur l'un de vos serveurs ? Sélectionnez-le et lancez l'analyse — si une pile de messagerie est détectée, elle est réadoptée dans le tableau de bord sans réinstallation ni modification de vos données.",
+    "scanning": "Analyse en cours…",
+    "scan": "Analyser le serveur",
+    "detected": "Serveur de messagerie détecté",
+    "domainLabel": "Domaine :",
+    "unknown": "inconnu",
+    "stats": "iRedMail actif : {iredmail} · Installation : {install} · Webmail : {webmail}",
+    "yes": "oui",
+    "no": "non",
+    "complete": "terminée",
+    "inProgress": "en cours",
+    "present": "présent",
+    "notDeployed": "non déployé",
+    "cancel": "Annuler",
+    "adopt": "Adopter",
+    "noInstall": "Aucune installation de serveur de messagerie n'a été trouvée sur ce serveur.",
+    "scanFailed": "Échec de l'analyse — le serveur est-il accessible ?",
+    "adoptFailed": "Échec de l'adoption"
+  },
+  "dns": {
+    "heading": "Publiez les enregistrements DNS avant de continuer",
+    "bodyBefore": "La livraison des e-mails échoue sans eux. Ajoutez-les chez votre fournisseur DNS, puis cliquez sur ",
+    "action": "J'ai défini les enregistrements - continuer",
+    "bodyAfterResume": " ci-dessous. L'installation reprend à l'étape {resumeStep} (certificat SSL).",
+    "bodyAfter": " ci-dessous.",
+    "autoConfigure": "Configurer le DNS automatiquement",
+    "autoConfigureDesc": "Choisissez le fournisseur qui héberge le DNS de votre domaine. Nous ajouterons les enregistrements pour vous via leur API.",
+    "otherManual": "Autre / configuration manuelle",
+    "otherManualDesc": "Copiez chaque enregistrement depuis la bannière et collez-le dans l'interface de votre fournisseur",
+    "pickAnother": "Choisir un autre fournisseur",
+    "comingSoon": "Intégration {provider} - bientôt disponible",
+    "comingSoonBefore": "L'intégration directe via l'API de ce fournisseur n'est pas encore disponible. Pour l'instant, copiez chaque enregistrement depuis la bannière et collez-le dans l'interface de votre fournisseur DNS. Une fois cela fait, cliquez sur ",
+    "comingSoonAfter": ".",
+    "gotIt": "Compris",
+    "providers": {
+      "cloudflare": "DNS gratuit, propagation rapide. Le choix le plus courant.",
+      "hostinger": "Si vous avez acheté le domaine via Hostinger.",
+      "route53": "Zones DNS hébergées par AWS.",
+      "digitalocean": "Zones gérées par DigitalOcean.",
+      "namecheap": "DNS Namecheap par défaut.",
+      "google": "Zones gérées par Google."
+    }
+  },
+  "recordCard": {
+    "priority": "Priorité : {priority}",
+    "copyValue": "Copier la valeur"
+  },
+  "progress": {
+    "liveLogs": "Journaux en direct",
+    "lineOne": "{count} ligne",
+    "lineOther": "{count} lignes",
+    "cancel": "Annuler",
+    "resetTitle": "Effacer l'état de l'installation sur le serveur et repartir de zéro",
+    "confirmReset": "Cliquez à nouveau pour confirmer",
+    "reset": "Réinitialiser",
+    "waiting": "En attente de sortie…",
+    "noBuffered": "Aucune sortie mise en mémoire tampon pour cette exécution.",
+    "willStream": "Les journaux s'afficheront ici une fois la configuration démarrée.",
+    "jumpToLatest": "Aller au plus récent",
+    "setupFailed": "Échec de la configuration",
+    "retryFromStep": "Réessayer à partir de l'étape {resumeStep}",
+    "resumePausedTitle": "Configuration en pause",
+    "stepLabel": "Étape {step}",
+    "continueFromStep": "Reprendre à l'étape {step}"
+  },
+  "serverList": {
+    "title": "Serveurs de messagerie",
+    "addServer": "Ajouter un serveur de messagerie",
+    "removeFromList": "Retirer de la liste",
+    "removeAria": "Retirer {name} de la liste de messagerie",
+    "installing": "Installation en cours",
+    "running": "En cours d'exécution",
+    "incomplete": "Incomplet",
+    "stoppedAt": "Arrêté · étape {step}",
+    "open": "Ouvrir",
+    "openAria": "Ouvrir {name}",
+    "actionsAria": "Actions pour {name}",
+    "overviewTitle": "Aperçu de la messagerie",
+    "hint": "Retirer un serveur le détache uniquement de cette liste : l'installation continue de tourner et peut être réadoptée."
+  },
+  "setup": {
+    "title": "Configuration du serveur de messagerie",
+    "subtitle": "Déployez une pile de messagerie auto-hébergée complète sur ce serveur",
+    "domainLabel": "Domaine",
+    "domainPlaceholder": "exemple.com",
+    "willBeAtBefore": "Votre serveur de messagerie sera à l'adresse ",
+    "adminPasswordLabel": "Mot de passe administrateur",
+    "passwordPlaceholder": "Mot de passe fort - ou cliquez sur Générer",
+    "passwordHint": "Au moins 12 caractères. Utilisé pour se connecter à la boîte mail après la configuration — vous pourrez le modifier plus tard depuis le panneau d'administration ci-dessous.",
+    "startSetup": "Démarrer la configuration",
+    "adoptCta": "Vous avez déjà un serveur de messagerie ? Adoptez-le",
+    "whatInstalled": "Ce qui est installé",
+    "features": {
+      "stackLabel": "Pile du serveur de messagerie",
+      "stackDesc": "Postfix, Dovecot, anti-spam",
+      "sslLabel": "Certificat SSL",
+      "sslDesc": "SSL automatique Let's Encrypt",
+      "dnsLabel": "Configuration DNS",
+      "dnsDesc": "Enregistrements DKIM, SPF, DMARC",
+      "adminLabel": "Panneau d'administration",
+      "adminDesc": "Gérez les boîtes mail, les domaines et les alias"
+    },
+    "prerequisites": "Prérequis",
+    "prereq1": "Un domaine avec accès au DNS",
+    "prereq2": "Le port 25 non bloqué par votre fournisseur",
+    "prereq2Relay": "Port 25 ouvert pour le courrier entrant (le sortant passe par votre relais)",
+    "prereq3": "Serveur Ubuntu/Debian vierge (recommandé)",
+    "hide": "Masquer",
+    "reveal": "Afficher",
+    "generateTitle": "Générer un mot de passe aléatoire fort",
+    "generate": "Générer"
+  },
+  "sidebar": {
+    "portConflict": {
+      "title": "Conflit de port détecté",
+      "subtitle": "Les ports 80/443 sont nécessaires pour le serveur de messagerie",
+      "managed": "Géré",
+      "known": "Service connu",
+      "unknown": "Inconnu",
+      "container": "Conteneur : {name}",
+      "killWarning": "Assurez-vous que ce processus n'est pas nécessaire avant de l'arrêter. Cette action est irréversible.",
+      "allResolved": "Tous les conflits résolus",
+      "rerun": "Relancez la vérification des ports et poursuivez la configuration.",
+      "resumeStep3": "Reprendre à l'étape 3"
+    },
+    "completion": {
+      "ready": "Serveur de messagerie prêt !",
+      "webmail": "Webmail",
+      "adminPanel": "Panneau d'administration"
+    },
+    "dnsRef": {
+      "title": "Enregistrements DNS requis",
+      "subtitle": "Référence - appuyez pour voir les enregistrements que vous avez publiés"
+    },
+    "steps": {
+      "title": "Toutes les étapes",
+      "interrupted": "L'installation a été interrompue avant l'étape {step}. Reprenez pour continuer là où elle s'est arrêtée.",
+      "resume": "Reprendre",
+      "retry": "Réessayer"
+    },
+    "details": {
+      "title": "Détails de la configuration",
+      "domain": "Domaine",
+      "mailServer": "Serveur de messagerie",
+      "started": "Démarré"
+    }
+  },
+  "ptr": {
+    "heading": "Définissez le DNS inverse (PTR) avant de continuer",
+    "bodyBefore": "Les PTR se configurent dans le ",
+    "bodyStrongPanel": "panneau de votre fournisseur VPS",
+    "bodyMid": " (Hostinger, DigitalOcean, AWS, etc.), ",
+    "bodyStrongNot": "pas",
+    "bodyAfter": " chez votre fournisseur DNS. Sans rDNS correspondant, Gmail et Outlook rejettent vos e-mails sortants. L'installation reprend à l'étape {resumeStep} (SSL).",
+    "recommended": "recommandé",
+    "ipLabel": "IP",
+    "setTo": "Définir sur",
+    "copy": "Copier",
+    "howTo": "Comment le définir :",
+    "howToBody": " connectez-vous à votre fournisseur VPS, trouvez les paramètres réseau / DNS / rDNS du serveur, et définissez l'enregistrement PTR de chaque IP sur ",
+    "howToAfter": ". La propagation prend généralement de 5 à 15 minutes.",
+    "verifyWith": "Vérifiez avec :",
+    "shouldReturn": " devrait renvoyer ",
+    "action": "J'ai défini les PTR - continuer"
+  }
+}

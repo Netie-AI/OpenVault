@@ -1,0 +1,222 @@
+{
+  "home": {
+    "goodMorning": "Buenos días",
+    "goodAfternoon": "Buenas tardes",
+    "goodEvening": "Buenas noches",
+    "subtitle": "Esto es lo que está pasando en tus proyectos",
+    "statsProjects": "Proyectos",
+    "statsDeployments": "Despliegues",
+    "statsSuccessful": "Exitosos",
+    "statsFailed": "Fallidos",
+    "recentProjects": "Proyectos recientes",
+    "yourLatestActivity": "Tu actividad más reciente",
+    "viewAll": "Ver todo",
+    "noProjectsYet": "Aún no hay proyectos",
+    "createFirstProject": "Crea tu primer proyecto",
+    "justNow": "ahora mismo",
+    "minutesAgo": "hace {n} min",
+    "hoursAgo": "hace {n} h",
+    "daysAgo": "hace {n} d",
+    "monthsAgo": "hace {n} meses",
+    "statusLive": "En vivo",
+    "statusPaused": "En pausa",
+    "yourProjects": "Tus proyectos",
+    "loading": "Cargando...",
+    "projectCountOne": "{count} proyecto",
+    "projectCountOther": "{count} proyectos",
+    "viewAllProjects": "Ver los {count} proyectos →",
+    "viewAllApps": "Ver las {count} aplicaciones →",
+    "greetingName": "{greeting}, {name}",
+    "importGit": "Importar Git",
+    "importGitDesc": "Desde repositorio",
+    "mcpDeploy": "Desplegar con MCP",
+    "mcpDeployDesc": "Conecta un agente de IA",
+    "settingsCard": "Configuración",
+    "settingsCardDesc": "Cuenta y equipo",
+    "docs": "Documentación",
+    "docsDesc": "Más información",
+    "activityTitle": "Actividad",
+    "systemStatus": "Estado del sistema",
+    "operational": "Operativo",
+    "oneIssue": "1 problema",
+    "manyIssues": "{n} problemas",
+    "recentTitle": "Reciente",
+    "activityEmpty": "Tu actividad aparecerá aquí",
+    "allSystemsOperational": "Todos los sistemas operativos",
+    "runningSmoothly": "Tus proyectos funcionan sin problemas",
+    "time": {
+      "justNow": "ahora mismo",
+      "minutes": "hace {n} min",
+      "hours": "hace {n} h",
+      "days": "hace {n} d",
+      "months": "hace {n} meses"
+    },
+    "appsEmptyTitle": "Aún no hay apps",
+    "appsEmptyDesc": "Un clic, totalmente autoalojado: bases de datos, automatización, analítica, gestores de contraseñas y más, en tus propios servidores."
+  },
+  "nav": {
+    "scale": "Escalado",
+    "home": "Inicio",
+    "new-project": "Nuevo proyecto",
+    "projects": "Proyectos",
+    "deployments": "Despliegues",
+    "issues": "Monitoreo",
+    "backups": "Copias de seguridad",
+    "domains": "Dominios",
+    "monitoring": "Monitoreo",
+    "servers": "Servidores",
+    "emails": "Correos",
+    "settings": "Configuración",
+    "billing": "Facturación y uso",
+    "audit": "Registro de auditoría",
+    "mailSetup": "Configurar el correo",
+    "mailSetupProgress": "Progreso de la configuración",
+    "addMailbox": "Añadir buzón",
+    "webmail": "Webmail",
+    "sections": {
+      "main": "Principal",
+      "settings": "Configuración",
+      "infrastructure": "Infraestructura",
+      "mail": "Correo",
+      "delivery": "Entrega",
+      "system": "Sistema",
+      "account": "Cuenta"
+    },
+    "apps": "Apps",
+    "jobs": "Trabajos"
+  },
+  "sidebar": {
+    "expand": "Expandir barra lateral",
+    "collapse": "Contraer barra lateral"
+  },
+  "user": {
+    "logout": "Cerrar sesión",
+    "loggingOut": "Cerrando sesión…",
+    "profile": "Perfil",
+    "preferences": "Preferencias"
+  },
+  "pages": {
+    "apps": {
+      "moreApps": "+{count} más",
+      "title": "Apps",
+      "description": "Servicios gestionados con un clic: instala y ejecuta Convex, WordPress, correo y más.",
+      "createButton": "Instalar app",
+      "loading": "Cargando apps…",
+      "countOne": "{count} app instalada",
+      "countOther": "{count} apps instaladas",
+      "emptyTitle": "Instala tu primera app",
+      "emptyDescription": "Levanta Convex, n8n, Ghost y más: un clic, totalmente autoalojado. Elige uno para empezar.",
+      "popular": "Apps populares",
+      "alsoDeploy": "También puedes desplegar",
+      "browseAll": "Ver todas las apps",
+      "catalogTitle": "Instalar una app",
+      "catalogDescription": "Servicios gestionados con un clic. Elige uno para instalarlo como app.",
+      "catalogSearchPlaceholder": "Buscar apps…",
+      "catalogNoResults": "Ninguna app coincide con tu búsqueda.",
+      "cancel": "Cancelar",
+      "install": "Instalar",
+      "installing": "Instalando…",
+      "comingSoon": "Próximamente",
+      "configTitle": "Configurar {app}",
+      "nameLabel": "Nombre",
+      "categories": {
+        "all": "Todas",
+        "backend": "Backend",
+        "database": "Base de datos",
+        "cms": "CMS",
+        "analytics": "Analítica",
+        "automation": "Automatización",
+        "mail": "Correo",
+        "other": "Herramientas"
+      }
+    },
+    "projects": {
+      "title": "Proyectos",
+      "description": "Despliega y gestiona tus aplicaciones con facilidad",
+      "createButton": "Crear proyecto",
+      "stats": {
+        "totalProjects": "Total de proyectos",
+        "liveNow": "En vivo ahora",
+        "avgPerDay": "Promedio por día",
+        "successRate": "Tasa de éxito"
+      },
+      "searchPlaceholder": "Buscar proyectos...",
+      "pinnedProjects": "Proyectos fijados",
+      "otherProjects": "Otros proyectos",
+      "noResultsFound": "No se encontraron proyectos que coincidan con \"{query}\"",
+      "emptyState": {
+        "title": "Comienza tu primer proyecto",
+        "description": "Importa un repositorio de Git, usa una plantilla o despliega desde la CLI. Tus proyectos aparecerán aquí.",
+        "createProject": "Crear proyecto",
+        "browseTemplates": "Explorar plantillas",
+        "zeroConfig": "Despliegue sin configuración",
+        "instant": "Instantáneo",
+        "instantDesc": "Despliega en segundos",
+        "global": "Global",
+        "globalDesc": "Más de 100 regiones edge",
+        "previews": "Vistas previas",
+        "previewsDesc": "URL por rama",
+        "rollbacks": "Reversiones",
+        "rollbacksDesc": "Revierte con un clic",
+        "commandPalette": "O pulsa {key} para abrir la paleta de comandos"
+      },
+      "view": {
+        "label": "Vista",
+        "list": "Lista",
+        "grid": "Cuadrícula"
+      }
+    },
+    "deployments": {
+      "title": "Despliegues",
+      "description": "Consulta y gestiona tu historial de despliegues."
+    },
+    "domains": {
+      "title": "Dominios",
+      "description": "Gestiona dominios personalizados y registros DNS."
+    },
+    "monitoring": {
+      "title": "Monitoreo",
+      "description": "Registros, métricas y comprobaciones de estado de tus servicios."
+    },
+    "servers": {
+      "title": "Servidores",
+      "description": "Gestiona tus servidores de despliegue e infraestructura."
+    },
+    "settings": {
+      "title": "Configuración",
+      "description": "Configuración de cuenta, equipo y plataforma."
+    },
+    "billing": {
+      "title": "Facturación y uso",
+      "description": "Gestiona tu suscripción, uso y métodos de pago."
+    }
+  },
+  "quickLinks": {
+    "title": "Acciones rápidas",
+    "subtitle": "Accede a las tareas comunes",
+    "deployProject": {
+      "title": "Desplegar proyecto",
+      "description": "Importar desde Git"
+    },
+    "projects": {
+      "title": "Proyectos",
+      "description": "Todos los proyectos"
+    },
+    "deployments": {
+      "title": "Despliegues",
+      "description": "Historial de compilaciones"
+    },
+    "settings": {
+      "title": "Configuración",
+      "description": "Gestionar acceso"
+    },
+    "domains": {
+      "title": "Dominios",
+      "description": "Dominios personalizados"
+    },
+    "billing": {
+      "title": "Facturación y uso",
+      "description": "Uso y planes"
+    }
+  }
+}

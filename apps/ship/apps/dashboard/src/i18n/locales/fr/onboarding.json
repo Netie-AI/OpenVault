@@ -1,0 +1,149 @@
+{
+  "common": {
+    "goBack": "Retour",
+    "continue": "Continuer",
+    "back": "Précédent",
+    "optional": "(facultatif)"
+  },
+  "topBar": {
+    "website": "Site web",
+    "github": "GitHub",
+    "theme": "Changer le thème",
+    "language": "Langue"
+  },
+  "choose": {
+    "title": "Bienvenue sur Openship",
+    "subtitle": "Choisissez comment exécuter Openship. Les deux options vous donnent accès à toutes les fonctionnalités, et vous pouvez changer à tout moment.",
+    "cloud": {
+      "name": "Openship Cloud",
+      "desc": "Nous gérons l'infrastructure, les mises à jour et les sauvegardes. Il vous suffit de vous connecter et de commencer à déployer.",
+      "perk1": "Aucun serveur requis",
+      "perk2": "Offre gratuite incluse",
+      "perk3": "Géré et toujours à jour",
+      "cta": "Continuer avec Cloud"
+    },
+    "or": "ou",
+    "selfhost": {
+      "name": "Auto-hébergé",
+      "desc": "Exécutez Openship sur votre propre matériel. Connectez un serveur distant ou utilisez cette machine.",
+      "perk1": "Propriété totale des données",
+      "perk2": "Serveur distant ou ce Mac",
+      "perk3": "Nous nous occupons du reste",
+      "cta": "Configurer mon serveur"
+    },
+    "migrateNote": "Basculez entre Cloud et Auto-hébergé à tout moment en un clic, sans aucune dépendance, jamais.",
+    "skip": "Passer pour l'instant"
+  },
+  "selfhost": {
+    "title": "Où exécuter Openship ?",
+    "subtitleLine1": "Choisissez où installer la plateforme Openship.",
+    "subtitleLine2": "Les deux options vous offrent un contrôle total et la propriété de vos données.",
+    "local": {
+      "title": "Cette machine",
+      "badge": "Bêta",
+      "desc": "Installez Openship directement ici, sans SSH ni configuration distante",
+      "comingSoon": "Bientôt disponible",
+      "comingSoonDesc": "Exécuter Openship directement sur cette machine n'est pas encore prêt — connectez un serveur pour l'instant."
+    },
+    "remote": {
+      "title": "Un autre serveur",
+      "desc": "Connectez-vous à un serveur distant, un VPS ou toute machine de votre réseau via SSH"
+    }
+  },
+  "ssh": {
+    "title": "Connectez-vous à votre serveur",
+    "subtitleLine1": "Saisissez les informations de votre serveur et choisissez une méthode d'authentification.",
+    "subtitleLine2": "Nous installerons et configurerons tout automatiquement.",
+    "serverNameLabel": "Nom du serveur",
+    "serverNamePlaceholder": "Production, Préproduction, Dev...",
+    "serverIpLabel": "Adresse IP du serveur",
+    "usernameLabel": "Nom d'utilisateur",
+    "methodPassword": "Mot de passe",
+    "methodKey": "Clé SSH",
+    "methodAgent": "Agent",
+    "agentHint": "Se connecte via l'agent SSH de cette machine, comme VSCode, sans mot de passe ni clé. L'hôte exécutant Openship doit déjà avoir accès à ce serveur (une clé chargée dans son ssh-agent).",
+    "passwordLabel": "Mot de passe",
+    "passwordPlaceholder": "Mot de passe du serveur",
+    "keyPathLabel": "Chemin de la clé",
+    "browse": "Parcourir",
+    "passphraseLabel": "Phrase secrète",
+    "passphrasePlaceholder": "Laissez vide s'il n'y en a pas",
+    "advanced": "Avancé",
+    "sshPortLabel": "Port SSH",
+    "jumpHostLabel": "Hôte de rebond",
+    "extraArgsLabel": "Arguments SSH supplémentaires",
+    "submit": "Enregistrer et continuer",
+    "tutorial": "Tutoriel de configuration étape par étape",
+    "testConnection": "Tester la connexion",
+    "testing": "Test…",
+    "connected": "Connecté",
+    "testFailed": "Échec de la connexion",
+    "testHint": "Vérifiez que le serveur est accessible avant de continuer."
+  },
+  "tunnel": {
+    "title": "Accès Internet",
+    "subtitle": "Votre serveur a besoin d'être accessible depuis Internet pour les webhooks, le SSL et l'accès public.",
+    "providers": {
+      "edge": {
+        "title": "Openship Edge",
+        "desc": "Aucune configuration. SSL automatique, haute disponibilité et protection anti-DDoS, le tout intégré.",
+        "badge": "Recommandé"
+      },
+      "cloudflare": {
+        "title": "Cloudflare Tunnel",
+        "desc": "Utilisez votre propre compte Cloudflare. Offre gratuite disponible."
+      },
+      "ngrok": {
+        "title": "ngrok",
+        "desc": "Exposez vos services avec votre jeton d'authentification ngrok."
+      }
+    },
+    "cloudflareTokenLabel": "Jeton Cloudflare Tunnel",
+    "ngrokTokenLabel": "Jeton d'authentification ngrok",
+    "cloudflarePlaceholder": "Collez votre jeton de tunnel",
+    "ngrokPlaceholder": "Collez votre jeton d'authentification ngrok",
+    "edgeHint": "Openship Edge nécessite un compte Openship. Vous vous connecterez pour continuer.",
+    "signInContinue": "Se connecter et continuer"
+  },
+  "preferences": {
+    "title": "Préférences de build",
+    "subtitleLine1": "Choisissez comment vos projets sont compilés lors du déploiement.",
+    "subtitleLine2": "Vous pourrez modifier ce choix plus tard dans les paramètres.",
+    "options": {
+      "auto": {
+        "title": "Auto",
+        "desc": "Nous choisissons la meilleure option pour chaque framework"
+      },
+      "server": {
+        "title": "Distant",
+        "desc": "Compiler directement sur le serveur de déploiement"
+      },
+      "local": {
+        "title": "Local",
+        "desc": "Compiler sur ce Mac, puis pousser vers le serveur"
+      }
+    },
+    "hint": "Les déploiements par git push se compilent toujours sur le serveur ; ceci ne s'applique qu'aux déploiements manuels."
+  },
+  "loading": {
+    "connecting": "Connexion…",
+    "verifying": "Vérification de votre serveur",
+    "retry": "Réessayer",
+    "openingCloud": "Ouverture d'Openship Cloud…",
+    "waitingAuth": "En attente de la fin de l'authentification",
+    "couldNotStartAuthTitle": "Impossible de démarrer l'authentification cloud",
+    "authFailedTitle": "Échec de l'authentification cloud",
+    "couldNotStartAuthMsg": "Le flux d'authentification du bureau n'a pas pu être démarré.",
+    "authFailedMsg": "Veuillez réessayer et terminer la connexion dans votre navigateur.",
+    "completingSignIn": "Finalisation de la connexion…",
+    "returningToOpenship": "Retour à Openship",
+    "redirectingCloud": "Redirection vers Openship Cloud…",
+    "newTabSignIn": "Vous terminerez la connexion dans un nouvel onglet",
+    "couldNotSaveTitle": "Impossible d'enregistrer la configuration",
+    "couldNotSaveMsg": "L'API n'a pas répondu. Assurez-vous que les services sont en cours d'exécution.",
+    "savingConfig": "Enregistrement de la configuration…",
+    "almostThere": "Presque terminé",
+    "settingUpAccount": "Configuration de votre compte…",
+    "creatingSession": "Création de votre session"
+  }
+}

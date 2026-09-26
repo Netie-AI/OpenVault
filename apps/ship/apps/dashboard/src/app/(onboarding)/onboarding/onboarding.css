@@ -1,0 +1,1163 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Onboarding - pixel-perfect CSS ported from the Electron renderer.
+   Uses existing dashboard theme tokens (--th-*) for light/dark support.
+   Fonts are already loaded by the dashboard globally.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Onboarding accent tokens (purple, not dashboard primary) ─── */
+.ob-root {
+  --ob-accent: #7c3aed;
+  --ob-accent-hover: #6d28d9;
+  --ob-accent-soft: rgba(124, 58, 237, 0.08);
+  --ob-accent-glow: rgba(124, 58, 237, 0.12);
+  --ob-danger: #ef4444;
+  --ob-success: #22c55e;
+}
+
+/* ─── Aurora background ─── */
+.ob-aurora {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.ob-aurora-blob {
+  position: absolute;
+  border-radius: 50%;
+}
+
+.ob-aurora-core {
+  width: 420px;
+  height: 420px;
+  bottom: -120px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: radial-gradient(circle, rgba(139,92,246,.18) 0%, rgba(124,58,237,.08) 50%, transparent 70%);
+  filter: blur(45px);
+  animation: ob-aurora-breathe 16s ease-in-out infinite;
+}
+
+.ob-aurora-left {
+  width: 320px;
+  height: 320px;
+  bottom: -80px;
+  left: 10%;
+  background: radial-gradient(circle, rgba(245,158,11,.12) 0%, rgba(251,146,60,.06) 60%, transparent 70%);
+  filter: blur(55px);
+  animation: ob-aurora-sway-left 20s ease-in-out infinite;
+}
+
+.ob-aurora-right {
+  width: 320px;
+  height: 320px;
+  bottom: -80px;
+  right: 10%;
+  background: radial-gradient(circle, rgba(251,191,36,.10) 0%, rgba(196,181,253,.06) 60%, transparent 70%);
+  filter: blur(55px);
+  animation: ob-aurora-sway-right 22s ease-in-out infinite;
+}
+
+@keyframes ob-aurora-breathe {
+  0%, 100% { transform: translateX(-50%) scale(1); }
+  50%      { transform: translateX(-50%) scale(1.12); }
+}
+
+@keyframes ob-aurora-sway-left {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%      { transform: translate(30px, -20px) scale(1.08); }
+}
+
+@keyframes ob-aurora-sway-right {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%      { transform: translate(-25px, -15px) scale(1.06); }
+}
+
+/* ─── Top bar ─── */
+.ob-top-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px 0;
+}
+
+.ob-top-bar-links {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ob-top-bar-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: var(--th-text-muted);
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.ob-top-bar-link:hover {
+  color: var(--th-text-heading);
+  background: var(--th-sf-05);
+}
+
+/* Desktop (Electron): nothing needed here any more. The app header is a real row
+   with a matching `body` inset (globals.css), so this bar already starts below it
+   — the old `padding-top: calc(--titlebar-h + …)` dodge now double-counts and
+   pushes the onboarding header down twice. */
+
+/* ─── Language switcher ─── */
+.ob-lang {
+  position: relative;
+}
+.ob-lang-trigger {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.ob-lang-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+}
+.ob-lang-menu {
+  position: absolute;
+  top: 42px;
+  inset-inline-end: 0;
+  z-index: 101;
+  min-width: 168px;
+  padding: 6px;
+  border-radius: 12px;
+  background: var(--th-sf-02);
+  border: 1px solid var(--th-bd-subtle);
+  box-shadow: 0 12px 34px -14px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ob-lang-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--th-text-body);
+  font-size: 13px;
+  text-align: start;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.ob-lang-item:hover {
+  background: var(--th-sf-05);
+  color: var(--th-text-heading);
+}
+.ob-lang-item.is-active {
+  color: var(--th-text-heading);
+  background: var(--th-sf-04);
+}
+
+/* ─── Skip link (choose step) ─── */
+.ob-skip {
+  display: block;
+  margin: 18px auto 0;
+  padding: 6px 12px;
+  border: none;
+  background: transparent;
+  color: var(--th-text-muted);
+  font-size: 13px;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.ob-skip:hover {
+  color: var(--th-text-heading);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ─── App container ─── */
+.ob-root {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 48px 32px;
+}
+
+/* ─── Screen wrapper ─── */
+.ob-screen {
+  width: 100%;
+  max-width: 480px;
+}
+
+.ob-screen-inner {
+  position: relative;
+  text-align: center;
+}
+
+.ob-screen-inner--wide {
+  max-width: 820px;
+  margin: 0 auto;
+}
+
+.ob-screen--choose {
+  max-width: 860px;
+}
+
+/* ─── Staggered fade-in ─── */
+.ob-anim-fade {
+  opacity: 0;
+  transform: translateY(12px);
+  animation: ob-fadeInUp 0.65s cubic-bezier(.16,1,.3,1) forwards;
+}
+
+.ob-anim-d1 { animation-delay: 0s; }
+.ob-anim-d2 { animation-delay: 0.1s; }
+.ob-anim-d3 { animation-delay: 0.2s; }
+
+@keyframes ob-fadeInUp {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Logo ─── */
+.ob-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ob-logo-circle {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2.5px solid var(--th-text-heading);
+  flex-shrink: 0;
+}
+
+.ob-logo-text {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--th-text-heading);
+  letter-spacing: -0.3px;
+}
+
+/* ─── Typography ─── */
+.ob-root h1 {
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--th-text-heading);
+  letter-spacing: -0.3px;
+  line-height: 1.2;
+}
+
+.ob-root h2 {
+  font-size: 21px;
+  font-weight: 600;
+  color: var(--th-text-heading);
+  letter-spacing: -0.2px;
+  line-height: 1.2;
+  margin-bottom: 4px;
+}
+
+.ob-root h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--th-text-heading);
+  margin-bottom: 6px;
+}
+
+.ob-subtitle {
+  margin-top: 10px;
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--th-text-muted);
+}
+
+.ob-version-text {
+  margin-top: 16px;
+  font-size: 11px;
+  color: var(--th-text-muted);
+  opacity: .7;
+}
+
+/* ─── Cards row ─── */
+.ob-cards-row {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  margin-top: 28px;
+}
+
+.ob-choice-card {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: var(--th-card-bg);
+  border: 1px solid var(--th-card-bd);
+  border-radius: 24px;
+  padding: 28px 28px 24px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.25s, box-shadow 0.25s;
+}
+
+.ob-choice-card:hover {
+  border-color: rgba(124, 58, 237, .25);
+  box-shadow: 0 8px 40px rgba(124, 58, 237, .08), 0 1px 3px rgba(0,0,0,.04);
+}
+
+/* Card icon badge */
+.ob-card-icon {
+  width: 44px;
+  height: 44px;
+  background: var(--ob-accent-soft);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+  color: var(--ob-accent);
+  position: relative;
+}
+
+.ob-card-icon--center {
+  margin: 0 auto 16px;
+}
+
+.ob-card-desc {
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--th-text-body);
+  margin-bottom: 18px;
+}
+
+.ob-card-perks {
+  list-style: none;
+  margin: 0 0 20px;
+  padding: 0;
+  flex: 1;
+}
+
+.ob-card-perks li {
+  font-size: 13px;
+  color: var(--th-text-body);
+  padding: 4px 0 4px 20px;
+  position: relative;
+  line-height: 1.5;
+}
+
+.ob-card-perks li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 10px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ob-accent);
+  opacity: .6;
+}
+
+/* Card button - shared base */
+.ob-btn-card {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s, box-shadow 0.25s, border-color 0.2s;
+  margin-top: auto;
+  position: relative;
+  overflow: hidden;
+}
+
+.ob-btn-card:active {
+  transform: scale(0.97);
+}
+
+.ob-choice-card .ob-btn-card svg {
+  transition: transform 0.2s;
+}
+
+.ob-choice-card:hover .ob-btn-card svg {
+  transform: translateX(3px);
+}
+
+/* Accent variant - gradient, glow */
+.ob-btn-card--accent {
+  color: #fff;
+  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 50%, #5b21b6 100%);
+  box-shadow: 0 2px 12px rgba(124, 58, 237, .25);
+}
+
+.ob-btn-card--accent:hover {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 50%, #6d28d9 100%);
+  box-shadow: 0 4px 24px rgba(124, 58, 237, .35);
+}
+
+/* Outline variant - ghost, border */
+.ob-btn-card--outline {
+  color: var(--th-text-heading);
+  background: transparent;
+  border: 1.5px solid var(--th-card-bd);
+}
+
+.ob-btn-card--outline:hover {
+  border-color: var(--th-on-20);
+  background: var(--th-sf-03);
+  box-shadow: 0 2px 12px rgba(0,0,0,.04);
+}
+
+/* ─── Vertical divider ─── */
+.ob-cards-divider {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 20px;
+  flex-shrink: 0;
+}
+
+.ob-divider-line {
+  width: 1px;
+  flex: 1;
+  background: var(--th-bd-default);
+}
+
+.ob-divider-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--th-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 10px 0;
+}
+
+/* ─── Migration note ─── */
+.ob-migrate-note {
+  margin-top: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--th-text-muted);
+  background: var(--ob-accent-soft);
+  padding: 10px 20px;
+  border-radius: 999px;
+}
+
+.ob-migrate-note svg {
+  flex-shrink: 0;
+  color: var(--ob-accent);
+}
+
+/* ─── Auth toggle tabs ─── */
+.ob-auth-toggle {
+  display: flex;
+  gap: 4px;
+  margin-top: 18px;
+  background: var(--th-sf-04);
+  border-radius: 10px;
+  padding: 3px;
+}
+
+.ob-auth-tab {
+  flex: 1;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--th-text-muted);
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s, box-shadow 0.15s;
+}
+
+.ob-auth-tab.active {
+  color: var(--th-text-heading);
+  background: var(--th-card-bg);
+  box-shadow: 0 1px 3px rgba(0,0,0,.06);
+}
+
+.ob-auth-tab:hover:not(.active) {
+  color: var(--th-text-body);
+}
+
+.ob-auth-hint {
+  margin-top: 14px;
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--th-text-muted);
+  background: var(--th-sf-04);
+  border: 1px solid var(--th-border-soft, rgba(255,255,255,.08));
+  border-radius: 10px;
+}
+
+/* Input with inline button */
+.ob-input-with-btn {
+  display: flex;
+  gap: 6px;
+}
+
+.ob-input-with-btn input {
+  flex: 1;
+}
+
+.ob-btn-browse {
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--th-text-body);
+  background: var(--th-sf-04);
+  border: 1px solid var(--th-card-bd);
+  border-radius: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.ob-btn-browse:hover {
+  border-color: var(--ob-accent);
+  background: var(--ob-accent-soft);
+  color: var(--ob-accent);
+}
+
+.ob-label-hint {
+  font-weight: 400;
+  color: var(--th-text-muted);
+  font-size: 12px;
+}
+
+/* ─── Advanced toggle ─── */
+.ob-btn-advanced {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 18px;
+  padding: 6px 0;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--th-text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.ob-btn-advanced:hover {
+  color: var(--th-text-body);
+}
+
+.ob-btn-advanced .ob-chevron {
+  transition: transform 0.2s ease;
+}
+
+.ob-btn-advanced.open .ob-chevron {
+  transform: rotate(180deg);
+}
+
+.ob-advanced-panel {
+  display: none;
+  margin-top: 4px;
+  padding: 16px;
+  background: var(--th-sf-03);
+  border: 1px solid var(--th-card-bd);
+  border-radius: 14px;
+}
+
+.ob-advanced-panel.open {
+  display: block;
+}
+
+.ob-advanced-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.ob-advanced-grid .ob-form-group {
+  margin-top: 0;
+}
+
+.ob-advanced-panel > .ob-form-group {
+  margin-top: 12px;
+}
+
+/* ─── Buttons ─── */
+.ob-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 24px;
+  width: 100%;
+  padding: 13px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--th-btn-text);
+  background: var(--th-btn-bg);
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.ob-btn-primary:hover {
+  background: var(--th-text-heading);
+}
+
+/* Secondary / test-connection button (outline) */
+.ob-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 16px;
+  width: 100%;
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--th-text-heading);
+  background: transparent;
+  border: 1px solid var(--th-border, rgba(127, 127, 127, 0.28));
+  border-radius: 14px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+}
+.ob-btn-secondary:hover:not(:disabled) {
+  background: var(--th-hover-bg, rgba(127, 127, 127, 0.08));
+}
+.ob-btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.ob-btn-secondary.is-ok {
+  color: #10b981;
+  border-color: rgba(16, 185, 129, 0.45);
+}
+
+/* Disabled self-host choice (e.g. "This Machine" not ready yet) */
+.ob-selfhost-choice-card.is-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+.ob-badge-soon {
+  display: inline-block;
+  margin-inline-start: 8px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 999px;
+  color: var(--th-text-muted, #888);
+  background: var(--th-hover-bg, rgba(127, 127, 127, 0.12));
+}
+
+.ob-btn-primary:active {
+  transform: scale(0.98);
+}
+
+.ob-btn-back {
+  position: absolute;
+  top: 2px;
+  left: -52px;
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  border: 1px solid var(--th-card-bd);
+  background: var(--th-card-bg);
+  color: var(--th-text-body);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.ob-btn-back:hover {
+  border-color: var(--ob-accent);
+  color: var(--ob-accent);
+}
+
+/* ─── Form ─── */
+.ob-form-group {
+  text-align: left;
+  margin-top: 18px;
+}
+
+.ob-form-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--th-text-heading);
+  margin-bottom: 6px;
+}
+
+.ob-form-group input {
+  width: 100%;
+  padding: 11px 14px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--th-text-heading);
+  background: var(--th-card-bg);
+  border: 1px solid var(--th-card-bd);
+  border-radius: 12px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.ob-form-group input:focus {
+  border-color: var(--ob-accent);
+  box-shadow: 0 0 0 3px var(--ob-accent-soft);
+}
+
+.ob-form-group input::placeholder {
+  color: var(--th-text-muted);
+}
+
+/* ─── Status messages ─── */
+.ob-status-message {
+  margin-top: 14px;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 12px;
+  text-align: left;
+}
+
+.ob-status-message.error {
+  color: var(--ob-danger);
+  background: rgba(239, 68, 68, 0.06);
+  border: 1px solid rgba(239, 68, 68, 0.12);
+}
+
+.ob-status-message.success {
+  color: var(--ob-success);
+  background: rgba(34, 197, 94, 0.06);
+  border: 1px solid rgba(34, 197, 94, 0.12);
+}
+
+/* ─── Tutorial link ─── */
+.ob-tutorial-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 20px;
+  font-size: 13px;
+  color: var(--ob-accent);
+  text-decoration: none;
+  transition: opacity 0.15s;
+}
+
+.ob-tutorial-link:hover {
+  opacity: .75;
+}
+
+/* ─── Spinner ─── */
+.ob-spinner {
+  display: block;
+  width: 36px;
+  height: 36px;
+  margin: 0 auto 20px;
+  color: var(--ob-accent);
+  animation: ob-spin 0.7s linear infinite;
+}
+
+@keyframes ob-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ─── Loading screen action buttons ─── */
+.ob-loading-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.ob-loading-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 220px;
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s, box-shadow 0.25s, border-color 0.2s;
+}
+
+.ob-loading-btn:active {
+  transform: scale(0.97);
+}
+
+.ob-loading-btn--accent {
+  color: #fff;
+  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 50%, #5b21b6 100%);
+  box-shadow: 0 2px 12px rgba(124, 58, 237, .25);
+}
+
+.ob-loading-btn--accent:hover {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 50%, #6d28d9 100%);
+  box-shadow: 0 4px 24px rgba(124, 58, 237, .35);
+}
+
+.ob-loading-btn--outline {
+  color: var(--th-text-heading);
+  background: transparent;
+  border: 1.5px solid var(--th-card-bd);
+}
+
+.ob-loading-btn--outline:hover {
+  border-color: var(--th-on-20);
+  background: var(--th-sf-03);
+  box-shadow: 0 2px 12px rgba(0,0,0,.04);
+}
+
+.ob-loading-btn--text {
+  color: var(--th-text-muted);
+  background: transparent;
+  min-width: auto;
+  padding: 8px 16px;
+  font-weight: 500;
+}
+
+.ob-loading-btn--text:hover {
+  color: var(--th-text-body);
+}
+
+/* ─── Self-host sub-choice screen ─── */
+.ob-selfhost-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 24px 0 8px;
+}
+
+.ob-selfhost-choice-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 20px;
+  background: var(--th-card-bg);
+  border: 1.5px solid var(--th-card-bd);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  text-align: left;
+  font-family: inherit;
+  color: inherit;
+  font-size: inherit;
+}
+
+.ob-selfhost-choice-card:hover {
+  border-color: var(--ob-accent);
+  background: var(--ob-accent-soft);
+  box-shadow: 0 0 0 3px var(--ob-accent-glow);
+}
+
+.ob-selfhost-choice-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--th-sf-05);
+  color: var(--th-text-heading);
+  flex-shrink: 0;
+}
+
+.ob-selfhost-choice-card:hover .ob-selfhost-choice-icon {
+  background: var(--ob-accent-soft);
+  color: var(--ob-accent);
+}
+
+.ob-selfhost-choice-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.ob-selfhost-choice-title {
+  font-weight: 600;
+  font-size: 14.5px;
+  color: var(--th-text-heading);
+}
+
+.ob-badge-beta {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--ob-accent);
+  background: var(--ob-accent-soft);
+  padding: 2px 8px;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
+  margin-left: 4px;
+}
+
+.ob-selfhost-choice-desc {
+  font-size: 12.5px;
+  color: var(--th-text-muted);
+  line-height: 1.45;
+}
+
+.ob-selfhost-choice-arrow {
+  flex-shrink: 0;
+  color: var(--th-on-20);
+  transition: color 0.15s, transform 0.15s;
+}
+
+.ob-selfhost-choice-card:hover .ob-selfhost-choice-arrow {
+  color: var(--ob-accent);
+  transform: translateX(2px);
+}
+
+/* ─── Preferences screen ─── */
+.ob-pref-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 24px 0 28px;
+}
+
+.ob-pref-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  background: var(--th-card-bg);
+  border: 1.5px solid var(--th-card-bd);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  text-align: left;
+  font-family: inherit;
+  color: inherit;
+  font-size: inherit;
+}
+
+.ob-pref-card:hover {
+  border-color: var(--th-on-16);
+  background: var(--th-sf-03);
+}
+
+.ob-pref-card.active {
+  border-color: var(--ob-accent);
+  background: var(--ob-accent-soft);
+  box-shadow: 0 0 0 3px var(--ob-accent-glow);
+}
+
+.ob-pref-card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--th-sf-05);
+  color: var(--th-text-heading);
+  flex-shrink: 0;
+}
+
+.ob-pref-card.active .ob-pref-card-icon {
+  background: var(--ob-accent-soft);
+  color: var(--ob-accent);
+}
+
+.ob-pref-card-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ob-pref-card-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--th-text-heading);
+}
+
+.ob-pref-card-desc {
+  font-size: 12.5px;
+  color: var(--th-text-muted);
+  line-height: 1.4;
+}
+
+.ob-pref-card-check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1.5px solid var(--th-on-12);
+  flex-shrink: 0;
+  color: transparent;
+  transition: all 0.15s;
+}
+
+.ob-pref-card.active .ob-pref-card-check {
+  background: var(--ob-accent);
+  border-color: var(--ob-accent);
+  color: #fff;
+}
+
+.ob-pref-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  color: var(--th-text-muted);
+  margin: 16px 0 0;
+  opacity: 0.7;
+}
+
+.ob-pref-hint svg {
+  flex-shrink: 0;
+}
+
+/* ─── Tunnel choice screen ─── */
+.ob-tunnel-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 24px 0 0;
+}
+
+.ob-tunnel-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  background: var(--th-card-bg);
+  border: 1.5px solid var(--th-card-bd);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  text-align: left;
+  font-family: inherit;
+  color: inherit;
+  font-size: inherit;
+}
+
+.ob-tunnel-card:hover {
+  border-color: var(--th-on-16);
+  background: var(--th-sf-03);
+}
+
+.ob-tunnel-card.active {
+  border-color: var(--ob-accent);
+  background: var(--ob-accent-soft);
+  box-shadow: 0 0 0 3px var(--ob-accent-glow);
+}
+
+.ob-tunnel-card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--th-sf-05);
+  color: var(--th-text-heading);
+  flex-shrink: 0;
+}
+
+.ob-tunnel-card.active .ob-tunnel-card-icon {
+  background: var(--ob-accent-soft);
+  color: var(--ob-accent);
+}
+
+.ob-tunnel-card-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.ob-tunnel-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ob-tunnel-card-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--th-text-heading);
+}
+
+.ob-tunnel-card-badge {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--ob-accent);
+  background: var(--ob-accent-soft);
+  padding: 2px 8px;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+}
+
+.ob-tunnel-card-desc {
+  font-size: 12.5px;
+  color: var(--th-text-muted);
+  line-height: 1.45;
+}
+
+.ob-tunnel-card-check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1.5px solid var(--th-on-12);
+  flex-shrink: 0;
+  color: transparent;
+  transition: all 0.15s;
+}
+
+.ob-tunnel-card.active .ob-tunnel-card-check {
+  background: var(--ob-accent);
+  border-color: var(--ob-accent);
+  color: #fff;
+}
+
+/* ─── Choose header ─── */
+.ob-choose-header {
+  margin-bottom: 8px;
+}

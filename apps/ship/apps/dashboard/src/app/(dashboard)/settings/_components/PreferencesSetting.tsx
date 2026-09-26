@@ -1,0 +1,56 @@
+"use client";
+
+/**
+ * Settings → General → Preferences. Personal, per-browser display preferences
+ * (nothing sent to the server). Collapsed by default. Currently holds Demo mode
+ * (blur IPs, hosts and env values for screen-shares); add future toggles as rows.
+ */
+
+import type { ReactNode } from "react";
+import { SettingsSection } from "./SettingsSection";
+import { Toggle } from "@/components/project-settings/ServerSideSwitch";
+import { useDemoMode, setDemoMode } from "@/lib/demo-mode";
+
+export function PreferencesSetting() {
+  const demoMode = useDemoMode();
+
+  return (
+    <SettingsSection
+      icon={"sliders"}
+      title="Preferences"
+      description="Personal display preferences for this browser — nothing is sent to the server."
+      collapsible
+    >
+      <div className="space-y-3">
+        <PreferenceRow
+          title="Demo mode"
+          hint="Blur IP addresses, hosts, and environment values during screen-shares and recordings."
+          checked={demoMode}
+          onChange={setDemoMode}
+        />
+      </div>
+    </SettingsSection>
+  );
+}
+
+function PreferenceRow({
+  title,
+  hint,
+  checked,
+  onChange,
+}: {
+  title: string;
+  hint: ReactNode;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4 rounded-xl border border-border/50 bg-muted/10 p-4">
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-foreground">{title}</p>
+        <p className="text-xs text-muted-foreground">{hint}</p>
+      </div>
+      <Toggle checked={checked} onChange={onChange} aria-label={title} />
+    </div>
+  );
+}

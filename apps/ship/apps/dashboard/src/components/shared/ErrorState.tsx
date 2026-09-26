@@ -1,0 +1,173 @@
+"use client";
+
+import { Icon as UiIcon } from "@repo/ui/icons";
+
+import { useRouter } from "next/navigation";
+import { PageContainer } from "@/components/ui/PageContainer";
+import { useI18n } from "@/components/i18n-provider";
+
+/* ── Error type configs ─────────────────────────────────────────────── */
+
+type ErrorType = "repo-not-found" | "project-not-found" | "access-denied" | "load-failed";
+
+interface ErrorStateProps {
+  type?: ErrorType;
+  error?: {
+    message?: string;
+    details?: string;
+  };
+}
+
+/* ── Component ──────────────────────────────────────────────────────── */
+
+export default function ErrorState({ error = {}, type = "repo-not-found" }: ErrorStateProps) {
+  const router = useRouter();
+  const { t } = useI18n();
+  const w = t.widgets.shared.errorState;
+
+  const ERROR_CONFIGS = {
+    "repo-not-found": {
+      icon: "git-branch" as const,
+      iconColor: "text-destructive",
+      iconBg: "bg-destructive/10",
+      title: w.repoNotFound.title,
+      subtitle: w.repoNotFound.subtitle,
+      hints: w.repoNotFound.hints,
+      actions: [
+        { label: w.repoNotFound.backToLibrary, icon: "arrow-left" as const, variant: "secondary" as const, path: "/library" },
+        { label: w.repoNotFound.importRepository, icon: "plus" as const, variant: "primary" as const, path: "/library" },
+      ],
+    },
+    "project-not-found": {
+      icon: "warning" as const,
+      iconColor: "text-destructive",
+      iconBg: "bg-destructive/10",
+      title: w.projectNotFound.title,
+      subtitle: w.projectNotFound.subtitle,
+      hints: w.projectNotFound.hints,
+      actions: [
+        { label: w.projectNotFound.backToDashboard, icon: "arrow-left" as const, variant: "secondary" as const, path: "/" },
+        { label: w.projectNotFound.createNewProject, icon: "plus" as const, variant: "primary" as const, path: "/library" },
+      ],
+    },
+    "access-denied": {
+      icon: "lock" as const,
+      iconColor: "text-warning",
+      iconBg: "bg-warning-bg",
+      title: w.accessDenied.title,
+      subtitle: w.accessDenied.subtitle,
+      hints: w.accessDenied.hints,
+      actions: [
+        { label: w.accessDenied.backToDashboard, icon: "arrow-left" as const, variant: "secondary" as const, path: "/" },
+      ],
+    },
+    // A non-404 fetch failure (cloud unreachable, network, 5xx). The caller
+    // passes the real reason via `error.details` so the actual message (e.g. a
+    // cloud-connection error) shows instead of a misleading "draft" screen.
+    "load-failed": {
+      icon: "warning" as const,
+      iconColor: "text-destructive",
+      iconBg: "bg-destructive/10",
+      title: w.loadFailed.title,
+      subtitle: w.loadFailed.subtitle,
+      hints: [] as string[],
+      actions: [
+        { label: w.projectNotFound.backToDashboard, icon: "arrow-left" as const, variant: "secondary" as const, path: "/" },
+      ],
+    },
+  };
+
+  const config = ERROR_CONFIGS[type] ?? ERROR_CONFIGS["repo-not-found"];
+  const Icon = config.icon;
+
+  const title = error.message || config.title;
+  const subtitle = error.details || config.subtitle;
+
+  return (
+    <PageContainer>
+        <div className="max-w-xl mx-auto pt-12">
+
+          {/* ── Error card ───────────────────────────────────────── */}
+          <div className="bg-card rounded-2xl border border-border/50">
+            {/* Header */}
+            <div className="px-6 py-5 border-b border-border/50">
+              <div className="flex items-center gap-4">
+                <div className={`w-11 h-11 rounded-xl ${config.iconBg} flex items-center justify-center`}>
+                  <UiIcon name={Icon} className={`size-5 ${config.iconColor}`} />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-foreground">{title}</h2>
+                  <p className="text-sm text-muted-foreground/70 mt-0.5">{subtitle}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="px-6 py-5 space-y-5">
+              {/* Hints */}
+              {config.hints.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-medium text-foreground mb-2.5">{w.commonCauses}</h3>
+                  <ul className="space-y-1.5">
+                    {config.hints.map((hint: string, i: number) => (
+                      <li key={i} className="flex items-start gap-2.5 text-sm text-muted-foreground">
+                        <span className="mt-1.5 size-1 rounded-full bg-muted-foreground/40 shrink-0" />
+                        {hint}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-1">
+                {config.actions.map((action, i) => {
+                  const ActionIcon = action.icon;
+                  return (
+                    <button
+                      key={i}
+                      onClick={() => router.push(action.path)}
+                      className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                        action.variant === "primary"
+                          ? "bg-foreground text-background hover:bg-foreground/90"
+                          : "bg-muted/60 text-foreground hover:bg-muted"
+                      }`}
+                    >
+                      <UiIcon name={ActionIcon} className={`size-4 ${ActionIcon === "arrow-left" ? "rtl:rotate-180" : ""}`} />
+                      {action.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* ── Help card ────────────────────────────────────────── */}
+          <div className="bg-card rounded-2xl border border-border/50 mt-4 px-5 py-4">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                <UiIcon name="help-circle" className="size-[18px] text-primary" />
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-foreground mb-1">{w.needHelp}</h3>
+                <p className="text-xs text-muted-foreground/70 mb-2.5">
+                  {w.needHelpDesc}
+                </p>
+                <div className="flex gap-4">
+                  <a
+                    href="https://openship.io/docs"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs font-medium text-primary hover:text-primary/80 flex items-center gap-1 transition-colors"
+                  >
+                    {w.documentation} <UiIcon name="external-link" className="size-3" />
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+    </PageContainer>
+  );
+}

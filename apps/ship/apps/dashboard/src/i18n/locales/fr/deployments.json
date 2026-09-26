@@ -1,0 +1,205 @@
+{
+  "time": {
+    "secondsAgo": "il y a {n} s",
+    "minutesAgo": "il y a {n} min",
+    "hoursAgo": "il y a {n} h",
+    "daysAgo": "il y a {n} j",
+    "monthsAgo": "il y a {n} mois",
+    "yearsAgo": "il y a {n} an(s)"
+  },
+  "header": {
+    "title": "Déploiements",
+    "loading": "Chargement…",
+    "countProjectOne": "{count} déploiement",
+    "countProjectOther": "{count} déploiements",
+    "countAllOne": "{deployments} au total sur {projects} projet",
+    "countAllOther": "{deployments} au total sur {projects} projets"
+  },
+  "filters": {
+    "searchPlaceholder": "Rechercher des déploiements...",
+    "all": "Tous",
+    "success": "Réussis",
+    "failed": "Échoués",
+    "building": "En construction",
+    "canceled": "Annulés"
+  },
+  "projectFilter": {
+    "allProjects": "Tous les projets"
+  },
+  "sidebar": {
+    "overview": {
+      "title": "Vue d'ensemble",
+      "total": "Total",
+      "successful": "Réussis",
+      "failed": "Échoués",
+      "inProgress": "En cours",
+      "pageTitle": "Sur cette page"
+    },
+    "autoDeploy": {
+      "title": "Déploiement automatique",
+      "description": "Activez le déploiement automatique pour déclencher les déploiements à chaque push sur votre branche principale.",
+      "cta": "Accéder aux paramètres du projet"
+    },
+    "getStarted": {
+      "title": "Commencer",
+      "description": "Importez un dépôt Git ou utilisez un modèle pour créer votre premier déploiement.",
+      "cta": "Déployer un projet"
+    },
+    "recent": {
+      "title": "Récents",
+      "empty": "Vos déploiements apparaîtront ici",
+      "unknown": "Inconnu"
+    }
+  },
+  "stats": {
+    "total": "Total",
+    "projectCountOne": "{count} projet",
+    "projectCountOther": "{count} projets",
+    "success": "Réussis",
+    "failed": "Échoués",
+    "inProgress": "En cours",
+    "buildingNow": "en construction"
+  },
+  "status": {
+    "deployed": "Déployé",
+    "failed": "Échoué",
+    "canceled": "Annulé",
+    "building": "En construction",
+    "deploying": "Déploiement en cours",
+    "partial": "Partiel",
+    "actionRequired": "Action requise",
+    "rejected": "Rejeté",
+    "verifying": "Vérification",
+    "noChanges": "Aucun changement",
+    "pending": "En attente"
+  },
+  "serviceStatus": {
+    "deployed": "Déployé",
+    "failed": "Échoué",
+    "cancelled": "Annulé",
+    "skipped": "Ignoré",
+    "building": "En construction",
+    "deploying": "Déploiement en cours",
+    "running": "En cours d'exécution",
+    "removedOnHost": "Supprimé sur l'hôte",
+    "verifying": "Vérification",
+    "pending": "En attente"
+  },
+  "card": {
+    "unknownProject": "Projet inconnu",
+    "versionTitle": "Version {version}",
+    "active": "Actif",
+    "activeTitle": "Il s'agit du déploiement qui sert actuellement le projet",
+    "pinned": "Épinglé",
+    "pinnedTitle": "Épinglé — exempté de la purge de rétention. Reste restaurable par rollback indéfiniment.",
+    "snapshotted": "Instantané",
+    "snapshottedTitle": "Artéfact archivé — cette version est disponible pour un rollback",
+    "manualDeploy": "Déploiement manuel",
+    "serviceTitle": "{name} : {label}",
+    "serviceTitleReason": "{name} : {label} ({reason})"
+  },
+  "empty": {
+    "filtered": {
+      "title": "Aucun déploiement trouvé",
+      "description": "Essayez d'ajuster vos filtres ou d'effacer votre recherche."
+    },
+    "none": {
+      "title": "Aucun déploiement pour le moment",
+      "description": "Déployez votre premier projet et il apparaîtra ici avec le statut de construction, les détails du commit et les métriques de performance.",
+      "deployButton": "Déployer un projet",
+      "browseButton": "Parcourir les modèles"
+    }
+  },
+  "modal": {
+    "title": "Détails du commit",
+    "project": "Projet",
+    "unknownProject": "Projet inconnu",
+    "domain": "Domaine",
+    "noDomain": "Aucun domaine",
+    "status": "Statut",
+    "environment": "Environnement",
+    "statusName": {
+      "success": "Réussi",
+      "failed": "Échoué",
+      "building": "En construction",
+      "deploying": "Déploiement en cours",
+      "canceled": "Annulé",
+      "pending": "En attente"
+    },
+    "changedFiles": "Fichiers modifiés ({count})",
+    "fileTypes": {
+      "added": "+ Ajouté",
+      "modified": "~ Modifié",
+      "removed": "- Supprimé"
+    },
+    "viewOnGithub": "Voir sur GitHub",
+    "visitSite": "Visiter le site",
+    "manual": {
+      "title": "Déploiement manuel",
+      "description": "Ce déploiement a été déclenché manuellement et ne contient pas d'informations de commit.",
+      "deploymentId": "ID de déploiement",
+      "created": "Créé",
+      "type": "Type",
+      "typeManual": "Manuel"
+    }
+  },
+  "menu": {
+    "openDeployment": "Ouvrir le déploiement",
+    "viewRepository": "Voir le dépôt",
+    "copyDomainUrl": "Copier l'URL du domaine",
+    "copyBuildId": "Copier l'ID de construction",
+    "cancelDeployment": "Annuler le déploiement",
+    "rollback": "Revenir à cette version",
+    "rollbackTitle": {
+      "enabled": "Restaurer le projet à cette version (code uniquement — les données restent inchangées)",
+      "active": "Il s'agit déjà de la version active",
+      "pruned": "Ce déploiement n'a ni image conservée ni commit à reconstruire",
+      "notReady": "Seuls les déploiements prêts peuvent faire l'objet d'un rollback",
+      "rebuildOnly": "Restaurer cette version en reconstruisant son commit (son image a été supprimée)"
+    },
+    "pin": "Épingler",
+    "unpin": "Désépingler",
+    "pinTitle": {
+      "pin": "Garder ce déploiement restaurable par rollback indéfiniment (limite : 10 épinglés par projet)",
+      "unpin": "Autoriser la purge de ce déploiement en cas de dépassement de la rétention",
+      "pruned": "Impossible d'épingler — l'artéfact a déjà été purgé"
+    },
+    "deleteDeployment": "Supprimer le déploiement",
+    "rollbackFailed": "Échec du rollback",
+    "pinFailed": "Échec de l'épinglage du déploiement",
+    "unpinFailed": "Échec du désépinglage du déploiement",
+    "rollbackModeInstant": "Restauration instantanée — réutilise l'image conservée de cette version, sans reconstruction.",
+    "rollbackModeRebuild": "Reconstruction — l'image de cette version n'est plus sur l'hôte, son commit est reconstruit.",
+    "rollbackModeReacquireImage": "Restauration depuis le registre — récupère la référence d'image exacte enregistrée pour cette version, sans reconstruire les sources.",
+    "rollbackModeMixed": "Presque instantané — {count} service(s) ont perdu leur image et seront reconstruits."
+  },
+  "rollbackConfirm": {
+    "title": "Revenir à cette version ?",
+    "dataUnchanged": "Seul le code de l'application est restauré. Les données de base de données et de volumes ne changent pas.",
+    "envHeading": "Variables d'environnement",
+    "envSummaryOverlay": "{count} variable(s) changent — les valeurs de cette version sont réappliquées par-dessus les actuelles.",
+    "envSummaryReplace": "{count} variable(s) changent — l'environnement de cette version est utilisé tel qu'il a été capturé.",
+    "envNoChanges": "Aucune variable d'environnement ne change.",
+    "envUnchanged": "Le conteneur existant est redémarré et non recréé : son environnement reste intact.",
+    "envNoValues": "Les valeurs ne sont jamais affichées ici.",
+    "envTruncated": "Affichage de {shown} sur {total}.",
+    "dirFrozenWins": "revient à la valeur de cette version",
+    "dirRemovedSince": "réapparaît — supprimée depuis cette version",
+    "dirAddedSinceKept": "conservée telle quelle — ajoutée après cette version",
+    "dirAddedSinceDropped": "supprimée — ajoutée après cette version",
+    "scopeAmbiguous": "capturée sans portée de service : une seule valeur s'applique à tous les services",
+    "untouchedHeading": "Services ajoutés après cette version",
+    "untouchedNote": "Ils continuent de tourner et ne sont pas touchés : {names}",
+    "confirm": "Revenir",
+    "cancel": "Annuler"
+  },
+  "loadFailed": "Impossible de charger les déploiements.",
+  "retry": "Réessayer",
+  "pagination": {
+    "label": "Pages de l’historique des déploiements",
+    "previous": "Page précédente",
+    "next": "Page suivante",
+    "pageOf": "Page {page} sur {total}",
+    "range": "Déploiements {from}–{to} sur {total}"
+  }
+}

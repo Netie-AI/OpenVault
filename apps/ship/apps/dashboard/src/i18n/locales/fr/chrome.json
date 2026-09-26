@@ -1,0 +1,86 @@
+{
+  "accountSwitcher": {
+    "workspacesCount": "{count} espaces de travail",
+    "newWorkspace": "Nouvel espace de travail",
+    "createTitle": "Créer un espace de travail",
+    "createDescription": "Une organisation distincte pour les projets, les déploiements, les serveurs et les membres.",
+    "nameLabel": "Nom",
+    "namePlaceholder": "Acme Corp",
+    "cancel": "Annuler",
+    "create": "Créer",
+    "toastTitle": "Organisation",
+    "switchFailed": "Échec du changement",
+    "createFailed": "Échec de la création"
+  },
+  "sidebar": {
+    "workspaceFallback": "Espace de travail",
+    "workspacesCount": "{count} espaces de travail",
+    "switchOrganization": "Changer d'organisation",
+    "current": "Actuel",
+    "cloudLabel": "Cloud : {email}",
+    "linkedToCloud": "Lié à Openship Cloud en tant que {email}",
+    "backToSetup": "Retour à la configuration",
+    "personal": "Personnel"
+  },
+  "mailRail": {
+    "selectServer": "Sélectionnez un serveur de messagerie",
+    "switchServer": "Changer de serveur de messagerie",
+    "setupIncomplete": "Configuration incomplète"
+  },
+  "migration": {
+    "inProgressTitle": "Migration en cours",
+    "inProgressBody": "Vos données sont en cours de transfert. Cette page s'actualisera une fois la bascule terminée — généralement en 30 à 90 secondes.",
+    "inProgressHint": "Ne fermez pas cet onglet. Nous vérifions l'état de la migration toutes les quelques secondes et rechargerons automatiquement.",
+    "newLocation": "Nouvel emplacement",
+    "switchBackPrompt": "Besoin de repasser en mode mono-utilisateur sur cette machine ?",
+    "switchBackAction": "Revenir au mode mono-utilisateur",
+    "cloudTitle": "Cette instance a été déplacée vers Openship Cloud",
+    "cloudBody": "Votre équipe collabore désormais à l'URL ci-dessous. Cette instance locale ne contient plus vos projets, paramètres ou déploiements — ouvrez le tableau de bord cloud pour continuer.",
+    "cloudCta": "Ouvrir le tableau de bord cloud",
+    "tunneledTitle": "Votre openship est désormais accessible via le tunnel",
+    "tunneledBody": "Vos coéquipiers peuvent se connecter à l'URL ci-dessous lorsque votre machine est en ligne. Les données résident toujours sur cet appareil — le tunnel ne fait que les exposer via le edge Oblien.",
+    "tunneledCta": "Ouvrir l'URL du tunnel",
+    "serverTitle": "Cette instance a été déplacée vers votre serveur",
+    "serverBody": "Votre équipe collabore désormais à l'URL ci-dessous. Cette instance locale ne contient plus vos projets, paramètres ou déploiements — ouvrez le tableau de bord de l'équipe pour continuer.",
+    "serverCta": "Ouvrir le tableau de bord de l'équipe"
+  },
+  "notFound": {
+    "title": "Page introuvable",
+    "descGlobal": "La page que vous recherchez n'existe pas ou a été déplacée.",
+    "descDashboard": "Cette page n'existe pas ou a peut-être été déplacée. Vérifiez l'URL, ou revenez à votre tableau de bord.",
+    "backToDashboard": "Retour au tableau de bord",
+    "viewDeployments": "Voir les déploiements",
+    "copyId": "Copier l'ID"
+  },
+  "window": {
+    "back": "Retour",
+    "forward": "Suivant",
+    "reload": "Recharger",
+    "minimize": "Réduire",
+    "maximize": "Agrandir",
+    "restore": "Restaurer",
+    "close": "Fermer",
+    "devTools": "Outils de développement",
+    "navigation": "Navigation"
+  },
+  "apiDown": {
+    "title": "Impossible de joindre l'API",
+    "description": "Le tableau de bord fonctionne, mais il ne parvient pas à joindre l'API Openship — il n'y a donc rien à afficher pour l'instant. Vos déploiements continuent de tourner malgré tout.",
+    "hintStatus": "Vérifiez que l'API est active : exécutez `openship status` sur l'hôte.",
+    "hintStart": "Il ne tourne pas ? Démarrez-le avec `openship up`.",
+    "hintRemote": "Vous gérez une machine distante ? Vérifiez son URL et que le port de l'API est joignable depuis ici.",
+    "docs": "Documentation d'auto-hébergement",
+    "retry": "Réessayer"
+  },
+  "error": {
+    "title": "Cette page a rencontré une erreur",
+    "description": "Un élément de cet écran n'a pas pu s'afficher. Réessayer suffit généralement — aucun de vos déploiements n'est affecté.",
+    "tryAgain": "Réessayer",
+    "goToProjects": "Aller aux projets",
+    "refCode": "Réf."
+  },
+  "errorLinks": {
+    "docs": "Documentation",
+    "github": "Signaler un problème"
+  }
+}

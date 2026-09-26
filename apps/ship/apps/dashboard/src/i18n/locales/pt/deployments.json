@@ -1,0 +1,205 @@
+{
+  "time": {
+    "secondsAgo": "há {n}s",
+    "minutesAgo": "há {n}min",
+    "hoursAgo": "há {n}h",
+    "daysAgo": "há {n}d",
+    "monthsAgo": "há {n}mês",
+    "yearsAgo": "há {n}a"
+  },
+  "header": {
+    "title": "Implantações",
+    "loading": "A carregar…",
+    "countProjectOne": "{count} implantação",
+    "countProjectOther": "{count} implantações",
+    "countAllOne": "{deployments} no total em {projects} projeto",
+    "countAllOther": "{deployments} no total em {projects} projetos"
+  },
+  "filters": {
+    "searchPlaceholder": "Pesquisar implantações...",
+    "all": "Todas",
+    "success": "Sucesso",
+    "failed": "Falhou",
+    "building": "A construir",
+    "canceled": "Cancelada"
+  },
+  "projectFilter": {
+    "allProjects": "Todos os projetos"
+  },
+  "sidebar": {
+    "overview": {
+      "title": "Visão geral",
+      "total": "Total",
+      "successful": "Bem-sucedidas",
+      "failed": "Falhadas",
+      "inProgress": "Em curso",
+      "pageTitle": "Nesta página"
+    },
+    "autoDeploy": {
+      "title": "Implantação automática",
+      "description": "Ative a implantação automática para acionar implantações automaticamente sempre que enviar código para a sua branch principal.",
+      "cta": "Ir para as definições do projeto"
+    },
+    "getStarted": {
+      "title": "Começar",
+      "description": "Importe um repositório Git ou use um modelo para criar a sua primeira implantação.",
+      "cta": "Implantar um projeto"
+    },
+    "recent": {
+      "title": "Recentes",
+      "empty": "As suas implantações aparecerão aqui",
+      "unknown": "Desconhecido"
+    }
+  },
+  "stats": {
+    "total": "Total",
+    "projectCountOne": "{count} projeto",
+    "projectCountOther": "{count} projetos",
+    "success": "Sucesso",
+    "failed": "Falhou",
+    "inProgress": "Em curso",
+    "buildingNow": "a construir agora"
+  },
+  "status": {
+    "deployed": "Implantada",
+    "failed": "Falhou",
+    "canceled": "Cancelada",
+    "building": "A construir",
+    "deploying": "A implantar",
+    "partial": "Parcial",
+    "actionRequired": "Ação necessária",
+    "rejected": "Rejeitada",
+    "verifying": "A verificar",
+    "noChanges": "Sem alterações",
+    "pending": "Pendente"
+  },
+  "serviceStatus": {
+    "deployed": "Implantado",
+    "failed": "Falhou",
+    "cancelled": "Cancelado",
+    "skipped": "Ignorado",
+    "building": "A construir",
+    "deploying": "A implantar",
+    "running": "Em execução",
+    "removedOnHost": "Removido no anfitrião",
+    "verifying": "A verificar",
+    "pending": "Pendente"
+  },
+  "card": {
+    "unknownProject": "Projeto desconhecido",
+    "versionTitle": "Versão {version}",
+    "active": "Ativa",
+    "activeTitle": "Esta é a implantação que serve atualmente o projeto",
+    "pinned": "Fixada",
+    "pinnedTitle": "Fixada — isenta da limpeza de retenção. Permanece restaurável por reversão indefinidamente.",
+    "snapshotted": "Com instantâneo",
+    "snapshottedTitle": "Artefacto arquivado — esta versão está disponível para reversão",
+    "manualDeploy": "Implantação manual",
+    "serviceTitle": "{name}: {label}",
+    "serviceTitleReason": "{name}: {label} ({reason})"
+  },
+  "empty": {
+    "filtered": {
+      "title": "Nenhuma implantação encontrada",
+      "description": "Tente ajustar os seus filtros ou limpar a sua pesquisa."
+    },
+    "none": {
+      "title": "Ainda não há implantações",
+      "description": "Implante o seu primeiro projeto e ele aparecerá aqui com o estado da construção, detalhes do commit e métricas de desempenho.",
+      "deployButton": "Implantar projeto",
+      "browseButton": "Explorar modelos"
+    }
+  },
+  "modal": {
+    "title": "Detalhes do commit",
+    "project": "Projeto",
+    "unknownProject": "Projeto desconhecido",
+    "domain": "Domínio",
+    "noDomain": "Sem domínio",
+    "status": "Estado",
+    "environment": "Ambiente",
+    "statusName": {
+      "success": "Sucesso",
+      "failed": "Falhou",
+      "building": "A construir",
+      "deploying": "A implantar",
+      "canceled": "Cancelada",
+      "pending": "Pendente"
+    },
+    "changedFiles": "Ficheiros alterados ({count})",
+    "fileTypes": {
+      "added": "+ Adicionado",
+      "modified": "~ Modificado",
+      "removed": "- Removido"
+    },
+    "viewOnGithub": "Ver no GitHub",
+    "visitSite": "Visitar o site",
+    "manual": {
+      "title": "Implantação manual",
+      "description": "Esta implantação foi acionada manualmente e não tem informação de commit.",
+      "deploymentId": "ID da implantação",
+      "created": "Criada",
+      "type": "Tipo",
+      "typeManual": "Manual"
+    }
+  },
+  "menu": {
+    "openDeployment": "Abrir implantação",
+    "viewRepository": "Ver repositório",
+    "copyDomainUrl": "Copiar URL do domínio",
+    "copyBuildId": "Copiar ID da construção",
+    "cancelDeployment": "Cancelar implantação",
+    "rollback": "Reverter para esta versão",
+    "rollbackTitle": {
+      "enabled": "Restaurar o projeto para esta versão (apenas o código — os dados não são alterados)",
+      "active": "Esta já é a versão ativa",
+      "pruned": "Este deploy não tem imagem retida nem commit para reconstruir",
+      "notReady": "Só é possível reverter para implantações prontas",
+      "rebuildOnly": "Restaurar esta versão reconstruindo o commit (a imagem foi removida)"
+    },
+    "pin": "Fixar",
+    "unpin": "Desafixar",
+    "pinTitle": {
+      "pin": "Manter esta implantação restaurável por reversão indefinidamente (limite: 10 fixadas por projeto)",
+      "unpin": "Permitir que esta implantação seja removida quando a retenção exceder o limite",
+      "pruned": "Não é possível fixar — o artefacto já foi removido"
+    },
+    "deleteDeployment": "Eliminar implantação",
+    "rollbackFailed": "A reversão falhou",
+    "pinFailed": "Falha ao fixar a implantação",
+    "unpinFailed": "Falha ao desafixar a implantação",
+    "rollbackModeInstant": "Restauração instantânea — reutiliza a imagem retida desta versão, sem rebuild.",
+    "rollbackModeRebuild": "Rebuild — a imagem desta versão não está mais no host, então o commit é construído novamente.",
+    "rollbackModeReacquireImage": "Restauração do registro — baixa novamente a referência exata da imagem salva para esta versão, sem reconstruir o código-fonte.",
+    "rollbackModeMixed": "Quase instantâneo — {count} serviço(s) perderam a imagem e serão reconstruídos."
+  },
+  "rollbackConfirm": {
+    "title": "Voltar para esta versão?",
+    "dataUnchanged": "Restaura apenas o código da aplicação. Os dados de banco e de volumes não mudam.",
+    "envHeading": "Variáveis de ambiente",
+    "envSummaryOverlay": "{count} variável(is) mudam — os valores desta versão são aplicados sobre os atuais.",
+    "envSummaryReplace": "{count} variável(is) mudam — o ambiente desta versão é usado exatamente como foi capturado.",
+    "envNoChanges": "Nenhuma variável de ambiente muda.",
+    "envUnchanged": "O contêiner existente é reiniciado em vez de recriado, então o ambiente dele não muda.",
+    "envNoValues": "Os valores nunca são exibidos aqui.",
+    "envTruncated": "Mostrando {shown} de {total}.",
+    "dirFrozenWins": "volta ao valor desta versão",
+    "dirRemovedSince": "retorna — removida depois desta versão",
+    "dirAddedSinceKept": "mantida como está — adicionada depois desta versão",
+    "dirAddedSinceDropped": "removida — adicionada depois desta versão",
+    "scopeAmbiguous": "capturada sem escopo de serviço, então um único valor vale para todos os serviços",
+    "untouchedHeading": "Serviços adicionados depois desta versão",
+    "untouchedNote": "Eles continuam rodando e não são alterados: {names}",
+    "confirm": "Voltar",
+    "cancel": "Cancelar"
+  },
+  "loadFailed": "Não foi possível carregar as implantações.",
+  "retry": "Tentar novamente",
+  "pagination": {
+    "label": "Páginas do histórico de implantações",
+    "previous": "Página anterior",
+    "next": "Próxima página",
+    "pageOf": "Página {page} de {total}",
+    "range": "Implantações {from}–{to} de {total}"
+  }
+}

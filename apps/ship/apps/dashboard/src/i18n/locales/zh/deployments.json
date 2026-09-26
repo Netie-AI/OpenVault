@@ -1,0 +1,205 @@
+{
+  "time": {
+    "secondsAgo": "{n} 秒前",
+    "minutesAgo": "{n} 分钟前",
+    "hoursAgo": "{n} 小时前",
+    "daysAgo": "{n} 天前",
+    "monthsAgo": "{n} 个月前",
+    "yearsAgo": "{n} 年前"
+  },
+  "header": {
+    "title": "部署",
+    "loading": "加载中…",
+    "countProjectOne": "{count} 次部署",
+    "countProjectOther": "{count} 次部署",
+    "countAllOne": "{projects} 个项目共 {deployments} 次",
+    "countAllOther": "{projects} 个项目共 {deployments} 次"
+  },
+  "filters": {
+    "searchPlaceholder": "搜索部署...",
+    "all": "全部",
+    "success": "成功",
+    "failed": "失败",
+    "building": "构建中",
+    "canceled": "已取消"
+  },
+  "projectFilter": {
+    "allProjects": "所有项目"
+  },
+  "sidebar": {
+    "overview": {
+      "title": "概览",
+      "total": "总计",
+      "successful": "成功",
+      "failed": "失败",
+      "inProgress": "进行中",
+      "pageTitle": "本页"
+    },
+    "autoDeploy": {
+      "title": "自动部署",
+      "description": "启用自动部署后，每次推送到主分支时都会自动触发部署。",
+      "cta": "前往项目设置"
+    },
+    "getStarted": {
+      "title": "开始使用",
+      "description": "导入 Git 仓库或使用模板来创建你的第一次部署。",
+      "cta": "部署项目"
+    },
+    "recent": {
+      "title": "最近",
+      "empty": "你的部署将显示在这里",
+      "unknown": "未知"
+    }
+  },
+  "stats": {
+    "total": "总计",
+    "projectCountOne": "{count} 个项目",
+    "projectCountOther": "{count} 个项目",
+    "success": "成功",
+    "failed": "失败",
+    "inProgress": "进行中",
+    "buildingNow": "正在构建"
+  },
+  "status": {
+    "deployed": "已部署",
+    "failed": "失败",
+    "canceled": "已取消",
+    "building": "构建中",
+    "deploying": "部署中",
+    "partial": "部分完成",
+    "actionRequired": "需要处理",
+    "rejected": "已拒绝",
+    "verifying": "验证中",
+    "noChanges": "无变更",
+    "pending": "待处理"
+  },
+  "serviceStatus": {
+    "deployed": "已部署",
+    "failed": "失败",
+    "cancelled": "已取消",
+    "skipped": "已跳过",
+    "building": "构建中",
+    "deploying": "部署中",
+    "running": "运行中",
+    "removedOnHost": "已在主机上移除",
+    "verifying": "验证中",
+    "pending": "待处理"
+  },
+  "card": {
+    "unknownProject": "未知项目",
+    "versionTitle": "版本 {version}",
+    "active": "当前活跃",
+    "activeTitle": "这是当前为项目提供服务的部署",
+    "pinned": "已固定",
+    "pinnedTitle": "已固定 — 不受保留策略清理影响。可无限期用于回滚恢复。",
+    "snapshotted": "已快照",
+    "snapshottedTitle": "构建产物已归档 — 此版本可用于回滚",
+    "manualDeploy": "手动部署",
+    "serviceTitle": "{name}：{label}",
+    "serviceTitleReason": "{name}：{label}（{reason}）"
+  },
+  "empty": {
+    "filtered": {
+      "title": "未找到部署",
+      "description": "请尝试调整筛选条件或清除搜索内容。"
+    },
+    "none": {
+      "title": "暂无部署",
+      "description": "部署你的第一个项目后，它将连同构建状态、提交详情和性能指标一起显示在这里。",
+      "deployButton": "部署项目",
+      "browseButton": "浏览模板"
+    }
+  },
+  "modal": {
+    "title": "提交详情",
+    "project": "项目",
+    "unknownProject": "未知项目",
+    "domain": "域名",
+    "noDomain": "无域名",
+    "status": "状态",
+    "environment": "环境",
+    "statusName": {
+      "success": "成功",
+      "failed": "失败",
+      "building": "构建中",
+      "deploying": "部署中",
+      "canceled": "已取消",
+      "pending": "待处理"
+    },
+    "changedFiles": "变更的文件（{count}）",
+    "fileTypes": {
+      "added": "+ 新增",
+      "modified": "~ 修改",
+      "removed": "- 删除"
+    },
+    "viewOnGithub": "在 GitHub 上查看",
+    "visitSite": "访问站点",
+    "manual": {
+      "title": "手动部署",
+      "description": "此次部署为手动触发，没有提交信息。",
+      "deploymentId": "部署 ID",
+      "created": "创建时间",
+      "type": "类型",
+      "typeManual": "手动"
+    }
+  },
+  "menu": {
+    "openDeployment": "打开部署",
+    "viewRepository": "查看仓库",
+    "copyDomainUrl": "复制域名 URL",
+    "copyBuildId": "复制构建 ID",
+    "cancelDeployment": "取消部署",
+    "rollback": "回滚到此版本",
+    "rollbackTitle": {
+      "enabled": "将项目恢复到此版本（仅代码 — 数据不变）",
+      "active": "这已经是当前活跃版本",
+      "pruned": "该部署既没有保留镜像，也没有可重建的提交",
+      "notReady": "只能回滚到就绪状态的部署",
+      "rebuildOnly": "通过重新构建其提交来恢复此版本（其镜像已被清理）"
+    },
+    "pin": "固定",
+    "unpin": "取消固定",
+    "pinTitle": {
+      "pin": "无限期保留此部署以便回滚恢复（上限：每个项目 10 个固定）",
+      "unpin": "允许在保留超额时清理此部署",
+      "pruned": "无法固定 — 产物已被清理"
+    },
+    "deleteDeployment": "删除部署",
+    "rollbackFailed": "回滚失败",
+    "pinFailed": "固定部署失败",
+    "unpinFailed": "取消固定部署失败",
+    "rollbackModeInstant": "即时恢复 — 复用该版本保留的镜像，无需重新构建。",
+    "rollbackModeRebuild": "重新构建 — 该版本的镜像已不在主机上，将重新构建其提交。",
+    "rollbackModeReacquireImage": "注册表恢复 — 重新拉取为此版本记录的精确镜像引用，无需重新构建源代码。",
+    "rollbackModeMixed": "基本即时 — {count} 个服务的镜像已丢失，将重新构建。"
+  },
+  "rollbackConfirm": {
+    "title": "回滚到此版本？",
+    "dataUnchanged": "仅恢复应用代码。数据库与卷数据不会更改。",
+    "envHeading": "环境变量",
+    "envSummaryOverlay": "{count} 个变量将改变 — 此版本的值会覆盖当前值。",
+    "envSummaryReplace": "{count} 个变量将改变 — 将完全使用此版本记录的环境。",
+    "envNoChanges": "没有环境变量会改变。",
+    "envUnchanged": "现有容器只是重启而非重建，其环境不会改变。",
+    "envNoValues": "这里从不显示变量值。",
+    "envTruncated": "显示 {total} 项中的 {shown} 项。",
+    "dirFrozenWins": "恢复为此版本的值",
+    "dirRemovedSince": "将恢复 — 此版本之后被删除",
+    "dirAddedSinceKept": "保持当前值 — 此版本之后新增",
+    "dirAddedSinceDropped": "将被移除 — 此版本之后新增",
+    "scopeAmbiguous": "记录时没有服务范围，因此同一个值会应用到所有服务",
+    "untouchedHeading": "此版本之后新增的服务",
+    "untouchedNote": "它们会继续运行，不会被改动：{names}",
+    "confirm": "回滚",
+    "cancel": "取消"
+  },
+  "loadFailed": "无法加载部署记录。",
+  "retry": "重试",
+  "pagination": {
+    "label": "部署历史分页",
+    "previous": "上一页",
+    "next": "下一页",
+    "pageOf": "第 {page} 页，共 {total} 页",
+    "range": "第 {from}–{to} 条部署，共 {total} 条"
+  }
+}

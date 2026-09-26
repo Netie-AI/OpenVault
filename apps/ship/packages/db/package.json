@@ -1,0 +1,67 @@
+{
+  "name": "@repo/db",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    "./factory": {
+      "types": "./src/factory.ts",
+      "import": "./src/factory.ts"
+    },
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    },
+    "./schema": {
+      "types": "./src/schema/index.ts",
+      "import": "./src/schema/index.ts"
+    },
+    "./repos": {
+      "types": "./src/repos/index.ts",
+      "import": "./src/repos/index.ts"
+    },
+    "./lock": {
+      "types": "./src/pglite-lock.ts",
+      "import": "./src/pglite-lock.ts"
+    },
+    "./encryption": {
+      "types": "./src/encryption.ts",
+      "import": "./src/encryption.ts"
+    },
+    "./configuration-secrets": {
+      "types": "./src/configuration-secrets.ts",
+      "import": "./src/configuration-secrets.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --clean",
+    "dev": "tsup src/index.ts --format esm --dts --watch",
+    "lint": "tsc --noEmit",
+    "test": "vitest run",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio",
+    "db:heal-pglite": "bun scripts/heal-pglite.ts",
+    "db:heal-pglite-resetwal": "bun scripts/heal-pglite-resetwal.ts",
+    "db:heal-orphans": "bun scripts/heal-orphan-tables.ts",
+    "db:dump": "bun scripts/dump.ts",
+    "db:restore": "bun scripts/restore.ts",
+    "clean": "rm -rf dist .turbo node_modules"
+  },
+  "dependencies": {
+    "@repo/core": "workspace:*",
+    "drizzle-orm": "^0.45.1",
+    "pg": "^8.20.0",
+    "@electric-sql/pglite": "^0.3.15"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.0",
+    "@types/pg": "^8.11.0",
+    "drizzle-kit": "^0.31.9",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
+  }
+}

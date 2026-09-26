@@ -1,0 +1,102 @@
+{
+  "activity": {
+    "title": "Actividad",
+    "thisWeek": "esta semana",
+    "deploymentSingular": "{count} despliegue",
+    "deploymentPlural": "{count} despliegues"
+  },
+  "apiRequests": {
+    "title": "Solicitudes de API",
+    "last7Days": "Últimos 7 días",
+    "totalRequests": "Solicitudes totales",
+    "requestsTooltip": "{count} solicitudes"
+  },
+  "credits": {
+    "title": "Saldo de créditos",
+    "availableToUse": "Disponible para usar",
+    "spentThisMonth": "Gastado este mes",
+    "add": "Añadir"
+  },
+  "deployments": {
+    "title": "Despliegues",
+    "lastNDays": "últimos {period} días",
+    "deploymentSingular": "{count} despliegue",
+    "deploymentPlural": "{count} despliegues"
+  },
+  "homeTip": {
+    "quickTip": "Consejo rápido",
+    "connectText": "Conecta tu repositorio de GitHub para desplegar automáticamente en cada push.",
+    "connectLabel": "Conectar GitHub",
+    "createText": "Crea tu primer proyecto para empezar a desplegar.",
+    "createLabel": "Nuevo proyecto",
+    "settingsText": "Configura variables de entorno y dominios personalizados en los ajustes del proyecto.",
+    "settingsLabel": "Ajustes del proyecto",
+    "connected": "Conectado"
+  },
+  "welcome": {
+    "title": "Lanza tu primer proyecto",
+    "subtitle": "Conecta un repositorio o empieza desde una plantilla — Openship lo construye, lo despliega y te entrega una URL en vivo en minutos.",
+    "createProject": "Crear proyecto",
+    "importGithub": "Importar desde GitHub",
+    "tipPrefix": "Consejo: pulsa",
+    "tipSuffix": "para ir a cualquier parte"
+  },
+  "header": {
+    "goodMorning": "Buenos días",
+    "goodAfternoon": "Buenas tardes",
+    "goodEvening": "Buenas noches",
+    "greetingWithName": "{greeting}, {name}",
+    "overview": "Resumen",
+    "subtitle": "Supervisa el uso de tu plataforma y gestiona los recursos",
+    "creditsBalance": "Saldo de créditos",
+    "topUp": "Recargar"
+  },
+  "hero": {
+    "title": "Actividad de la plataforma",
+    "subtitle": "Uso de tokens y solicitudes de API",
+    "tokens": "Tokens",
+    "requests": "Solicitudes",
+    "lastNDays": "Últimos {period} días",
+    "agents": "Agentes",
+    "environments": "Entornos",
+    "total": "Total",
+    "production": "Producción",
+    "testing": "Pruebas",
+    "prodCount": "{count} prod",
+    "testCount": "{count} prueba"
+  },
+  "projects": {
+    "title": "Proyectos",
+    "activeDeployments": "Despliegues activos",
+    "total": "Total",
+    "live": "En vivo",
+    "building": "Construyendo",
+    "needAttentionSingular": "{count} proyecto necesita atención",
+    "needAttentionPlural": "{count} proyectos necesitan atención"
+  },
+  "sandboxes": {
+    "title": "Entornos de prueba",
+    "developmentEnvironments": "Entornos de desarrollo",
+    "totalSandboxes": "Entornos de prueba totales",
+    "active": "Activos",
+    "runningCount": "{count} en ejecución",
+    "stoppedCount": "{count} detenidos"
+  },
+  "stats": {
+    "creditsBalance": "Saldo de créditos",
+    "tokenUsage": "Uso de tokens",
+    "thisMonth": "Este mes",
+    "apiRequests": "Solicitudes de API",
+    "last7Days": "Últimos 7 días",
+    "deployments": "Despliegues",
+    "successfulCount": "{count} exitosos",
+    "activeProjects": "Proyectos activos",
+    "sandboxes": "Entornos de prueba",
+    "activeCount": "{count} activos"
+  },
+  "tokenUsage": {
+    "title": "Uso de tokens",
+    "lastNDays": "últimos {period} días",
+    "tokensTooltip": "{count} tokens"
+  }
+}

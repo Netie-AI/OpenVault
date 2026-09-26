@@ -1,0 +1,190 @@
+{
+  "page": {
+    "title": "E-Mail-Server",
+    "subtitle": "Richte mit wenigen Klicks einen selbst gehosteten Mailserver ein",
+    "backToServers": "Zurück zu den Mailservern",
+    "backToAdmin": "Zurück zur Mail-Verwaltung",
+    "addServer": "Mailserver hinzufügen",
+    "removeModal": {
+      "title": "Diesen Mailserver entfernen?",
+      "description": "Entfernt {label} nur aus der Mail-Liste. Der Mail-Stack läuft weiter und es wird nichts deinstalliert – füge ihn jederzeit über \"Übernehmen\" für eine bestehende Installation wieder hinzu.",
+      "submit": "Aus Liste entfernen",
+      "submitting": "Wird entfernt…",
+      "body": "Da die Installation auf dem Server unangetastet bleibt, stellt eine spätere erneute Übernahme die vollständige Verwaltung ohne Neuinstallation wieder her."
+    },
+    "errors": {
+      "resetFailed": "Zurücksetzen fehlgeschlagen",
+      "ackDns": "DNS konnte nicht bestätigt werden",
+      "ackPtr": "PTR konnte nicht bestätigt werden",
+      "selectServer": "Wähle zuerst einen Server aus",
+      "resolutionFailed": "Auflösung fehlgeschlagen"
+    }
+  },
+  "adopt": {
+    "title": "Bestehenden Mailserver übernehmen",
+    "intro": "Hast du auf einem deiner Server bereits einen Mailserver mit Openship eingerichtet? Wähle ihn aus und scanne – wird ein Mail-Stack gefunden, wird er wieder ins Dashboard übernommen, ohne neu zu installieren oder deine Daten anzutasten.",
+    "scanning": "Wird gescannt…",
+    "scan": "Server scannen",
+    "detected": "Mailserver erkannt",
+    "domainLabel": "Domain:",
+    "unknown": "unbekannt",
+    "stats": "iRedMail läuft: {iredmail} · Installation: {install} · Webmail: {webmail}",
+    "yes": "ja",
+    "no": "nein",
+    "complete": "abgeschlossen",
+    "inProgress": "in Bearbeitung",
+    "present": "vorhanden",
+    "notDeployed": "nicht bereitgestellt",
+    "cancel": "Abbrechen",
+    "adopt": "Übernehmen",
+    "noInstall": "Auf diesem Server wurde keine Mailserver-Installation gefunden.",
+    "scanFailed": "Scan fehlgeschlagen – ist der Server erreichbar?",
+    "adoptFailed": "Übernahme fehlgeschlagen"
+  },
+  "dns": {
+    "heading": "Veröffentliche DNS-Einträge, bevor du fortfährst",
+    "bodyBefore": "Ohne diese schlägt die Mail-Zustellung fehl. Füge sie bei deinem DNS-Anbieter hinzu und klicke dann auf ",
+    "action": "Ich habe die Einträge gesetzt – fortfahren",
+    "bodyAfterResume": " unten. Die Installation wird ab Schritt {resumeStep} (SSL-Zertifikat) fortgesetzt.",
+    "bodyAfter": " unten.",
+    "autoConfigure": "DNS automatisch konfigurieren",
+    "autoConfigureDesc": "Wähle den Anbieter, der das DNS deiner Domain hostet. Wir übertragen die Einträge über dessen API für dich.",
+    "otherManual": "Andere / manuell festlegen",
+    "otherManualDesc": "Kopiere jeden Eintrag aus dem Banner und füge ihn in die Oberfläche deines Anbieters ein",
+    "pickAnother": "Anderen Anbieter wählen",
+    "comingSoon": "{provider}-Integration – demnächst verfügbar",
+    "comingSoonBefore": "Die direkte API-Integration mit diesem Anbieter ist noch nicht verfügbar. Kopiere vorerst jeden Eintrag aus dem Banner und füge ihn in die Oberfläche deines DNS-Anbieters ein. Sobald das erledigt ist, klicke auf ",
+    "comingSoonAfter": ".",
+    "gotIt": "Verstanden",
+    "providers": {
+      "cloudflare": "Kostenloses DNS, schnelle Verbreitung. Die häufigste Wahl.",
+      "hostinger": "Wenn du die Domain über Hostinger gekauft hast.",
+      "route53": "Von AWS gehostete DNS-Zonen.",
+      "digitalocean": "Von DigitalOcean verwaltete Zonen.",
+      "namecheap": "Standard-DNS von Namecheap.",
+      "google": "Von Google verwaltete Zonen."
+    }
+  },
+  "recordCard": {
+    "priority": "Priorität: {priority}",
+    "copyValue": "Wert kopieren"
+  },
+  "progress": {
+    "liveLogs": "Live-Protokolle",
+    "lineOne": "{count} Zeile",
+    "lineOther": "{count} Zeilen",
+    "cancel": "Abbrechen",
+    "resetTitle": "Installationsstatus auf dem Server löschen und neu beginnen",
+    "confirmReset": "Zum Bestätigen erneut klicken",
+    "reset": "Zurücksetzen",
+    "waiting": "Warte auf Ausgabe…",
+    "noBuffered": "Keine gepufferte Ausgabe für diesen Durchlauf.",
+    "willStream": "Die Protokolle werden hier gestreamt, sobald die Einrichtung startet.",
+    "jumpToLatest": "Zum Neuesten springen",
+    "setupFailed": "Einrichtung fehlgeschlagen",
+    "retryFromStep": "Ab Schritt {resumeStep} erneut versuchen",
+    "resumePausedTitle": "Einrichtung pausiert",
+    "stepLabel": "Schritt {step}",
+    "continueFromStep": "Ab Schritt {step} fortsetzen"
+  },
+  "serverList": {
+    "title": "Mailserver",
+    "addServer": "Mailserver hinzufügen",
+    "removeFromList": "Aus Liste entfernen",
+    "removeAria": "{name} aus der Mail-Liste entfernen",
+    "installing": "Wird installiert",
+    "running": "Läuft",
+    "incomplete": "Unvollständig",
+    "stoppedAt": "Gestoppt · Schritt {step}",
+    "open": "Öffnen",
+    "openAria": "{name} öffnen",
+    "actionsAria": "Aktionen für {name}",
+    "overviewTitle": "Mail-Überblick",
+    "hint": "Das Entfernen löst den Server nur aus dieser Liste — die Installation läuft weiter und kann erneut übernommen werden."
+  },
+  "setup": {
+    "title": "Mailserver-Einrichtung",
+    "subtitle": "Stelle einen vollständigen, selbst gehosteten Mail-Stack auf diesem Server bereit",
+    "domainLabel": "Domain",
+    "domainPlaceholder": "example.com",
+    "willBeAtBefore": "Dein Mailserver wird erreichbar sein unter ",
+    "adminPasswordLabel": "Admin-Passwort",
+    "passwordPlaceholder": "Starkes Passwort – oder auf Generieren klicken",
+    "passwordHint": "Mindestens 12 Zeichen. Wird nach der Einrichtung für die Anmeldung am Postfach verwendet — du kannst es später im Admin-Panel unten ändern.",
+    "startSetup": "Einrichtung starten",
+    "adoptCta": "Du hast bereits einen Mailserver? Übernimm ihn",
+    "whatInstalled": "Was installiert wird",
+    "features": {
+      "stackLabel": "Mailserver-Stack",
+      "stackDesc": "Postfix, Dovecot, Anti-Spam",
+      "sslLabel": "SSL-Zertifikat",
+      "sslDesc": "Automatisches SSL mit Let's Encrypt",
+      "dnsLabel": "DNS-Konfiguration",
+      "dnsDesc": "DKIM-, SPF-, DMARC-Einträge",
+      "adminLabel": "Admin-Panel",
+      "adminDesc": "Postfächer, Domains und Aliase verwalten"
+    },
+    "prerequisites": "Voraussetzungen",
+    "prereq1": "Eine Domain mit DNS-Zugriff",
+    "prereq2": "Port 25 wird von deinem Anbieter nicht blockiert",
+    "prereq2Relay": "Port 25 offen für eingehende Mail (ausgehende läuft über deinen Relay)",
+    "prereq3": "Sauberer Ubuntu/Debian-Server (empfohlen)",
+    "hide": "Verbergen",
+    "reveal": "Anzeigen",
+    "generateTitle": "Ein starkes, zufälliges Passwort generieren",
+    "generate": "Generieren"
+  },
+  "sidebar": {
+    "portConflict": {
+      "title": "Portkonflikt erkannt",
+      "subtitle": "Die Ports 80/443 werden für den Mailserver benötigt",
+      "managed": "Verwaltet",
+      "known": "Bekannter Dienst",
+      "unknown": "Unbekannt",
+      "container": "Container: {name}",
+      "killWarning": "Stelle sicher, dass dieser Prozess nicht benötigt wird, bevor du ihn beendest. Diese Aktion kann nicht rückgängig gemacht werden.",
+      "allResolved": "Alle Konflikte gelöst",
+      "rerun": "Die Portprüfung erneut ausführen und die Einrichtung fortsetzen.",
+      "resumeStep3": "Ab Schritt 3 fortsetzen"
+    },
+    "completion": {
+      "ready": "Mailserver bereit!",
+      "webmail": "Webmail",
+      "adminPanel": "Admin-Panel"
+    },
+    "dnsRef": {
+      "title": "Erforderliche DNS-Einträge",
+      "subtitle": "Referenz – tippe, um die von dir veröffentlichten Einträge anzuzeigen"
+    },
+    "steps": {
+      "title": "Alle Schritte",
+      "interrupted": "Die Installation wurde vor Schritt {step} unterbrochen. Setze fort, um dort weiterzumachen, wo sie aufgehört hat.",
+      "resume": "Fortsetzen",
+      "retry": "Erneut versuchen"
+    },
+    "details": {
+      "title": "Einrichtungsdetails",
+      "domain": "Domain",
+      "mailServer": "Mailserver",
+      "started": "Gestartet"
+    }
+  },
+  "ptr": {
+    "heading": "Reverse-DNS (PTR) setzen, bevor du fortfährst",
+    "bodyBefore": "PTRs werden im ",
+    "bodyStrongPanel": "Panel deines VPS-Anbieters",
+    "bodyMid": " (Hostinger, DigitalOcean, AWS usw.) konfiguriert, ",
+    "bodyStrongNot": "nicht",
+    "bodyAfter": " bei deinem DNS-Anbieter. Ohne passendes rDNS lehnen Gmail und Outlook deine ausgehenden Mails ab. Die Installation wird ab Schritt {resumeStep} (SSL) fortgesetzt.",
+    "recommended": "empfohlen",
+    "ipLabel": "IP",
+    "setTo": "Setzen auf",
+    "copy": "Kopieren",
+    "howTo": "So setzt du es:",
+    "howToBody": " melde dich bei deinem VPS-Anbieter an, finde die Netzwerk- / DNS- / rDNS-Einstellungen des Servers und setze den PTR-Eintrag für jede IP auf ",
+    "howToAfter": ". Die Verbreitung dauert in der Regel 5–15 Minuten.",
+    "verifyWith": "Überprüfen mit:",
+    "shouldReturn": " sollte Folgendes zurückgeben: ",
+    "action": "Ich habe die PTRs gesetzt – fortfahren"
+  }
+}

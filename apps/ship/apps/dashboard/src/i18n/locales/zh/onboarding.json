@@ -1,0 +1,139 @@
+{
+  "common": {
+    "goBack": "返回",
+    "continue": "继续",
+    "back": "上一步",
+    "optional": "（可选）"
+  },
+  "topBar": {
+    "website": "官网",
+    "github": "GitHub"
+  },
+  "choose": {
+    "title": "欢迎使用 Openship",
+    "subtitle": "选择你希望的 Openship 运行方式。两种方式都提供全部功能，而且你可以随时切换。",
+    "cloud": {
+      "name": "Openship Cloud",
+      "desc": "我们负责基础设施、更新和备份。只需登录即可开始部署。",
+      "perk1": "无需服务器",
+      "perk2": "包含免费套餐",
+      "perk3": "托管服务，始终保持最新",
+      "cta": "使用 Cloud 继续"
+    },
+    "or": "或",
+    "selfhost": {
+      "name": "自托管",
+      "desc": "在你自己的硬件上运行 Openship。连接远程服务器或使用本机。",
+      "perk1": "完全掌控数据",
+      "perk2": "远程服务器或本机 Mac",
+      "perk3": "其余交给我们处理",
+      "cta": "配置我的服务器"
+    },
+    "migrateNote": "随时一键在 Cloud 与自托管之间切换，绝无绑定。"
+  },
+  "selfhost": {
+    "title": "Openship 应在何处运行？",
+    "subtitleLine1": "选择安装 Openship 平台的位置。",
+    "subtitleLine2": "两种方式都让你完全掌控并拥有自己的数据。",
+    "local": {
+      "title": "本机",
+      "badge": "Beta",
+      "desc": "直接在此安装 Openship —— 无需 SSH，无需远程配置"
+    },
+    "remote": {
+      "title": "其他服务器",
+      "desc": "通过 SSH 连接到远程服务器、VPS 或网络中的任意机器"
+    }
+  },
+  "ssh": {
+    "title": "连接到你的服务器",
+    "subtitleLine1": "输入你的服务器信息并选择一种认证方式。",
+    "subtitleLine2": "我们会自动安装并配置好一切。",
+    "serverNameLabel": "服务器名称",
+    "serverNamePlaceholder": "生产、预发布、开发……",
+    "serverIpLabel": "服务器 IP 地址",
+    "usernameLabel": "用户名",
+    "methodPassword": "密码",
+    "methodKey": "SSH 密钥",
+    "methodAgent": "Agent",
+    "agentHint": "使用本机的 SSH agent 进行连接 —— 类似 VSCode，无需密码或密钥。运行 Openship 的主机必须已能访问该服务器（其 ssh-agent 中已加载相应密钥）。",
+    "passwordLabel": "密码",
+    "passwordPlaceholder": "服务器密码",
+    "keyPathLabel": "密钥路径",
+    "browse": "浏览",
+    "passphraseLabel": "密钥口令",
+    "passphrasePlaceholder": "如无请留空",
+    "advanced": "高级",
+    "sshPortLabel": "SSH 端口",
+    "jumpHostLabel": "跳板主机",
+    "extraArgsLabel": "额外 SSH 参数",
+    "submit": "保存并继续",
+    "tutorial": "分步配置教程"
+  },
+  "tunnel": {
+    "title": "互联网访问",
+    "subtitle": "你的服务器需要一种可从互联网访问的方式，用于 webhook、SSL 和公开访问。",
+    "providers": {
+      "edge": {
+        "title": "Openship Edge",
+        "desc": "零配置。自动 SSL、高可用和 DDoS 防护 —— 全部内置。",
+        "badge": "推荐"
+      },
+      "cloudflare": {
+        "title": "Cloudflare Tunnel",
+        "desc": "使用你自己的 Cloudflare 账户。提供免费套餐。"
+      },
+      "ngrok": {
+        "title": "ngrok",
+        "desc": "使用你的 ngrok 认证令牌暴露服务。"
+      }
+    },
+    "cloudflareTokenLabel": "Cloudflare Tunnel 令牌",
+    "ngrokTokenLabel": "ngrok 认证令牌",
+    "cloudflarePlaceholder": "粘贴你的隧道令牌",
+    "ngrokPlaceholder": "粘贴你的 ngrok 认证令牌",
+    "edgeHint": "Openship Edge 需要 Openship 账户。你需要登录后才能继续。",
+    "signInContinue": "登录并继续"
+  },
+  "preferences": {
+    "title": "构建偏好",
+    "subtitleLine1": "选择部署时项目的构建方式。",
+    "subtitleLine2": "你之后可以在设置中更改。",
+    "options": {
+      "auto": {
+        "title": "自动",
+        "desc": "我们会为每种框架选择最佳选项"
+      },
+      "server": {
+        "title": "远程",
+        "desc": "直接在部署服务器上构建"
+      },
+      "local": {
+        "title": "本地",
+        "desc": "在本机 Mac 上构建，然后推送到服务器"
+      }
+    },
+    "hint": "Git push 部署始终在服务器上构建 —— 此设置仅适用于手动部署。"
+  },
+  "loading": {
+    "connecting": "正在连接……",
+    "verifying": "正在验证你的服务器",
+    "retry": "重试",
+    "openingCloud": "正在打开 Openship Cloud……",
+    "waitingAuth": "正在等待认证完成",
+    "couldNotStartAuthTitle": "无法启动云端认证",
+    "authFailedTitle": "云端认证失败",
+    "couldNotStartAuthMsg": "无法启动桌面认证流程。",
+    "authFailedMsg": "请重试并在浏览器中完成登录。",
+    "completingSignIn": "正在完成登录……",
+    "returningToOpenship": "正在返回 Openship",
+    "redirectingCloud": "正在跳转到 Openship Cloud……",
+    "newTabSignIn": "你将在新标签页中完成登录",
+    "couldNotSaveTitle": "无法保存配置",
+    "couldNotSaveMsg": "API 无响应。请确认各项服务正在运行。",
+    "savingConfig": "正在保存配置……",
+    "almostThere": "即将完成",
+    "settingUpAccount": "正在设置你的账户……",
+    "creatingSession": "正在创建你的会话"
+  }
+}

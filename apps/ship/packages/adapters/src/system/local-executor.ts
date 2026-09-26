@@ -1,0 +1,214 @@
+import { exec, spawn } from "node:child_process";
+import {
+  access,
+  mkdir as fsMkdir,
+  open as fsOpen,
+  readFile as fsReadFile,
+  rename as fsRename,
+  rm as fsRm,
+  writeFile as fsWriteFile,
+} from "node:fs/promises";
+import { dirname } from "node:path";
+
+import type { CommandExecutor, LogEntry } from "../types";
+import {
+  getLocalExecEnv,
+  getLocalShellArgs,
+  getLocalShellPath,
+  logEntry,
+  sq,
+} from "./local-shell";
+
+/**
+ * Runs commands on the local machine via child_process.
+ * File operations use node:fs directly.
+ */
+export class LocalExecutor implements CommandExecutor {
+  async exec(command: string, opts?: { timeout?: number }): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const shell = getLocalShellPath();
+      exec(
+        command,
+        {
+          timeout: opts?.timeout ?? 30_000,
+          shell,
+          env: getLocalExecEnv(),
+        },
+        (err, stdout, stderr) => {
+          // Fold BOTH streams into the failure error. Many CLIs (certbot in
+          // particular) print the real cause to stdout while stderr only carries
+          // boilerplate ("Saving debug log to …"); dropping stdout hid the reason.
+          if (err) {
+            const detail = [stderr.trim(), stdout.trim()].filter(Boolean).join("\n");
+            reject(new Error(detail || err.message));
+          } else resolve(stdout.trim());
+        },
+      );
+    });
+  }
+
+  streamExec(
+    command: string,
+    onLog: (log: LogEntry) => void,
+    opts?: { signal?: AbortSignal; killProcessTree?: boolean },
+  ): Promise<{ code: number; output: string }> {
+    return new Promise((resolve) => {
+      // Already told to stop before we even spawned (a stream torn down immediately).
+      if (opts?.signal?.aborted) {
+        resolve({ code: 0, output: "" });
+        return;
+      }
+
+      const killProcessTree = opts?.killProcessTree === true && process.platform !== "win32";
+      const child = spawn(getLocalShellPath(), getLocalShellArgs(command), {
+        stdio: ["ignore", "pipe", "pipe"],
+        env: getLocalExecEnv(),
+        detached: killProcessTree,
+      });
+
+      // Raw passthrough: forward the untouched byte stream (rawData = base64)
+      // so the client's xterm renders carriage returns / ANSI natively —
+      // progress lines (git clone, npm, next build) repaint in place instead
+      // of flooding new lines. We keep the decoded text in `chunks` for the
+      // returned `output` (build-kill-hint detection + persistence fallback).
+      // Do NOT split on "\n" or trim here — that is exactly what destroyed the
+      // "\r" carriage returns and made every progress tick its own line.
+      // Bounded: a live tail (the exec log transport) can run for the length of a
+      // session, so cap what we retain for `output` — the last N chunks are all any
+      // caller reads (kill-hint detection, an error tail), and unbounded growth here
+      // would be a slow leak.
+      const MAX_RETAINED_CHUNKS = 200;
+      const chunks: string[] = [];
+
+      const onChunk = (data: Buffer, level: LogEntry["level"]) => {
+        const text = data.toString();
+        if (!text) return;
+        chunks.push(text);
+        if (chunks.length > MAX_RETAINED_CHUNKS) chunks.shift();
+        onLog(logEntry(text, level, data.toString("base64")));
+      };
+
+      // Kill the child when the caller aborts. `curl -sN` held open by the exec log
+      // transport only ends on the edge closing or on this kill; without it a torn-down
+      // browser stream leaves the curl draining the edge's shared queue.
+      const signal = opts?.signal;
+      let killTimer: ReturnType<typeof setTimeout> | undefined;
+      const kill = (sig: NodeJS.Signals) => {
+        try {
+          if (killProcessTree && child.pid) process.kill(-child.pid, sig);
+          else child.kill(sig);
+        } catch { /* process already exited */ }
+      };
+      const onAbort = () => {
+        kill("SIGTERM");
+        if (killProcessTree) {
+          killTimer = setTimeout(() => kill("SIGKILL"), 1_000);
+          killTimer.unref?.();
+        }
+      };
+      signal?.addEventListener("abort", onAbort, { once: true });
+      if (signal?.aborted) onAbort();
+      const cleanup = () => {
+        signal?.removeEventListener("abort", onAbort);
+        if (killTimer) clearTimeout(killTimer);
+        // The shell can exit before a grandchild that redirected its stdio.
+        // Reap the remaining group before reporting cancellation complete.
+        if (signal?.aborted && killProcessTree) kill("SIGKILL");
+      };
+
+      child.stdout.on("data", (data: Buffer) => onChunk(data, "info"));
+      child.stderr.on("data", (data: Buffer) => onChunk(data, "warn"));
+
+      child.on("close", (code) => {
+        cleanup();
+        resolve({ code: code ?? 1, output: chunks.join("") });
+      });
+
+      child.on("error", (err) => {
+        cleanup();
+        onLog(logEntry(`Process error: ${err.message}`, "error"));
+        resolve({ code: 1, output: err.message });
+      });
+    });
+  }
+
+  async writeFile(path: string, content: string, opts?: { mode?: number }): Promise<void> {
+    await fsMkdir(dirname(path), { recursive: true });
+    if (opts?.mode === undefined) {
+      await fsWriteFile(path, content, "utf-8");
+      return;
+    }
+
+    // `mode` on writeFile only applies when the path is newly created. Open +
+    // fchmod first also tightens an existing path before any new payload bytes
+    // are written.
+    const file = await fsOpen(path, "w", opts.mode);
+    try {
+      await file.chmod(opts.mode);
+      await file.writeFile(content, "utf-8");
+    } finally {
+      await file.close();
+    }
+  }
+
+  async rename(from: string, to: string): Promise<void> {
+    await fsRename(from, to);
+  }
+
+  async readFile(path: string): Promise<string> {
+    return fsReadFile(path, "utf-8");
+  }
+
+  async exists(path: string): Promise<boolean> {
+    try {
+      await access(path);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async mkdir(path: string): Promise<void> {
+    await fsMkdir(path, { recursive: true });
+  }
+
+  async rm(path: string): Promise<void> {
+    try {
+      await fsRm(path, { recursive: true, force: true });
+    } catch {
+      // Already gone
+    }
+  }
+
+  async transferIn(
+    localPath: string,
+    remotePath: string,
+    onLog?: (log: LogEntry) => void,
+    // alsoInclude is a no-op here: the `cp -a .` fallback already copies the
+    // whole built tree (build output included) with no git/exclude filtering.
+    options?: { excludes?: string[]; includes?: string[]; alsoInclude?: string[] },
+  ): Promise<void> {
+    const log = onLog ?? (() => {});
+
+    if (options?.includes?.length) {
+      for (const p of options.includes) {
+        const { code } = await this.streamExec(
+          `cp -a ${sq(localPath + "/" + p)} ${sq(remotePath + "/" + p)}`,
+          log,
+        );
+        if (code !== 0) throw new Error(`Failed to copy ${p}`);
+      }
+      return;
+    }
+
+    const { code } = await this.streamExec(
+      `cp -a ${sq(localPath + "/")}. ${sq(remotePath)}`,
+      log,
+    );
+    if (code !== 0) throw new Error("Failed to copy local project files");
+  }
+
+  async dispose(): Promise<void> {
+    // Nothing to clean up for local execution
+  }
+}

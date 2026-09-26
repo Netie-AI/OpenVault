@@ -1,0 +1,149 @@
+{
+  "common": {
+    "goBack": "Go back",
+    "continue": "Continue",
+    "back": "Back",
+    "optional": "(optional)"
+  },
+  "topBar": {
+    "website": "Website",
+    "github": "GitHub",
+    "theme": "Toggle theme",
+    "language": "Language"
+  },
+  "choose": {
+    "title": "Welcome to Openship",
+    "subtitle": "Choose how you'd like to run Openship. Both options give you every feature - and you can switch anytime.",
+    "cloud": {
+      "name": "Openship Cloud",
+      "desc": "We handle infrastructure, updates, and backups. Just sign in and start deploying.",
+      "perk1": "No server needed",
+      "perk2": "Free tier included",
+      "perk3": "Managed & always up to date",
+      "cta": "Continue with Cloud"
+    },
+    "or": "or",
+    "selfhost": {
+      "name": "Self-Hosted",
+      "desc": "Run Openship on your own hardware. Connect a remote server or use this machine.",
+      "perk1": "Full data ownership",
+      "perk2": "Remote server or this Mac",
+      "perk3": "We handle the rest",
+      "cta": "Set Up My Server"
+    },
+    "migrateNote": "Switch between Cloud and Self-Hosted anytime with one click - no lock-in, ever.",
+    "skip": "Skip for now"
+  },
+  "selfhost": {
+    "title": "Where should Openship run?",
+    "subtitleLine1": "Pick where to install the Openship platform.",
+    "subtitleLine2": "Both options give you full control and data ownership.",
+    "local": {
+      "title": "This Machine",
+      "badge": "Beta",
+      "desc": "Install Openship right here - no SSH, no remote setup needed",
+      "comingSoon": "Coming soon",
+      "comingSoonDesc": "Running Openship directly on this machine isn't ready yet — connect a server for now."
+    },
+    "remote": {
+      "title": "Another Server",
+      "desc": "Connect to a remote server, VPS, or any machine on your network via SSH"
+    }
+  },
+  "ssh": {
+    "title": "Connect to your server",
+    "subtitleLine1": "Enter your server details and choose an auth method.",
+    "subtitleLine2": "We'll install and configure everything automatically.",
+    "serverNameLabel": "Server Name",
+    "serverNamePlaceholder": "Production, Staging, Dev...",
+    "serverIpLabel": "Server IP Address",
+    "usernameLabel": "Username",
+    "methodPassword": "Password",
+    "methodKey": "SSH Key",
+    "methodAgent": "Agent",
+    "agentHint": "Connects using this machine's SSH agent — like VSCode, no password or key needed. The host running Openship must already have access to this server (a key loaded in its ssh-agent).",
+    "passwordLabel": "Password",
+    "passwordPlaceholder": "Server password",
+    "keyPathLabel": "Key Path",
+    "browse": "Browse",
+    "passphraseLabel": "Passphrase",
+    "passphrasePlaceholder": "Leave blank if none",
+    "advanced": "Advanced",
+    "sshPortLabel": "SSH Port",
+    "jumpHostLabel": "Jump Host",
+    "extraArgsLabel": "Extra SSH Arguments",
+    "submit": "Save & Continue",
+    "tutorial": "Step-by-step setup tutorial",
+    "testConnection": "Test connection",
+    "testing": "Testing…",
+    "connected": "Connected",
+    "testFailed": "Connection failed",
+    "testHint": "Verify the server is reachable before continuing."
+  },
+  "tunnel": {
+    "title": "Internet Access",
+    "subtitle": "Your server needs a way to be reachable from the internet for webhooks, SSL, and public access.",
+    "providers": {
+      "edge": {
+        "title": "Openship Edge",
+        "desc": "Zero config. Automatic SSL, high availability, and DDoS protection - all built in.",
+        "badge": "Recommended"
+      },
+      "cloudflare": {
+        "title": "Cloudflare Tunnel",
+        "desc": "Use your own Cloudflare account. Free tier available."
+      },
+      "ngrok": {
+        "title": "ngrok",
+        "desc": "Expose services with your ngrok auth token."
+      }
+    },
+    "cloudflareTokenLabel": "Cloudflare Tunnel Token",
+    "ngrokTokenLabel": "ngrok Auth Token",
+    "cloudflarePlaceholder": "Paste your tunnel token",
+    "ngrokPlaceholder": "Paste your ngrok auth token",
+    "edgeHint": "Openship Edge requires an Openship account. You'll sign in to continue.",
+    "signInContinue": "Sign In & Continue"
+  },
+  "preferences": {
+    "title": "Build Preferences",
+    "subtitleLine1": "Choose how your projects are built when deploying.",
+    "subtitleLine2": "You can change this later in settings.",
+    "options": {
+      "auto": {
+        "title": "Auto",
+        "desc": "We pick the best option per framework"
+      },
+      "server": {
+        "title": "Remote",
+        "desc": "Build on the deployment server directly"
+      },
+      "local": {
+        "title": "Local",
+        "desc": "Build on this Mac, then push to the server"
+      }
+    },
+    "hint": "Git push deployments always build on the server - this only applies to manual deploys."
+  },
+  "loading": {
+    "connecting": "Connecting…",
+    "verifying": "Verifying your server",
+    "retry": "Retry",
+    "openingCloud": "Opening Openship Cloud…",
+    "waitingAuth": "Waiting for authentication to complete",
+    "couldNotStartAuthTitle": "Could not start cloud authentication",
+    "authFailedTitle": "Cloud authentication failed",
+    "couldNotStartAuthMsg": "The desktop auth flow could not be started.",
+    "authFailedMsg": "Please try again and finish sign-in in your browser.",
+    "completingSignIn": "Completing sign-in…",
+    "returningToOpenship": "Returning to Openship",
+    "redirectingCloud": "Redirecting to Openship Cloud…",
+    "newTabSignIn": "You'll complete sign-in in a new tab",
+    "couldNotSaveTitle": "Could not save configuration",
+    "couldNotSaveMsg": "The API didn't respond. Make sure services are running.",
+    "savingConfig": "Saving configuration…",
+    "almostThere": "Almost there",
+    "settingUpAccount": "Setting up your account…",
+    "creatingSession": "Creating your session"
+  }
+}

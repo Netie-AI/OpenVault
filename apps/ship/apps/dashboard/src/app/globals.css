@@ -1,0 +1,342 @@
+@import "tailwindcss";
+@import "../styles/fonts.css";
+@import "../styles/theme.css";
+@import "../styles/chart.css";
+
+/* Tailwind v4 - selector-based dark mode via data-theme */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+/* The third theme — lets `dim:` utilities target the neutral medium-dark. */
+@custom-variant dim (&:where([data-theme="dim"], [data-theme="dim"] *));
+
+/*
+ * The desktop app's own header row (DesktopChrome). A REAL row, not an overlay:
+ * it used to be an invisible fixed strip with no layout height, which forced every
+ * surface near the top to be padded out of its way by hand (the sidebar header and
+ * the auth shell each had their own dodge rule). The app read as inflated at the
+ * top, and each new top-anchored surface needed another hack.
+ *
+ * It stays `fixed` so it never scrolls away, and `body` carries a matching inset
+ * so content genuinely starts below it instead of underneath it.
+ *
+ * NO bottom border by design. A hairline there cut the window in two; the bar and
+ * the page share one background and the sidebar/cards provide all the structure
+ * the eye needs — same reasoning as the borderless cards.
+ */
+.is-desktop {
+  --titlebar-h: 2.75rem;
+}
+.is-desktop body {
+  padding-top: var(--titlebar-h);
+}
+
+/* Inside the desktop app, "full height" means the viewport MINUS the header row.
+ *
+ * Anything sized to 100dvh/100vh sits below the body inset, so its last
+ * --titlebar-h pixels fall off the bottom of the window. That is not cosmetic:
+ * the dashboard shell is `h-dvh` (app/(dashboard)/layout.tsx) and the sidebar is
+ * its child, so the account switcher at the sidebar's foot was clipped out of
+ * reach. Redefining the full-height utilities in one place beats hunting every
+ * shell — and beats a per-surface padding hack, which is what the old overlay
+ * titlebar forced and what this whole change removed.
+ *
+ * Unlayered on purpose: these must outrank Tailwind's `utilities` layer. */
+.is-desktop .th-page,
+.is-desktop .min-h-dvh {
+  min-height: calc(100dvh - var(--titlebar-h));
+}
+.is-desktop .h-dvh {
+  height: calc(100dvh - var(--titlebar-h));
+}
+.is-desktop .min-h-screen {
+  min-height: calc(100vh - var(--titlebar-h));
+}
+.is-desktop .h-screen {
+  height: calc(100vh - var(--titlebar-h));
+}
+
+.is-desktop .app-titlebar {
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: var(--titlebar-h);
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  padding-inline: 0.5rem;
+  background: var(--th-bg-page);
+  -webkit-app-region: drag;
+  user-select: none;
+}
+/* macOS draws its native traffic lights over the start of the bar
+ * (trafficLightPosition x:18 y:16), so reserve room before the nav chevrons.
+ * Windows/Linux have no inlaid controls, so nav starts at the normal padding. */
+.is-desktop-mac .app-titlebar {
+  /* Clear the native traffic lights (they end around x:70) and leave a modest
+   * gap, so the chevrons read as ours rather than a fourth light crowded up
+   * against the green one. 6.75rem overshot and stranded them mid-bar. */
+  padding-inline-start: 5.75rem;
+}
+
+/* Navigation — Spotify-style: chevrons at the start, quiet until hovered. Bigger
+ * than the trailing icons on purpose; these are the only controls in the bar
+ * anyone clicks repeatedly, and a chevron needs more room than a 15px logo to not
+ * look cramped. */
+.app-titlebar-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  -webkit-app-region: no-drag;
+}
+.app-titlebar-nav .app-titlebar-btn {
+  width: 2rem;
+  height: 2rem;
+}
+
+/* Everything between nav and the end zone is pure drag surface. */
+.app-titlebar-drag {
+  flex: 1;
+  min-width: 0;
+  align-self: stretch;
+}
+
+.app-titlebar-end {
+  display: flex;
+  align-items: center;
+  gap: 0.125rem;
+  -webkit-app-region: no-drag;
+}
+
+/* One button style for nav, socials, the ⋯ menu and the window controls.
+ * Deliberately quiet at rest — this is chrome, and at full strength it competed
+ * with the page's own controls. Opacity carries the state so the icon colour stays
+ * a single token. */
+.app-titlebar-btn,
+.app-titlebar-menu > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+  color: var(--th-text-title);
+  opacity: 0.45;
+  transition: background-color 0.15s, opacity 0.15s;
+}
+.app-titlebar-btn:hover,
+.app-titlebar-menu > button:hover {
+  background: var(--th-sf-06);
+  opacity: 1;
+}
+/* Nothing to go back/forward to — visibly inert and not hoverable, so the bar
+ * never offers a control that would do nothing. */
+.app-titlebar-btn:disabled {
+  opacity: 0.15;
+  pointer-events: none;
+}
+/* Window controls share the catalog while retaining their compact dimensions. */
+.app-titlebar-wc {
+  width: 12px;
+  height: 12px;
+}
+/* The ⋯ dropdown lives in a 44px bar, so its popup has to escape downward. */
+.app-titlebar-menu {
+  position: relative;
+  -webkit-app-region: no-drag;
+}
+/* Close goes red on hover, like every other desktop app. */
+.app-titlebar-btn--close:hover {
+  background: var(--st-danger-solid);
+  color: #fff;
+  opacity: 1;
+}
+
+/* An in-page navigation control the desktop titlebar supersedes. Hidden only in
+ * the app — the web/SaaS build has no titlebar, so it is the ONLY way back there
+ * and must keep rendering. */
+.is-desktop .app-nav-fallback {
+  display: none;
+}
+
+/*
+ * Expose shadcn bridge vars as Tailwind utilities.
+ * "inline" keeps them as runtime var() refs so light/dark switching works.
+ */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Semantic status utilities (text-success, bg-success-bg, border-danger-border,
+     text-warning, text-info, …) — theme-aware via the --st-* tokens per theme. */
+  --color-success: var(--success);
+  --color-success-bg: var(--success-bg);
+  --color-success-border: var(--success-border);
+  --color-danger: var(--danger);
+  --color-danger-bg: var(--danger-bg);
+  --color-danger-border: var(--danger-border);
+  --color-warning: var(--warning);
+  --color-warning-bg: var(--warning-bg);
+  --color-warning-border: var(--warning-border);
+  --color-info: var(--info);
+  --color-info-bg: var(--info-bg);
+  --color-info-border: var(--info-border);
+  --color-neutral: var(--neutral);
+  --color-neutral-bg: var(--neutral-bg);
+  --color-neutral-border: var(--neutral-border);
+
+  /* Vivid solid fills (bg-success-solid, etc.) for bars/dots/solid buttons. */
+  --color-success-solid: var(--success-solid);
+  --color-danger-solid: var(--danger-solid);
+  --color-warning-solid: var(--warning-solid);
+  --color-info-solid: var(--info-solid);
+  --color-neutral-solid: var(--neutral-solid);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@theme inline {
+  --font-sans: 'Gellix', 'SF Arabic', system-ui, -apple-system, sans-serif;
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.25rem;
+}
+
+@layer base {
+  html { -webkit-font-smoothing: antialiased; }
+  body {
+    font-family: var(--font-sans);
+    background-color: var(--th-bg-page);
+    color: var(--th-text-body);
+  }
+}
+
+::-webkit-scrollbar {
+  display: none;
+}
+
+/* `scrollbar-hide` is referenced by Tabs.tsx and ProjectMobileTabs but was
+ * never actually defined - the global ::-webkit-scrollbar rule above already
+ * hides WebKit scrollbars everywhere, so it went unnoticed there, but Firefox
+ * doesn't honor that rule and needs `scrollbar-width` instead. */
+.scrollbar-hide {
+  scrollbar-width: none;
+}
+
+button {
+  cursor: pointer;
+}
+
+/* Slide-in from the right, used by the cloud power picker when it
+   appears next to the deploy-target column. Kept tiny on purpose —
+   long animations on layout-changing elements feel laggy, not delightful. */
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+.animate-slide-in-right {
+  animation: slideInRight 0.25s ease-out;
+}
+/* A highlight travelling across a progress bar's FILLED part (app install aside).
+   The bar's width carries the real progress; this only says "still moving", so a
+   phase that takes minutes doesn't read as a hung bar — and nothing here fakes
+   advancement. Motion-sensitive users get the plain bar. */
+@keyframes progressSweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+.animate-progress-sweep {
+  animation: progressSweep 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-progress-sweep {
+    animation: none;
+  }
+}
+/* ── Card surfaces: lifted fills, never bordered boxes ─────────────────────
+ * All three themes agree, so this is unscoped. A card separates from the page by
+ * its own fill: white on light's grey page, a white overlay on dark's black and
+ * dim's #141414. The hairline only ever made containers read as boxed-in, and on
+ * dark it computed BRIGHTER than the fill it enclosed — an outline around a
+ * hollow middle.
+ *
+ * This depends entirely on page-vs-card contrast (see --th-bg-page and
+ * --th-card-bg). Move a page background toward its card fill and these cards go
+ * invisible, because there is no border left to save them.
+ *
+ * Retired here rather than at the --th-card-bd token because most cards draw
+ * their edge with the generic Tailwind `border-border/50` utility, not the token.
+ * Unlayered on purpose: unlayered rules outrank Tailwind's `utilities` layer,
+ * which is what lets this reach ~330 call sites across 175 files from one place.
+ * Narrow by design — only the two NEUTRAL border utilities match, so colored and
+ * stateful borders (border-primary when selected, border-destructive, hover tints
+ * applied by swapping the class) are never touched.
+ */
+.bg-card.border-border\/50,
+.bg-card.border-border\/60 {
+  border-color: transparent;
+}
+
+/* Exceptions: things that carry the card fill but are not card containers.
+ * Matched by EXACT class names — never [class*="border-b"], which would also
+ * match `border-border` and silently re-border every card. */
+input.bg-card,
+select.bg-card,
+textarea.bg-card,
+.bg-card.border-b,
+.bg-card.border-t,
+.bg-card.border-s,
+.bg-card.border-e,
+.bg-card.border-2 {
+  border-color: var(--th-bd-default);
+}
+
+/* A card nested inside a card, light only. Dim needs nothing here: its fill is a
+ * translucent white overlay, so a nested one composites lighter than its parent
+ * and separates for free. Light's fill is opaque #ffffff, so an inner card on an
+ * outer card is the same colour and vanishes entirely once the border is gone.
+ * Recess it to page level instead of handing the border back, so the borderless
+ * language still holds. Form controls opt out — they keep the white field
+ * background that --th-input-bg specifies. */
+html:not([data-theme="dark"]):not([data-theme="dim"])
+  .bg-card .bg-card:not(input):not(select):not(textarea) {
+  background-color: var(--th-sf-03);
+}
+
+/* Hard dark is the exception to the paragraph above: nesting composites too far.
+ * Its card fill is .05 white, sized to clear a pure #000 page (0 → #0d0d0d), and
+ * a nested card repeats that entire step (#0d0d0d → #191919) — a second page
+ * rather than a shelf on the first. Level two only has to separate from level
+ * one, not from black, so it steps like dim's ladder: +7, to #141414. Same
+ * selector and opt-outs as light. Lower this and the inner card starts merging
+ * into the outer one; there is no border left to save it. */
+html[data-theme="dark"]
+  .bg-card .bg-card:not(input):not(select):not(textarea) {
+  background-color: var(--th-sf-03);
+}

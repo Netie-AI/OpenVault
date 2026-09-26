@@ -1,0 +1,515 @@
+"use client";
+
+import { Icon as UiIcon, type IconName } from "@repo/ui/icons";
+
+/**
+ * Overview tab - what an operator wants on day one.
+ *
+ * Order (top → bottom, left column):
+ *   1. Mail server card   - combined identity + webmail CTA. Big hostname,
+ *                            "Open webmail" primary action, "Protocol
+ *                            details →" link to the Advanced tab. Webmail
+ *                            is bundled with openship, so it's always
+ *                            available - no deploy gate needed.
+ *   2. Setup guides       - 4-up banner that deep-links to the public
+ *                            walkthroughs on /mail/setup-guide/<client> in
+ *                            a new tab. Server settings stay in this tab
+ *                            (Postmaster credentials / Advanced); the
+ *                            guides are pure content.
+ *
+ * Right column (340px, sticky):
+ *   1. Mail stats         - domain/mailbox/alias/storage/message counts.
+ *   2. Quick actions      - links into other tabs.
+ *
+ * The postmaster account is just another row in `vmail.mailbox`. The
+ * operator manages its password the same way they manage every other
+ * mailbox - Mailboxes tab → edit row → set password. There's no separate
+ * credentials card here on purpose: one place for one operation.
+ *
+ * Protocol details (host:port + encryption) live in the Advanced tab -
+ * useful when wiring a client by hand but noise on the overview.
+ */
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import {
+  getApiErrorMessage,
+  isMailEngineUnavailable,
+  mailAdminApi,
+  type MailServerStats,
+  type MailSetupStatus,
+  type MailWebmailSummary,
+} from "@/lib/api";
+import { getMarketingOrigin } from "@/lib/api/urls";
+import { webmailCta } from "../../_lib/webmail-cta";
+import { Skeleton } from "./_shared/skeleton";
+import { useI18n, interpolate } from "@/components/i18n-provider";
+import { mailHostname } from "@repo/core";
+
+interface OverviewTabProps {
+  status: MailSetupStatus;
+  serverId: string;
+  onRefresh: () => void;
+}
+
+export function OverviewTab({ status, serverId }: OverviewTabProps) {
+  const domain = status.domain ?? "";
+  const mailHost = domain ? mailHostname(domain) : "";
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6">
+      <div className="space-y-5 min-w-0">
+        <MailServerCard
+          mailHost={mailHost}
+          serverId={serverId}
+          webmail={status.webmail}
+        />
+        <SetupGuidesBanner />
+      </div>
+
+      <div className="space-y-4 lg:sticky lg:top-6 lg:self-start">
+        <MailStatsCard serverId={serverId} />
+        <QuickActionsCard />
+      </div>
+    </div>
+  );
+}
+
+// ─── Mail server + webmail (combined hero card) ──────────────────────────────
+
+/** The card's single CTA slot, in whichever of its three shapes applies. */
+const CTA_CLASS =
+  "inline-flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-semibold rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shrink-0";
+
+/**
+ * Single editorial card at the top of the overview. Combines mail-server
+ * identity (the hostname) with the webmail CTA.
+ *
+ * Webmail state is read from `status.webmail` - the openship API derives it
+ * from the webmail project this mail server is linked to. If the record is
+ * absent (or `installed=false`), the operator sees a Deploy webmail CTA that
+ * opens /deploy/mail (host + domain picker, then the standard build screen).
+ * Once deployed, the same slot becomes an Open webmail link.
+ *
+ * `routingUnknown` is the third state, and it is NOT the deploy one: webmail is
+ * installed, its address just could not be read. Offering a deploy there reads as
+ * "nothing is installed", so the slot links to the project instead.
+ *
+ * `legacy` is the one state the CTA slot can't express: that webmail works, so
+ * the slot correctly says Open - but it predates the webmail app and can only be
+ * replaced, which is offered as a line under the hostname.
+ */
+function MailServerCard({
+  mailHost,
+  serverId,
+  webmail,
+}: {
+  mailHost: string;
+  serverId: string;
+  webmail?: MailWebmailSummary;
+}) {
+  const { t } = useI18n();
+  const [copied, setCopied] = useState(false);
+
+  const copy = async () => {
+    if (!mailHost) return;
+    try {
+      await navigator.clipboard.writeText(mailHost);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1200);
+    } catch {
+      /* noop */
+    }
+  };
+
+  const cta = webmailCta(webmail);
+
+  return (
+    <div className="bg-card rounded-2xl border border-border/50 p-5">
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <div className="flex items-center gap-2">
+          <UiIcon name="inbox" className="size-4 text-muted-foreground" />
+          <h3 className="font-semibold text-foreground text-sm">{t.emailsAdmin.overview.mailServer}</h3>
+        </div>
+        <Link
+          href="?tab=advanced"
+          replace
+          scroll={false}
+          className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+        >
+          {t.emailsAdmin.overview.protocolDetails}
+        </Link>
+      </div>
+
+      {/* Give the hostname and webmail action separate rows on phones. */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <div className="min-w-0 flex-1">
+          <p className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground mb-1.5">
+            {t.emailsAdmin.overview.hostname}
+          </p>
+          <button
+            type="button"
+            onClick={copy}
+            className="group inline-flex items-center gap-2 -mx-1 px-1 py-0.5 rounded-md hover:bg-muted/40 transition-colors"
+          >
+            <span className="text-lg font-semibold text-foreground tracking-tight break-all">
+              {mailHost || "-"}
+            </span>
+            {mailHost && (
+              <span className="text-muted-foreground/70 group-hover:text-foreground transition-colors shrink-0">
+                {copied ? (
+                  <UiIcon name="check" className="size-3.5 text-success" />
+                ) : (
+                  <UiIcon name="copy" className="size-3.5" />
+                )}
+              </span>
+            )}
+          </button>
+          {cta.kind === "open" && webmail && (
+            <p className="text-xs text-muted-foreground mt-1.5 break-all">
+              {t.emailsAdmin.overview.webmailAt}{" "}
+              <a
+                href={cta.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-foreground font-medium hover:underline"
+              >
+                {webmail.hostname}
+              </a>
+            </p>
+          )}
+          {/* A pre-catalog webmail serves fine, so `installed` is true and the
+              slot on the right stays Open-webmail. Without this line the only
+              path onto the webmail app would be one the operator can't see. */}
+          {webmail?.legacy && (
+            <p className="text-xs text-muted-foreground mt-1.5">
+              {t.emailsAdmin.overview.legacyWebmail}{" "}
+              <Link
+                href={`/deploy/mail?serverId=${encodeURIComponent(serverId)}`}
+                className="text-warning font-medium hover:underline"
+              >
+                {t.emailsAdmin.overview.upgradeWebmail}
+              </Link>
+            </p>
+          )}
+        </div>
+
+        {cta.kind === "open" ? (
+          <a href={cta.url} target="_blank" rel="noopener noreferrer" className={CTA_CLASS}>
+            {t.emailsAdmin.overview.openWebmail}
+            <UiIcon name="arrow-up-right" className="size-3.5" />
+          </a>
+        ) : cta.kind === "project" ? (
+          <Link href={`/projects/${cta.projectId}`} className={CTA_CLASS}>
+            {t.projects.connections.usedByOpen}
+            <UiIcon name="arrow-up-right" className="size-3.5" />
+          </Link>
+        ) : (
+          <Link
+            href={`/deploy/mail?serverId=${encodeURIComponent(serverId)}`}
+            className={CTA_CLASS}
+          >
+            <UiIcon name="upload" className="size-3.5" />
+            {t.emailsAdmin.overview.deployWebmail}
+          </Link>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Setup guides banner ─────────────────────────────────────────────────────
+
+function SetupGuidesBanner() {
+  const { t } = useI18n();
+  const guideHref = (client: string) =>
+    `${getMarketingOrigin()}/mail/setup-guide/${client}`;
+
+  return (
+    <div className="bg-gradient-to-br from-primary/5 via-primary/3 to-transparent rounded-2xl border border-primary/15 p-5">
+      <div className="flex items-center gap-2 mb-1">
+        <UiIcon name="sparkles" className="size-4 text-primary" />
+        <h3 className="font-semibold text-foreground text-sm">{t.emailsAdmin.overview.setupGuides}</h3>
+      </div>
+      <p className="text-sm text-muted-foreground leading-relaxed mb-4">
+        {t.emailsAdmin.overview.setupGuidesDesc}
+      </p>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+        <GuideCard
+          href={guideHref("ios")}
+          icon={"apple"}
+          title={t.emailsAdmin.overview.guides.iosTitle}
+          subtitle={t.emailsAdmin.overview.guides.iosSubtitle}
+        />
+        <GuideCard
+          href={guideHref("android")}
+          icon={"smartphone"}
+          title={t.emailsAdmin.overview.guides.androidTitle}
+          subtitle={t.emailsAdmin.overview.guides.androidSubtitle}
+        />
+        <GuideCard
+          href={guideHref("desktop")}
+          icon={"mail"}
+          title={t.emailsAdmin.overview.guides.desktopTitle}
+          subtitle={t.emailsAdmin.overview.guides.desktopSubtitle}
+        />
+        <GuideCard
+          href={guideHref("nodemailer")}
+          icon={"code"}
+          title={t.emailsAdmin.overview.guides.codeTitle}
+          subtitle={t.emailsAdmin.overview.guides.codeSubtitle}
+        />
+      </div>
+    </div>
+  );
+}
+
+function GuideCard({
+  href,
+  icon: Icon,
+  title,
+  subtitle,
+}: {
+  href: string;
+  icon: IconName;
+  title: string;
+  subtitle: string;
+}) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-3 px-4 py-3 rounded-xl bg-card border border-border/50 hover:bg-muted/40 hover:border-border transition-all group"
+    >
+      <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+        <UiIcon name={Icon} className="size-[18px] text-muted-foreground" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium text-foreground truncate">{title}</p>
+        <p className="text-xs text-muted-foreground truncate mt-0.5">{subtitle}</p>
+      </div>
+      <UiIcon name="arrow-up-right" className="size-4 text-muted-foreground/50 group-hover:text-muted-foreground transition-colors shrink-0" />
+    </a>
+  );
+}
+
+// ─── Right sidebar ───────────────────────────────────────────────────────────
+
+function MailStatsCard({ serverId }: { serverId: string }) {
+  const { t } = useI18n();
+  const [stats, setStats] = useState<MailServerStats | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  /** The failure was "the engine isn't serving" — stated, not alarmed about. */
+  const [blocked, setBlocked] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    mailAdminApi.stats
+      .get(serverId)
+      .then((s) => {
+        if (cancelled) return;
+        setStats(s);
+        setError(null);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        // The engine being down is a PANEL-level condition that already carries
+        // its fix (MailEngineBanner, above the tab bar). Repeating it as a red
+        // line in every card that failed for that one reason buries the remedy —
+        // so this card states it quietly and points nowhere.
+        setBlocked(isMailEngineUnavailable(err));
+        setError(getApiErrorMessage(err, t.emailsAdmin.overview.statsFailed));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [serverId]);
+
+  return (
+    <div className="bg-card rounded-2xl border border-border/50 p-5">
+      <div className="flex items-center gap-2 mb-4">
+        <UiIcon name="activity" className="size-4 text-muted-foreground" />
+        <h3 className="font-semibold text-foreground text-sm">{t.emailsAdmin.overview.mailStats}</h3>
+      </div>
+
+      {loading ? (
+        <StatsSkeleton />
+      ) : blocked ? (
+        <p className="text-xs text-muted-foreground">{t.emailsAdmin.engine.cardBlocked}</p>
+      ) : error ? (
+        <p className="text-xs text-danger">{error}</p>
+      ) : stats ? (
+        <div className="space-y-3">
+          <StatRow
+            icon={"globe"}
+            iconBg="bg-primary/10"
+            iconColor="text-primary"
+            label={t.emailsAdmin.overview.domains}
+            value={stats.domains.active}
+            sub={stats.domains.total !== stats.domains.active ? interpolate(t.emailsAdmin.overview.totalSuffix, { count: String(stats.domains.total) }) : undefined}
+          />
+          <StatRow
+            icon={"user"}
+            iconBg="bg-orange-500/10"
+            iconColor="text-orange-500"
+            label={t.emailsAdmin.overview.mailboxes}
+            value={stats.mailboxes.active}
+            sub={stats.mailboxes.total !== stats.mailboxes.active ? interpolate(t.emailsAdmin.overview.totalSuffix, { count: String(stats.mailboxes.total) }) : undefined}
+          />
+          <StatRow
+            icon={"arrow-right"}
+            iconBg="bg-muted"
+            iconColor="text-muted-foreground"
+            label={t.emailsAdmin.overview.aliases}
+            value={stats.aliases.total}
+          />
+
+          <div className="h-px bg-border/60 my-2" />
+
+          <StatRow
+            icon={"hard-drive"}
+            iconBg="bg-muted"
+            iconColor="text-muted-foreground"
+            label={t.emailsAdmin.overview.storage}
+            value={formatBytes(stats.storageBytes)}
+          />
+          <StatRow
+            icon={"inbox"}
+            iconBg="bg-muted"
+            iconColor="text-muted-foreground"
+            label={t.emailsAdmin.overview.messages}
+            value={stats.messages.toLocaleString()}
+          />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function StatsSkeleton() {
+  return (
+    <div className="space-y-3">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div key={i} className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Skeleton className="w-8 h-8 rounded-lg" />
+            <Skeleton className="h-3 w-20" />
+          </div>
+          <Skeleton className="h-4 w-10" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function StatRow({
+  icon: Icon,
+  iconBg,
+  iconColor,
+  label,
+  value,
+  sub,
+}: {
+  icon: IconName;
+  iconBg: string;
+  iconColor: string;
+  label: string;
+  value: string | number;
+  sub?: string;
+}) {
+  const stringValue =
+    typeof value === "number" ? value.toLocaleString() : value;
+  return (
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-2">
+        <div
+          className={`w-8 h-8 rounded-lg ${iconBg} flex items-center justify-center`}
+        >
+          <UiIcon name={Icon} className={`size-4 ${iconColor}`} />
+        </div>
+        <span className="text-sm text-muted-foreground">{label}</span>
+      </div>
+      <div className="text-end">
+        <p className="text-lg font-semibold text-foreground tabular-nums leading-none">
+          {stringValue}
+        </p>
+        {sub && (
+          <p className="text-[10.5px] text-muted-foreground/70 mt-0.5 leading-none">
+            {sub}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function QuickActionsCard() {
+  const { t } = useI18n();
+  return (
+    <div className="bg-card rounded-2xl border border-border/50 p-5">
+      <div className="flex items-center gap-2 mb-4">
+        <UiIcon name="sparkles" className="size-4 text-muted-foreground" />
+        <h3 className="font-semibold text-foreground text-sm">{t.emailsAdmin.overview.quickActions}</h3>
+      </div>
+      <div className="space-y-2">
+        <QuickActionLink
+          href="?tab=mailboxes"
+          icon={"user-plus"}
+          label={t.emailsAdmin.overview.addMailbox}
+        />
+        <QuickActionLink
+          href="?tab=domains"
+          icon={"globe"}
+          label={t.emailsAdmin.overview.addDomain}
+        />
+        <QuickActionLink
+          href="?tab=dns"
+          icon={"mail"}
+          label={t.emailsAdmin.overview.reviewDns}
+        />
+      </div>
+    </div>
+  );
+}
+
+function QuickActionLink({
+  href,
+  icon: Icon,
+  label,
+}: {
+  href: string;
+  icon: IconName;
+  label: string;
+}) {
+  return (
+    <Link
+      href={href}
+      replace
+      scroll={false}
+      className="flex items-center gap-2.5 -mx-2 px-2.5 py-2 rounded-lg hover:bg-muted/40 transition-colors group"
+    >
+      <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
+        <UiIcon name={Icon} className="size-4 text-muted-foreground" />
+      </div>
+      <span className="text-sm text-foreground flex-1">{label}</span>
+      <UiIcon name="arrow-right" className="size-3.5 text-muted-foreground/50 group-hover:text-muted-foreground transition-colors rtl:rotate-180" />
+    </Link>
+  );
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes <= 0) return "0 MB";
+  const KB = 1024;
+  const MB = KB * 1024;
+  const GB = MB * 1024;
+  if (bytes >= GB) return `${(bytes / GB).toFixed(2)} GB`;
+  if (bytes >= MB) return `${(bytes / MB).toFixed(1)} MB`;
+  return `${(bytes / KB).toFixed(0)} KB`;
+}

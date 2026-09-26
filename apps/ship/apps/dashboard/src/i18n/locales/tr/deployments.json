@@ -1,0 +1,205 @@
+{
+  "time": {
+    "secondsAgo": "{n}sn önce",
+    "minutesAgo": "{n}dk önce",
+    "hoursAgo": "{n}sa önce",
+    "daysAgo": "{n}g önce",
+    "monthsAgo": "{n}ay önce",
+    "yearsAgo": "{n}yıl önce"
+  },
+  "header": {
+    "title": "Dağıtımlar",
+    "loading": "Yükleniyor…",
+    "countProjectOne": "{count} dağıtım",
+    "countProjectOther": "{count} dağıtım",
+    "countAllOne": "{projects} projede toplam {deployments} dağıtım",
+    "countAllOther": "{projects} projede toplam {deployments} dağıtım"
+  },
+  "filters": {
+    "searchPlaceholder": "Dağıtımlarda ara...",
+    "all": "Tümü",
+    "success": "Başarılı",
+    "failed": "Başarısız",
+    "building": "Derleniyor",
+    "canceled": "İptal Edildi"
+  },
+  "projectFilter": {
+    "allProjects": "Tüm Projeler"
+  },
+  "sidebar": {
+    "overview": {
+      "title": "Genel Bakış",
+      "total": "Toplam",
+      "successful": "Başarılı",
+      "failed": "Başarısız",
+      "inProgress": "Devam Ediyor",
+      "pageTitle": "Bu sayfada"
+    },
+    "autoDeploy": {
+      "title": "Otomatik Dağıtım",
+      "description": "Ana dalınıza (main branch) yapılan her push işleminde dağıtımların otomatik tetiklenmesi için otomatik dağıtımı etkinleştirin.",
+      "cta": "Proje ayarlarına git"
+    },
+    "getStarted": {
+      "title": "Başlarken",
+      "description": "İlk dağıtımınızı oluşturmak için bir Git deposunu içe aktarın veya bir şablon kullanın.",
+      "cta": "Bir proje dağıt"
+    },
+    "recent": {
+      "title": "Son İşlemler",
+      "empty": "Dağıtımlarınız burada görünecek",
+      "unknown": "Bilinmiyor"
+    }
+  },
+  "stats": {
+    "total": "Toplam",
+    "projectCountOne": "{count} proje",
+    "projectCountOther": "{count} proje",
+    "success": "Başarılı",
+    "failed": "Başarısız",
+    "inProgress": "Devam Ediyor",
+    "buildingNow": "şu an derleniyor"
+  },
+  "status": {
+    "deployed": "Dağıtıldı",
+    "failed": "Başarısız",
+    "canceled": "İptal Edildi",
+    "building": "Derleniyor",
+    "deploying": "Dağıtılıyor",
+    "partial": "Kısmi",
+    "actionRequired": "İşlem gerekiyor",
+    "rejected": "Reddedildi",
+    "verifying": "Doğrulanıyor",
+    "noChanges": "Değişiklik yok",
+    "pending": "Beklemede"
+  },
+  "serviceStatus": {
+    "deployed": "Dağıtıldı",
+    "failed": "Başarısız",
+    "cancelled": "İptal Edildi",
+    "skipped": "Atlandı",
+    "building": "Derleniyor",
+    "deploying": "Dağıtılıyor",
+    "running": "Çalışıyor",
+    "removedOnHost": "Sunucuda kaldırıldı",
+    "verifying": "Doğrulanıyor",
+    "pending": "Beklemede"
+  },
+  "card": {
+    "unknownProject": "Bilinmeyen Proje",
+    "versionTitle": "Sürüm {version}",
+    "active": "Aktif",
+    "activeTitle": "Şu anda projeye hizmet veren dağıtım budur",
+    "pinned": "Sabitlendi",
+    "pinnedTitle": "Sabitlendi — saklama temizliğinden muaftır ve geri alma için süresiz olarak korunur.",
+    "snapshotted": "Anlık Görüntü Alındı",
+    "snapshottedTitle": "Arşivlendi — bu sürüme geri dönülebilir",
+    "manualDeploy": "Manuel dağıtım",
+    "serviceTitle": "{name}: {label}",
+    "serviceTitleReason": "{name}: {label} ({reason})"
+  },
+  "empty": {
+    "filtered": {
+      "title": "Dağıtım bulunamadı",
+      "description": "Filtrelerinizi ayarlamayı veya aramanızı temizlemeyi deneyin."
+    },
+    "none": {
+      "title": "Henüz dağıtım yapılmadı",
+      "description": "İlk projenizi dağıtın; derleme durumu, commit detayları ve performans metrikleriyle burada görünecektir.",
+      "deployButton": "Proje Dağıt",
+      "browseButton": "Şablonlara Göz At"
+    }
+  },
+  "modal": {
+    "title": "Commit Detayları",
+    "project": "Proje",
+    "unknownProject": "Bilinmeyen Proje",
+    "domain": "Alan Adı",
+    "noDomain": "Alan adı yok",
+    "status": "Durum",
+    "environment": "Ortam",
+    "statusName": {
+      "success": "Başarılı",
+      "failed": "Başarısız",
+      "building": "Derleniyor",
+      "deploying": "Dağıtılıyor",
+      "canceled": "İptal Edildi",
+      "pending": "Beklemede"
+    },
+    "changedFiles": "Değişen Dosyalar ({count})",
+    "fileTypes": {
+      "added": "+ Eklendi",
+      "modified": "~ Değiştirildi",
+      "removed": "- Kaldırıldı"
+    },
+    "viewOnGithub": "GitHub'da Görüntüle",
+    "visitSite": "Siteyi Ziyaret Et",
+    "manual": {
+      "title": "Manuel Dağıtım",
+      "description": "Bu dağıtım manuel olarak tetiklendi ve commit bilgisi içermiyor.",
+      "deploymentId": "Dağıtım ID",
+      "created": "Oluşturulma",
+      "type": "Tür",
+      "typeManual": "Manuel"
+    }
+  },
+  "menu": {
+    "openDeployment": "Dağıtımı Aç",
+    "viewRepository": "Depoyu Görüntüle",
+    "copyDomainUrl": "Alan Adı URL'sini Kopyala",
+    "copyBuildId": "Derleme ID'sini Kopyala",
+    "cancelDeployment": "Dağıtımı İptal Et",
+    "rollback": "Bu sürüme geri dön (Rollback)",
+    "rollbackTitle": {
+      "enabled": "Projeyi bu sürüme geri yükle (yalnızca kod — veriler değişmez)",
+      "active": "Bu zaten aktif olan sürümdür",
+      "pruned": "Bu dağıtımın saklanan imajı ve yeniden derlenecek commit'i yok",
+      "notReady": "Yalnızca hazır durumdaki dağıtımlara geri dönülebilir",
+      "rebuildOnly": "Bu sürümü commit'ini yeniden derleyerek geri yükle (imajı silinmiş)"
+    },
+    "pin": "Sabitle",
+    "unpin": "Sabitlemeyi Kaldır",
+    "pinTitle": {
+      "pin": "Bu dağıtımı süresiz olarak geri alınabilir durumda tut (sınır: proje başına 10 sabitlenmiş dağıtım)",
+      "unpin": "Saklama sınırı aşıldığında bu dağıtımın temizlenmesine izin ver",
+      "pruned": "Sabitlenemiyor — arşiv zaten temizlenmiş"
+    },
+    "deleteDeployment": "Dağıtımı Sil",
+    "rollbackFailed": "Geri alma başarısız oldu",
+    "pinFailed": "Dağıtım sabitlenemedi",
+    "unpinFailed": "Dağıtım sabitlemesi kaldırılamadı",
+    "rollbackModeInstant": "Anında geri yükleme — bu sürümün saklanan imajı kullanılır, yeniden derleme yok.",
+    "rollbackModeRebuild": "Yeniden derleme — bu sürümün imajı sunucuda yok, commit'i tekrar derlenecek.",
+    "rollbackModeReacquireImage": "Kayıt deposundan geri yükleme — bu sürüm için kaydedilen tam imaj referansını yeniden çeker; kaynak yeniden derlenmez.",
+    "rollbackModeMixed": "Çoğunlukla anında — {count} servis imajını yitirdi ve yeniden derlenecek."
+  },
+  "rollbackConfirm": {
+    "title": "Bu sürüme geri dönülsün mü?",
+    "dataUnchanged": "Yalnızca uygulama kodu geri yüklenir. Veritabanı ve volume verileri değişmez.",
+    "envHeading": "Ortam değişkenleri",
+    "envSummaryOverlay": "{count} değişken değişecek — bu sürümün değerleri mevcut değerlerin üzerine uygulanır.",
+    "envSummaryReplace": "{count} değişken değişecek — bu sürümün ortamı kaydedildiği gibi kullanılır.",
+    "envNoChanges": "Hiçbir ortam değişkeni değişmiyor.",
+    "envUnchanged": "Mevcut konteyner yeniden oluşturulmaz, yalnızca yeniden başlatılır; ortamı değişmez.",
+    "envNoValues": "Değerler burada asla gösterilmez.",
+    "envTruncated": "{total} kaydın {shown} tanesi gösteriliyor.",
+    "dirFrozenWins": "bu sürümün değerine döner",
+    "dirRemovedSince": "geri gelir — bu sürümden sonra silinmiş",
+    "dirAddedSinceKept": "şu anki hâliyle kalır — bu sürümden sonra eklenmiş",
+    "dirAddedSinceDropped": "kaldırılır — bu sürümden sonra eklenmiş",
+    "scopeAmbiguous": "servis kapsamı olmadan kaydedilmiş, bu yüzden tek bir değer tüm servislere uygulanır",
+    "untouchedHeading": "Bu sürümden sonra eklenen servisler",
+    "untouchedNote": "Bunlar çalışmaya devam eder ve değiştirilmez: {names}",
+    "confirm": "Geri dön",
+    "cancel": "İptal"
+  },
+  "loadFailed": "Dağıtımlar yüklenemedi.",
+  "retry": "Tekrar dene",
+  "pagination": {
+    "label": "Dağıtım geçmişi sayfaları",
+    "previous": "Önceki sayfa",
+    "next": "Sonraki sayfa",
+    "pageOf": "Sayfa {page} / {total}",
+    "range": "{total} dağıtımdan {from}–{to}"
+  }
+}

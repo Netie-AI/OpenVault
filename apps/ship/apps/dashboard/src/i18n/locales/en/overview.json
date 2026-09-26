@@ -1,0 +1,144 @@
+{
+  "activity": {
+    "title": "Activity",
+    "thisWeek": "this week",
+    "deploymentSingular": "{count} deployment",
+    "deploymentPlural": "{count} deployments"
+  },
+  "apiRequests": {
+    "title": "API Requests",
+    "last7Days": "Last 7 days",
+    "totalRequests": "Total requests",
+    "requestsTooltip": "{count} requests"
+  },
+  "credits": {
+    "title": "Credits Balance",
+    "availableToUse": "Available to use",
+    "spentThisMonth": "Spent this month",
+    "add": "Add"
+  },
+  "deployments": {
+    "title": "Deployments",
+    "lastNDays": "last {period} days",
+    "deploymentSingular": "{count} deployment",
+    "deploymentPlural": "{count} deployments"
+  },
+  "homeTip": {
+    "quickTip": "Quick Tip",
+    "connectText": "Connect your GitHub repository for automatic deployments on every push.",
+    "connectLabel": "Connect GitHub",
+    "createText": "Create your first project to start deploying.",
+    "createLabel": "New Project",
+    "settingsText": "Set up environment variables and custom domains in project settings.",
+    "settingsLabel": "Project Settings",
+    "connected": "Connected",
+    "tips": {
+      "envVars": {
+        "text": "Add encrypted environment variables and secrets to any project.",
+        "label": "Open projects"
+      },
+      "customDomain": {
+        "text": "Point a custom domain at a project — HTTPS is provisioned automatically.",
+        "label": "Open projects"
+      },
+      "autoDeploy": {
+        "text": "Connect GitHub to auto-deploy every push, no CI to wire up.",
+        "label": "Open Git settings"
+      },
+      "rollback": {
+        "text": "Roll back to any previous deployment in one click.",
+        "label": "View deployments"
+      },
+      "apps": {
+        "text": "Install self-hosted apps like Gitea, n8n, and Metabase in one click.",
+        "label": "Browse apps"
+      },
+      "servers": {
+        "text": "Connect your own servers over SSH and deploy to them from here.",
+        "label": "Manage servers"
+      },
+      "jobs": {
+        "text": "Schedule commands with cron jobs — retries, live logs, and history included.",
+        "label": "Open jobs"
+      },
+      "backups": {
+        "text": "Set up automatic backups for your databases and volumes.",
+        "label": "Configure backups"
+      },
+      "mail": {
+        "text": "Run your own mail server and webmail, fully self-hosted.",
+        "label": "Set up mail"
+      },
+      "team": {
+        "text": "Invite teammates and scope their access per project.",
+        "label": "Manage team"
+      }
+    }
+  },
+  "welcome": {
+    "title": "Launch your first project",
+    "subtitle": "Connect a repository or start from a template — Openship builds it, ships it, and hands you a live URL in minutes.",
+    "createProject": "Create project",
+    "importGithub": "Import from GitHub",
+    "tipPrefix": "Tip: press",
+    "tipSuffix": "to jump anywhere"
+  },
+  "header": {
+    "goodMorning": "Good morning",
+    "goodAfternoon": "Good afternoon",
+    "goodEvening": "Good evening",
+    "greetingWithName": "{greeting}, {name}",
+    "overview": "Overview",
+    "subtitle": "Monitor your platform usage and manage resources",
+    "creditsBalance": "Credits Balance",
+    "topUp": "Top Up"
+  },
+  "hero": {
+    "title": "Platform Activity",
+    "subtitle": "Token usage & API requests",
+    "tokens": "Tokens",
+    "requests": "Requests",
+    "lastNDays": "Last {period} days",
+    "agents": "Agents",
+    "environments": "Environments",
+    "total": "Total",
+    "production": "Production",
+    "testing": "Testing",
+    "prodCount": "{count} prod",
+    "testCount": "{count} test"
+  },
+  "projects": {
+    "title": "Projects",
+    "activeDeployments": "Active deployments",
+    "total": "Total",
+    "live": "Live",
+    "building": "Building",
+    "needAttentionSingular": "{count} project needs attention",
+    "needAttentionPlural": "{count} projects need attention"
+  },
+  "sandboxes": {
+    "title": "Sandboxes",
+    "developmentEnvironments": "Development environments",
+    "totalSandboxes": "Total sandboxes",
+    "active": "Active",
+    "runningCount": "{count} running",
+    "stoppedCount": "{count} stopped"
+  },
+  "stats": {
+    "creditsBalance": "Credits Balance",
+    "tokenUsage": "Token Usage",
+    "thisMonth": "This month",
+    "apiRequests": "API Requests",
+    "last7Days": "Last 7 days",
+    "deployments": "Deployments",
+    "successfulCount": "{count} successful",
+    "activeProjects": "Active Projects",
+    "sandboxes": "Sandboxes",
+    "activeCount": "{count} active"
+  },
+  "tokenUsage": {
+    "title": "Token Usage",
+    "lastNDays": "last {period} days",
+    "tokensTooltip": "{count} tokens"
+  }
+}
