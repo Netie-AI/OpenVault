@@ -783,6 +783,12 @@ class ShipPreflightBody(BaseModel):
     vps_host: str = ""
 
 
+class ApiKeyVerifyBody(BaseModel):
+    """Token a co-located fork received from its own client (DR-0018)."""
+
+    token: str
+
+
 class ApiKeyIssueBody(BaseModel):
     """Mint a FreeRoute credential for someone else's app."""
 
@@ -3278,6 +3284,21 @@ def create_app(
         _require_loopback(request, "list api keys")
         keys = state_api_keys.list_keys(include_revoked=include_revoked)
         return {"ok": True, "keys": [k.to_dict() for k in keys], "count": len(keys)}
+
+    @app.post("/api/apikeys/verify")
+    def apikeys_verify(body: ApiKeyVerifyBody, request: Request) -> dict[str, Any]:
+        """Check a caller's token for a co-located fork (FreeRoute, DR-0018).
+
+        The forks keep no key store of their own, so they ask here. Loopback-only:
+        off-box this would be a free oracle for guessing tokens. The answer is
+        the same shape for unknown and revoked, like ``ApiKeyStore.verify``.
+        """
+        _require_loopback(request, "verify api key")
+        record = state_api_keys.verify(body.token.strip())
+        if record is None:
+            return {"valid": False}
+        state_api_keys.touch(record.key_id)
+        return {"valid": True, "key_id": record.key_id, "tier": record.tier}
 
     @app.get("/api/keys/packs")
     def keys_packs_get() -> dict[str, Any]:
