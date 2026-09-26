@@ -65,7 +65,28 @@ FreeRoute and FreeBuild.
   instead of keeping its own key table. Unknown and revoked return the same answer.
 - `CLAUDE.md`: npm is allowed in `apps/router` and `apps/ship`.
 
-<!-- FILL: per-app specifics after agent reports -->
+### FreeRoute (`apps/router`)
+
+- One classifier, `open-sse/netie/policy.ts`, reads the provider registry
+  (`authType: "oauth"`, `authHeader: "cookie"`, `-web` executors) plus a short override
+  table. Gates: `getExecutor()`, `/v1/chat/completions`, and a path table in
+  `src/lib/netie/hardDisabledRoutes.ts` run from `src/proxy.ts` before authz.
+- Disabled: 21 subscription-OAuth providers and their login and import routes
+  (`/api/oauth/*`, `/api/codex/*`, `/api/cursor-cli/*`, CLI credential import); 32
+  web-session providers plus MITM, agent bridge, traffic inspector, VNC and session
+  pools; `packages/browser-pool` stubbed; `wreq-js` dependency removed.
+- Also disabled because they couple FreeRoute to the upstream project:
+  `upstream_updates_disabled` (version check, updater, changelog fetch) and
+  `upstream_service_not_included` (the embedded 9router service).
+- Keys: `src/lib/netie/keyvault.ts`, called from `materializeConnection()` in
+  `src/sse/services/auth.ts`. Client tokens: `validateApiKey()` and
+  `getApiKeyMetadata()` accept OpenVault-issued tokens (scope `self:usage`, never
+  `manage`); router-side key minting returns `keys_managed_by_openvault`.
+- Kept on purpose: the deploy-time env key (`OMNIROUTE_API_KEY`) as the operator's
+  bootstrap credential, `X-OmniRoute-*` header names, the `/api/omniroute/status` path,
+  and internal identifiers.
+
+<!-- FILL: ship specifics after agent report -->
 
 ## Consequences
 
