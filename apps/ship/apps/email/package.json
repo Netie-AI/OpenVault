@@ -1,0 +1,35 @@
+{
+  "name": "@repo/email",
+  "version": "0.8.0",
+  "private": true,
+  "description": "Self-hosted email - iRedMail (engine) + Zero Email (server + client). Orchestrator package: install and run server + client together.",
+  "scripts": {
+    "resolve-catalogs": "bun run scripts/resolve-catalog-refs.ts",
+    "postinstall": "cd server && bun install && cd ../client && bun install",
+    "install:server": "cd server && bun install",
+    "install:client": "cd client && bun install",
+    "install:all": "bun run resolve-catalogs && bun run install:server && bun run install:client",
+    "dev:server": "cd server && bun run dev",
+    "dev:client": "cd client && bun run dev",
+    "dev": "bash -c '(cd server && bun run dev) & (cd client && bun run dev) & trap \"kill 0\" EXIT INT TERM; wait'",
+    "build:client": "cd client && bun run build",
+    "build": "bun run scripts/build-release.ts",
+    "start": "bun run server/src/main.ts",
+    "start:dist": "cd dist && bun start",
+    "lint": "(cd server && bun run lint) && (cd client && bun run lint)",
+    "test": "cd server && bun run test",
+    "db:generate": "cd server && bun run db:generate",
+    "db:migrate": "cd server && bun run db:migrate",
+    "db:studio": "cd server && bun run db:studio"
+  },
+  "trustedDependencies": [
+    "esbuild",
+    "@biomejs/biome",
+    "@swc/core",
+    "workerd",
+    "@cloudflare/workerd-darwin-arm64",
+    "@cloudflare/workerd-linux-64",
+    "@cloudflare/workerd-linux-arm64",
+    "@parcel/watcher"
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "zero",
+  "compatibility_date": "2025-06-27",
+  "observability": {
+    "enabled": true,
+  },
+  "assets": {
+    "directory": "./build/client/",
+    "not_found_handling": "single-page-application",
+    "html_handling": "force-trailing-slash",
+  },
+  // Top-level vars are loaded by `react-router dev` (Cloudflare Vite
+  // plugin) when no `--env` flag is passed. Without these, SSR
+  // `import.meta.env.VITE_PUBLIC_BACKEND_URL` is `undefined` and tRPC
+  // fetches end up POSTing to `/undefined/api/trpc/...` - same-origin
+  // on :3000, which routes into the 404 catch-all.
+  // The per-env blocks below override these for `wrangler deploy --env ...`.
+  //
+  // APP_URL is absent on purpose: the app's own origin is never a
+  // build-time fact. Internal redirects are relative and react-router
+  // resolves them against the live origin, so a value here could only be
+  // wrong - which is exactly how GH-567 shipped `http://localhost:3000`
+  // into the published image's session guards.
+  "vars": {
+    "VITE_PUBLIC_BACKEND_URL": "http://localhost:3030",
+  },
+  "env": {
+    "local": {
+      "name": "zero-local",
+      "vars": {
+        "VITE_PUBLIC_BACKEND_URL": "http://localhost:3030",
+      },
+    },
+    "staging": {
+      "name": "zero-staging",
+      "vars": {
+        "VITE_PUBLIC_BACKEND_URL": "https://sapi.0.email",
+      },
+    },
+    "production": {
+      "name": "zero-production",
+      "vars": {
+        "VITE_PUBLIC_BACKEND_URL": "https://api.0.email",
+      },
+    },
+  },
+}
