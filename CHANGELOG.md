@@ -2,14 +2,16 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-01 - OpenRouter /key 404 is error; doc corrections (OpenVault #100)
+
+- OpenRouter /api/v1/key: 404 and any other non-2xx except 401/403 (auth_fail) and 429 (rate_limit) now map to `error` with `HTTP {code}`. Other providers keep the shared classifier.
+- Corrections: the #92 chat probe defaults to 3600s, OPENVAULT_CHAT_PROBE_INTERVAL_S has a 600s floor, sambanova and sea_lion are probed at most every 6h, keys with a hop_attempts 2xx inside the gap are skipped, and it uses the first non-reasoning catalog chat model at 16 tokens (512 only if every chat model is reasoning). The #97 OpenRouter precheck statuses are auth_fail / rate_limit / error, not failed.
+
 ## 2026-10-01 - Chat health probe per key (OpenVault #92)
 
-- A chat probe POSTs "Reply with OK" on its own loop, separate from the 60s
-  models probe. The default interval is 3600s. `OPENVAULT_CHAT_PROBE_INTERVAL_S`
-  overrides it, with a 600s floor. `sambanova` and `sea_lion` are probed at
-  most once every 6h. A key with a `hop_attempts` 2xx inside that gap is
-  skipped. The model is the first non-reasoning catalog chat id, at 16
-  tokens, or 512 only when every chat model is reasoning.
+- A chat probe POSTs "Reply with OK" on its own 300s loop, separate from the
+  60s models probe. The model is the provider's first catalog chat id.
+  `max_tokens` is 16, or 512 when that id is a reasoning model.
 - HTTP 402, a 429 whose request-limit header is 0, or a 429 with an account
   or plan error code, marks that key unusable. `usable_provider_count` skips
   it. A transient 429 parks the key and does not mark it unusable.
@@ -23,8 +25,7 @@ Append-only. Never edited, only added to. Newest first.
   daily limit, reset time, park state, and a scrubbed error. No secret.
 - OpenRouter precheck calls `GET https://openrouter.ai/api/v1/key` and stores
   `limit_remaining` and `is_free_tier` only. A non-2xx sets `precheck_status`
-  to `auth_fail`, `rate_limit`, or `error` with the HTTP code. Other
-  providers are unchanged.
+  to `failed` with the HTTP code. Other providers are unchanged.
 - `hop_attempts` records one row per fallback hop. No bodies and no keys.
   Rows older than 7 days, and rows past the cap, are pruned on write.
 
