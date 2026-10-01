@@ -6,6 +6,7 @@ import hashlib
 import json
 import math
 import time
+import uuid
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from typing import Any, Literal
@@ -18,6 +19,7 @@ from openmw.openvault.route.breaker import get_circuit_breaker
 from openmw.openvault.vault.budget import BudgetDecision, estimate_tokens_for_body, prepare_hop_body
 from openmw.openvault.vault.crypto import VaultCryptoError, VaultSealedError
 from openmw.openvault.vault.fallback import FallbackManager
+from openmw.openvault.vault.hop_attempts import record_hop_attempt
 from openmw.openvault.vault.local_hop import (
     LOCAL_HOP_KEY_ID,
     LOCAL_PLACEHOLDER_SECRET,
@@ -548,6 +550,11 @@ _PIN_CIRCUIT = "circuit_open"
 _PIN_NO_HOP = "no_hop"
 _PIN_NOT_IN_CATALOG = "not_in_catalog"
 _PIN_PARK_REASONS = frozenset({_PIN_PARKED, _PIN_QUOTA})
+# Pin-site provider bind. The DMS pin is groq even when another catalog row
+# lists the same id (together also has openai/gpt-oss-120b).
+_STRICT_PIN_PROVIDER: dict[str, str] = {
+    "openai/gpt-oss-120b": "groq",
+}
 
 
 def strict_header_on(value: str | None) -> bool:
@@ -565,6 +572,14 @@ def pop_strict(body: dict[str, Any]) -> bool:
 
 def _hop_serves(provider: str, model: str, *, multimodal: bool) -> bool:
     return model in models_for(provider, multimodal=multimodal)
+
+
+def _strict_hop_serves(provider: str, pin: str, *, multimodal: bool) -> bool:
+    """Exact catalog id, and the bound provider when the pin names one."""
+    bound = _STRICT_PIN_PROVIDER.get(pin)
+    if bound is not None and provider != bound:
+        return False
+    return _hop_serves(provider, pin, multimodal=multimodal)
 
 
 def _retry_seconds(cooldown_ms: int) -> int | None:
@@ -635,7 +650,7 @@ def _why_pin_blocked(
     for record in vault.pooled_ordered():
         if record.custody != "pooled" or not record.enabled:
             continue
-        if not _hop_serves(record.provider, pin, multimodal=multimodal):
+        if not _strict_hop_serves(record.provider, pin, multimodal=multimodal):
             continue
         if record.precheck_status == "auth_fail":
             continue
@@ -688,7 +703,7 @@ def _strict_candidates(
         return [], (503, _pin_unavailable_body(pin, _PIN_NOT_IN_CATALOG)), None
     healthy: list[ProxyCandidate] = []
     for cand in candidates:
-        if not _hop_serves(cand.provider, pin, multimodal=multimodal):
+        if not _strict_hop_serves(cand.provider, pin, multimodal=multimodal):
             continue
         if not get_circuit_breaker(cand.provider).can_execute():
             continue
@@ -710,7 +725,7 @@ def _models_to_send(
 ) -> tuple[str, ...]:
     """Strict sends the pin only. Otherwise the existing per-hop catalog walk."""
     if strict_pin is not None:
-        if _hop_serves(provider, strict_pin, multimodal=multimodal):
+        if _strict_hop_serves(provider, strict_pin, multimodal=multimodal):
             return (strict_pin,)
         return ()
     return _models_for_hop(provider, requested, multimodal=multimodal)
@@ -804,6 +819,32 @@ def _open_walk(
     )
 
 
+def _ledger_attempt(
+    vault: KeyVault,
+    *,
+    request_id: str,
+    key_id: str,
+    model: str,
+    status: str,
+    started: float,
+    reason: str,
+) -> None:
+    """One hop_attempts row. ``reason`` is a short code, never a body or a key."""
+    latency_ms = max(0, int((time.perf_counter() - started) * 1000.0))
+    try:
+        record_hop_attempt(
+            vault.db_path,
+            request_id=request_id,
+            key_id=key_id,
+            model=model,
+            status=status,
+            latency_ms=latency_ms,
+            reason=reason,
+        )
+    except Exception:
+        log.warning("openvault_hop_attempt_ledger_failed", key_ref=key_id[:8])
+
+
 async def chat_completions(
     vault: KeyVault,
     fallback: FallbackManager,
@@ -820,6 +861,7 @@ async def chat_completions(
     the return tuple is unpacked by four test modules that do not want it.
     """
     trace = trace if trace is not None else HopTrace()
+    request_id = uuid.uuid4().hex
     work = dict(body)
     walk = _open_walk(vault, fallback, work, tenant=tenant, trace=trace, path="chat_completions")
     if walk.early is not None:
@@ -918,10 +960,20 @@ async def chat_completions(
 
                 trace.note_attempt()
                 sent_any = True
+                started = time.perf_counter()
                 try:
                     resp = await client.post(url, headers=headers, json=hop_body)
                 except httpx.TimeoutException:
                     outcome = classify_attempt(None, "timeout")
+                    _ledger_attempt(
+                        vault,
+                        request_id=request_id,
+                        key_id=cand.key_id,
+                        model=model,
+                        status="timeout",
+                        started=started,
+                        reason="timeout",
+                    )
                     _apply_candidate_outcome(vault, fallback, cand, outcome, "timeout")
                     errors.append(f"{cand.label}: timeout")
                     if cand.served_local:
@@ -930,6 +982,15 @@ async def chat_completions(
                     break
                 except (httpx.HTTPError, OSError) as exc:
                     outcome = classify_attempt(None, str(exc))
+                    _ledger_attempt(
+                        vault,
+                        request_id=request_id,
+                        key_id=cand.key_id,
+                        model=model,
+                        status="error",
+                        started=started,
+                        reason="transport_error",
+                    )
                     _apply_candidate_outcome(vault, fallback, cand, outcome, str(exc))
                     errors.append(f"{cand.label}: {exc}")
                     if cand.served_local:
@@ -938,14 +999,23 @@ async def chat_completions(
                     break
 
                 # Upstream body is for classification only. Do not log it or
-                # copy it into errors, the trace, or a usage row. A park may
-                # keep a scrubbed message of at most 200 characters, not the body.
+                # copy it into errors, the trace, a usage row, or hop_attempts.
+                # A park may keep a scrubbed message of at most 200 characters.
                 status_code = resp.status_code
                 body_text = resp.text if status_code >= 400 else ""
                 outcome = classify_attempt(
                     status_code,
                     body_text if status_code >= 400 else None,
                     headers=dict(resp.headers),
+                )
+                _ledger_attempt(
+                    vault,
+                    request_id=request_id,
+                    key_id=cand.key_id,
+                    model=model,
+                    status=str(status_code),
+                    started=started,
+                    reason=outcome.reason or "",
                 )
                 err = f"HTTP {status_code}"
                 snippet = provider_error_text(body_text, status=status_code)
@@ -1052,6 +1122,7 @@ async def prepare_chat_stream(
     with the correct HTTP status (streaming cannot change status mid-flight).
     """
     trace = trace if trace is not None else HopTrace()
+    request_id = uuid.uuid4().hex
     work = dict(body)
     walk = _open_walk(vault, fallback, work, tenant=tenant, trace=trace, path="prepare_chat_stream")
     if walk.early is not None:
@@ -1162,11 +1233,21 @@ async def prepare_chat_stream(
 
                 trace.note_attempt()
                 sent_any = True
+                started = time.perf_counter()
                 try:
                     req = client.build_request("POST", url, headers=headers, json=hop_payload)
                     resp = await client.send(req, stream=True)
                 except httpx.TimeoutException:
                     outcome = classify_attempt(None, "timeout")
+                    _ledger_attempt(
+                        vault,
+                        request_id=request_id,
+                        key_id=cand.key_id,
+                        model=model,
+                        status="timeout",
+                        started=started,
+                        reason="timeout",
+                    )
                     _apply_candidate_outcome(vault, fallback, cand, outcome, "timeout")
                     errors.append(f"{cand.label}: timeout")
                     if cand.served_local:
@@ -1175,6 +1256,15 @@ async def prepare_chat_stream(
                     break
                 except (httpx.HTTPError, OSError) as exc:
                     outcome = classify_attempt(None, str(exc))
+                    _ledger_attempt(
+                        vault,
+                        request_id=request_id,
+                        key_id=cand.key_id,
+                        model=model,
+                        status="error",
+                        started=started,
+                        reason="transport_error",
+                    )
                     _apply_candidate_outcome(vault, fallback, cand, outcome, str(exc))
                     errors.append(f"{cand.label}: {exc}")
                     if cand.served_local:
@@ -1186,10 +1276,20 @@ async def prepare_chat_stream(
                     err_bytes = await resp.aread()
                     await resp.aclose()
                     # Classification only. The park row keeps a scrubbed message,
-                    # never the request or the response body.
+                    # never the request or the response body. hop_attempts stores
+                    # the status and the short reason code.
                     body_text = err_bytes.decode("utf-8", errors="replace")
                     outcome = classify_attempt(
                         resp.status_code, body_text, headers=dict(resp.headers)
+                    )
+                    _ledger_attempt(
+                        vault,
+                        request_id=request_id,
+                        key_id=cand.key_id,
+                        model=model,
+                        status=str(resp.status_code),
+                        started=started,
+                        reason=outcome.reason or "",
                     )
                     err = f"HTTP {resp.status_code}"
                     snippet = provider_error_text(body_text, status=resp.status_code)
@@ -1221,6 +1321,15 @@ async def prepare_chat_stream(
                     break
 
                 outcome = classify_attempt(resp.status_code, "", headers=dict(resp.headers))
+                _ledger_attempt(
+                    vault,
+                    request_id=request_id,
+                    key_id=cand.key_id,
+                    model=model,
+                    status=str(resp.status_code),
+                    started=started,
+                    reason=outcome.reason or "",
+                )
                 _on_model_outcome(vault, fallback, cand, outcome, "", model)
                 log.info(
                     "openvault_proxy_stream_ok",

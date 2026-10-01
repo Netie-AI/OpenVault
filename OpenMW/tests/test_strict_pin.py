@@ -21,6 +21,7 @@ from openmw.openvault.route.attempt import QUOTA_PARK_MS
 from openmw.openvault.route.breaker import get_circuit_breaker, reset_all_circuit_breakers
 from openmw.openvault.vault.crypto import Seal
 from openmw.openvault.vault.fallback import FallbackManager
+from openmw.openvault.vault.local_hop import SERVED_PROVIDER_HEADER
 from openmw.openvault.vault.providers import models_for
 from openmw.openvault.vault.proxy import (
     PIN_UNAVAILABLE,
@@ -33,6 +34,7 @@ from openmw.openvault.vault.usage_store import HopTrace
 
 _PIN = "openai/gpt-oss-120b"
 _GROQ = "https://api.groq.com/openai/v1"
+_TOGETHER = "https://api.together.xyz/v1"
 _GOOGLE = "https://generativelanguage.googleapis.com/v1beta/openai"
 _GOOGLE_MODEL = models_for("google")[0]
 _REQ = "REQBODY-ov80"
@@ -84,6 +86,17 @@ def _groq(vault: KeyVault, priority: int = 0, secret: str = "gsk-test-ov80-aaaa"
     )
 
 
+def _together(vault: KeyVault, priority: int = 0, secret: str = "tg-test-ov98-eeee") -> KeyRecord:
+    return _hop(
+        vault,
+        label=f"together-{priority}",
+        provider="together",
+        secret=secret,
+        base_url=_TOGETHER,
+        priority=priority,
+    )
+
+
 def _google(vault: KeyVault) -> KeyRecord:
     return _hop(
         vault,
@@ -129,6 +142,8 @@ class _Recorder:
         for url in self.urls:
             if "groq.com" in url:
                 found.append("groq")
+            elif "together.xyz" in url:
+                found.append("together")
             elif "googleapis.com" in url:
                 found.append("google")
             else:
@@ -449,4 +464,142 @@ def test_http_strict_header_sets_retry_after_and_does_not_call_google(
     assert second.json()["error"]["reason"] == "parked"
     assert second.headers.get("Retry-After")
     assert int(second.headers["Retry-After"]) >= 1
+    assert rec.providers == ["groq"]
+
+
+def test_strict_together_and_groq_serves_groq_only(vault: KeyVault) -> None:
+    _together(vault, priority=0)
+    _groq(vault, priority=10)
+    mgr = FallbackManager(vault)
+    upstream = {
+        "id": "chatcmpl-groq",
+        "model": "upstream-name",
+        "choices": [{"message": {"content": "ok"}}],
+    }
+    rec = _Recorder(_response(200, upstream))
+    trace = HopTrace()
+
+    status, payload = _run(vault, mgr, _chat(_PIN, strict=True), rec, trace)
+
+    assert status == 200
+    assert isinstance(payload, dict)
+    assert payload["served_provider"] == "groq"
+    assert payload["served_model"] == _PIN
+    assert payload["served_local"] is False
+    assert trace.provider == "groq"
+    assert trace.model_served == _PIN
+    assert rec.providers == ["groq"]
+    assert rec.bodies[0]["model"] == _PIN
+    assert "strict" not in rec.bodies[0]
+
+
+def test_strict_together_without_groq_is_pin_unavailable_no_hop(vault: KeyVault) -> None:
+    _together(vault)
+    mgr = FallbackManager(vault)
+    rec = _Recorder(_response(200, {"id": "together-should-not-run"}))
+    trace = HopTrace()
+
+    status, payload = _run(vault, mgr, _chat(_PIN, strict=True), rec, trace)
+
+    assert status == 503
+    assert isinstance(payload, dict)
+    assert payload["error"]["type"] == PIN_UNAVAILABLE
+    assert payload["error"]["reason"] == "no_hop"
+    assert payload["error"]["model"] == _PIN
+    assert payload["served_provider"] is None
+    assert payload["served_model"] is None
+    assert trace.error_type == PIN_UNAVAILABLE
+    assert rec.urls == []
+    assert rec.providers == []
+
+
+def test_strict_parked_groq_does_not_serve_healthy_together(vault: KeyVault) -> None:
+    groq = _groq(vault, priority=10)
+    _together(vault, priority=0)
+    mgr = FallbackManager(vault)
+    mgr.record_park(groq.id, 30_000, "rate_limited")
+    rec = _Recorder(_response(200, {"id": "together-should-not-run"}))
+    trace = HopTrace()
+
+    status, payload = _run(vault, mgr, _chat(_PIN, strict=True), rec, trace)
+
+    assert status == 503
+    assert isinstance(payload, dict)
+    assert payload["error"]["type"] == PIN_UNAVAILABLE
+    assert payload["error"]["reason"] == "parked"
+    assert payload["served_provider"] is None
+    assert trace.retry_after_s is not None
+    assert rec.urls == []
+
+
+def test_non_strict_same_model_still_follows_fallback_order(vault: KeyVault) -> None:
+    _together(vault, priority=0)
+    _groq(vault, priority=10)
+    mgr = FallbackManager(vault)
+    rec = _Recorder(_response(200, {"id": "chatcmpl-together", "choices": []}))
+    trace = HopTrace()
+
+    status, payload = _run(vault, mgr, _chat(_PIN), rec, trace)
+
+    assert status == 200
+    assert isinstance(payload, dict)
+    assert payload["served_provider"] == "together"
+    assert payload["served_model"] == _PIN
+    assert trace.provider == "together"
+    assert trace.model_served == _PIN
+    assert rec.providers == ["together"]
+    assert rec.bodies[0]["model"] == _PIN
+    assert "strict" not in rec.bodies[0]
+
+
+def test_strict_not_in_catalog_unchanged_when_together_and_groq_present(
+    vault: KeyVault,
+) -> None:
+    _together(vault, priority=0)
+    _groq(vault, priority=10)
+    mgr = FallbackManager(vault)
+    rec = _Recorder(_response(200, {"id": "should-not-run"}))
+
+    status, payload = _run(vault, mgr, _chat("auto", strict=True), rec)
+
+    assert status == 503
+    assert isinstance(payload, dict)
+    assert payload["error"]["type"] == PIN_UNAVAILABLE
+    assert payload["error"]["reason"] == "not_in_catalog"
+    assert payload["error"]["model"] == "auto"
+    assert payload["served_provider"] is None
+    assert rec.urls == []
+
+
+def test_http_strict_served_provider_header_is_groq(
+    vault: KeyVault, tmp_path: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("OPENVAULT_HOME", str(tmp_path / "home"))
+    monkeypatch.delenv("OPENVAULT_LOCAL_BASE_URL", raising=False)
+    _together(vault, priority=0)
+    _groq(vault, priority=10)
+    app = create_app(
+        vault=vault,
+        mock_health=True,
+        enable_precheck_loop=False,
+        cortex_url="http://127.0.0.1:9",
+    )
+    client = TestClient(app, client=("127.0.0.1", 5555))
+    _identity, headers = issue_key(client, tier="free")
+    rec = _Recorder(
+        _response(200, {"id": "chatcmpl-groq", "choices": [{"message": {"content": "ok"}}]})
+    )
+    body = {"model": _PIN, "messages": [{"role": "user", "content": "hi"}]}
+    with patch("openmw.openvault.vault.proxy.httpx.AsyncClient", return_value=rec.mock):
+        response = client.post(
+            "/v1/chat/completions",
+            json=body,
+            headers={**headers, STRICT_PIN_HEADER: "true"},
+        )
+
+    assert response.status_code == 200
+    assert response.headers.get(SERVED_PROVIDER_HEADER) == "groq"
+    assert response.headers.get("x-openvault-served-provider") == "groq"
+    assert response.json()["served_provider"] == "groq"
+    assert response.json()["served_model"] == _PIN
     assert rec.providers == ["groq"]

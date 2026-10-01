@@ -16,12 +16,19 @@ from openmw.openvault.vault.free_keys_onboard import (
     is_cloudflare_workers_ai_base,
 )
 from openmw.openvault.vault.health_store import HealthStore, HistoryStatus
+from openmw.openvault.vault.openrouter_probe import (
+    delete_openrouter_probe,
+    openrouter_probe_facts,
+    save_openrouter_probe,
+)
 from openmw.openvault.vault.store import KeyRecord, KeyVault, PrecheckStatus
 
 log = structlog.get_logger()
 
 DEFAULT_PRECHECK_INTERVAL_S = 60.0
 DEFAULT_TIMEOUT_S = 8.0
+# Credit limit lives here. GET /models does not report it, and answers without a key.
+OPENROUTER_KEY_URL = "https://openrouter.ai/api/v1/key"
 _HISTORY_STATUSES = frozenset({"ok", "auth_fail", "rate_limit", "error", "timeout"})
 
 
@@ -31,6 +38,8 @@ class PrecheckResult:
     status: PrecheckStatus
     latency_ms: float | None
     error: str | None
+    limit_remaining: float | None = None
+    is_free_tier: bool | None = None
 
 
 def _default_base_url(provider: str, base_url: str) -> str:
@@ -120,6 +129,32 @@ async def probe_key(
                 f"{base}/api/whoami-v2",
                 headers={"Authorization": f"Bearer {secret}"},
             )
+        elif record.provider == "openrouter":
+            resp = await http.get(
+                OPENROUTER_KEY_URL,
+                headers={"Authorization": f"Bearer {secret}"},
+            )
+            latency = (time.perf_counter() - started) * 1000.0
+            code = int(resp.status_code)
+            if code < 200 or code >= 300:
+                # /api/v1/key is not a models list, so a 404 is not proof of
+                # auth. Only 401/403 and 429 keep the shared classifier.
+                status = classify_http_error(resp.status_code, resp.text[:200])
+                if status not in ("auth_fail", "rate_limit"):
+                    status = "error"
+                return PrecheckResult(record.id, status, latency, f"HTTP {code}")
+            try:
+                remaining, free_tier = openrouter_probe_facts(resp.json())
+            except Exception:
+                remaining, free_tier = None, None
+            return PrecheckResult(
+                record.id,
+                "ok",
+                latency,
+                None,
+                limit_remaining=remaining,
+                is_free_tier=free_tier,
+            )
         else:
             # OpenAI-compatible models list
             resp = await http.get(
@@ -188,6 +223,16 @@ async def precheck_one(vault: KeyVault, key_id: str) -> PrecheckResult:
         latency_ms=result.latency_ms,
         error=result.error,
     )
+    if record.provider == "openrouter":
+        if result.status == "ok":
+            save_openrouter_probe(
+                vault.db_path,
+                key_id=key_id,
+                limit_remaining=result.limit_remaining,
+                is_free_tier=result.is_free_tier,
+            )
+        else:
+            delete_openrouter_probe(vault.db_path, key_id)
     if result.status in _HISTORY_STATUSES:
         # Transition + 15m heartbeat; see docs/CARD_HEALTH_HISTORY.md H1.
         HealthStore(db_path=vault.db_path).record(

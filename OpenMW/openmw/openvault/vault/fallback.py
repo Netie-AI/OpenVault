@@ -310,12 +310,18 @@ class FallbackManager:
         return min(untils)
 
     def usable_provider_count(self) -> int:
-        """Providers with a pooled key that is not parked and not out of quota."""
+        """Pooled providers that are not parked, chat-unusable, or out of quota."""
         if self._vault.seal.is_sealed:
             return 0
+        # Local import: chat_probe imports FallbackManager.
+        from openmw.openvault.vault.chat_probe import chat_unusable_ids
+
+        blocked = chat_unusable_ids(self._vault.db_path)
         found: set[str] = set()
         for record in self._vault.pooled_ordered():
             if self.key_is_parked(record.id):
+                continue
+            if record.id in blocked:
                 continue
             if quota_blocks(record.provider, self._vault.db_path):
                 continue

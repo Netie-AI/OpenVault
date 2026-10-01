@@ -2,6 +2,68 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-01 - Chat probe cadence is boot plus daily (OpenVault #104)
+
+- `OPENVAULT_CHAT_PROBE_INTERVAL_S` defaults to 86400s with a 3600s floor.
+  Junk or non-finite values keep the default. SambaNova and SEA-LION stay
+  at most once every 6h via max(). A hop_attempts 2xx inside the gap is
+  still skipped.
+- Startup runs one boot pass after a random 30-120s jitter. A key whose
+  chat_probe checked_at is younger than 3600s is skipped.
+- `OPENVAULT_CHAT_PROBE_TIMEOUT_S` defaults to 120s with a 30s floor. A
+  timeout or connect error stores status only. It does not park the key
+  and does not mark it unusable.
+- Unusable is only 402, a request-limit-0 429, a plan-code 429, or 401/403.
+  A transient 429 still parks. 404 and 5xx store status only. Only a 2xx
+  clears unusable.
+
+## 2026-10-01 - Strict pin binds provider and model (OpenVault #98)
+
+- Strict mode for `openai/gpt-oss-120b` is a pin-site provider bind: groq only.
+  Together lists the same catalog id and is not a hop for that pin.
+- No groq hop for that pin returns 503 `pin_unavailable` with `no_hop`.
+  Non-strict routing for the same model is unchanged.
+
+## 2026-10-01 - OpenRouter /key 404 is error; doc corrections (OpenVault #100)
+
+- OpenRouter /api/v1/key: 404 and any other non-2xx except 401/403 (auth_fail) and 429 (rate_limit) now map to `error` with `HTTP {code}`. Other providers keep the shared classifier.
+- Corrections: the #92 chat probe defaults to 3600s, OPENVAULT_CHAT_PROBE_INTERVAL_S has a 600s floor, sambanova and sea_lion are probed at most every 6h, keys with a hop_attempts 2xx inside the gap are skipped, and it uses the first non-reasoning catalog chat model at 16 tokens (512 only if every chat model is reasoning). The #97 OpenRouter precheck statuses are auth_fail / rate_limit / error, not failed.
+
+## 2026-10-01 - Chat health probe per key (OpenVault #92)
+
+- A chat probe POSTs "Reply with OK" on its own 300s loop, separate from the
+  60s models probe. The model is the provider's first catalog chat id.
+  `max_tokens` is 16, or 512 when that id is a reasoning model.
+- HTTP 402, a 429 whose request-limit header is 0, or a 429 with an account
+  or plan error code, marks that key unusable. `usable_provider_count` skips
+  it. A transient 429 parks the key and does not mark it unusable.
+- The probe writes no `usage_events` rows. Stored error text is scrubbed and
+  capped at 200 characters. Request and response bodies are not stored.
+
+## 2026-10-01 - Per-key quota, OpenRouter precheck, hop attempts (OpenVault #93)
+
+- `GET /api/keys/quota` is admin-only (`http_guard` and `X-OpenVault-Admin`).
+  Each row is a masked id, provider, tokens used today against the catalog
+  daily limit, reset time, park state, and a scrubbed error. No secret.
+- OpenRouter precheck calls `GET https://openrouter.ai/api/v1/key` and stores
+  `limit_remaining` and `is_free_tier` only. A non-2xx sets `precheck_status`
+  to `failed` with the HTTP code. Other providers are unchanged.
+- `hop_attempts` records one row per fallback hop. No bodies and no keys.
+  Rows older than 7 days, and rows past the cap, are pruned on write.
+
+## 2026-10-01 - Catalog SambaNova, SEA-LION, and NVIDIA NIM (OpenVault #94)
+
+- SambaNova Cloud is an OpenAI-compatible catalog row. Chat ids come from the
+  public models list. DeepSeek ids on that list are not copied. Llama 3.1 405B
+  is not on the list.
+- AI Singapore SEA-LION is a catalog row for the three documented chat ids.
+  The guard model and the embedding model are not chat hops.
+- NVIDIA NIM chat models are refreshed from the public models list. DeepSeek
+  ids on that list are not copied. The separate deepseek provider is unchanged.
+  Cerebras and Mistral catalog rows are unchanged.
+- Letter-mark icons for the two new rows, so the existing card page can render
+  them. No card-renderer change.
+
 ## 2026-10-01 - Close vault sqlite handles (OpenVault #88)
 
 - `with self._connect() as conn` under `openmw/openvault` now closes the
