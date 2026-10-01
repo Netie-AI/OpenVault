@@ -27,7 +27,9 @@ from openmw.openvault.vault.key_add import (
     add_tested_key,
     cli_main,
     key_fingerprint,
+    main,
     mask_key_id,
+    probe_catalog_chat,
     read_key,
 )
 from openmw.openvault.vault.providers import get_provider
@@ -254,6 +256,27 @@ def test_unreachable_and_timeout_store_nothing(vault: KeyVault) -> None:
     assert _SECRET not in _blob(out, err, logs)
 
 
+def test_unsafe_provider_id_is_not_echoed(vault: KeyVault) -> None:
+    seen: dict[str, Any] = {}
+    result = add_tested_key(vault, _SECRET, "ignored", client=_client(200, seen))
+    assert result.ok is False
+    assert result.error == "unknown catalog id"
+    assert _SECRET not in result.error
+    assert seen.get("calls", 0) == 0
+    assert vault.list_keys() == []
+
+    spec = get_provider("fireworks")
+    assert spec is not None
+    probed = probe_catalog_chat(spec, _SECRET, client=_client(200, seen))
+    assert probed.ok is False
+    assert probed.error == "no catalog chat model to test"
+    blank = replace(spec, base_url="  ", chat_models=("some-model",))
+    probed = probe_catalog_chat(blank, _SECRET, client=_client(200, seen))
+    assert probed.ok is False
+    assert probed.error == "no catalog base url to test"
+    assert seen.get("calls", 0) == 0
+
+
 def test_unknown_provider_and_missing_model_store_nothing(vault: KeyVault) -> None:
     seen: dict[str, Any] = {}
     client = _client(200, seen)
@@ -401,6 +424,25 @@ def test_tty_prompt_does_not_echo_the_key(vault: KeyVault) -> None:
     assert code == 0, err
     assert _SECRET not in _blob(out, err, logs)
     assert vault.get_secret(vault.list_keys()[0].id) == _SECRET
+
+
+def test_read_key_without_isatty() -> None:
+    class _NoIsatty:
+        def read(self) -> str:
+            return _SECRET + "\n"
+
+    assert read_key(stdin=_NoIsatty(), stderr=io.StringIO()) == _SECRET  # type: ignore[arg-type]
+
+
+def test_module_main_help(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr("sys.argv", ["openvault-add", "--help"])
+    assert main() == 0
+    captured = capsys.readouterr()
+    assert "catalog id" in captured.out
+    assert _SECRET not in captured.out
+    assert _SECRET not in captured.err
 
 
 def test_read_key_when_isatty_fails() -> None:
