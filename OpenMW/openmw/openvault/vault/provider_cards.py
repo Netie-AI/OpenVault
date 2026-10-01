@@ -16,7 +16,8 @@ from openmw.openvault.vault.key_add import AddResult
 from openmw.openvault.vault.providers import PROVIDER_CATALOG, ProviderSpec
 
 # Founder UI rule: no DeepSeek card. Cloudflare is not in the catalog.
-_NO_CARD_IDS = frozenset({"deepseek"})
+# github_models stays in the catalog; no card, the service is retiring.
+_NO_CARD_IDS = frozenset({"deepseek", "github_models"})
 _ICON_DIR = Path(__file__).resolve().parent.parent / "static" / "provider_cards"
 _PREMIUM_NOTE = "Paste your API key."
 
@@ -198,14 +199,28 @@ def render_cards_page() -> str:
   button {{ margin-top: 10px; border: 0; border-radius: 999px; padding: 8px 12px; font-weight: 600;
     background: #1f8a5b; color: #fff; cursor: pointer; }}
   .outcome {{ min-height: 1.2em; font-size: 0.85rem; color: #9aa8a0; }}
+  .admin {{ margin: 0 0 18px; }}
 </style>
 </head>
 <body>
 <main>
 <h1>Providers</h1>
+<label class="admin">Admin token
+<input id="admin-token" type="password" autocomplete="off" spellcheck="false">
+</label>
 {body}
 </main>
 <script>
+var adminField = document.getElementById("admin-token");
+var adminKey = "openvault.admin";
+try {{
+  adminField.value = sessionStorage.getItem(adminKey) || "";
+}} catch (err) {{}}
+adminField.addEventListener("input", function () {{
+  try {{
+    sessionStorage.setItem(adminKey, adminField.value);
+  }} catch (err) {{}}
+}});
 document.querySelectorAll("form.card-add").forEach(function (form) {{
   form.addEventListener("submit", function (ev) {{
     ev.preventDefault();
@@ -213,12 +228,17 @@ document.querySelectorAll("form.card-add").forEach(function (form) {{
     var field = form.querySelector("input[type=password]");
     var out = card.querySelector(".outcome");
     var secret = field.value;
+    var admin = adminField.value;
     var provider = card.getAttribute("data-provider") || "";
     field.value = "";
     out.textContent = "";
     fetch("/api/keys/cards", {{
       method: "POST",
-      headers: {{ "content-type": "application/json", "accept": "application/json" }},
+      headers: {{
+        "content-type": "application/json",
+        "accept": "application/json",
+        "X-OpenVault-Admin": admin
+      }},
       body: JSON.stringify({{ provider: provider, secret: secret }})
     }}).then(function (res) {{
       return res.json();
@@ -226,15 +246,18 @@ document.querySelectorAll("form.card-add").forEach(function (form) {{
       var label = String((data && data.label) || "");
       var masked = String((data && data.masked_id) || "");
       var outcome = String((data && data.outcome) || "");
-      if (secret && (label + masked + outcome).indexOf(secret) !== -1) {{
+      var shown = label + masked + outcome;
+      if ((secret && shown.indexOf(secret) !== -1) || (admin && shown.indexOf(admin) !== -1)) {{
         label = "";
         masked = "";
         outcome = "";
       }}
       secret = "";
+      admin = "";
       out.textContent = [label, masked, outcome].filter(Boolean).join(" ");
     }}).catch(function () {{
       secret = "";
+      admin = "";
       out.textContent = "test call failed (unreachable)";
     }});
   }});

@@ -1,7 +1,3 @@
-import { readFileSync } from "node:fs";
-import { homedir } from "node:os";
-import path from "node:path";
-
 import { NextResponse, type NextRequest } from "next/server";
 
 import { validateBrowserMutationOrigin } from "@/server/authz/csrf";
@@ -9,26 +5,17 @@ import { isLoopbackHost } from "@/server/authz/routeGuard";
 
 export const dynamic = "force-dynamic";
 
+const ADMIN_HEADER = "x-openvault-admin";
+
 type AddBody = {
   label?: unknown;
   masked_id?: unknown;
   outcome?: unknown;
 };
 
-function scrub(text: string, secret: string): string {
-  if (!secret || !text.includes(secret)) return text;
-  return text.split(secret).join("");
-}
-
-function adminToken(): string {
-  const override = (process.env.OPENVAULT_ADMIN_TOKEN_PATH || "").trim();
-  const file = override
-    ? override
-    : path.join(
-        (process.env.OPENVAULT_HOME || "").trim() || path.join(homedir(), ".openvault"),
-        "admin_token",
-      );
-  return readFileSync(file, "utf8").trim();
+function scrub(text: string, hidden: string): string {
+  if (!hidden || !text.includes(hidden)) return text;
+  return text.split(hidden).join("");
 }
 
 function apiOrigin(): string | null {
@@ -43,14 +30,24 @@ function apiOrigin(): string | null {
   }
 }
 
-function publicBody(data: AddBody | null, secret: string, fallback: string) {
-  const label = scrub(typeof data?.label === "string" ? data.label : "", secret);
-  const masked = scrub(typeof data?.masked_id === "string" ? data.masked_id : "", secret);
-  const outcome = scrub(
-    typeof data?.outcome === "string" ? data.outcome : fallback,
-    secret,
-  );
+function publicBody(
+  data: AddBody | null,
+  secret: string,
+  admin: string,
+  fallback: string,
+) {
+  const hide = (value: string) => scrub(scrub(value, secret), admin);
+  const label = hide(typeof data?.label === "string" ? data.label : "");
+  const masked = hide(typeof data?.masked_id === "string" ? data.masked_id : "");
+  const outcome = hide(typeof data?.outcome === "string" ? data.outcome : fallback);
   return { label, masked_id: masked, outcome };
+}
+
+function unauthorized() {
+  return NextResponse.json(
+    { label: "", masked_id: "", outcome: "unauthorized" },
+    { status: 401 },
+  );
 }
 
 export function GET() {
@@ -58,11 +55,12 @@ export function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  if (!isLoopbackHost(request.nextUrl.hostname) || !validateBrowserMutationOrigin(request)) {
-    return NextResponse.json(
-      { label: "", masked_id: "", outcome: "unauthorized" },
-      { status: 401 },
-    );
+  if (!validateBrowserMutationOrigin(request)) {
+    return unauthorized();
+  }
+  const presented = request.headers.get(ADMIN_HEADER);
+  if (presented === null || presented.trim() === "") {
+    return unauthorized();
   }
 
   let provider = "";
@@ -79,17 +77,8 @@ export async function POST(request: NextRequest) {
   }
 
   const origin = apiOrigin();
-  let token = "";
-  try {
-    token = adminToken();
-  } catch {
-    token = "";
-  }
-  if (!origin || !token) {
-    return NextResponse.json(
-      { label: "", masked_id: "", outcome: "unauthorized" },
-      { status: 401 },
-    );
+  if (!origin) {
+    return unauthorized();
   }
 
   try {
@@ -99,17 +88,17 @@ export async function POST(request: NextRequest) {
       headers: {
         "content-type": "application/json",
         accept: "application/json",
-        "X-OpenVault-Admin": token,
+        "X-OpenVault-Admin": presented,
       },
       body: JSON.stringify({ provider, secret }),
       signal: AbortSignal.timeout(30_000),
     });
     const data = (await upstream.json().catch(() => null)) as AddBody | null;
     const status = upstream.status >= 200 && upstream.status < 600 ? upstream.status : 502;
-    return NextResponse.json(publicBody(data, secret, "probe failed"), { status });
+    return NextResponse.json(publicBody(data, secret, presented, "probe failed"), { status });
   } catch {
     return NextResponse.json(
-      publicBody(null, secret, "test call failed (unreachable)"),
+      publicBody(null, secret, presented, "test call failed (unreachable)"),
       { status: 502 },
     );
   }

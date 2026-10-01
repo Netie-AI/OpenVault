@@ -29,12 +29,38 @@ type AddBody = {
   outcome?: string;
 };
 
-function scrub(text: string, secret: string): string {
-  if (!secret || !text.includes(secret)) return text;
-  return text.split(secret).join("");
+const ADMIN_KEY = "openvault.admin";
+
+function scrub(text: string, hidden: string): string {
+  if (!hidden || !text.includes(hidden)) return text;
+  return text.split(hidden).join("");
 }
 
-function CardForm({ card, note }: { card: Card; note: string }) {
+function readAdmin(): string {
+  try {
+    return sessionStorage.getItem(ADMIN_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function writeAdmin(value: string): void {
+  try {
+    sessionStorage.setItem(ADMIN_KEY, value);
+  } catch {
+    /* session storage unavailable; the field still holds it in memory */
+  }
+}
+
+function CardForm({
+  card,
+  note,
+  admin,
+}: {
+  card: Card;
+  note: string;
+  admin: string;
+}) {
   const [secret, setSecret] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
@@ -42,19 +68,24 @@ function CardForm({ card, note }: { card: Card; note: string }) {
   async function onSubmit(ev: FormEvent) {
     ev.preventDefault();
     const pasted = secret;
+    const presented = admin;
     setSecret("");
     setBusy(true);
     setMsg("");
     try {
       const res = await fetch("/api/provider-cards", {
         method: "POST",
-        headers: { "content-type": "application/json", accept: "application/json" },
+        headers: {
+          "content-type": "application/json",
+          accept: "application/json",
+          "X-OpenVault-Admin": presented,
+        },
         body: JSON.stringify({ provider: card.id, secret: pasted }),
       });
       const data = (await res.json().catch(() => null)) as AddBody | null;
-      const label = scrub(String(data?.label ?? ""), pasted);
-      const masked = scrub(String(data?.masked_id ?? ""), pasted);
-      const outcome = scrub(String(data?.outcome ?? ""), pasted);
+      const label = scrub(scrub(String(data?.label ?? ""), pasted), presented);
+      const masked = scrub(scrub(String(data?.masked_id ?? ""), pasted), presented);
+      const outcome = scrub(scrub(String(data?.outcome ?? ""), pasted), presented);
       setMsg([label, masked, outcome].filter(Boolean).join(" "));
     } catch {
       setMsg("test call failed (unreachable)");
@@ -115,8 +146,10 @@ function CardForm({ card, note }: { card: Card; note: string }) {
 export default function ProvidersPage() {
   const [sections, setSections] = useState<Section[]>([]);
   const [err, setErr] = useState("");
+  const [admin, setAdmin] = useState("");
 
   useEffect(() => {
+    setAdmin(readAdmin());
     const ac = new AbortController();
     apiFetch<CardsPayload>("/api/providers/cards", { signal: ac.signal })
       .then((data) => setSections(data.sections ?? []))
@@ -127,19 +160,37 @@ export default function ProvidersPage() {
     return () => ac.abort();
   }, []);
 
+  function onAdmin(value: string) {
+    setAdmin(value);
+    writeAdmin(value);
+  }
+
   return (
     <PageContainer>
       <PageHeader
         title="Providers"
         description="Paste a key once. OpenVault tests it, then stores it."
       />
+      <label className="mb-6 block text-xs text-muted-foreground">
+        Admin token
+        <input
+          id="admin-token"
+          type="password"
+          name="admin"
+          autoComplete="off"
+          spellCheck={false}
+          value={admin}
+          onChange={(ev) => onAdmin(ev.target.value)}
+          className="mt-1 w-full max-w-md rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
+        />
+      </label>
       {err ? <p className="mb-4 text-sm text-destructive">{err}</p> : null}
       {sections.map((section) => (
         <section key={section.id} data-section={section.id} className="mt-8">
           <h2 className="text-lg font-semibold text-foreground">{section.title}</h2>
           <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {section.cards.map((card) => (
-              <CardForm key={card.id} card={card} note={section.note} />
+              <CardForm key={card.id} card={card} note={section.note} admin={admin} />
             ))}
           </div>
         </section>

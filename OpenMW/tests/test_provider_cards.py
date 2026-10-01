@@ -180,6 +180,7 @@ def test_page_omits_deepseek_and_cloudflare_and_stays_in_catalog(home: Path) -> 
         assert provider_id in catalog_ids
         assert get_provider(provider_id) is not None
     assert "deepseek" not in ids
+    assert "github_models" not in ids
     assert "Get key" in html
     assert 'type="password"' in html
     assert "Test and add" in html
@@ -258,6 +259,8 @@ def test_cards_json_is_catalog_only_and_bad_body_is_not_echoed(home: Path) -> No
     assert ids
     assert "deepseek" not in ids
     assert "cloudflare" not in ids
+    assert "github_models" not in ids
+    assert get_provider("github_models") is not None
     raw = client.post(
         _ADD,
         content=_SECRET.encode(),
@@ -279,7 +282,42 @@ def test_console_page_does_not_hardcode_excluded_providers() -> None:
     assert 'type="password"' in page
     assert "deepseek" not in lowered
     assert "cloudflare" not in lowered
+    assert "github_models" not in lowered
     assert "sign in with chatgpt" not in lowered
+    assert "Admin token" in page
+    assert 'id="admin-token"' in page
+    assert "sessionStorage" in page
+    assert "localStorage" not in page
+    assert "admin_token" not in lowered
+    assert "X-OpenVault-Admin" in page
+
+
+def test_cards_page_has_admin_field_and_embeds_no_token(home: Path) -> None:
+    token = ensure_admin_token()
+    html = _client().get("/provider-cards").text
+    assert "Admin token" in html
+    assert 'id="admin-token"' in html
+    assert 'type="password"' in html
+    assert "sessionStorage" in html
+    assert "X-OpenVault-Admin" in html
+    assert "localStorage" not in html
+    assert "admin_token" not in html
+    assert token not in html
+    assert "github_models" not in html
+
+
+def test_proxy_source_does_not_read_the_admin_token_file() -> None:
+    root = Path(__file__).resolve().parents[2]
+    route_path = root / "apps" / "web" / "src" / "app" / "api" / "provider-cards" / "route.ts"
+    route = route_path.read_text(encoding="utf-8")
+    lowered = route.lower()
+    assert "admin_token" not in lowered
+    assert "readfilesync" not in lowered
+    assert "node:fs" not in route
+    assert 'from "fs"' not in route
+    assert "from 'fs'" not in route
+    assert "x-openvault-admin" in lowered
+    assert "validatebrowsermutationorigin" in lowered
 
 
 def _catalog() -> list[Any]:

@@ -2,6 +2,15 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-01 - Provider cards admin field (OpenVault #79)
+
+- The `/providers` proxy no longer reads the admin token file. The operator
+  types `X-OpenVault-Admin` into a password field. It stays in memory or
+  sessionStorage, and the proxy forwards that header. A missing header is 401
+  and does not call upstream.
+- `GET /provider-cards` uses the same field. No GitHub Models card; the catalog
+  row stays because the service is retiring.
+
 ## 2026-10-01 - Provider cards (OpenVault #79)
 
 - Cards page in the console (`/providers`) and `GET /provider-cards`. Free and
