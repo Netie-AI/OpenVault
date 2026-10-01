@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import random
 import sqlite3
 from pathlib import Path
 from typing import Any
@@ -17,15 +18,21 @@ from structlog.testing import capture_logs
 
 from openmw.openvault.app import create_app
 from openmw.openvault.vault.chat_probe import (
+    CHAT_PROBE_BOOT_JITTER_MAX_S,
+    CHAT_PROBE_BOOT_JITTER_MIN_S,
     CHAT_PROBE_INTERVAL_MIN_S,
     CHAT_PROBE_LOW_CAP_INTERVAL_S,
     CHAT_PROBE_LOW_CAP_PROVIDERS,
     CHAT_PROBE_MAX_TOKENS,
     CHAT_PROBE_PROMPT,
+    CHAT_PROBE_TIMEOUT_MIN_S,
     DEFAULT_CHAT_PROBE_INTERVAL_S,
+    DEFAULT_CHAT_PROBE_TIMEOUT_S,
     ChatProbeLoop,
+    boot_jitter_s,
     chat_probe_interval_s,
     chat_probe_target,
+    chat_probe_timeout_s,
     chat_unusable_ids,
     probe_enabled_chats,
     probe_key_chat,
@@ -191,7 +198,8 @@ def test_probe_target_prefers_a_non_reasoning_chat_model() -> None:
     assert chat_probe_target("anthropic") is None
     assert chat_probe_target("huggingface") is None
     assert chat_probe_target("local_qwen") is None
-    assert DEFAULT_CHAT_PROBE_INTERVAL_S == 3600.0
+    assert DEFAULT_CHAT_PROBE_INTERVAL_S == 86400.0
+    assert DEFAULT_CHAT_PROBE_TIMEOUT_S == 120.0
     assert DEFAULT_CHAT_PROBE_INTERVAL_S != DEFAULT_PRECHECK_INTERVAL_S
     assert frozenset({"sambanova", "sea_lion"}) == CHAT_PROBE_LOW_CAP_PROVIDERS
     assert CHAT_PROBE_LOW_CAP_INTERVAL_S == 6.0 * 60.0 * 60.0
@@ -368,12 +376,13 @@ def test_auth_fail_and_rate_limit_come_from_classify_http_error(vault: KeyVault)
     assert seen == [(401, ""), (429, "")]
     assert auth.status == "auth_fail"
     assert auth.status == real(401)
-    assert auth.unusable is False
+    assert auth.unusable is True
     assert auth.parked is False
     assert limited.status == "rate_limit"
     assert limited.status == real(429)
     assert limited.parked is True
-    assert limited.unusable is False
+    # A transient 429 parks and does not clear the 401 unusable flag.
+    assert limited.unusable is True
     assert mgr.key_is_parked(key_id) is True
     _assert_clean(vault.db_path, logs)
 
@@ -462,7 +471,9 @@ def test_timeout_and_transport_are_not_unusable(vault: KeyVault) -> None:
     )
     assert timed.status == "timeout"
     assert timed.unusable is False
+    assert timed.parked is False
     assert mgr.key_is_parked(key_id) is False
+    assert key_id not in chat_unusable_ids(vault.db_path)
     down = asyncio.run(
         probe_key_chat(
             vault,
@@ -473,7 +484,33 @@ def test_timeout_and_transport_are_not_unusable(vault: KeyVault) -> None:
     )
     assert down.status == "error"
     assert down.unusable is False
+    assert down.parked is False
+    assert mgr.key_is_parked(key_id) is False
+    assert key_id not in chat_unusable_ids(vault.db_path)
     assert _usage_count(vault.db_path) == 0
+    flagged = _key(vault, "groq", _GROQ, secret="gsk_test_ov104_timeout")
+    blocked = asyncio.run(
+        probe_key_chat(
+            vault,
+            mgr,
+            flagged,
+            client=_Client(_Resp(402, json.dumps({"error": {"message": "payment required"}}))),  # type: ignore[arg-type]
+        )
+    )
+    assert blocked.unusable is True
+    held = asyncio.run(
+        probe_key_chat(
+            vault,
+            mgr,
+            flagged,
+            client=_RaiseClient(httpx.TimeoutException("still slow")),  # type: ignore[arg-type]
+        )
+    )
+    assert held.status == "timeout"
+    assert held.unusable is True
+    assert held.parked is False
+    assert mgr.key_is_parked(flagged) is False
+    assert flagged in chat_unusable_ids(vault.db_path)
 
 
 def test_sealed_vault_does_not_probe(vault: KeyVault) -> None:
@@ -494,7 +531,7 @@ def test_sealed_vault_does_not_probe(vault: KeyVault) -> None:
 
 def test_chat_loop_stops_after_one_pass(vault: KeyVault) -> None:
     mgr = FallbackManager(vault)
-    loop = ChatProbeLoop(vault, mgr, interval_s=0.01)
+    loop = ChatProbeLoop(vault, mgr, interval_s=0.01, jitter_s=0.0)
     seen: list[str] = []
 
     async def _fake(*_args: object, **_kwargs: object) -> list[object]:
@@ -531,13 +568,19 @@ def test_lifespan_starts_chat_probe_apart_from_models(
             _fallback: object,
             *,
             interval_s: float = DEFAULT_CHAT_PROBE_INTERVAL_S,
+            timeout_s: float = DEFAULT_CHAT_PROBE_TIMEOUT_S,
         ) -> None:
             self._interval_s = interval_s
-            started.append(("chat", interval_s))
+            self._timeout_s = timeout_s
+            started.append(("chat", interval_s, timeout_s))
 
         @property
         def interval_s(self) -> float:
             return self._interval_s
+
+        @property
+        def timeout_s(self) -> float:
+            return self._timeout_s
 
         def stop(self) -> None:
             return None
@@ -546,6 +589,7 @@ def test_lifespan_starts_chat_probe_apart_from_models(
             await asyncio.Event().wait()
 
     monkeypatch.delenv("OPENVAULT_CHAT_PROBE_INTERVAL_S", raising=False)
+    monkeypatch.delenv("OPENVAULT_CHAT_PROBE_TIMEOUT_S", raising=False)
     monkeypatch.setattr("openmw.openvault.app.PrecheckLoop", _Models)
     monkeypatch.setattr("openmw.openvault.app.ChatProbeLoop", _Chat)
     app = create_app(
@@ -555,7 +599,10 @@ def test_lifespan_starts_chat_probe_apart_from_models(
         cortex_url="http://127.0.0.1:9",
     )
     with TestClient(app, client=("127.0.0.1", 5555)):
-        assert started == [("models", 60.0), ("chat", DEFAULT_CHAT_PROBE_INTERVAL_S)]
+        assert started == [
+            ("models", 60.0),
+            ("chat", DEFAULT_CHAT_PROBE_INTERVAL_S, DEFAULT_CHAT_PROBE_TIMEOUT_S),
+        ]
 
 
 def test_missing_db_has_no_unusable_ids(tmp_path: Path) -> None:
@@ -590,11 +637,51 @@ def _posts_across_day(
     return sent
 
 
-def test_default_interval_probes_at_most_once_per_hour(vault: KeyVault) -> None:
+def test_default_cadence_is_one_probe_per_day_plus_boot(vault: KeyVault, tmp_path: Path) -> None:
     _key(vault, "mistral", _MISTRAL)
-    sent = _posts_across_day(vault, now0=1_700_000_000.0, interval_s=DEFAULT_CHAT_PROBE_INTERVAL_S)
-    assert sent == 24
-    assert sent <= 24
+    now0 = 1_700_000_000.0
+    scheduled = _posts_across_day(vault, now0=now0, interval_s=DEFAULT_CHAT_PROBE_INTERVAL_S)
+    assert DEFAULT_CHAT_PROBE_INTERVAL_S == 86400.0
+    assert scheduled == 1
+    fresh = KeyVault(db_path=tmp_path / "boot.db", seal=Seal(Fernet.generate_key()))
+    _key(fresh, "mistral", _MISTRAL)
+    client = _Client(_Resp(200, ""))
+    mgr = FallbackManager(fresh)
+    asyncio.run(
+        probe_enabled_chats(
+            fresh,
+            mgr,
+            client=client,  # type: ignore[arg-type]
+            now=now0,
+            interval_s=DEFAULT_CHAT_PROBE_INTERVAL_S,
+            boot=True,
+        )
+    )
+    assert len(client.posts) == 1
+    t = now0
+    day_end = now0 + 86400.0
+    while t < day_end:
+        asyncio.run(
+            probe_enabled_chats(
+                fresh,
+                mgr,
+                client=client,  # type: ignore[arg-type]
+                now=t,
+                interval_s=DEFAULT_CHAT_PROBE_INTERVAL_S,
+            )
+        )
+        t += DEFAULT_CHAT_PROBE_INTERVAL_S
+    assert len(client.posts) == 1
+    asyncio.run(
+        probe_enabled_chats(
+            fresh,
+            mgr,
+            client=client,  # type: ignore[arg-type]
+            now=now0 + 86400.0,
+            interval_s=DEFAULT_CHAT_PROBE_INTERVAL_S,
+        )
+    )
+    assert len(client.posts) == 2
 
 
 def test_sambanova_is_probed_at_most_four_times_a_day(vault: KeyVault) -> None:
@@ -692,21 +779,44 @@ def test_recent_hop_2xx_is_not_probed(vault: KeyVault) -> None:
 
 def test_interval_env_is_honoured_and_floored(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("OPENVAULT_CHAT_PROBE_INTERVAL_S", raising=False)
-    assert chat_probe_interval_s() == DEFAULT_CHAT_PROBE_INTERVAL_S == 3600.0
-    assert chat_probe_interval_s({}) == 3600.0
-    assert chat_probe_interval_s({"OPENVAULT_CHAT_PROBE_INTERVAL_S": ""}) == 3600.0
-    assert chat_probe_interval_s({"OPENVAULT_CHAT_PROBE_INTERVAL_S": "nope"}) == 3600.0
-    assert chat_probe_interval_s({"OPENVAULT_CHAT_PROBE_INTERVAL_S": "nan"}) == 3600.0
-    assert chat_probe_interval_s({"OPENVAULT_CHAT_PROBE_INTERVAL_S": "1800"}) == 1800.0
-    assert chat_probe_interval_s({"OPENVAULT_CHAT_PROBE_INTERVAL_S": "600"}) == 600.0
-    for raw in ("60", "0", "599", "-5"):
+    assert chat_probe_interval_s() == DEFAULT_CHAT_PROBE_INTERVAL_S == 86400.0
+    assert chat_probe_interval_s({}) == 86400.0
+    assert chat_probe_interval_s({"OPENVAULT_CHAT_PROBE_INTERVAL_S": ""}) == 86400.0
+    assert chat_probe_interval_s({"OPENVAULT_CHAT_PROBE_INTERVAL_S": "nope"}) == 86400.0
+    assert chat_probe_interval_s({"OPENVAULT_CHAT_PROBE_INTERVAL_S": "nan"}) == 86400.0
+    assert chat_probe_interval_s({"OPENVAULT_CHAT_PROBE_INTERVAL_S": "inf"}) == 86400.0
+    assert chat_probe_interval_s({"OPENVAULT_CHAT_PROBE_INTERVAL_S": "-inf"}) == 86400.0
+    assert chat_probe_interval_s({"OPENVAULT_CHAT_PROBE_INTERVAL_S": "7200"}) == 7200.0
+    assert chat_probe_interval_s({"OPENVAULT_CHAT_PROBE_INTERVAL_S": "86400"}) == 86400.0
+    assert chat_probe_interval_s({"OPENVAULT_CHAT_PROBE_INTERVAL_S": "3600"}) == 3600.0
+    for raw in ("1800", "600", "60", "0", "3599", "-5"):
         assert chat_probe_interval_s({"OPENVAULT_CHAT_PROBE_INTERVAL_S": raw}) == (
             CHAT_PROBE_INTERVAL_MIN_S
         )
-    monkeypatch.setenv("OPENVAULT_CHAT_PROBE_INTERVAL_S", "1800")
-    assert chat_probe_interval_s() == 1800.0
+    monkeypatch.setenv("OPENVAULT_CHAT_PROBE_INTERVAL_S", "90000")
+    assert chat_probe_interval_s() == 90000.0
     monkeypatch.setenv("OPENVAULT_CHAT_PROBE_INTERVAL_S", "30")
-    assert chat_probe_interval_s() == 600.0
+    assert chat_probe_interval_s() == 3600.0
+
+
+def test_timeout_env_is_honoured_and_floored(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("OPENVAULT_CHAT_PROBE_TIMEOUT_S", raising=False)
+    assert chat_probe_timeout_s() == DEFAULT_CHAT_PROBE_TIMEOUT_S == 120.0
+    assert chat_probe_timeout_s({}) == 120.0
+    assert chat_probe_timeout_s({"OPENVAULT_CHAT_PROBE_TIMEOUT_S": ""}) == 120.0
+    assert chat_probe_timeout_s({"OPENVAULT_CHAT_PROBE_TIMEOUT_S": "nope"}) == 120.0
+    assert chat_probe_timeout_s({"OPENVAULT_CHAT_PROBE_TIMEOUT_S": "nan"}) == 120.0
+    assert chat_probe_timeout_s({"OPENVAULT_CHAT_PROBE_TIMEOUT_S": "inf"}) == 120.0
+    assert chat_probe_timeout_s({"OPENVAULT_CHAT_PROBE_TIMEOUT_S": "90"}) == 90.0
+    assert chat_probe_timeout_s({"OPENVAULT_CHAT_PROBE_TIMEOUT_S": "30"}) == 30.0
+    for raw in ("29", "10", "0", "-1"):
+        assert chat_probe_timeout_s({"OPENVAULT_CHAT_PROBE_TIMEOUT_S": raw}) == (
+            CHAT_PROBE_TIMEOUT_MIN_S
+        )
+    monkeypatch.setenv("OPENVAULT_CHAT_PROBE_TIMEOUT_S", "45")
+    assert chat_probe_timeout_s() == 45.0
+    monkeypatch.setenv("OPENVAULT_CHAT_PROBE_TIMEOUT_S", "1")
+    assert chat_probe_timeout_s() == 30.0
 
 
 def _chat_error(db: Path) -> str | None:
@@ -715,3 +825,216 @@ def _chat_error(db: Path) -> str | None:
     if row is None:
         return None
     return str(row[0])
+
+
+def test_boot_skips_a_restart_within_one_hour(vault: KeyVault) -> None:
+    key_id = _key(vault, "mistral", _MISTRAL)
+    now = 1_700_000_000.0
+    client = _Client(_Resp(200, ""))
+    mgr = FallbackManager(vault)
+    first = asyncio.run(
+        probe_key_chat(
+            vault,
+            mgr,
+            key_id,
+            client=client,  # type: ignore[arg-type]
+            now=now,
+        )
+    )
+    assert first.status == "ok"
+    assert len(client.posts) == 1
+    client.posts.clear()
+    skipped = asyncio.run(
+        probe_enabled_chats(
+            vault,
+            mgr,
+            client=client,  # type: ignore[arg-type]
+            now=now + 1800.0,
+            interval_s=DEFAULT_CHAT_PROBE_INTERVAL_S,
+            boot=True,
+        )
+    )
+    assert [item.status for item in skipped] == ["skipped"]
+    assert client.posts == []
+    again = asyncio.run(
+        probe_enabled_chats(
+            vault,
+            mgr,
+            client=client,  # type: ignore[arg-type]
+            now=now + 7200.0,
+            interval_s=DEFAULT_CHAT_PROBE_INTERVAL_S,
+            boot=True,
+        )
+    )
+    assert [item.status for item in again] == ["ok"]
+    assert len(client.posts) == 1
+
+
+def test_boot_low_cap_keeps_the_six_hour_gap(vault: KeyVault) -> None:
+    key_id = _key(vault, "sambanova", "https://api.sambanova.ai/v1", secret="sk-samba-ov104-boot")
+    now = 1_700_000_000.0
+    client = _Client(_Resp(200, ""))
+    mgr = FallbackManager(vault)
+    asyncio.run(
+        probe_key_chat(
+            vault,
+            mgr,
+            key_id,
+            client=client,  # type: ignore[arg-type]
+            now=now,
+        )
+    )
+    client.posts.clear()
+    skipped = asyncio.run(
+        probe_enabled_chats(
+            vault,
+            mgr,
+            client=client,  # type: ignore[arg-type]
+            now=now + 7200.0,
+            interval_s=DEFAULT_CHAT_PROBE_INTERVAL_S,
+            boot=True,
+        )
+    )
+    assert [item.status for item in skipped] == ["skipped"]
+    assert client.posts == []
+    assert CHAT_PROBE_LOW_CAP_INTERVAL_S == 6.0 * 60.0 * 60.0
+
+
+def test_boot_jitter_stays_inside_30_to_120() -> None:
+    rng = random.Random(104)
+    for _ in range(40):
+        delay = boot_jitter_s(rng)
+        assert CHAT_PROBE_BOOT_JITTER_MIN_S <= delay <= CHAT_PROBE_BOOT_JITTER_MAX_S
+
+
+def test_loop_boots_after_jitter_before_the_daily_pass(vault: KeyVault) -> None:
+    mgr = FallbackManager(vault)
+    loop = ChatProbeLoop(vault, mgr, interval_s=86400.0, timeout_s=120.0, jitter_s=45.0)
+    calls: list[dict[str, object]] = []
+
+    async def _fake(*_args: object, **kwargs: object) -> list[object]:
+        calls.append(dict(kwargs))
+        if len(calls) == 2:
+            loop.stop()
+        return []
+
+    slept: list[float] = []
+
+    async def _sleep(seconds: float) -> None:
+        slept.append(seconds)
+
+    with (
+        patch("openmw.openvault.vault.chat_probe.probe_enabled_chats", _fake),
+        patch("asyncio.sleep", _sleep),
+    ):
+        asyncio.run(loop.run_forever())
+    assert [bool(item["boot"]) for item in calls] == [True, False]
+    assert calls[0]["timeout_s"] == 120.0
+    assert calls[0]["interval_s"] == 86400.0
+    assert slept == [45.0, 86400.0]
+
+
+def test_slow_2xx_inside_the_timeout_is_ok(
+    vault: KeyVault, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    key_id = _key(vault, "mistral", _MISTRAL)
+    monkeypatch.delenv("OPENVAULT_CHAT_PROBE_TIMEOUT_S", raising=False)
+    seen: dict[str, float] = {}
+
+    class _SlowClient:
+        def __init__(self, *, timeout: float, trust_env: bool, follow_redirects: bool) -> None:
+            seen["timeout"] = float(timeout)
+            assert trust_env is False
+            assert follow_redirects is False
+
+        async def post(
+            self,
+            url: str,
+            headers: dict[str, str] | None = None,
+            json: dict[str, Any] | None = None,
+        ) -> _Resp:
+            await asyncio.sleep(0.02)
+            return _Resp(200, "")
+
+        async def aclose(self) -> None:
+            return None
+
+    monkeypatch.setattr("openmw.openvault.vault.chat_probe.httpx.AsyncClient", _SlowClient)
+    mgr = FallbackManager(vault)
+    result = asyncio.run(probe_key_chat(vault, mgr, key_id))
+    assert seen["timeout"] == DEFAULT_CHAT_PROBE_TIMEOUT_S == 120.0
+    assert result.status == "ok"
+    assert result.http_status == 200
+    assert result.unusable is False
+    assert result.parked is False
+    assert mgr.key_is_parked(key_id) is False
+
+
+@pytest.mark.parametrize("code", [401, 403])
+def test_401_and_403_mark_unusable(vault: KeyVault, code: int) -> None:
+    key_id = _key(vault, "mistral", _MISTRAL)
+    _key(vault, "groq", _GROQ, secret="gsk_test_ov104_auth")
+    body = json.dumps({"error": {"message": "denied", "dump": _BODY}, "key": _SECRET})
+    client = _Client(_Resp(code, body))
+    mgr, result, logs = _run(vault, key_id, client)
+    assert result.status == "auth_fail"
+    assert result.status == classify_http_error(code)
+    assert result.http_status == code
+    assert result.unusable is True
+    assert result.parked is False
+    assert mgr.key_is_parked(key_id) is False
+    assert key_id in chat_unusable_ids(vault.db_path)
+    assert mgr.usable_provider_count() == 1
+    _assert_clean(vault.db_path, logs)
+
+
+@pytest.mark.parametrize("code", [404, 500, 503])
+def test_404_and_5xx_record_status_only(vault: KeyVault, code: int) -> None:
+    key_id = _key(vault, "mistral", _MISTRAL)
+    _key(vault, "groq", _GROQ, secret="gsk_test_ov104_status")
+    body = json.dumps({"error": {"message": "missing", "dump": _BODY}, "key": _SECRET})
+    client = _Client(_Resp(code, body))
+    mgr, result, logs = _run(vault, key_id, client)
+    assert result.http_status == code
+    assert result.status == classify_http_error(code)
+    assert result.unusable is False
+    assert result.parked is False
+    assert mgr.key_is_parked(key_id) is False
+    assert key_id not in chat_unusable_ids(vault.db_path)
+    assert mgr.usable_provider_count() == 2
+    blocked = asyncio.run(
+        probe_key_chat(
+            vault,
+            mgr,
+            key_id,
+            client=_Client(  # type: ignore[arg-type]
+                _Resp(402, json.dumps({"error": {"message": "payment required", "dump": _BODY}}))
+            ),
+        )
+    )
+    assert blocked.unusable is True
+    kept = asyncio.run(
+        probe_key_chat(
+            vault,
+            mgr,
+            key_id,
+            client=_Client(_Resp(code, body)),  # type: ignore[arg-type]
+        )
+    )
+    assert kept.http_status == code
+    assert kept.status == classify_http_error(code)
+    assert kept.unusable is True
+    assert kept.parked is False
+    assert mgr.key_is_parked(key_id) is False
+    cleared = asyncio.run(
+        probe_key_chat(
+            vault,
+            mgr,
+            key_id,
+            client=_Client(_Resp(200, "")),  # type: ignore[arg-type]
+        )
+    )
+    assert cleared.status == "ok"
+    assert cleared.unusable is False
+    assert key_id not in chat_unusable_ids(vault.db_path)
+    _assert_clean(vault.db_path, logs)

@@ -2,6 +2,21 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-01 - Chat probe cadence is boot plus daily (OpenVault #104)
+
+- `OPENVAULT_CHAT_PROBE_INTERVAL_S` defaults to 86400s with a 3600s floor.
+  Junk or non-finite values keep the default. SambaNova and SEA-LION stay
+  at most once every 6h via max(). A hop_attempts 2xx inside the gap is
+  still skipped.
+- Startup runs one boot pass after a random 30-120s jitter. A key whose
+  chat_probe checked_at is younger than 3600s is skipped.
+- `OPENVAULT_CHAT_PROBE_TIMEOUT_S` defaults to 120s with a 30s floor. A
+  timeout or connect error stores status only. It does not park the key
+  and does not mark it unusable.
+- Unusable is only 402, a request-limit-0 429, a plan-code 429, or 401/403.
+  A transient 429 still parks. 404 and 5xx store status only. Only a 2xx
+  clears unusable.
+
 ## 2026-10-01 - Strict pin binds provider and model (OpenVault #98)
 
 - Strict mode for `openai/gpt-oss-120b` is a pin-site provider bind: groq only.

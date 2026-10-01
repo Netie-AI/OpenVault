@@ -122,7 +122,11 @@ from openmw.openvault.vault.app_grants import (
 )
 from openmw.openvault.vault.auth import AuthRefusedError, resolve_caller
 from openmw.openvault.vault.budget import configured_ceiling
-from openmw.openvault.vault.chat_probe import ChatProbeLoop, chat_probe_interval_s
+from openmw.openvault.vault.chat_probe import (
+    ChatProbeLoop,
+    chat_probe_interval_s,
+    chat_probe_timeout_s,
+)
 from openmw.openvault.vault.cortex_key import tenant_key_payload
 from openmw.openvault.vault.crypto import Seal, VaultCryptoError, VaultSealedError
 from openmw.openvault.vault.env_ingest import ingest_environment, scan_environment
@@ -1129,10 +1133,15 @@ def create_app(
                 state_vault,
                 fallback,
                 interval_s=chat_probe_interval_s(),
+                timeout_s=chat_probe_timeout_s(),
             )
             chat_holder["loop"] = chat_loop
             chat_task_holder["task"] = asyncio.create_task(chat_loop.run_forever())
-            log.info("openvault_chat_probe_loop_started", interval_s=chat_loop.interval_s)
+            log.info(
+                "openvault_chat_probe_loop_started",
+                interval_s=chat_loop.interval_s,
+                timeout_s=chat_loop.timeout_s,
+            )
         log.info(
             "openvault_local_mesh_ready",
             cortex_url=cortex_url,
