@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from typing import Any, Literal
@@ -32,6 +33,7 @@ from openmw.openvault.vault.local_hop import (
 from openmw.openvault.vault.precheck import _default_base_url
 from openmw.openvault.vault.providers import (
     LOCAL_QWEN_ID,
+    catalog_contains_model,
     get_provider,
     models_for,
     resolve_model,
@@ -494,6 +496,261 @@ def _apply_outcome(
             get_circuit_breaker(provider).record_failure(status=status)
 
 
+PIN_UNAVAILABLE = "pin_unavailable"
+STRICT_PIN_HEADER = "X-OpenVault-Strict"
+_STRICT_HEADER_TRUTHY = frozenset({"1", "true", "yes"})
+_PIN_PARKED = "parked"
+_PIN_QUOTA = "quota_exhausted"
+_PIN_CIRCUIT = "circuit_open"
+_PIN_NO_HOP = "no_hop"
+_PIN_NOT_IN_CATALOG = "not_in_catalog"
+_PIN_PARK_REASONS = frozenset({_PIN_PARKED, _PIN_QUOTA})
+
+
+def strict_header_on(value: str | None) -> bool:
+    """True when ``X-OpenVault-Strict`` opts this request into a strict pin."""
+    return (value or "").strip().lower() in _STRICT_HEADER_TRUTHY
+
+
+def pop_strict(body: dict[str, Any]) -> bool:
+    """Remove ``strict`` so it never reaches upstream. True only for JSON true."""
+    if "strict" not in body:
+        return False
+    value = body.pop("strict")
+    return value is True
+
+
+def _hop_serves(provider: str, model: str, *, multimodal: bool) -> bool:
+    return model in models_for(provider, multimodal=multimodal)
+
+
+def _retry_seconds(cooldown_ms: int) -> int | None:
+    if cooldown_ms <= 0:
+        return None
+    return max(1, math.ceil(cooldown_ms / 1000))
+
+
+def _pin_unavailable_body(model: str, reason: str) -> dict[str, Any]:
+    """Nothing served. ``model`` is the pin that failed, not a served id."""
+    return {
+        "error": {
+            "message": "pinned model has no healthy hop",
+            "type": PIN_UNAVAILABLE,
+            "model": model,
+            "reason": reason,
+        },
+        "served_provider": None,
+        "served_model": None,
+        "served_local": False,
+    }
+
+
+@dataclass
+class _PinFail:
+    reason: str = _PIN_NO_HOP
+    retry_after_s: int | None = None
+
+
+def _remember_circuit(pin_fail: _PinFail | None) -> None:
+    if pin_fail is None or pin_fail.reason in _PIN_PARK_REASONS:
+        return
+    pin_fail.reason = _PIN_CIRCUIT
+
+
+def _remember_pin_failure(pin_fail: _PinFail | None, outcome: AttemptOutcome) -> None:
+    if pin_fail is None or outcome.attempt_class == "success":
+        return
+    if outcome.attempt_class == "quota_exhausted":
+        pin_fail.reason = _PIN_QUOTA
+        pin_fail.retry_after_s = _retry_seconds(outcome.cooldown_ms)
+        return
+    if outcome.candidate == "park":
+        pin_fail.reason = _PIN_PARKED
+        pin_fail.retry_after_s = _retry_seconds(outcome.cooldown_ms)
+
+
+def _finish_pin(trace: HopTrace, pin: str, pin_fail: _PinFail) -> tuple[int, dict[str, Any]]:
+    retry = pin_fail.retry_after_s if pin_fail.reason in _PIN_PARK_REASONS else None
+    trace.error_type = PIN_UNAVAILABLE
+    trace.retry_after_s = retry
+    return 503, _pin_unavailable_body(pin, pin_fail.reason)
+
+
+def _why_pin_blocked(
+    vault: KeyVault,
+    fallback: FallbackManager,
+    pin: str,
+    *,
+    multimodal: bool,
+) -> tuple[str, int | None]:
+    """Why no healthy hop can serve ``pin``. Retry seconds only for a park."""
+    saw_park = False
+    saw_quota = False
+    saw_circuit = False
+    saw_hop = False
+    retries: list[int] = []
+    for record in vault.pooled_ordered():
+        if record.custody != "pooled" or not record.enabled:
+            continue
+        if not _hop_serves(record.provider, pin, multimodal=multimodal):
+            continue
+        if record.precheck_status == "auth_fail":
+            continue
+        saw_hop = True
+        retry = fallback.park_retry_after_s(record.id, pin)
+        if (
+            fallback.key_is_parked(record.id)
+            and fallback.key_park_reason(record.id) == "credits_exhausted"
+        ):
+            saw_quota = True
+            if retry is not None:
+                retries.append(retry)
+            continue
+        if fallback.key_is_parked(record.id) or fallback.model_is_parked(record.id, pin):
+            saw_park = True
+            if retry is not None:
+                retries.append(retry)
+            continue
+        breaker_open = not get_circuit_breaker(record.provider).can_execute()
+        if fallback.hop_circuit_is_open(record.id) or breaker_open:
+            saw_circuit = True
+    if not saw_hop:
+        return _PIN_NO_HOP, None
+    retry_after = min(retries) if retries else None
+    if saw_park:
+        return _PIN_PARKED, retry_after
+    if saw_quota:
+        return _PIN_QUOTA, retry_after
+    if saw_circuit:
+        return _PIN_CIRCUIT, None
+    return _PIN_NO_HOP, None
+
+
+def _strict_candidates(
+    vault: KeyVault,
+    fallback: FallbackManager,
+    candidates: list[ProxyCandidate],
+    pin: str,
+    *,
+    multimodal: bool,
+) -> tuple[list[ProxyCandidate], tuple[int, dict[str, Any]] | None, int | None]:
+    """Hops that serve ``pin`` exactly, or a fast ``pin_unavailable`` refusal."""
+    if not catalog_contains_model(pin, multimodal=multimodal):
+        return [], (503, _pin_unavailable_body(pin, _PIN_NOT_IN_CATALOG)), None
+    healthy: list[ProxyCandidate] = []
+    for cand in candidates:
+        if not _hop_serves(cand.provider, pin, multimodal=multimodal):
+            continue
+        if not get_circuit_breaker(cand.provider).can_execute():
+            continue
+        if not cand.served_local and fallback.model_is_parked(cand.key_id, pin):
+            continue
+        healthy.append(cand)
+    if healthy:
+        return healthy, None, None
+    reason, retry = _why_pin_blocked(vault, fallback, pin, multimodal=multimodal)
+    return [], (503, _pin_unavailable_body(pin, reason)), retry
+
+
+def _models_to_send(
+    provider: str,
+    requested: str | None,
+    *,
+    multimodal: bool,
+    strict_pin: str | None,
+) -> tuple[str, ...]:
+    """Strict sends the pin only. Otherwise the existing per-hop catalog walk."""
+    if strict_pin is not None:
+        if _hop_serves(provider, strict_pin, multimodal=multimodal):
+            return (strict_pin,)
+        return ()
+    return _models_for_hop(provider, requested, multimodal=multimodal)
+
+
+@dataclass
+class _Walk:
+    candidates: list[ProxyCandidate]
+    early: tuple[int, dict[str, Any]] | None
+    local_only: bool
+    strict_pin: str | None
+    pin_fail: _PinFail | None
+
+
+def _note_early(trace: HopTrace, early: tuple[int, dict[str, Any]]) -> None:
+    err = early[1].get("error")
+    if isinstance(err, dict) and err.get("type"):
+        trace.error_type = str(err["type"])
+
+
+def _open_walk(
+    vault: KeyVault,
+    fallback: FallbackManager,
+    work: dict[str, Any],
+    *,
+    tenant: str,
+    trace: HopTrace,
+    path: str,
+) -> _Walk:
+    """Pop request flags, then either a hop list or an early refusal.
+
+    Strict mode keeps only hops whose catalog contains the requested id.
+    A parked, quota-exhausted, or open circuit on that id returns
+    ``pin_unavailable`` before any upstream call.
+    """
+    local_only = pop_local_only(work)
+    strict = pop_strict(work)
+    candidates, early = _collect_candidates(
+        vault, fallback, work, tenant=tenant, local_only=local_only
+    )
+    if early is not None:
+        _note_early(trace, early)
+        return _Walk(
+            candidates=[],
+            early=early,
+            local_only=local_only,
+            strict_pin=None,
+            pin_fail=None,
+        )
+    if vault.seal.is_sealed:
+        log.warning("freeroute_refused", reason="vault_sealed", path=path)
+        trace.error_type = "openvault_vault_sealed"
+        sealed = _sealed_refusal()
+        return _Walk(
+            candidates=[], early=sealed, local_only=local_only, strict_pin=None, pin_fail=None
+        )
+    if not strict:
+        return _Walk(
+            candidates=candidates,
+            early=None,
+            local_only=local_only,
+            strict_pin=None,
+            pin_fail=None,
+        )
+    raw_model = work.get("model")
+    pin = raw_model.strip() if isinstance(raw_model, str) else ""
+    multimodal = _is_multimodal(work)
+    narrowed, refusal, retry = _strict_candidates(
+        vault, fallback, candidates, pin, multimodal=multimodal
+    )
+    if refusal is not None:
+        trace.error_type = PIN_UNAVAILABLE
+        trace.retry_after_s = retry
+        return _Walk(
+            candidates=[],
+            early=refusal,
+            local_only=local_only,
+            strict_pin=pin,
+            pin_fail=None,
+        )
+    return _Walk(
+        candidates=narrowed,
+        early=None,
+        local_only=local_only,
+        strict_pin=pin,
+        pin_fail=_PinFail(),
+    )
+
+
 async def chat_completions(
     vault: KeyVault,
     fallback: FallbackManager,
@@ -511,22 +768,13 @@ async def chat_completions(
     """
     trace = trace if trace is not None else HopTrace()
     work = dict(body)
-    local_only = pop_local_only(work)
-    candidates, early = _collect_candidates(
-        vault, fallback, work, tenant=tenant, local_only=local_only
-    )
-    if early is not None:
-        err = early[1].get("error")
-        if isinstance(err, dict) and err.get("type"):
-            trace.error_type = str(err["type"])
-        return early[0], early[1]
-
-    # Fail closed before hop walk: metadata may still be listed while sealed.
-    # Walking then decrypting yields VaultSealedError -> dishonest 500 / exhausted.
-    if vault.seal.is_sealed:
-        log.warning("freeroute_refused", reason="vault_sealed", path="chat_completions")
-        trace.error_type = "openvault_vault_sealed"
-        return _sealed_refusal()
+    walk = _open_walk(vault, fallback, work, tenant=tenant, trace=trace, path="chat_completions")
+    if walk.early is not None:
+        return walk.early
+    local_only = walk.local_only
+    candidates = walk.candidates
+    strict_pin = walk.strict_pin
+    pin_fail = walk.pin_fail
 
     errors: list[str] = []
     prompt_estimate = estimate_tokens_for_body(work)
@@ -539,6 +787,7 @@ async def chat_completions(
             breaker = get_circuit_breaker(cand.provider)
             if not breaker.acquire_probe_slot():
                 errors.append(f"{cand.label}: provider circuit open")
+                _remember_circuit(pin_fail)
                 continue
 
             try:
@@ -571,7 +820,12 @@ async def chat_completions(
             wants_images = _is_multimodal(work)
             raw_model = work.get("model")
             requested = raw_model if isinstance(raw_model, str) else None
-            models = _models_for_hop(cand.provider, requested, multimodal=wants_images)
+            models = _models_to_send(
+                cand.provider,
+                requested,
+                multimodal=wants_images,
+                strict_pin=strict_pin,
+            )
             if not models:
                 why = "no vision model" if wants_images else "no catalogued model"
                 errors.append(f"{cand.label}: {why} for provider {cand.provider}")
@@ -640,6 +894,7 @@ async def chat_completions(
                 )
                 err = f"HTTP {status_code}"
                 step = _on_model_outcome(vault, fallback, cand, outcome, err, model)
+                _remember_pin_failure(pin_fail, outcome)
                 if cand.served_local and status_code >= 400:
                     local_fail_reason = _local_fail_reason(status_code, body_text, model)
                 if step == "served":
@@ -708,6 +963,9 @@ async def chat_completions(
         trace.error_type = "openvault_context_length_exceeded"
         return _context_refusal(errors)
 
+    if strict_pin is not None and pin_fail is not None:
+        return _finish_pin(trace, strict_pin, pin_fail)
+
     trace.error_type = "openvault_fallback_exhausted"
     return 502, {
         "error": {
@@ -735,20 +993,13 @@ async def prepare_chat_stream(
     """
     trace = trace if trace is not None else HopTrace()
     work = dict(body)
-    local_only = pop_local_only(work)
-    candidates, early = _collect_candidates(
-        vault, fallback, work, tenant=tenant, local_only=local_only
-    )
-    if early is not None:
-        err = early[1].get("error")
-        if isinstance(err, dict) and err.get("type"):
-            trace.error_type = str(err["type"])
-        return early[0], early[1]
-
-    if vault.seal.is_sealed:
-        log.warning("freeroute_refused", reason="vault_sealed", path="prepare_chat_stream")
-        trace.error_type = "openvault_vault_sealed"
-        return _sealed_refusal()
+    walk = _open_walk(vault, fallback, work, tenant=tenant, trace=trace, path="prepare_chat_stream")
+    if walk.early is not None:
+        return walk.early
+    local_only = walk.local_only
+    candidates = walk.candidates
+    strict_pin = walk.strict_pin
+    pin_fail = walk.pin_fail
 
     payload = dict(work)
     payload["stream"] = True
@@ -768,6 +1019,7 @@ async def prepare_chat_stream(
             breaker = get_circuit_breaker(cand.provider)
             if not breaker.acquire_probe_slot():
                 errors.append(f"{cand.label}: provider circuit open")
+                _remember_circuit(pin_fail)
                 continue
 
             try:
@@ -806,7 +1058,12 @@ async def prepare_chat_stream(
             wants_images = _is_multimodal(payload)
             raw_model = payload.get("model")
             requested = raw_model if isinstance(raw_model, str) else None
-            models = _models_for_hop(cand.provider, requested, multimodal=wants_images)
+            models = _models_to_send(
+                cand.provider,
+                requested,
+                multimodal=wants_images,
+                strict_pin=strict_pin,
+            )
             if not models:
                 why = "no vision model" if wants_images else "no catalogued model"
                 errors.append(f"{cand.label}: {why} for provider {cand.provider}")
@@ -874,6 +1131,7 @@ async def prepare_chat_stream(
                     )
                     err = f"HTTP {resp.status_code}"
                     step = _on_model_outcome(vault, fallback, cand, outcome, err, model)
+                    _remember_pin_failure(pin_fail, outcome)
                     if cand.served_local:
                         local_fail_reason = _local_fail_reason(resp.status_code, body_text, model)
                     if step == "dead":
@@ -964,6 +1222,9 @@ async def prepare_chat_stream(
     if context_blocked and context_blocked == considered:
         trace.error_type = "openvault_context_length_exceeded"
         return _context_refusal(errors)
+
+    if strict_pin is not None and pin_fail is not None:
+        return _finish_pin(trace, strict_pin, pin_fail)
 
     trace.error_type = "openvault_fallback_exhausted"
     return 502, {

@@ -2,6 +2,16 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-01 - Opt-in strict model pin (OpenVault #80)
+
+- `strict: true` on the chat body, or header `X-OpenVault-Strict: true`,
+  pins the request to an exact catalog model id. The default is unchanged.
+- When that id has no healthy hop (parked, quota-exhausted, or circuit open),
+  the gateway returns 503 `pin_unavailable` and does not call another provider
+  or swap models. A park sets `Retry-After`.
+- `served_provider` and `served_model` name the hop that actually served.
+  A pin that was not served reports both as null.
+
 ## 2026-10-01 - Dead-model skip and per-model 429 (OpenVault #76)
 
 - A 404, or a 400/422 whose body says the model is unknown, decommissioned,

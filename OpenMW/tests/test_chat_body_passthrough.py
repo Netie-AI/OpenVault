@@ -78,7 +78,7 @@ def test_declared_fields_still_work() -> None:
 def test_absent_optional_fields_are_not_invented() -> None:
     """exclude_none must not turn an unset field into a null the upstream rejects."""
     out = _dump()
-    for k in ("tools", "tool_choice", "temperature", "max_tokens"):
+    for k in ("tools", "tool_choice", "temperature", "max_tokens", "strict"):
         assert k not in out, f"{k} should be absent, not None, when unset"
 
 

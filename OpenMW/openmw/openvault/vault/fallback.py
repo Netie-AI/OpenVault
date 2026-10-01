@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -208,6 +209,44 @@ class FallbackManager:
         circ.park_until = time.time() + wait_s
         circ.park_reason = reason
         circ.last_error = reason
+
+    def key_is_parked(self, key_id: str) -> bool:
+        """True while this key is inside a park window."""
+        circ = self._circuit(key_id)
+        return circ.park_until is not None and time.time() < circ.park_until
+
+    def key_park_reason(self, key_id: str) -> str | None:
+        """Park reason while the key is parked, else None."""
+        if not self.key_is_parked(key_id):
+            return None
+        return self._circuit(key_id).park_reason
+
+    def hop_circuit_is_open(self, key_id: str) -> bool:
+        """True while this hop's circuit is open and the cool-down has not elapsed."""
+        circ = self._circuit(key_id)
+        if circ.state != "open":
+            return False
+        if circ.opened_at is None:
+            return True
+        return (time.time() - circ.opened_at) < self._config.open_seconds
+
+    def park_retry_after_s(self, key_id: str, model: str | None = None) -> int | None:
+        """Seconds until the soonest key or model park lifts. None when neither is parked."""
+        now = time.time()
+        circ = self._circuit(key_id)
+        untils: list[float] = []
+        if circ.park_until is not None and now < circ.park_until:
+            untils.append(circ.park_until)
+        if model is not None:
+            model_until = circ.model_park_until.get(model)
+            if model_until is not None and now < model_until:
+                untils.append(model_until)
+        if not untils:
+            return None
+        remaining = min(untils) - now
+        if remaining <= 0:
+            return None
+        return max(1, math.ceil(remaining))
 
     def status(self) -> FallbackStatus:
         hops: list[dict[str, object]] = []

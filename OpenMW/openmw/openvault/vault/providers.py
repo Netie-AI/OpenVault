@@ -708,6 +708,23 @@ def models_for(provider: str, *, multimodal: bool = False) -> tuple[str, ...]:
     return spec.vision_models if multimodal else spec.chat_models
 
 
+def catalog_contains_model(model: str, *, multimodal: bool = False) -> bool:
+    """True when ``model`` is an exact id in some provider catalog pool.
+
+    Aliases (``auto``, empty, ``default``) are not catalog ids. A different
+    spelling is not a match: ``gpt-oss-120b`` is not ``openai/gpt-oss-120b``.
+    """
+    want = (model or "").strip()
+    if not want or want.lower() in _AUTO_ALIASES:
+        return False
+    for spec in PROVIDER_CATALOG:
+        live = _with_runtime_local(spec) if spec.local_hop else spec
+        pool = live.vision_models if multimodal else live.chat_models
+        if want in pool:
+            return True
+    return False
+
+
 # A reasoning model emits its chain of thought from the same completion budget as the
 # answer, so a small max_tokens is consumed entirely before any content is written.
 # Measured on gpt-oss-120b: 30 reasoning tokens at max_tokens=32 -> content "",

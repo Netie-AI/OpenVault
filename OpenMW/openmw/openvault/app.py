@@ -139,7 +139,12 @@ from openmw.openvault.vault.providers import (
     get_provider,
     list_catalog,
 )
-from openmw.openvault.vault.proxy import chat_completions, prepare_chat_stream
+from openmw.openvault.vault.proxy import (
+    STRICT_PIN_HEADER,
+    chat_completions,
+    prepare_chat_stream,
+    strict_header_on,
+)
 from openmw.openvault.vault.ratelimit import (
     DEFAULT_MAX_OUTPUT_TOKENS,
     DEFAULT_TIER,
@@ -668,6 +673,17 @@ class ChatBody(BaseModel):
     tools: list[dict[str, Any]] | None = None
     tool_choice: str | dict[str, Any] | None = None
     local_only: bool | None = None
+    strict: bool | None = Field(
+        default=None,
+        description=(
+            "Opt-in strict model pin. JSON true, or header "
+            "X-OpenVault-Strict: true (also 1 or yes). "
+            "model must be an exact catalog id. When that id has no healthy hop "
+            "(parked, quota-exhausted, or circuit open) the gateway returns 503 "
+            "pin_unavailable and does not call another provider or swap models. "
+            "A park sets Retry-After. Omit or false to keep the fallback chain."
+        ),
+    )
 
 
 class DeployFromCortex(BaseModel):
@@ -3451,6 +3467,8 @@ def create_app(
                 headers=decision.headers(),
             )
         payload = body.model_dump(exclude_none=True)
+        if strict_header_on(request.headers.get(STRICT_PIN_HEADER)):
+            payload["strict"] = True
         rate_headers = limiter.headers_for(identity, tier=tier)
 
         if body.stream:
@@ -3469,7 +3487,7 @@ def create_app(
                 return JSONResponse(
                     status_code=status,
                     content=result,
-                    headers=limiter.headers_for(identity, tier=tier),
+                    headers=_chat_result_headers(limiter.headers_for(identity, tier=tier), trace),
                 )
 
             # Only settle from real usage when the client asked for it. Otherwise
@@ -3524,12 +3542,7 @@ def create_app(
                 status_code=status,
                 media_type="text/event-stream",
                 headers={
-                    **rate_headers,
-                    **served_response_headers(
-                        provider=trace.provider,
-                        model=trace.model_served,
-                        served_local=trace.served_local,
-                    ),
+                    **_chat_result_headers(rate_headers, trace),
                     "Cache-Control": "no-cache",
                     "X-Accel-Buffering": "no",
                 },
@@ -3602,14 +3615,7 @@ def create_app(
         return JSONResponse(
             status_code=status,
             content=result,
-            headers={
-                **limiter.headers_for(identity, tier=tier),
-                **served_response_headers(
-                    provider=trace.provider,
-                    model=trace.model_served,
-                    served_local=trace.served_local,
-                ),
-            },
+            headers=_chat_result_headers(limiter.headers_for(identity, tier=tier), trace),
         )
 
     app_url = os.environ.get("OPENVAULT_APP_URL", "http://127.0.0.1:3010/")
@@ -3628,6 +3634,21 @@ def create_app(
         )
 
     return app
+
+
+def _chat_result_headers(rate_headers: dict[str, str], trace: HopTrace) -> dict[str, str]:
+    """Rate-limit headers, the hop that actually served, and Retry-After on a park."""
+    headers = {
+        **rate_headers,
+        **served_response_headers(
+            provider=trace.provider,
+            model=trace.model_served,
+            served_local=trace.served_local,
+        ),
+    }
+    if trace.retry_after_s is not None:
+        headers["Retry-After"] = str(trace.retry_after_s)
+    return headers
 
 
 def run_console(
