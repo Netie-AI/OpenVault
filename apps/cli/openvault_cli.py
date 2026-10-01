@@ -8,6 +8,7 @@
   openvault home unpack ZIP --to DIR       # restore that zip (passphrase unseal there)
   openvault doctor      # environment preflight (filesystem, node, npm, ports)
   openvault doctor      # environment preflight (filesystem, node, npm, ports)
+  openvault add PROVIDER  # catalog id; key from hidden prompt or stdin only
   openvault demo        # mock-health demo: API + app + open browser
   openvault demo-path   # scripted vault->FreeRoute refuse->ship allow->deny (mocks only)
 
@@ -21,6 +22,7 @@ import argparse
 import contextlib
 import json
 import os
+import re
 import shutil
 import socket
 import subprocess
@@ -100,6 +102,28 @@ def _resolve_port(service_key: str, env_var: str, default: int) -> int:
 
 API_PORT = _resolve_port("api", "OPENVAULT_API_PORT", 5000)
 WEB_PORT = _resolve_port("web", "OPENVAULT_WEB_PORT", 3010)
+
+# Keep in step with openmw.openvault.vault.key_add._SAFE_PROVIDER_ID.
+_SAFE_PROVIDER_ID = re.compile(r"[a-z0-9_]{1,32}\Z")
+_ARGV_KEY_ERROR = (
+    "refusing a key passed on the command line; paste it at the hidden prompt or pipe it on stdin"
+)
+
+
+def refuse_add_command_line(argv: list[str]) -> int | None:
+    """Refuse `add` when a key was passed in argv. Never echo that key.
+
+    Returns an exit code when the command must stop, or None to keep parsing.
+    """
+    if not argv or argv[0] != "add":
+        return None
+    rest = argv[1:]
+    providers = [item for item in rest if item not in ("-h", "--help")]
+    unsafe = [item for item in providers if _SAFE_PROVIDER_ID.fullmatch(item) is None]
+    if unsafe or len(providers) > 1:
+        print(_ARGV_KEY_ERROR, file=sys.stderr)
+        return 2
+    return None
 
 
 def _wait(url: str, timeout: float = 60.0) -> bool:
@@ -286,6 +310,31 @@ def _base_env() -> dict[str, str]:
         "PATH": os.environ.get("PATH")
         or next((v for k, v in os.environ.items() if k.upper() == "PATH"), ""),
     }
+
+
+def cmd_add(args: argparse.Namespace) -> int:
+    """Test a catalog provider key, then store it in the one existing vault.
+
+    The key is not an argument. The child reads a hidden prompt or stdin.
+    """
+    provider = str(args.provider)
+    if _SAFE_PROVIDER_ID.fullmatch(provider) is None:
+        print(_ARGV_KEY_ERROR, file=sys.stderr)
+        return 2
+    uv = shutil.which("uv")
+    if not uv:
+        print("uv is required to run openvault add", file=sys.stderr)
+        return 1
+    cmd = [
+        uv,
+        "run",
+        "--no-sync",
+        "python",
+        "-m",
+        "openmw.openvault.vault.key_add",
+        provider,
+    ]
+    return subprocess.call(cmd, cwd=str(OPENMW))
 
 
 def cmd_doctor(_: argparse.Namespace) -> int:
@@ -516,6 +565,9 @@ def cmd_secret_get(args: argparse.Namespace) -> int:
         sys.path.insert(0, cli_dir)
     from secret_retrieve import RetrieveError, retrieve_secret
 
+    # The retrieve client reads this path. It matches the home `openvault up` gives the API.
+    if not (os.environ.get("OPENVAULT_ADMIN_TOKEN_PATH") or "").strip():
+        os.environ["OPENVAULT_ADMIN_TOKEN_PATH"] = str(_admin_token_path())
     base = args.base_url or f"http://127.0.0.1:{API_PORT}"
     try:
         payload = retrieve_secret(base, args.target, kind_hint=args.kind)
@@ -533,11 +585,57 @@ def cmd_app(_: argparse.Namespace) -> int:
     return subprocess.call([_npm(), "run", "dev"], cwd=str(SHELL))
 
 
+def _admin_token_path() -> Path:
+    override = (os.environ.get("OPENVAULT_ADMIN_TOKEN_PATH") or "").strip()
+    if override:
+        return Path(override).expanduser()
+    return _home_dir() / "admin_token"
+
+
+def _read_admin_token() -> str:
+    """Admin credential from the 0600 file. Never from argv."""
+    path = _admin_token_path()
+    if not path.is_file():
+        raise SystemExit(f"admin token file is missing: {path}")
+    token = path.read_text(encoding="utf-8").strip()
+    if not token:
+        raise SystemExit(f"admin token file is empty: {path}")
+    return token
+
+
+def _url_needs_admin(url: str) -> bool:
+    path = url.split("?", 1)[0]
+    marker = path.find("://")
+    if marker != -1:
+        slash = path.find("/", marker + 3)
+        path = path[slash:] if slash != -1 else "/"
+    roots = (
+        "/api/keys",
+        "/api/keyvault",
+        "/api/apikeys",
+        "/api/secrets",
+        "/api/vault",
+        "/api/ship/github/pat",
+        "/keys",
+    )
+    if any(path == root or path.startswith(root + "/") for root in roots):
+        return True
+    parts = [part for part in path.split("/") if part]
+    return (
+        len(parts) >= 4
+        and parts[0] == "api"
+        and parts[1] == "accounts"
+        and parts[3] in {"keys", "cortex-key"}
+    )
+
+
 def _http_json(method: str, url: str, payload: dict | None = None) -> tuple[int, dict]:
     data = None if payload is None else json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(url, data=data, method=method)
     if payload is not None:
         req.add_header("Content-Type", "application/json")
+    if _url_needs_admin(url):
+        req.add_header("X-OpenVault-Admin", _read_admin_token())
     try:
         with urllib.request.urlopen(req, timeout=10) as resp:
             raw = resp.read().decode("utf-8") or "{}"
@@ -586,6 +684,9 @@ def cmd_grant_request(args: argparse.Namespace) -> int:
 
 def main() -> int:
     ensure_utf8_stdio()
+    refused = refuse_add_command_line(sys.argv[1:])
+    if refused is not None:
+        return refused
     parser = argparse.ArgumentParser(prog="openvault")
     sub = parser.add_subparsers(dest="cmd", required=True)
 
@@ -638,6 +739,12 @@ def main() -> int:
     grant_req.add_argument("--no-open", action="store_true")
     grant_req.add_argument("--base-url", default=None)
     grant_req.set_defaults(func=cmd_grant_request)
+    add = sub.add_parser(
+        "add",
+        help="Add a catalog provider key (hidden prompt or stdin; never argv or env)",
+    )
+    add.add_argument("provider", help="catalog provider id")
+    add.set_defaults(func=cmd_add)
     sub.add_parser("doctor", help="Environment preflight").set_defaults(func=cmd_doctor)
 
     secret = sub.add_parser("secret", help="Agent retrieve: keys and site passwords (never cards)")

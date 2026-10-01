@@ -5,6 +5,7 @@ Stores metadata + relative path / git URL / scaffold slug. Never stores secrets.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import sqlite3
 import time
@@ -51,7 +52,7 @@ class ShareStore:
         return conn
 
     def _init(self) -> None:
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS shares (
@@ -108,7 +109,7 @@ class ShareStore:
             peers_allowed=list(peers_allowed or []),
             env_edge=edge,
         )
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             conn.execute(
                 """
                 INSERT INTO shares(
@@ -134,18 +135,18 @@ class ShareStore:
         return row
 
     def list_shares(self) -> list[SharedApp]:
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             cur = conn.execute("SELECT * FROM shares ORDER BY updated_at DESC")
             return [self._row(r) for r in cur.fetchall()]
 
     def get(self, share_id: str) -> SharedApp | None:
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             cur = conn.execute("SELECT * FROM shares WHERE id=?", (share_id,))
             r = cur.fetchone()
             return self._row(r) if r else None
 
     def get_by_code(self, code: str) -> SharedApp | None:
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             cur = conn.execute("SELECT * FROM shares WHERE share_code=?", (code,))
             r = cur.fetchone()
             return self._row(r) if r else None

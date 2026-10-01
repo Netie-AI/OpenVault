@@ -7,6 +7,10 @@ valid issued OpenVault API key (the same ``Authorization: Bearer`` /
 ``OPENVAULT_REQUIRE_API_KEY`` cannot open a remote path: unset, false, or
 true, the guard still runs.
 
+Key and secret management routes, and every ``/keys`` route, also require
+the separate admin credential in ``X-OpenVault-Admin``. Loopback does not
+skip that check. The admin token is not an ``ov_`` key.
+
 The peer is ``request.client.host`` after the socket accept. Forwarded and
 Host headers are never read.
 """
@@ -19,6 +23,11 @@ from typing import Any, Protocol
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
+from openmw.openvault.vault.admin_token import (
+    ADMIN_HEADER,
+    admin_token_matches,
+    path_needs_admin,
+)
 from openmw.openvault.vault.auth import bearer_token
 
 #: The only unauthenticated ``/api/*`` path. Length 1 is a contract test.
@@ -75,6 +84,11 @@ def refuse_if_unauthorised(request: Request, *, api_keys: _KeyStore) -> JSONResp
     way as GET. Handlers do not need their own remote check.
     """
     path = request.url.path
+    if path_needs_admin(path):
+        presented = (request.headers.get(ADMIN_HEADER) or "").strip()
+        if not admin_token_matches(presented):
+            return _missing()
+
     if not path_is_guarded(path):
         return None
 
@@ -116,6 +130,7 @@ __all__ = [
     "HttpGuardMiddleware",
     "dev_docs_enabled",
     "path_is_guarded",
+    "path_needs_admin",
     "peer_is_loopback",
     "refuse_if_unauthorised",
 ]

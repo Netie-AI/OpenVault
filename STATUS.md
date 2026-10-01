@@ -47,12 +47,20 @@ shell at HTTP 200 is refused and named "compiling", not "unreachable".
 
 | # | Status |
 |---|--------|
+| #83 admin token | Key and secret admin routes plus /keys require X-OpenVault-Admin, even from loopback. |
+| #76 T2 | Dead-model 404/unknown continues; 429 parks (key, model); pinned model is not swapped in-provider. |
+| #80 strict pin | Opt-in field or header. pin_unavailable when the exact catalog id has no healthy hop. |
+| #78 CLI add | openvault add <provider>: hidden prompt or stdin, 1-token chat, HMAC dedupe, one vault. |
 | #72 SEC-GUARD | Fail-closed /api+/keys guard, docs off, GET mesh/connect-pack is read-only. |
 | #70 LOCAL-1 | Hop + served_* + fail-closed local_only. Ceiling: merged, local not proven. |
 | OpenMW collection errors | 5 files, one root-cause class. Blocks a green suite. |
 | Verify ghosts | R-0003: a different run must confirm before any deletion. |
 | apps/web build | No CI job exists for it; `npm run build` unverified. |
 | Usage $/unit | NEEDS-YOU. Display SKUs are locked (DR-0013). |
+| #79 cards | Provider cards: Get key, paste once, test and add. |
+| #86 T3 | Persisted parks, quota-aware health, usable_provider_count. |
+| #88 sqlite close | Vault and usage connections close after commit. Open handles do not grow. |
+| #90 web CI | apps/web npm test runs in CI on ubuntu-latest with Node 20. |
 
 ## HT gates (#18 CLOSED, boxes ticked)
 

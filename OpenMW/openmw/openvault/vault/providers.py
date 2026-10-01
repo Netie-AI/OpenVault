@@ -53,6 +53,11 @@ class ProviderSpec:
     reasoning_models: tuple[str, ...] = ()
     # LOCAL-1: no-cloud-key FreeRoute hop. Distinct from vaulted ollama/litellm.
     local_hop: bool = False
+    # Free-tier tokens per reset window. None means OpenVault does not track one.
+    # The router reads this; it does not hard-code a provider's allowance.
+    daily_token_limit: int | None = None
+    # IANA zone whose local midnight ends the daily window. Empty means none.
+    quota_reset_tz: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         d = asdict(self)
@@ -136,17 +141,25 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
         register_url="https://openrouter.ai/keys",
         docs_url="https://openrouter.ai/docs",
         health_path="/models",
-        free_notes="20+ free models via :free suffix; single key marketplace",
+        free_notes="Pinned :free ids only (prompt and completion price 0)",
         needed_by=("cortex", "airgpt", "openvault"),
         status_page="https://status.openrouter.ai/",
-        # Verified against https://openrouter.ai/api/v1/models. The previously pinned
-        # google/gemini-2.0-flash-001 had been retired and answered 404, which read as
-        # "OpenRouter is down" for weeks.
+        # Pinned 2026-10-01T08:00:04Z from https://openrouter.ai/api/v1/models.
+        # Every id had pricing.prompt == 0 and pricing.completion == 0 and ends
+        # with :free. Vision ids include "image" in architecture.input_modalities.
+        # Paid ids were parking a credit-less key as credits_exhausted.
         chat_models=(
-            "google/gemini-2.5-flash",
-            "meta-llama/llama-3.3-70b-instruct",
+            "nvidia/nemotron-3-ultra-550b-a55b:free",
+            "thinkingmachines/inkling:free",
+            "qwen/qwen3.8-27b:free",
+            "google/gemma-4-31b-it:free",
+            "nvidia/nemotron-3-super-120b-a12b:free",
         ),
-        vision_models=("google/gemini-2.5-flash",),
+        vision_models=(
+            "thinkingmachines/inkling:free",
+            "qwen/qwen3.8-27b:free",
+            "google/gemma-4-31b-it:free",
+        ),
     ),
     ProviderSpec(
         id="groq",
@@ -159,22 +172,25 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
         health_path="/models",
         free_notes="Fast free tier RPM; great fallback hop",
         needed_by=("cortex", "airgpt"),
-        # Verified against https://api.groq.com/openai/v1/models. Limits are per
-        # model per day (1K RPD, 8K TPM each), so listing several multiplies the
-        # usable budget instead of dying on the first 429.
+        # Verified 2026-10-01 against https://console.groq.com/docs/models and
+        # https://console.groq.com/docs/deprecations. Shutdown for free/developer:
+        # llama-3.1-8b-instant and llama-3.3-70b-versatile (2026-08-16),
+        # qwen/qwen3.6-27b (2026-09-14, successor qwen/qwen3.8-27b).
+        # qwen/qwen3.8-27b is the preview vision model (image input, 20 MB).
         chat_models=(
             "openai/gpt-oss-120b",
-            "qwen/qwen3.6-27b",
+            "qwen/qwen3.8-27b",
             "openai/gpt-oss-20b",
-            "llama-3.3-70b-versatile",
-            "llama-3.1-8b-instant",
         ),
-        vision_models=("qwen/qwen3.6-27b",),
+        vision_models=("qwen/qwen3.8-27b",),
         reasoning_models=(
             "openai/gpt-oss-120b",
             "openai/gpt-oss-20b",
-            "qwen/qwen3.6-27b",
+            "qwen/qwen3.8-27b",
         ),
+        # gpt-oss-120b free tier is about 200K tokens/day. Health sums usage_events.
+        daily_token_limit=200_000,
+        quota_reset_tz="UTC",
     ),
     ProviderSpec(
         id="google",
@@ -215,6 +231,8 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
             "gemini-flash-latest",
             "gemini-3.1-flash-lite",
         ),
+        # AI Studio RPD resets at midnight Pacific. A park lasts until then.
+        quota_reset_tz="America/Los_Angeles",
     ),
     ProviderSpec(
         id="mistral",
@@ -227,10 +245,11 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
         health_path="/models",
         free_notes="Experiment / free credits on signup",
         needed_by=("cortex",),
+        # open-mistral-nemo retired 2026-07-31 (overview row open-mistral-nemo-2407):
+        # https://docs.mistral.ai/getting-started/models/models_overview/
         chat_models=(
             "mistral-small-latest",
             "ministral-8b-latest",
-            "open-mistral-nemo",
         ),
         vision_models=("mistral-small-latest",),
     ),
@@ -240,17 +259,18 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
         base_url="https://integrate.api.nvidia.com/v1",
         default_role="cheap",
         tier="freemium",
-        register_url="https://build.nvidia.com/",
+        # Keys page: https://build.nvidia.com/settings/api-keys
+        # (quickstart: https://docs.api.nvidia.com/nim/docs/api-quickstart)
+        register_url="https://build.nvidia.com/settings/api-keys",
         docs_url="https://docs.api.nvidia.com/",
         health_path="/models",
         free_notes="build.nvidia.com / NIM OpenAI-compatible; keys typically nvapi-…",
         needed_by=("airgpt", "cortex"),
-        chat_models=(
-            "meta/llama-3.1-8b-instruct",
-            "meta/llama-3.1-70b-instruct",
-            "mistralai/mistral-nemotron",
-            "nvidia/llama-3.1-nemotron-70b-instruct",
-        ),
+        # First id was on https://integrate.api.nvidia.com/v1/models at
+        # 2026-10-01T07:57:06Z. meta/llama-3.1-8b-instruct and
+        # meta/llama-3.1-70b-instruct were absent, so they are not the first hop.
+        # mistralai/mistral-nemotron was also absent from that list.
+        chat_models=("nvidia/llama-3.1-nemotron-70b-instruct",),
         reasoning_models=("nvidia/llama-3.1-nemotron-70b-instruct",),
     ),
     ProviderSpec(
@@ -281,7 +301,8 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
         base_url="https://api.together.xyz/v1",
         default_role="cheap",
         tier="freemium",
-        register_url="https://api.together.xyz/settings/api-keys",
+        # Project keys: https://docs.together.ai/docs/quickstart
+        register_url="https://api.together.ai/settings/projects/~current/api-keys",
         docs_url="https://docs.together.ai/",
         health_path="/models",
         free_notes="Signup credits; OpenAI-compatible",
@@ -304,7 +325,8 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
         base_url="https://api.fireworks.ai/inference/v1",
         default_role="cheap",
         tier="paid",
-        register_url="https://fireworks.ai/account/api-keys",
+        # Dashboard keys: https://docs.fireworks.ai/getting-started/quickstart
+        register_url="https://app.fireworks.ai/settings/users/api-keys",
         docs_url="https://docs.fireworks.ai/",
         health_path="/models",
         needed_by=("cortex",),
@@ -318,14 +340,18 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
         register_url="https://cloud.cerebras.ai/",
         docs_url="https://inference-docs.cerebras.ai/",
         health_path="/models",
-        free_notes="High-speed free tier for Llama/Qwen",
+        free_notes="Trial ($5 credits, 30 days, 5 RPM), not a free tier",
         needed_by=("airgpt",),
-        # From D:\Netie\Free APIs for OpenVault Free\Free API.txt (2026-08).
+        # Models: https://inference-docs.cerebras.ai/models/overview
+        # Trial ($5 / 30 days / 5 RPM, not a renewing free tier):
+        # https://inference-docs.cerebras.ai/support/rate-limits
+        # qwen-3.8-27b accepts images (rate-limit footnote: image limits).
+        # llama-3.3-70b and llama3.1-8b are not in the shared catalog.
         chat_models=(
             "gpt-oss-120b",
-            "llama-3.3-70b",
-            "llama3.1-8b",
+            "qwen-3.8-27b",
         ),
+        vision_models=("qwen-3.8-27b",),
         reasoning_models=("gpt-oss-120b",),
     ),
     ProviderSpec(
@@ -436,7 +462,9 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
         base_url="https://models.inference.ai.azure.com",
         default_role="free",
         tier="freemium",
-        register_url="https://github.com/marketplace/models",
+        # marketplace/models is 404. Retirement notice:
+        # https://docs.github.com/en/github-models
+        register_url="https://docs.github.com/en/github-models",
         docs_url="https://docs.github.com/en/github-models",
         health_path="/models",
         free_notes="Free tier via GitHub token -- inference API retired 2026-07-30",
@@ -465,7 +493,8 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
         base_url="https://api.siliconflow.cn/v1",
         default_role="free",
         tier="freemium",
-        register_url="https://cloud.siliconflow.cn/account/ak",
+        # API keys page: https://docs.siliconflow.com/en/userguide/quickstart
+        register_url="https://cloud.siliconflow.com/account/ak",
         docs_url="https://docs.siliconflow.cn/",
         health_path="/models",
         free_notes="OmniRoute lists as permanently-free pool (region dependent)",
@@ -694,6 +723,23 @@ def models_for(provider: str, *, multimodal: bool = False) -> tuple[str, ...]:
     if spec is None:
         return ()
     return spec.vision_models if multimodal else spec.chat_models
+
+
+def catalog_contains_model(model: str, *, multimodal: bool = False) -> bool:
+    """True when ``model`` is an exact id in some provider catalog pool.
+
+    Aliases (``auto``, empty, ``default``) are not catalog ids. A different
+    spelling is not a match: ``gpt-oss-120b`` is not ``openai/gpt-oss-120b``.
+    """
+    want = (model or "").strip()
+    if not want or want.lower() in _AUTO_ALIASES:
+        return False
+    for spec in PROVIDER_CATALOG:
+        live = _with_runtime_local(spec) if spec.local_hop else spec
+        pool = live.vision_models if multimodal else live.chat_models
+        if want in pool:
+            return True
+    return False
 
 
 # A reasoning model emits its chain of thought from the same completion budget as the

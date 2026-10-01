@@ -254,8 +254,11 @@ class TestUsageLedger:
             }
         )
         mock = _mock_client(resp_429, ok)
+        # auto would try the next catalog model on this same key (#76). Pin an
+        # id openai serves so the 429 still moves to the second key.
+        pinned = {**_CHAT, "model": "gpt-4o-mini"}
         with patch("openmw.openvault.vault.proxy.httpx.AsyncClient", return_value=mock):
-            resp = client.post("/v1/chat/completions", json=_CHAT, headers=headers)
+            resp = client.post("/v1/chat/completions", json=pinned, headers=headers)
         assert resp.status_code == 200
 
         events = client.get("/api/usage").json()["events"]

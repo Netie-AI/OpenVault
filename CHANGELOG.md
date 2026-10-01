@@ -2,6 +2,113 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-01 - Close vault sqlite handles (OpenVault #88)
+
+- `with self._connect() as conn` under `openmw/openvault` now closes the
+  connection after the commit. Parks and the quota reader already closed.
+- A repeated vault and usage-store run leaves no extra open database handles.
+
+## 2026-10-01 - Close park DB handles and widen error scrub (OpenVault #86)
+
+- `hop_parks` connections close after each ensure, save, delete, and load.
+  The schema is created once when a fallback manager starts.
+- Stored provider messages also redact `csk-`, `xai-`, and any 32+ character
+  token. The 200-character cap and message-only rule stay.
+
+## 2026-10-01 - Persisted parks and quota-aware health (OpenVault #86)
+
+- Hop parks live in `keys.db` table `hop_parks`. A restart keeps them. An
+  expired park is shown as expired and is routed to again. Google stays
+  parked until the next Pacific midnight, which is when its quota resets.
+- Groq health uses the catalog daily token limit (200K) summed from
+  `usage_events`. Over the limit the status is `quota_exhausted` with a
+  reset time. The 18-column usage ledger is unchanged.
+- A park stores a provider message of at most 200 characters. Key-like
+  text is scrubbed. Request and response bodies are not stored.
+- When every hop is parked the gateway returns 503
+  `all hops parked, retry at <ISO time>` and sets `Retry-After`.
+  OpenVault's own 429 already sends `Retry-After`.
+- `GET /api/freeroute/status` adds `usable_provider_count`. `spendable_count`
+  and `pooled_key_count` are unchanged.
+
+## 2026-10-01 - Provider cards admin field (OpenVault #79)
+
+- The `/providers` proxy no longer reads the admin token file. The operator
+  types `X-OpenVault-Admin` into a password field. It stays in memory or
+  sessionStorage, and the proxy forwards that header. A missing header is 401
+  and does not call upstream.
+- `GET /provider-cards` uses the same field. No GitHub Models card; the catalog
+  row stays because the service is retiring.
+
+## 2026-10-01 - Provider cards (OpenVault #79)
+
+- Cards page in the console (`/providers`) and `GET /provider-cards`. Free and
+  Premium only, for catalog providers. No DeepSeek card, no Cloudflare card,
+  no Sign in with ChatGPT. Premium is a plain paste field.
+- `POST /api/keys/cards` is POST-only, behind `http_guard` and
+  `X-OpenVault-Admin`. It reuses `key_add.add_tested_key`. The response is the
+  label, masked id, and outcome. The key is not echoed.
+- Letter-mark icons are local SVGs (CC0). Catalog `register_url` fixes: NVIDIA,
+  Together, Fireworks, GitHub Models, SiliconFlow.
+
+## 2026-10-01 - Admin credential for key and secret routes (OpenVault #83)
+
+- `/api/keys`, `/api/secrets`, other key and secret management routes, and
+  `/keys` require `X-OpenVault-Admin` even from loopback. The token is not an
+  `ov_` key. It is created with `secrets.token_urlsafe(32)` at
+  `<vault home>/admin_token` (mode 0600) and compared with `hmac.compare_digest`.
+- `OPENVAULT_ADMIN_TOKEN_PATH` overrides the file location. The value is not logged.
+- `scripts/add_key.py`, `openvault secret get`, and other admin HTTP callers
+  read that file. `openvault add` still writes the vault in process.
+- `/api/freeroute/status`, `/api/healthz`, and `/v1/*` are unchanged.
+
+## 2026-10-01 - CLI openvault add (OpenVault #78)
+
+- `openvault add <provider>` reads the key from a hidden prompt or stdin.
+  A key in argv or an environment variable is refused.
+- The key is stored only after a 1-token chat on the provider's first catalog
+  model, in the existing vault. GET /models is not the test. Bodies are not logged.
+- Dedupe is an HMAC with a vault-held secret, stored beside the key. Output is
+  the label and masked id. The test and dedupe live in `vault/key_add.py`.
+
+## 2026-10-01 - Opt-in strict model pin (OpenVault #80)
+
+- `strict: true` on the chat body, or header `X-OpenVault-Strict: true`,
+  pins the request to an exact catalog model id. The default is unchanged.
+- When that id has no healthy hop (parked, quota-exhausted, or circuit open),
+  the gateway returns 503 `pin_unavailable` and does not call another provider
+  or swap models. A park sets `Retry-After`.
+- `served_provider` and `served_model` name the hop that actually served.
+  A pin that was not served reports both as null.
+
+## 2026-10-01 - Dead-model skip and per-model 429 (OpenVault #76)
+
+- A 404, or a 400/422 whose body says the model is unknown, decommissioned,
+  or not found, ejects that (key, model) for the job and the chain continues.
+  Any other 400/422 still fails the request after one upstream call.
+- A 429 parks (key, model) and tries the provider's next catalog model.
+  The key is parked only when every model returns 429. A 402 or credits
+  error still parks the whole key. 401/403 quarantine is unchanged.
+- In-provider fallback runs only for `auto`, or when the provider does not
+  serve the requested model. A pinned model the provider serves is never
+  swapped for a sibling model. Upstream bodies are not logged or stored.
+
+## 2026-10-01 - FreeRoute catalog refresh (OpenVault #74)
+
+- OpenRouter `chat_models` are only `:free` ids whose prompt and completion
+  price were 0 on https://openrouter.ai/api/v1/models at 2026-10-01T08:00:04Z.
+  Vision ids are the ones whose `input_modalities` include image.
+- Groq drops `llama-3.1-8b-instant`, `llama-3.3-70b-versatile`, and
+  `qwen/qwen3.6-27b`. Vision is `qwen/qwen3.8-27b`.
+- Cerebras models are `gpt-oss-120b` and `qwen-3.8-27b`. Notes call it a trial
+  ($5 credits, 30 days, 5 RPM), not a free tier.
+- Mistral drops retired `open-mistral-nemo`.
+- NVIDIA drops `meta/llama-3.1-8b-instruct`, `meta/llama-3.1-70b-instruct`,
+  and unlisted `mistralai/mistral-nemotron`. First choice is
+  `nvidia/llama-3.1-nemotron-70b-instruct`.
+- `local_qwen` is unchanged. Routing, precheck, limiter, parks, and guards
+  are unchanged.
+
 ## 2026-09-25 - Fail-closed auth guard on /api and /keys (OpenVault #72)
 
 - Every `/api/*` and `/keys/*` route now requires a valid issued OpenVault API
