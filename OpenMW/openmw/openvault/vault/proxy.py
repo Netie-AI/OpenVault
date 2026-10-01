@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import time
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from typing import Any, Literal
@@ -30,6 +31,7 @@ from openmw.openvault.vault.local_hop import (
     probe_local,
     walkable_local_base,
 )
+from openmw.openvault.vault.parks import provider_error_text
 from openmw.openvault.vault.precheck import _default_base_url
 from openmw.openvault.vault.providers import (
     LOCAL_QWEN_ID,
@@ -38,6 +40,7 @@ from openmw.openvault.vault.providers import (
     models_for,
     resolve_model,
 )
+from openmw.openvault.vault.quota import iso_utc, quota_blocks, quota_retry_after_s
 from openmw.openvault.vault.store import KeyRecord, KeyVault
 from openmw.openvault.vault.usage_store import HopTrace
 
@@ -131,6 +134,29 @@ def _vault_candidates(
     return hops
 
 
+def _all_hops_parked_body(until: float) -> dict[str, Any]:
+    return {
+        "error": {
+            "message": f"all hops parked, retry at {iso_utc(until)}",
+            "type": "openvault_all_hops_parked",
+        }
+    }
+
+
+def _parked_pool_refusal(
+    vault: KeyVault, fallback: FallbackManager
+) -> tuple[int, dict[str, Any], int] | None:
+    """503 when every pooled hop is inside a park window."""
+    pooled = list(vault.pooled_ordered())
+    if not pooled or any(not fallback.key_is_parked(record.id) for record in pooled):
+        return None
+    until = fallback.soonest_key_park_until([record.id for record in pooled])
+    if until is None:
+        return None
+    retry = max(1, math.ceil(until - time.time()))
+    return 503, _all_hops_parked_body(until), retry
+
+
 def _collect_candidates(
     vault: KeyVault,
     fallback: FallbackManager,
@@ -138,12 +164,13 @@ def _collect_candidates(
     *,
     tenant: str,
     local_only: bool,
-) -> tuple[list[ProxyCandidate], tuple[int, dict[str, Any]] | None]:
+) -> tuple[list[ProxyCandidate], tuple[int, dict[str, Any], int | None] | None]:
     """Build the hop list. local_only never returns a cloud hop."""
     base, leftover = walkable_local_base()
     if local_only:
         if base is None:
-            return [], local_only_refusal(leftover)
+            status, body_out = local_only_refusal(leftover)
+            return [], (status, body_out, None)
         return [_local_candidate(base)], None
 
     hops: list[ProxyCandidate] = []
@@ -151,7 +178,10 @@ def _collect_candidates(
         hops.append(_local_candidate(base))
     hops.extend(_vault_candidates(fallback, body, tenant=tenant))
     if not hops:
-        return [], (503, _no_candidates_refusal(vault))
+        parked = _parked_pool_refusal(vault, fallback)
+        if parked is not None:
+            return [], parked
+        return [], (503, _no_candidates_refusal(vault), None)
     return hops, None
 
 
@@ -169,6 +199,8 @@ def _apply_candidate_outcome(
     cand: ProxyCandidate,
     outcome: AttemptOutcome,
     error: str,
+    *,
+    error_text: str = "",
 ) -> None:
     if cand.served_local:
         breaker = get_circuit_breaker(cand.provider)
@@ -191,6 +223,7 @@ def _apply_candidate_outcome(
         provider=cand.provider,
         outcome=outcome,
         error=error,
+        error_text=error_text,
     )
 
 
@@ -264,6 +297,8 @@ def _on_model_outcome(
     outcome: AttemptOutcome,
     error: str,
     model: str,
+    *,
+    error_text: str = "",
 ) -> _ModelStep:
     """Apply one model's health effects and say which way the walk goes.
 
@@ -285,11 +320,12 @@ def _on_model_outcome(
                 model,
                 outcome.cooldown_ms,
                 outcome.reason or "rate_limited",
+                error_text=error_text,
             )
         return "next_model"
     if outcome.attempt_class == "model_unavailable":
         return "next_model"
-    _apply_candidate_outcome(vault, fallback, cand, outcome, error)
+    _apply_candidate_outcome(vault, fallback, cand, outcome, error, error_text=error_text)
     return "next_hop"
 
 
@@ -302,13 +338,14 @@ def _park_key_if_every_model_limited(
     already_parked: int,
     cooldown_ms: int,
     reason: str,
+    error_text: str = "",
 ) -> None:
     """Park the key only when every model on this hop came back 429."""
     if cand.served_local or not models or limited <= 0:
         return
     if limited + already_parked != len(models):
         return
-    fallback.record_park(cand.key_id, cooldown_ms, reason)
+    fallback.record_park(cand.key_id, cooldown_ms, reason, error_text=error_text)
 
 
 def _non_retryable(
@@ -464,6 +501,7 @@ def _apply_outcome(
     provider: str,
     outcome: AttemptOutcome,
     error: str,
+    error_text: str = "",
 ) -> None:
     """Mutate hop / provider health according to the attempt policy."""
     if outcome.attempt_class == "success":
@@ -472,7 +510,12 @@ def _apply_outcome(
         return
 
     if outcome.candidate == "park":
-        fallback.record_park(key_id, outcome.cooldown_ms, outcome.reason or error)
+        fallback.record_park(
+            key_id,
+            outcome.cooldown_ms,
+            outcome.reason or error,
+            error_text=error_text,
+        )
         return
 
     if outcome.candidate == "quarantine_key":
@@ -611,6 +654,12 @@ def _why_pin_blocked(
             if retry is not None:
                 retries.append(retry)
             continue
+        if quota_blocks(record.provider, vault.db_path):
+            saw_quota = True
+            quota_retry = quota_retry_after_s(record.provider)
+            if quota_retry is not None:
+                retries.append(quota_retry)
+            continue
         breaker_open = not get_circuit_breaker(record.provider).can_execute()
         if fallback.hop_circuit_is_open(record.id) or breaker_open:
             saw_circuit = True
@@ -703,10 +752,14 @@ def _open_walk(
         vault, fallback, work, tenant=tenant, local_only=local_only
     )
     if early is not None:
-        _note_early(trace, early)
+        status, body, retry = early
+        if retry is not None:
+            trace.retry_after_s = retry
+        noted = (status, body)
+        _note_early(trace, noted)
         return _Walk(
             candidates=[],
-            early=early,
+            early=noted,
             local_only=local_only,
             strict_pin=None,
             pin_fail=None,
@@ -835,6 +888,7 @@ async def chat_completions(
             already_parked = 0
             limit_cooldown = 0
             limit_reason = "rate_limited"
+            limit_error = ""
             sent_any = False
             context_skips = 0
             other_skips = 0
@@ -884,7 +938,8 @@ async def chat_completions(
                     break
 
                 # Upstream body is for classification only. Do not log it or
-                # copy it into errors, the trace, or a usage row.
+                # copy it into errors, the trace, or a usage row. A park may
+                # keep a scrubbed message of at most 200 characters, not the body.
                 status_code = resp.status_code
                 body_text = resp.text if status_code >= 400 else ""
                 outcome = classify_attempt(
@@ -893,7 +948,10 @@ async def chat_completions(
                     headers=dict(resp.headers),
                 )
                 err = f"HTTP {status_code}"
-                step = _on_model_outcome(vault, fallback, cand, outcome, err, model)
+                snippet = provider_error_text(body_text, status=status_code)
+                step = _on_model_outcome(
+                    vault, fallback, cand, outcome, err, model, error_text=snippet
+                )
                 _remember_pin_failure(pin_fail, outcome)
                 if cand.served_local and status_code >= 400:
                     local_fail_reason = _local_fail_reason(status_code, body_text, model)
@@ -930,6 +988,7 @@ async def chat_completions(
                         limited += 1
                         limit_cooldown = outcome.cooldown_ms
                         limit_reason = outcome.reason or "rate_limited"
+                        limit_error = snippet
                     continue
                 leave_hop = True
                 break
@@ -951,6 +1010,7 @@ async def chat_completions(
                     already_parked=already_parked,
                     cooldown_ms=limit_cooldown,
                     reason=limit_reason,
+                    error_text=limit_error,
                 )
 
     if local_only:
@@ -1073,6 +1133,7 @@ async def prepare_chat_stream(
             already_parked = 0
             limit_cooldown = 0
             limit_reason = "rate_limited"
+            limit_error = ""
             sent_any = False
             context_skips = 0
             other_skips = 0
@@ -1124,13 +1185,17 @@ async def prepare_chat_stream(
                 if resp.status_code >= 400:
                     err_bytes = await resp.aread()
                     await resp.aclose()
-                    # Classification only. Never log or store the upstream body.
+                    # Classification only. The park row keeps a scrubbed message,
+                    # never the request or the response body.
                     body_text = err_bytes.decode("utf-8", errors="replace")
                     outcome = classify_attempt(
                         resp.status_code, body_text, headers=dict(resp.headers)
                     )
                     err = f"HTTP {resp.status_code}"
-                    step = _on_model_outcome(vault, fallback, cand, outcome, err, model)
+                    snippet = provider_error_text(body_text, status=resp.status_code)
+                    step = _on_model_outcome(
+                        vault, fallback, cand, outcome, err, model, error_text=snippet
+                    )
                     _remember_pin_failure(pin_fail, outcome)
                     if cand.served_local:
                         local_fail_reason = _local_fail_reason(resp.status_code, body_text, model)
@@ -1150,6 +1215,7 @@ async def prepare_chat_stream(
                             limited += 1
                             limit_cooldown = outcome.cooldown_ms
                             limit_reason = outcome.reason or "rate_limited"
+                            limit_error = snippet
                         continue
                     leave_hop = True
                     break
@@ -1210,6 +1276,7 @@ async def prepare_chat_stream(
                     already_parked=already_parked,
                     cooldown_ms=limit_cooldown,
                     reason=limit_reason,
+                    error_text=limit_error,
                 )
     except Exception:
         await _close_client()

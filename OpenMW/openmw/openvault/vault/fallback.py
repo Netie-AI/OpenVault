@@ -11,6 +11,8 @@ from pathlib import Path
 from typing import Literal
 
 from openmw.openvault.paths import fallback_path
+from openmw.openvault.vault.parks import clip_error_text, delete_park, load_parks, save_park
+from openmw.openvault.vault.quota import park_wait_s, quota_blocks, quota_view
 from openmw.openvault.vault.store import KeyRecord, KeyVault
 
 CircuitState = Literal["closed", "open", "half_open"]
@@ -30,6 +32,8 @@ class HopCircuit:
     # the rest of the key. Cleared only when that model's window expires.
     model_park_until: dict[str, float] = field(default_factory=dict)
     model_park_reason: dict[str, str] = field(default_factory=dict)
+    model_error_text: dict[str, str] = field(default_factory=dict)
+    error_text: str = ""
 
 
 @dataclass
@@ -79,6 +83,7 @@ class FallbackManager:
         self._config_path = config_path if config_path is not None else fallback_path()
         self._config = config if config is not None else self._load_config()
         self._circuits: dict[str, HopCircuit] = {}
+        self._load_parks()
 
     def _load_config(self) -> FallbackConfig:
         if self._config_path.is_file():
@@ -113,6 +118,26 @@ class FallbackManager:
             self._circuits[key_id] = HopCircuit(key_id=key_id)
         return self._circuits[key_id]
 
+    def _load_parks(self) -> None:
+        for row in load_parks(self._vault.db_path):
+            circ = self._circuit(row.key_id)
+            if row.model:
+                circ.model_park_until[row.model] = row.park_until
+                circ.model_park_reason[row.model] = row.reason
+                if row.error_text:
+                    circ.model_error_text[row.model] = row.error_text
+                continue
+            circ.park_until = row.park_until
+            circ.park_reason = row.reason or None
+            circ.error_text = row.error_text
+            circ.last_error = row.reason or None
+
+    def _wait_s(self, key_id: str, cooldown_ms: int, reason: str) -> float:
+        wait_s = max(0.0, float(cooldown_ms) / 1000.0)
+        record = self._vault.get(key_id)
+        provider = record.provider if record is not None else ""
+        return park_wait_s(provider, wait_s, reason)
+
     def _is_available(self, record: KeyRecord, now: float) -> bool:
         # Custody first, before health: a tenant's key is not ours to spend no
         # matter how healthy it looks. This is the chokepoint every selection
@@ -126,6 +151,8 @@ class FallbackManager:
             return False
         circ = self._circuit(record.id)
         if circ.park_until is not None and now < circ.park_until:
+            return False
+        if quota_blocks(record.provider, self._vault.db_path):
             return False
         if circ.state == "open":
             if circ.opened_at is not None and now - circ.opened_at >= self._config.open_seconds:
@@ -168,6 +195,8 @@ class FallbackManager:
         circ.last_error = None
         circ.park_until = None
         circ.park_reason = None
+        circ.error_text = ""
+        delete_park(self._vault.db_path, key_id)
         # Leave model_park_until alone: a later model answering does not
         # un-park a sibling that just returned 429.
 
@@ -180,15 +209,36 @@ class FallbackManager:
         if time.time() >= until:
             circ.model_park_until.pop(model, None)
             circ.model_park_reason.pop(model, None)
+            circ.model_error_text.pop(model, None)
             return False
         return True
 
-    def record_model_park(self, key_id: str, model: str, cooldown_ms: int, reason: str) -> None:
+    def record_model_park(
+        self,
+        key_id: str,
+        model: str,
+        cooldown_ms: int,
+        reason: str,
+        *,
+        error_text: str = "",
+    ) -> None:
         """Hide one model on this key. Does not park the key itself."""
         circ = self._circuit(key_id)
-        wait_s = max(0.0, float(cooldown_ms) / 1000.0)
-        circ.model_park_until[model] = time.time() + wait_s
+        wait_s = self._wait_s(key_id, cooldown_ms, reason)
+        until = time.time() + wait_s
+        stored = clip_error_text(error_text) if error_text else ""
+        circ.model_park_until[model] = until
         circ.model_park_reason[model] = reason
+        if stored:
+            circ.model_error_text[model] = stored
+        save_park(
+            self._vault.db_path,
+            key_id=key_id,
+            model=model,
+            park_until=until,
+            reason=reason,
+            error_text=stored,
+        )
 
     def record_failure(self, key_id: str, error: str) -> None:
         circ = self._circuit(key_id)
@@ -198,17 +248,36 @@ class FallbackManager:
             circ.state = "open"
             circ.opened_at = time.time()
 
-    def record_park(self, key_id: str, cooldown_ms: int, reason: str) -> None:
+    def record_park(
+        self,
+        key_id: str,
+        cooldown_ms: int,
+        reason: str,
+        *,
+        error_text: str = "",
+    ) -> None:
         """Temporarily hide a key without counting a circuit failure.
 
         Rate limits and stale OAuth must not open the hop circuit — that is the
         live bug fixed by DESIGN_TIERED_QUEUE_LB §1.1 / §4.2.
+        The park is written to keys.db so a new process sees the same window.
         """
         circ = self._circuit(key_id)
-        wait_s = max(0.0, float(cooldown_ms) / 1000.0)
-        circ.park_until = time.time() + wait_s
+        wait_s = self._wait_s(key_id, cooldown_ms, reason)
+        until = time.time() + wait_s
+        stored = clip_error_text(error_text) if error_text else ""
+        circ.park_until = until
         circ.park_reason = reason
         circ.last_error = reason
+        circ.error_text = stored
+        save_park(
+            self._vault.db_path,
+            key_id=key_id,
+            model="",
+            park_until=until,
+            reason=reason,
+            error_text=stored,
+        )
 
     def key_is_parked(self, key_id: str) -> bool:
         """True while this key is inside a park window."""
@@ -220,6 +289,31 @@ class FallbackManager:
         if not self.key_is_parked(key_id):
             return None
         return self._circuit(key_id).park_reason
+
+    def soonest_key_park_until(self, key_ids: list[str]) -> float | None:
+        """Earliest still-active key park, or None when none of them are parked."""
+        now = time.time()
+        untils: list[float] = []
+        for key_id in key_ids:
+            circ = self._circuit(key_id)
+            if circ.park_until is not None and now < circ.park_until:
+                untils.append(circ.park_until)
+        if not untils:
+            return None
+        return min(untils)
+
+    def usable_provider_count(self) -> int:
+        """Providers with a pooled key that is not parked and not out of quota."""
+        if self._vault.seal.is_sealed:
+            return 0
+        found: set[str] = set()
+        for record in self._vault.pooled_ordered():
+            if self.key_is_parked(record.id):
+                continue
+            if quota_blocks(record.provider, self._vault.db_path):
+                continue
+            found.add(record.provider)
+        return len(found)
 
     def hop_circuit_is_open(self, key_id: str) -> bool:
         """True while this hop's circuit is open and the cool-down has not elapsed."""
@@ -250,25 +344,40 @@ class FallbackManager:
 
     def status(self) -> FallbackStatus:
         hops: list[dict[str, object]] = []
+        now = time.time()
         for record in self._vault.pooled_ordered():
             circ = self._circuit(record.id)
-            hops.append(
-                {
-                    "key_id": record.id,
-                    "label": record.label,
-                    "provider": record.provider,
-                    "role": record.role,
-                    "priority": record.priority,
-                    "precheck_status": record.precheck_status,
-                    "circuit": circ.state,
-                    "failures": circ.failures,
-                    "last_error": circ.last_error or record.last_error,
-                    "last_latency_ms": record.last_latency_ms,
-                    "park_until": circ.park_until,
-                    "park_reason": circ.park_reason,
-                    "served_local": False,
-                }
-            )
+            if circ.park_until is None:
+                park_state = ""
+            elif now < circ.park_until:
+                park_state = "parked"
+            else:
+                park_state = "expired"
+            view = quota_view(record.provider, self._vault.db_path, now=now)
+            health = record.precheck_status
+            if view.status == "quota_exhausted" and health in ("ok", "unknown"):
+                health = "quota_exhausted"
+            hop: dict[str, object] = {
+                "key_id": record.id,
+                "label": record.label,
+                "provider": record.provider,
+                "role": record.role,
+                "priority": record.priority,
+                "precheck_status": record.precheck_status,
+                "health": health,
+                "circuit": circ.state,
+                "failures": circ.failures,
+                "last_error": circ.last_error or record.last_error,
+                "last_latency_ms": record.last_latency_ms,
+                "park_until": circ.park_until,
+                "park_reason": circ.park_reason,
+                "park_state": park_state,
+                "error_text": circ.error_text,
+                "served_local": False,
+            }
+            if view.status == "quota_exhausted" and view.reset_at:
+                hop["quota_reset_at"] = view.reset_at
+            hops.append(hop)
         return FallbackStatus(
             hops=hops,
             config={

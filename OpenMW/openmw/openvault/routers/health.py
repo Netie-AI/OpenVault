@@ -8,6 +8,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Query
 
 from openmw.openvault.vault.health_store import HealthStore, parse_window
+from openmw.openvault.vault.quota import quota_view
 from openmw.openvault.vault.store import KeyVault
 
 
@@ -31,10 +32,24 @@ def build_health_router(vault: KeyVault) -> APIRouter:
         store = HealthStore(db_path=vault.db_path)
         summary = store.summarize(key_id, window=window)
         payload = store.to_api_dict(summary)
-        if payload["current_status"] is None:
-            record = vault.get(key_id)
-            if record is not None and record.precheck_status != "unknown":
-                payload["current_status"] = record.precheck_status
+        record = vault.get(key_id)
+        if (
+            payload["current_status"] is None
+            and record is not None
+            and record.precheck_status != "unknown"
+        ):
+            payload["current_status"] = record.precheck_status
+        if record is not None:
+            view = quota_view(record.provider, vault.db_path)
+            if view.status == "quota_exhausted" and payload["current_status"] in (
+                None,
+                "ok",
+                "unknown",
+            ):
+                payload["current_status"] = view.status
+                payload["quota_reset_at"] = view.reset_at
+                payload["tokens_used"] = view.tokens_used
+                payload["daily_token_limit"] = view.limit
         return payload
 
     return router
