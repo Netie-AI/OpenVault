@@ -71,6 +71,7 @@ shell at HTTP 200 is refused and named "compiling", not "unreachable".
 | #104 chat probe cadence | Boot after 30-120s jitter, then once a day (86400s, floor 3600). Timeout 120s. Unusable only for 402, plan 429, or 401/403. |
 | #106 T4 | Single-turn same-provider keys spread by LRU weighted by remaining quota. The proxy breaker is per key. |
 | #95 web audit | apps/web npm audit fix: 0 high, 0 critical (was 3 high, 1 critical). next 16.3.8, sharp 0.35.5, nanoid 3.3.19. |
+| #109 strict pin | gemini-3.5-flash binds to google. google/gemma-4-31b-it:free binds to openrouter. |
 
 ## HT gates
 
