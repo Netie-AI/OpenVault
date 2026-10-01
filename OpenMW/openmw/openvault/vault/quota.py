@@ -7,6 +7,7 @@ its 18-column schema is not changed.
 
 from __future__ import annotations
 
+import contextlib
 import math
 import sqlite3
 import time
@@ -115,6 +116,63 @@ def quota_view(provider: str, db_path: Path, *, now: float | None = None) -> Quo
 
 def quota_blocks(provider: str, db_path: Path) -> bool:
     return quota_view(provider, db_path).status != "ok"
+
+
+def quota_window(provider: str, now: float | None = None) -> tuple[float, float, int | None]:
+    """``(window_start, next_reset, daily_limit)`` for one provider.
+
+    The catalog reset zone is used when the provider defines one. Otherwise
+    the window is the UTC day. ``daily_limit`` is the catalog ceiling, or
+    None when the catalog does not track one.
+    """
+    spec = get_provider(provider)
+    tz_name = "UTC"
+    limit: int | None = None
+    if spec is not None:
+        if spec.quota_reset_tz:
+            tz_name = spec.quota_reset_tz
+        if spec.daily_token_limit is not None and spec.daily_token_limit > 0:
+            limit = spec.daily_token_limit
+    start, nxt = window_bounds(tz_name, now)
+    return start, nxt, limit
+
+
+def _connect(db_path: Path) -> sqlite3.Connection:
+    conn = sqlite3.connect(str(db_path), timeout=5.0)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def tokens_used_for_key(
+    db_path: Path,
+    *,
+    provider: str,
+    vault_key_id: str,
+    since: float,
+) -> int:
+    """Successful ``usage_events`` tokens for one vault key since ``since``.
+
+    Read only. The 18-column usage schema is not changed. A row with an
+    empty ``vault_key_id`` is not attributed to a key.
+    """
+    if not db_path.is_file() or not vault_key_id:
+        return 0
+    try:
+        with contextlib.closing(_connect(db_path)) as conn, conn:
+            found = conn.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='usage_events'"
+            ).fetchone()
+            if found is None:
+                return 0
+            row = conn.execute(
+                "SELECT COALESCE(SUM(total_tokens), 0) FROM usage_events "
+                "WHERE provider=? AND vault_key_id=? AND created_at>=? "
+                "AND status>=200 AND status<300",
+                (provider, vault_key_id, float(since)),
+            ).fetchone()
+            return int(row[0] if row is not None else 0)
+    except sqlite3.Error:
+        return 0
 
 
 def quota_retry_after_s(provider: str) -> int | None:

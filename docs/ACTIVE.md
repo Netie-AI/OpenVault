@@ -28,13 +28,13 @@ What exists in this repo and where. Update when structure changes, not when stat
 |------|---------|------|
 | Health | `health/` | Laptop device inventory |
 | Observe | `observe/` | PathTrace hops + severity (`hot` = red) |
-| Vault | `vault/` | Encrypted keys, accounts, proxy, FreeRoute gateway. Metering trio: `api_keys.py` (issued `ov_` credentials) · `auth.py` (who is calling — never a header) · `usage_store.py` (one durable row per request) · `budget.py` (output ceiling + context refusal) · `system_plane.py` (SYSTEM control plane; usage $/unit stays NEEDS-YOU) · `trust.py` (JWKS pin kids; mint stays loopback) · `route_packs.py` (experience credit, DR-0016) · `app_grants.py` (loopback app Grant) · `webauthn_unlock.py` (passkey unseal, DR-0017) · `local_hop.py` (LOCAL-1 `local_qwen` loopback hop, no cloud key) · `key_add.py` (`openvault add`: 1-token chat, HMAC dedupe) · `provider_cards.py` (catalog cards, POST `/api/keys/cards`) |
+| Vault | `vault/` | Encrypted keys, accounts, proxy, FreeRoute gateway. Metering trio: `api_keys.py` (issued `ov_` credentials) · `auth.py` (who is calling — never a header) · `usage_store.py` (one durable row per request) · `budget.py` (output ceiling + context refusal) · `system_plane.py` (SYSTEM control plane; usage $/unit stays NEEDS-YOU) · `trust.py` (JWKS pin kids; mint stays loopback) · `route_packs.py` (experience credit, DR-0016) · `app_grants.py` (loopback app Grant) · `webauthn_unlock.py` (passkey unseal, DR-0017) · `local_hop.py` (LOCAL-1 `local_qwen` loopback hop, no cloud key) · `key_add.py` (`openvault add`: 1-token chat, HMAC dedupe) · `provider_cards.py` (catalog cards, POST `/api/keys/cards`) · `hop_attempts.py` (per-hop attempt ledger) · GET `/api/keys/quota` |
 | Ship | `ship/` (+ `ship/hosts/`) | Deploy / FreeBuild / email gates |
 | Mesh | `mesh/` | Local mesh + Cortex client + `/api/slots` |
 | Control | `control/` | GPU/CPU/fan remediation (dry_run default) — not the billing control plane (`/api/system/*`) |
 | Cloud | `cloud/` | Small Software LAN cloud — device discovery, shares, multiplayer sessions (`docs/decisions/DR-0002-small-software-lan-cloud.md`) |
 | Route | `route/` | Attempt classifier, park/kill-and-send, fallback chain |
-| Routers | `routers/` | New-style `APIRouter` surfaces (health history, keys JWKS, FreeRoute register/status, system plane) — replacing the single-file `app.py` route style over time |
+| Routers | `routers/` | New-style `APIRouter` surfaces (health history, key quota, keys JWKS, FreeRoute register/status, system plane) — replacing the single-file `app.py` route style over time |
 | Sentinel | `sentinel/` | NVMe Sentinel engine binding (`nvme_sentinel` + `Profiler` into the app) |
 
 Peer (not in this repo): Cortex at `D:\Cortex` -> `http://127.0.0.1:8000` (URL wiring only).

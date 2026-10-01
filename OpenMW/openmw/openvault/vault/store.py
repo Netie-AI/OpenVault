@@ -37,7 +37,7 @@ ProviderKind = Literal[
     "custom",
 ]
 KeyRole = Literal["primary", "backup", "cheap", "free"]
-PrecheckStatus = Literal["unknown", "ok", "auth_fail", "rate_limit", "timeout", "error"]
+PrecheckStatus = Literal["unknown", "ok", "auth_fail", "rate_limit", "timeout", "error", "failed"]
 KeyLifecycle = Literal["active", "revoked", "rotated", "compromised"]
 
 #: Who owns the provider account behind this key, and therefore who pays.
