@@ -136,17 +136,25 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
         register_url="https://openrouter.ai/keys",
         docs_url="https://openrouter.ai/docs",
         health_path="/models",
-        free_notes="20+ free models via :free suffix; single key marketplace",
+        free_notes="Pinned :free ids only (prompt and completion price 0)",
         needed_by=("cortex", "airgpt", "openvault"),
         status_page="https://status.openrouter.ai/",
-        # Verified against https://openrouter.ai/api/v1/models. The previously pinned
-        # google/gemini-2.0-flash-001 had been retired and answered 404, which read as
-        # "OpenRouter is down" for weeks.
+        # Pinned 2026-10-01T08:00:04Z from https://openrouter.ai/api/v1/models.
+        # Every id had pricing.prompt == 0 and pricing.completion == 0 and ends
+        # with :free. Vision ids include "image" in architecture.input_modalities.
+        # Paid ids were parking a credit-less key as credits_exhausted.
         chat_models=(
-            "google/gemini-2.5-flash",
-            "meta-llama/llama-3.3-70b-instruct",
+            "nvidia/nemotron-3-ultra-550b-a55b:free",
+            "thinkingmachines/inkling:free",
+            "qwen/qwen3.8-27b:free",
+            "google/gemma-4-31b-it:free",
+            "nvidia/nemotron-3-super-120b-a12b:free",
         ),
-        vision_models=("google/gemini-2.5-flash",),
+        vision_models=(
+            "thinkingmachines/inkling:free",
+            "qwen/qwen3.8-27b:free",
+            "google/gemma-4-31b-it:free",
+        ),
     ),
     ProviderSpec(
         id="groq",
@@ -159,21 +167,21 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
         health_path="/models",
         free_notes="Fast free tier RPM; great fallback hop",
         needed_by=("cortex", "airgpt"),
-        # Verified against https://api.groq.com/openai/v1/models. Limits are per
-        # model per day (1K RPD, 8K TPM each), so listing several multiplies the
-        # usable budget instead of dying on the first 429.
+        # Verified 2026-10-01 against https://console.groq.com/docs/models and
+        # https://console.groq.com/docs/deprecations. Shutdown for free/developer:
+        # llama-3.1-8b-instant and llama-3.3-70b-versatile (2026-08-16),
+        # qwen/qwen3.6-27b (2026-09-14, successor qwen/qwen3.8-27b).
+        # qwen/qwen3.8-27b is the preview vision model (image input, 20 MB).
         chat_models=(
             "openai/gpt-oss-120b",
-            "qwen/qwen3.6-27b",
+            "qwen/qwen3.8-27b",
             "openai/gpt-oss-20b",
-            "llama-3.3-70b-versatile",
-            "llama-3.1-8b-instant",
         ),
-        vision_models=("qwen/qwen3.6-27b",),
+        vision_models=("qwen/qwen3.8-27b",),
         reasoning_models=(
             "openai/gpt-oss-120b",
             "openai/gpt-oss-20b",
-            "qwen/qwen3.6-27b",
+            "qwen/qwen3.8-27b",
         ),
     ),
     ProviderSpec(
@@ -227,10 +235,11 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
         health_path="/models",
         free_notes="Experiment / free credits on signup",
         needed_by=("cortex",),
+        # open-mistral-nemo retired 2026-07-31 (overview row open-mistral-nemo-2407):
+        # https://docs.mistral.ai/getting-started/models/models_overview/
         chat_models=(
             "mistral-small-latest",
             "ministral-8b-latest",
-            "open-mistral-nemo",
         ),
         vision_models=("mistral-small-latest",),
     ),
@@ -245,12 +254,11 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
         health_path="/models",
         free_notes="build.nvidia.com / NIM OpenAI-compatible; keys typically nvapi-…",
         needed_by=("airgpt", "cortex"),
-        chat_models=(
-            "meta/llama-3.1-8b-instruct",
-            "meta/llama-3.1-70b-instruct",
-            "mistralai/mistral-nemotron",
-            "nvidia/llama-3.1-nemotron-70b-instruct",
-        ),
+        # First id was on https://integrate.api.nvidia.com/v1/models at
+        # 2026-10-01T07:57:06Z. meta/llama-3.1-8b-instruct and
+        # meta/llama-3.1-70b-instruct were absent, so they are not the first hop.
+        # mistralai/mistral-nemotron was also absent from that list.
+        chat_models=("nvidia/llama-3.1-nemotron-70b-instruct",),
         reasoning_models=("nvidia/llama-3.1-nemotron-70b-instruct",),
     ),
     ProviderSpec(
@@ -318,14 +326,18 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
         register_url="https://cloud.cerebras.ai/",
         docs_url="https://inference-docs.cerebras.ai/",
         health_path="/models",
-        free_notes="High-speed free tier for Llama/Qwen",
+        free_notes="Trial ($5 credits, 30 days, 5 RPM), not a free tier",
         needed_by=("airgpt",),
-        # From D:\Netie\Free APIs for OpenVault Free\Free API.txt (2026-08).
+        # Models: https://inference-docs.cerebras.ai/models/overview
+        # Trial ($5 / 30 days / 5 RPM, not a renewing free tier):
+        # https://inference-docs.cerebras.ai/support/rate-limits
+        # qwen-3.8-27b accepts images (rate-limit footnote: image limits).
+        # llama-3.3-70b and llama3.1-8b are not in the shared catalog.
         chat_models=(
             "gpt-oss-120b",
-            "llama-3.3-70b",
-            "llama3.1-8b",
+            "qwen-3.8-27b",
         ),
+        vision_models=("qwen-3.8-27b",),
         reasoning_models=("gpt-oss-120b",),
     ),
     ProviderSpec(
