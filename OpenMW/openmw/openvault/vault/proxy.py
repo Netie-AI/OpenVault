@@ -550,6 +550,11 @@ _PIN_CIRCUIT = "circuit_open"
 _PIN_NO_HOP = "no_hop"
 _PIN_NOT_IN_CATALOG = "not_in_catalog"
 _PIN_PARK_REASONS = frozenset({_PIN_PARKED, _PIN_QUOTA})
+# Pin-site provider bind. The DMS pin is groq even when another catalog row
+# lists the same id (together also has openai/gpt-oss-120b).
+_STRICT_PIN_PROVIDER: dict[str, str] = {
+    "openai/gpt-oss-120b": "groq",
+}
 
 
 def strict_header_on(value: str | None) -> bool:
@@ -567,6 +572,14 @@ def pop_strict(body: dict[str, Any]) -> bool:
 
 def _hop_serves(provider: str, model: str, *, multimodal: bool) -> bool:
     return model in models_for(provider, multimodal=multimodal)
+
+
+def _strict_hop_serves(provider: str, pin: str, *, multimodal: bool) -> bool:
+    """Exact catalog id, and the bound provider when the pin names one."""
+    bound = _STRICT_PIN_PROVIDER.get(pin)
+    if bound is not None and provider != bound:
+        return False
+    return _hop_serves(provider, pin, multimodal=multimodal)
 
 
 def _retry_seconds(cooldown_ms: int) -> int | None:
@@ -637,7 +650,7 @@ def _why_pin_blocked(
     for record in vault.pooled_ordered():
         if record.custody != "pooled" or not record.enabled:
             continue
-        if not _hop_serves(record.provider, pin, multimodal=multimodal):
+        if not _strict_hop_serves(record.provider, pin, multimodal=multimodal):
             continue
         if record.precheck_status == "auth_fail":
             continue
@@ -690,7 +703,7 @@ def _strict_candidates(
         return [], (503, _pin_unavailable_body(pin, _PIN_NOT_IN_CATALOG)), None
     healthy: list[ProxyCandidate] = []
     for cand in candidates:
-        if not _hop_serves(cand.provider, pin, multimodal=multimodal):
+        if not _strict_hop_serves(cand.provider, pin, multimodal=multimodal):
             continue
         if not get_circuit_breaker(cand.provider).can_execute():
             continue
@@ -712,7 +725,7 @@ def _models_to_send(
 ) -> tuple[str, ...]:
     """Strict sends the pin only. Otherwise the existing per-hop catalog walk."""
     if strict_pin is not None:
-        if _hop_serves(provider, strict_pin, multimodal=multimodal):
+        if _strict_hop_serves(provider, strict_pin, multimodal=multimodal):
             return (strict_pin,)
         return ()
     return _models_for_hop(provider, requested, multimodal=multimodal)
