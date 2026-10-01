@@ -180,7 +180,46 @@ function writeSecrets(secrets: CredentialSecrets): string {
 
 export async function listCredentials(organizationId: string): Promise<SanitizedCredential[]> {
   const rows = await repos.credential.listByOrg(organizationId);
-  return rows.map(sanitizeCredential);
+  return [...rows.map(sanitizeCredential), ...(await listOpenVaultCredentials())];
+}
+
+/**
+ * Modified by Netie AI, 2026: the OpenVault keys FreeBuild would use for each
+ * OPENVAULT_MANAGED_CREDENTIAL_PROVIDERS provider, in the same masked shape as a
+ * local row. Without this the Settings page and GET /api/dns/credentials said
+ * "no Cloudflare credential" while resolveCredentialSecrets was using one.
+ * Lists key metadata only; no secret is revealed. OpenVault being unreachable
+ * fails the listing with the named 503, same as every other OpenVault read.
+ */
+async function listOpenVaultCredentials(): Promise<SanitizedCredential[]> {
+  const out: SanitizedCredential[] = [];
+  for (const providerId of OPENVAULT_MANAGED_CREDENTIAL_PROVIDERS) {
+    const provider = getCredentialProvider(providerId);
+    if (!provider) continue;
+    const secretKey = managedSecretFieldKey(provider);
+    for (const key of await findKeysForFreeBuildProvider(providerId)) {
+      out.push({
+        id: key.id,
+        provider: provider.id,
+        providerLabel: provider.label,
+        name: key.label,
+        selector: null,
+        publicFields: {},
+        secretsMasked: { [secretKey]: CREDENTIAL_MASK },
+        status: "active",
+        lastVerifiedAt: null,
+        lastError: null,
+        createdAt: openVaultTime(key.created_at),
+        updatedAt: openVaultTime(key.updated_at ?? key.created_at),
+      });
+    }
+  }
+  return out;
+}
+
+/** OpenVault reports times as Unix seconds. */
+function openVaultTime(value: unknown): Date {
+  return typeof value === "number" && Number.isFinite(value) ? new Date(value * 1000) : new Date(0);
 }
 
 export async function getCredential(

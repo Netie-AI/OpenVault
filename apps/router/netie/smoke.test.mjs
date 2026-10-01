@@ -14,13 +14,19 @@
 // per-run value used as the "management" bearer (isConfiguredEnvApiKey path
 // in src/lib/db/apiKeys.ts).
 //
+// The OpenVault stub enforces X-OpenVault-Admin like real OpenVault: every
+// route under /api/keys, /api/keyvault, /api/apikeys, /api/secrets,
+// /api/vault and /keys answers 401 openvault_unauthenticated when the header
+// is missing or wrong. The token is random per run, written to a mode-0600
+// temp file, and passed to the server as OPENVAULT_ADMIN_TOKEN_PATH.
+//
 // Run: npm run build:backend && npm run test:smoke
 
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createServer } from "node:http";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { randomBytes } from "node:crypto";
@@ -33,14 +39,29 @@ const OPENVAULT_VALID_TOKEN = `ovtok_smoke_${randomBytes(16).toString("hex")}`;
 const OPENVAULT_BOGUS_TOKEN = `ovtok_bogus_${randomBytes(16).toString("hex")}`;
 const OPENVAULT_KEY_ID = "key_smoke_test";
 const OPENVAULT_VERIFY_KEY_ID = "apikey_smoke_test";
+const OPENVAULT_ADMIN_TOKEN = `adm_smoke_${randomBytes(24).toString("hex")}`;
+const OPENVAULT_ADMIN_ROOTS = [
+  "/api/keys",
+  "/api/keyvault",
+  "/api/apikeys",
+  "/api/secrets",
+  "/api/vault",
+  "/keys",
+];
 
 let stubServer;
 let stubPort;
 let serverProcess;
 let appPort;
 let dataDir;
+let adminTokenDir;
 const serverLogs = [];
 let verifyCallCount = 0;
+let adminRejectedCount = 0;
+
+function pathNeedsAdmin(pathname) {
+  return OPENVAULT_ADMIN_ROOTS.some((root) => pathname === root || pathname.startsWith(`${root}/`));
+}
 
 /** Minimal OpenVault stub: /api/keys, /api/keys/{id}/secret, /api/apikeys/verify. */
 function startOpenVaultStub() {
@@ -48,6 +69,18 @@ function startOpenVaultStub() {
     const server = createServer((req, res) => {
       const url = new URL(req.url, "http://127.0.0.1");
       res.setHeader("content-type", "application/json");
+
+      if (
+        pathNeedsAdmin(url.pathname) &&
+        req.headers["x-openvault-admin"] !== OPENVAULT_ADMIN_TOKEN
+      ) {
+        adminRejectedCount += 1;
+        res.writeHead(401);
+        res.end(
+          JSON.stringify({ error: { message: "unauthorized", type: "openvault_unauthenticated" } })
+        );
+        return;
+      }
 
       if (url.pathname === "/api/keys" && req.method === "GET") {
         res.writeHead(200);
@@ -149,6 +182,9 @@ before(async () => {
 
   appPort = await getFreePort();
   dataDir = mkdtempSync(join(tmpdir(), "freeroute-smoke-"));
+  adminTokenDir = mkdtempSync(join(tmpdir(), "freeroute-smoke-ovadmin-"));
+  const adminTokenPath = join(adminTokenDir, "admin_token");
+  writeFileSync(adminTokenPath, `${OPENVAULT_ADMIN_TOKEN}\n`, { mode: 0o600 });
 
   serverProcess = spawn(process.execPath, ["scripts/dev/run-next.mjs", "start"], {
     cwd: ROOT,
@@ -161,6 +197,7 @@ before(async () => {
       HOSTNAME: "127.0.0.1",
       DATA_DIR: dataDir,
       OPENVAULT_URL: `http://127.0.0.1:${stubPort}`,
+      OPENVAULT_ADMIN_TOKEN_PATH: adminTokenPath,
       NODE_ENV: "production",
       DISABLE_SQLITE_AUTO_BACKUP: "true",
       OMNIROUTE_DISABLE_BACKGROUND_SERVICES: "true",
@@ -189,9 +226,10 @@ after(async () => {
     if (!serverProcess.killed) serverProcess.kill("SIGKILL");
   }
   if (stubServer) await new Promise((resolve) => stubServer.close(resolve));
-  if (dataDir) {
+  for (const dir of [dataDir, adminTokenDir]) {
+    if (!dir) continue;
     try {
-      rmSync(dataDir, { recursive: true, force: true });
+      rmSync(dir, { recursive: true, force: true });
     } catch {
       /* best-effort cleanup */
     }
@@ -282,6 +320,7 @@ test("an OpenVault-verified client token is accepted on /v1/models (non-401)", a
   });
   assert.notEqual(res.status, 401, `expected non-401, got ${res.status}: ${await res.text()}`);
   assert.ok(verifyCallCount > 0, "expected the server to call the OpenVault verify stub");
+  assert.equal(adminRejectedCount, 0, "server must send the OpenVault admin token on every call");
 });
 
 test("a bogus client token is rejected on /v1/models (401)", async () => {

@@ -66,7 +66,8 @@ export function proxy(req: NextRequest) {
   // flash on reload). `cookies()` / `headers().get("cookie")` can come back
   // empty in the SSR render path, but request cookies are always available
   // here in the proxy — so we inject a header the layout can read reliably.
-  const locale = req.cookies.get("openship-locale")?.value;
+  // Modified by Netie AI, 2026: same name as LOCALE_COOKIE in src/i18n/index.ts.
+  const locale = req.cookies.get("freebuild-locale")?.value;
   if (locale) requestHeaders.set("x-openship-locale", locale);
 
   // Same trick for the per-user product view (full platform vs Openship Mail).

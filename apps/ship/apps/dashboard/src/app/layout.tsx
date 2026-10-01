@@ -83,6 +83,8 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // Modified by Netie AI, 2026: the browser global is __FREEBUILD_API_ORIGIN__
+  // (was __OPENSHIP_API_ORIGIN__); it is visible in the page source.
   // Desktop runs the API on a dynamic free port. Mirror the server-side
   // OPENSHIP_LOCAL_API_URL into the browser so the client bundle's API base
   // (a module-load constant that can't read a runtime env) targets it. Read
@@ -115,7 +117,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {localApiOrigin ? (
           <script
             dangerouslySetInnerHTML={{
-              __html: `window.__OPENSHIP_API_ORIGIN__=${JSON.stringify(localApiOrigin)}`,
+              __html: `window.__FREEBUILD_API_ORIGIN__=${JSON.stringify(localApiOrigin)}`,
             }}
           />
         ) : null}

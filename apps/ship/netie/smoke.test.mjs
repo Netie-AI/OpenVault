@@ -1,4 +1,7 @@
 // Copyright (c) 2026 Netie AI. Licensed under Apache-2.0.
+// Modified by Netie AI, 2026: the stub OpenVault enforces X-OpenVault-Admin,
+// and the keyvault cases cover the admin token, openvault_forbidden and
+// revoked keys.
 //
 // FreeBuild smoke test (node:test, plain Node — no test framework dependency).
 // Run with `npm run test:smoke` from the repo root.
@@ -18,15 +21,22 @@
 //   4. The keyvault client (packages/core/src/netie/keyvault.ts) reads a key
 //      list and a secret from a stub OpenVault server, matching a FreeBuild
 //      provider by label, per the exact wire contract this fork implements.
+//   5. The keyvault client sends the OpenVault admin token (X-OpenVault-Admin,
+//      read from OPENVAULT_ADMIN_TOKEN_PATH) and maps a missing token file,
+//      a rejected token and a 403 openvault_forbidden to named 503 errors.
+//
+// The keyvault cases (4 and 5) need no build. Run only them with:
+//   node --import tsx --test --test-name-pattern=keyvault netie/smoke.test.mjs
 //
 // A stub HTTP server stands in for OpenVault for the whole run (`OPENVAULT_URL`
 // points at it) — the real OpenVault is never required to run this test.
 
-import { test, before, after } from "node:test";
+import { test, describe, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { spawn } from "node:child_process";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { randomBytes } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -56,14 +66,35 @@ const STUB_KEY = {
 };
 const STUB_SECRET = "stub-cloudflare-token-value";
 
+/** Random per run, written to a mode-0600 temp file like OpenVault's own. */
+const ADMIN_TOKEN = randomBytes(32).toString("hex");
+
 let revealCalls = 0;
+/** What GET /api/keys returns. Cases may swap it and must restore it. */
+let stubKeys = [STUB_KEY];
+/** When set, every keys route answers this 403 body (the guard or a sealed vault). */
+let stubForce403 = null;
 
 function startStubOpenVault() {
   const server = createServer((req, res) => {
     const url = new URL(req.url, "http://127.0.0.1");
+    // Real OpenVault (#84) guards every /api/keys route with the admin token,
+    // loopback included.
+    if (url.pathname === "/api/keys" || url.pathname.startsWith("/api/keys/")) {
+      if (req.headers["x-openvault-admin"] !== ADMIN_TOKEN) {
+        res.writeHead(401, { "content-type": "application/json" });
+        res.end(JSON.stringify({ error: { message: "unauthorized", type: "openvault_unauthenticated" } }));
+        return;
+      }
+      if (stubForce403) {
+        res.writeHead(403, { "content-type": "application/json" });
+        res.end(JSON.stringify(stubForce403));
+        return;
+      }
+    }
     if (req.method === "GET" && url.pathname === "/api/keys") {
       res.writeHead(200, { "content-type": "application/json" });
-      res.end(JSON.stringify({ keys: [STUB_KEY] }));
+      res.end(JSON.stringify({ keys: stubKeys }));
       return;
     }
     const secretMatch = url.pathname.match(/^\/api\/keys\/([^/]+)\/secret$/);
@@ -87,6 +118,9 @@ function startStubOpenVault() {
     res.writeHead(404, { "content-type": "application/json" });
     res.end(JSON.stringify({ error: "not found" }));
   });
+  // Unref'd so the stub alone never keeps the process alive. Node's test
+  // runner runs root-level after() hooks only once the event loop drains.
+  server.unref();
   return new Promise((resolve) => {
     server.listen(0, "127.0.0.1", () => resolve(server));
   });
@@ -116,12 +150,31 @@ let openVaultUrl;
 let apiProcess;
 let apiBaseUrl;
 let dataDir;
+let adminTokenPath;
 
+// Stub OpenVault and the token file serve every test. The API process is
+// started only by the "API process" suite below, so the keyvault cases run
+// without a build.
 before(async () => {
   stubOpenVault = await startStubOpenVault();
   openVaultUrl = `http://127.0.0.1:${stubOpenVault.address().port}`;
 
   dataDir = await mkdtemp(join(tmpdir(), "freebuild-smoke-"));
+  adminTokenPath = join(dataDir, "admin_token");
+  await writeFile(adminTokenPath, ADMIN_TOKEN, { mode: 0o600 });
+  process.env.OPENVAULT_ADMIN_TOKEN_PATH = adminTokenPath;
+});
+
+after(async () => {
+  stubOpenVault?.closeAllConnections();
+  stubOpenVault?.close();
+  if (dataDir) await rm(dataDir, { recursive: true, force: true }).catch(() => {});
+});
+
+// ─── API smoke tests ───────────────────────────────────────────────────────
+
+describe("API process", () => {
+before(async () => {
   const apiPort = 30000 + Math.floor(Math.random() * 10000);
   apiBaseUrl = `http://127.0.0.1:${apiPort}`;
 
@@ -138,6 +191,7 @@ before(async () => {
         INTERNAL_TOKEN: "smoke-test-internal-token",
         PGLITE_DATA_DIR: join(dataDir, "pglite"),
         OPENVAULT_URL: openVaultUrl,
+        OPENVAULT_ADMIN_TOKEN_PATH: adminTokenPath,
         // Disposable, isolated smoke-test instance only — lets an
         // unauthenticated loopback request act as admin so this script can
         // exercise an admin-gated route (POST /api/credentials) without
@@ -162,11 +216,7 @@ before(async () => {
 
 after(async () => {
   apiProcess?.kill("SIGTERM");
-  stubOpenVault?.close();
-  if (dataDir) await rm(dataDir, { recursive: true, force: true }).catch(() => {});
 });
-
-// ─── API smoke tests ───────────────────────────────────────────────────────
 
 test("health endpoint answers 200", async () => {
   const res = await fetch(`${apiBaseUrl}/api/health`);
@@ -199,6 +249,7 @@ test("saving a provider key (Cloudflare) answers 501 keys_managed_by_openvault",
   assert.equal(body.error.code, "keys_managed_by_openvault");
   assert.match(body.error.message, /OpenVault/);
   assert.match(body.error.message, /127\.0\.0\.1:3010\/keys/);
+});
 });
 
 // ─── keyvault.ts unit test (fast, no API process — imports the module directly) ──
@@ -244,4 +295,111 @@ test("keyvault client fails loud (never a silent fallback) when OpenVault is unr
     },
   );
   process.env.OPENVAULT_URL = openVaultUrl;
+});
+
+test("keyvault client sends the admin token: right token returns the secret", async () => {
+  process.env.OPENVAULT_URL = openVaultUrl;
+  process.env.OPENVAULT_ADMIN_TOKEN_PATH = adminTokenPath;
+  keyvault._resetSecretCacheForTests();
+  assert.equal(await keyvault.getSecret(STUB_KEY.id), STUB_SECRET);
+  assert.equal((await keyvault.listKeys()).length, 1);
+});
+
+test("keyvault client: missing token file is openvault_admin_token_unavailable", async () => {
+  process.env.OPENVAULT_URL = openVaultUrl;
+  const missing = join(dataDir, "no_such_admin_token");
+  process.env.OPENVAULT_ADMIN_TOKEN_PATH = missing;
+  keyvault._resetSecretCacheForTests();
+  try {
+    for (const call of [() => keyvault.listKeys(), () => keyvault.getSecret(STUB_KEY.id)]) {
+      await assert.rejects(call, (err) => {
+        assert.equal(err.code, "openvault_admin_token_unavailable");
+        assert.equal(err.statusCode, 503);
+        assert.ok(err.message.includes(missing), "the message names the path");
+        return true;
+      });
+    }
+  } finally {
+    process.env.OPENVAULT_ADMIN_TOKEN_PATH = adminTokenPath;
+  }
+});
+
+test("keyvault client: wrong token is openvault_admin_token_rejected and never leaks", async () => {
+  process.env.OPENVAULT_URL = openVaultUrl;
+  const wrongPath = join(dataDir, "wrong_admin_token");
+  const wrongToken = randomBytes(32).toString("hex");
+  await writeFile(wrongPath, wrongToken, { mode: 0o600 });
+  process.env.OPENVAULT_ADMIN_TOKEN_PATH = wrongPath;
+  keyvault._resetSecretCacheForTests();
+  try {
+    for (const call of [() => keyvault.listKeys(), () => keyvault.getSecret(STUB_KEY.id)]) {
+      await assert.rejects(call, (err) => {
+        assert.equal(err.code, "openvault_admin_token_rejected");
+        assert.equal(err.statusCode, 503);
+        assert.ok(!err.message.includes(wrongToken), "the token must not appear in the error");
+        assert.ok(!(err.stack ?? "").includes(wrongToken), "the token must not appear in the stack");
+        return true;
+      });
+    }
+  } finally {
+    process.env.OPENVAULT_ADMIN_TOKEN_PATH = adminTokenPath;
+  }
+});
+
+test("keyvault client: 403 openvault_forbidden is openvault_forbidden, not sealed", async () => {
+  process.env.OPENVAULT_URL = openVaultUrl;
+  process.env.OPENVAULT_ADMIN_TOKEN_PATH = adminTokenPath;
+  keyvault._resetSecretCacheForTests();
+  stubForce403 = { error: { message: "forbidden", type: "openvault_forbidden" } };
+  try {
+    for (const call of [() => keyvault.listKeys(), () => keyvault.getSecret(STUB_KEY.id)]) {
+      await assert.rejects(call, (err) => {
+        assert.equal(err.code, "openvault_forbidden");
+        assert.equal(err.statusCode, 503);
+        assert.notEqual(err.name, "OpenVaultSealedError");
+        return true;
+      });
+    }
+  } finally {
+    stubForce403 = null;
+  }
+});
+
+test("keyvault client: a reveal 403 without openvault_forbidden still means sealed", async () => {
+  process.env.OPENVAULT_URL = openVaultUrl;
+  process.env.OPENVAULT_ADMIN_TOKEN_PATH = adminTokenPath;
+  keyvault._resetSecretCacheForTests();
+  stubForce403 = { detail: "vault is sealed" };
+  try {
+    await assert.rejects(
+      () => keyvault.getSecret(STUB_KEY.id),
+      (err) => {
+        assert.equal(err.code, "openvault_keyvault_sealed");
+        assert.equal(err.statusCode, 503);
+        return true;
+      },
+    );
+  } finally {
+    stubForce403 = null;
+  }
+});
+
+test("keyvault client: findKeysForFreeBuildProvider skips revoked and replaced keys", async () => {
+  process.env.OPENVAULT_URL = openVaultUrl;
+  process.env.OPENVAULT_ADMIN_TOKEN_PATH = adminTokenPath;
+  const revoked = { ...STUB_KEY, id: "key_stub_cloudflare_revoked", priority: 0, lifecycle: "revoked" };
+  const replaced = { ...STUB_KEY, id: "key_stub_cloudflare_replaced", lifecycle: "replaced" };
+  const noLifecycle = { ...STUB_KEY, id: "key_stub_cloudflare_legacy" };
+  delete noLifecycle.lifecycle;
+  stubKeys = [revoked, replaced, STUB_KEY, noLifecycle];
+  try {
+    const ids = (await keyvault.findKeysForFreeBuildProvider("cloudflare")).map((k) => k.id);
+    assert.deepEqual(ids, [STUB_KEY.id, noLifecycle.id]);
+    assert.equal((await keyvault.findKeyForFreeBuildProvider("cloudflare")).id, STUB_KEY.id);
+
+    stubKeys = [revoked];
+    assert.deepEqual(await keyvault.findKeysForFreeBuildProvider("cloudflare"), []);
+  } finally {
+    stubKeys = [STUB_KEY];
+  }
 });

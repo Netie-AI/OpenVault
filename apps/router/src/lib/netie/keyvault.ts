@@ -11,38 +11,175 @@
 //   GET  {OPENVAULT_URL}/api/keys                        -> the account's keys (no plaintext)
 //   GET  {OPENVAULT_URL}/api/keys/{id}/secret             -> {id, secret} (audited, loopback only)
 //
+// Every call also sends X-OpenVault-Admin. OpenVault requires it on every
+// route under /api/keys, /api/keyvault, /api/apikeys, /api/secrets,
+// /api/vault and /keys, from loopback too. The value is the token in the
+// mode-0600 file OpenVault creates on first start:
+//
+//   $OPENVAULT_ADMIN_TOKEN_PATH, else $OPENVAULT_HOME/admin_token,
+//   else ~/.openvault/admin_token
+//
+// The file is read per OpenVault call (the 60s caches below bound how often
+// that happens). The token is never logged and never put in an error message;
+// only the path is.
+//
 // Plaintext secrets are cached in memory only, for at most CACHE_TTL_MS, and
-// are never written to disk or logged. If OpenVault cannot be reached, this
-// throws `OpenVaultUnreachableError` (HTTP 503, code
-// `openvault_keyvault_unreachable`), callers must not fall back to a local
-// store.
+// are never written to disk or logged. Every OpenVault failure throws an
+// `OpenVaultUnreachableError` (HTTP 503) whose `code` names the cause:
+//
+//   openvault_keyvault_unreachable      OpenVault down, timed out, or other error
+//   openvault_admin_token_unavailable   admin token file missing or empty
+//   openvault_admin_token_rejected      OpenVault answered 401 to the token
+//   openvault_keyvault_sealed           secret reveal refused because the vault is sealed
+//
+// Callers must not fall back to a local store.
 //
 // Choke point: src/sse/services/auth.ts `materializeConnection()` calls
 // `resolveProviderApiKey()` here in place of reading `connection.apiKey` for
 // every `authType: "apikey"` connection.
+
+import { readFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 
 const DEFAULT_OPENVAULT_URL = "http://127.0.0.1:5000";
 const CACHE_TTL_MS = 60_000;
 const REQUEST_TIMEOUT_MS = 5_000;
 const REVEAL_HEADER = "X-OpenVault-Reveal";
 const REVEAL_HEADER_VALUE = "intentional";
+const ADMIN_HEADER = "X-OpenVault-Admin";
 
 export const KEYS_MANAGED_BY_OPENVAULT_CODE = "keys_managed_by_openvault";
 export const OPENVAULT_KEYVAULT_UNREACHABLE_CODE = "openvault_keyvault_unreachable";
+export const OPENVAULT_ADMIN_TOKEN_UNAVAILABLE_CODE = "openvault_admin_token_unavailable";
+export const OPENVAULT_ADMIN_TOKEN_REJECTED_CODE = "openvault_admin_token_rejected";
+export const OPENVAULT_KEYVAULT_SEALED_CODE = "openvault_keyvault_sealed";
+
+export type OpenVaultErrorCode =
+  | typeof OPENVAULT_KEYVAULT_UNREACHABLE_CODE
+  | typeof OPENVAULT_ADMIN_TOKEN_UNAVAILABLE_CODE
+  | typeof OPENVAULT_ADMIN_TOKEN_REJECTED_CODE
+  | typeof OPENVAULT_KEYVAULT_SEALED_CODE;
 
 function openVaultBaseUrl(): string {
   const raw = process.env.OPENVAULT_URL?.trim() || DEFAULT_OPENVAULT_URL;
   return raw.replace(/\/+$/, "");
 }
 
+function expandHome(path: string): string {
+  if (path === "~") return homedir();
+  if (path.startsWith("~/")) return join(homedir(), path.slice(2));
+  return path;
+}
+
+/** Same resolution order as OpenVault's admin_token_path(). */
+export function resolveAdminTokenPath(): string {
+  const override = process.env.OPENVAULT_ADMIN_TOKEN_PATH?.trim();
+  if (override) return expandHome(override);
+  const home = process.env.OPENVAULT_HOME?.trim();
+  if (home) return join(expandHome(home), "admin_token");
+  return join(homedir(), ".openvault", "admin_token");
+}
+
 /** Thrown whenever OpenVault cannot be reached or answers with an error. Never swallow this into a silent fallback. */
 export class OpenVaultUnreachableError extends Error {
   readonly status = 503 as const;
-  readonly code = OPENVAULT_KEYVAULT_UNREACHABLE_CODE;
-  constructor(message?: string) {
+  readonly code: OpenVaultErrorCode;
+  constructor(message?: string, code: OpenVaultErrorCode = OPENVAULT_KEYVAULT_UNREACHABLE_CODE) {
     super(message ?? `OpenVault KeyVault is unreachable at ${openVaultBaseUrl()}.`);
     this.name = "OpenVaultUnreachableError";
+    this.code = code;
   }
+}
+
+/** The admin token file is missing, unreadable or empty. */
+export class OpenVaultAdminTokenUnavailableError extends OpenVaultUnreachableError {
+  readonly path: string;
+  constructor(path: string, reason: string) {
+    super(
+      `OpenVault admin token not available at ${path} (${reason}). OpenVault creates this file ` +
+        `on first start. Start OpenVault once, or set OPENVAULT_ADMIN_TOKEN_PATH to the file it created.`,
+      OPENVAULT_ADMIN_TOKEN_UNAVAILABLE_CODE
+    );
+    this.name = "OpenVaultAdminTokenUnavailableError";
+    this.path = path;
+  }
+}
+
+/** OpenVault answered 401 to the admin token we sent. */
+export class OpenVaultAdminTokenRejectedError extends OpenVaultUnreachableError {
+  readonly path: string;
+  constructor(path: string, route: string) {
+    super(
+      `OpenVault rejected the admin token read from ${path} (401 on ${route}). ` +
+        `Typical cause: OPENVAULT_HOME or OPENVAULT_ADMIN_TOKEN_PATH points at a different vault ` +
+        `than the one running at ${openVaultBaseUrl()}.`,
+      OPENVAULT_ADMIN_TOKEN_REJECTED_CODE
+    );
+    this.name = "OpenVaultAdminTokenRejectedError";
+    this.path = path;
+  }
+}
+
+/** OpenVault refused a secret reveal because the vault is sealed. */
+export class OpenVaultKeyVaultSealedError extends OpenVaultUnreachableError {
+  constructor(route: string) {
+    super(
+      `OpenVault KeyVault at ${openVaultBaseUrl()} is sealed (403 on ${route}). ` +
+        `Unseal it in OpenVault, then retry.`,
+      OPENVAULT_KEYVAULT_SEALED_CODE
+    );
+    this.name = "OpenVaultKeyVaultSealedError";
+  }
+}
+
+/**
+ * True for any KeyVault error, including one that crossed a module boundary
+ * (duck-typed on name and code, so a second copy of this module still matches).
+ */
+export function isOpenVaultKeyVaultError(error: unknown): error is OpenVaultUnreachableError {
+  if (error instanceof OpenVaultUnreachableError) return true;
+  if (!error || typeof error !== "object") return false;
+  const e = error as { status?: unknown; code?: unknown };
+  return (
+    e.status === 503 &&
+    typeof e.code === "string" &&
+    (e.code === OPENVAULT_KEYVAULT_UNREACHABLE_CODE ||
+      e.code === OPENVAULT_ADMIN_TOKEN_UNAVAILABLE_CODE ||
+      e.code === OPENVAULT_ADMIN_TOKEN_REJECTED_CODE ||
+      e.code === OPENVAULT_KEYVAULT_SEALED_CODE)
+  );
+}
+
+/** JSON 503 a route returns for a KeyVault error. The body carries the specific code. */
+export function openVaultErrorResponse(
+  error: OpenVaultUnreachableError,
+  headers: Record<string, string> = {}
+): Response {
+  return new Response(
+    JSON.stringify({
+      error: { code: error.code, type: error.code, message: error.message },
+    }),
+    { status: error.status, headers: { ...headers, "content-type": "application/json" } }
+  );
+}
+
+/** Read the admin token for one OpenVault call. Throws OpenVaultAdminTokenUnavailableError. */
+function readAdminToken(): { token: string; path: string } {
+  const path = resolveAdminTokenPath();
+  let raw: string;
+  try {
+    raw = readFileSync(path, "utf8");
+  } catch (error) {
+    const errno = (error as NodeJS.ErrnoException)?.code;
+    throw new OpenVaultAdminTokenUnavailableError(
+      path,
+      errno === "ENOENT" ? "file not found" : `cannot read file${errno ? `: ${errno}` : ""}`
+    );
+  }
+  const token = raw.trim();
+  if (!token) throw new OpenVaultAdminTokenUnavailableError(path, "file is empty");
+  return { token, path };
 }
 
 export interface OpenVaultKey {
@@ -61,15 +198,53 @@ export interface OpenVaultKey {
   [extra: string]: unknown;
 }
 
-async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
+async function readErrorType(response: Response): Promise<{ type?: string; detail?: string }> {
+  try {
+    const body = (await response.json()) as {
+      error?: { type?: unknown };
+      detail?: unknown;
+    };
+    return {
+      type: typeof body?.error?.type === "string" ? body.error.type : undefined,
+      detail: typeof body?.detail === "string" ? body.detail : undefined,
+    };
+  } catch {
+    return {};
+  }
+}
+
+async function fetchJson<T>(
+  url: string,
+  init: RequestInit & { headers?: Record<string, string> } = {},
+  opts: { isSecretReveal?: boolean } = {}
+): Promise<T> {
+  const { token, path } = readAdminToken();
+  const route = url.replace(openVaultBaseUrl(), "");
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
-    const response = await fetch(url, { ...init, signal: controller.signal });
-    if (!response.ok) {
+    const response = await fetch(url, {
+      ...init,
+      headers: { ...(init.headers ?? {}), [ADMIN_HEADER]: token },
+      signal: controller.signal,
+    });
+    if (response.status === 401) {
+      throw new OpenVaultAdminTokenRejectedError(path, route);
+    }
+    if (response.status === 403 && opts.isSecretReveal) {
+      const { type, detail } = await readErrorType(response);
+      // openvault_forbidden is the guard's bad-bearer answer, not a sealed vault.
+      // Other 403s on reveal (loopback-only, reveal intent) carry a detail that
+      // does not mention the seal.
+      if (type !== "openvault_forbidden" && (detail === undefined || /seal/i.test(detail))) {
+        throw new OpenVaultKeyVaultSealedError(route);
+      }
       throw new OpenVaultUnreachableError(
-        `OpenVault responded ${response.status} for ${url.replace(openVaultBaseUrl(), "")}.`
+        `OpenVault responded 403 for ${route}${type ? ` (${type})` : detail ? `: ${detail}` : ""}.`
       );
+    }
+    if (!response.ok) {
+      throw new OpenVaultUnreachableError(`OpenVault responded ${response.status} for ${route}.`);
     }
     return (await response.json()) as T;
   } catch (error) {
@@ -119,7 +294,8 @@ async function revealSecret(keyId: string): Promise<string> {
 
   const request = fetchJson<{ id: string; secret: string }>(
     `${openVaultBaseUrl()}/api/keys/${encodeURIComponent(keyId)}/secret`,
-    { headers: { [REVEAL_HEADER]: REVEAL_HEADER_VALUE } }
+    { headers: { [REVEAL_HEADER]: REVEAL_HEADER_VALUE } },
+    { isSecretReveal: true }
   )
     .then((body) => {
       secretCache.set(keyId, { at: Date.now(), secret: body.secret });
@@ -218,23 +394,50 @@ function pickBestKey(keys: OpenVaultKey[]): OpenVaultKey | null {
   return best;
 }
 
+/** Lowercased origin + path without trailing slashes, or null when not an absolute http(s) URL. */
+export function normalizeBaseUrl(value: string | null | undefined): string | null {
+  if (!value || typeof value !== "string") return null;
+  try {
+    const url = new URL(value.trim());
+    if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+    return `${url.protocol}//${url.host}${url.pathname.replace(/\/+$/, "")}`.toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
 // ── Public API ────────────────────────────────────────────────────────────
 
 /**
  * Resolve the plaintext API key FreeRoute should use for `routerProviderId`
  * right now, or `null` when OpenVault has no usable (enabled + active) key
- * for that provider. Throws `OpenVaultUnreachableError` if OpenVault itself
- * cannot be reached, callers must propagate that as a loud 503, never a
- * silent fallback to a locally stored value.
+ * for it. Throws `OpenVaultUnreachableError` if OpenVault itself cannot be
+ * reached, callers must propagate that as a loud 503, never a silent fallback
+ * to a locally stored value.
+ *
+ * Selection, first match wins:
+ *   1. a usable key whose `base_url` is the connection's base URL. This is how
+ *      an OpenAI-compatible node (id `openai-compatible-*`, any host) finds
+ *      the key the operator stored in OpenVault for that exact endpoint;
+ *      the provider-id map below cannot name those.
+ *   2. a usable key whose `provider` is the mapped OpenVault provider.
  */
 export async function resolveProviderApiKey(
   routerProviderId: string,
   opts: { baseUrl?: string | null } = {}
 ): Promise<string | null> {
-  const ovProvider = mapToOpenVaultProvider(routerProviderId, opts.baseUrl);
   const allKeys = await fetchAllKeys();
-  const candidates = allKeys.filter((k) => k.provider === ovProvider);
-  const best = pickBestKey(candidates);
+
+  const wantedBaseUrl = normalizeBaseUrl(opts.baseUrl);
+  if (wantedBaseUrl) {
+    const byEndpoint = pickBestKey(
+      allKeys.filter((k) => normalizeBaseUrl(k.base_url ?? null) === wantedBaseUrl)
+    );
+    if (byEndpoint) return revealSecret(byEndpoint.id);
+  }
+
+  const ovProvider = mapToOpenVaultProvider(routerProviderId, opts.baseUrl);
+  const best = pickBestKey(allKeys.filter((k) => k.provider === ovProvider));
   if (!best) return null;
   return revealSecret(best.id);
 }
@@ -271,8 +474,10 @@ function warnOnceVerifyUnreachable(error: unknown): void {
   // invalid token with OpenVault down must not spam the log.
   if (now - unreachableWarningLoggedAt < CACHE_TTL_MS) return;
   unreachableWarningLoggedAt = now;
+  // The error message never contains the admin token, only its path.
+  const code = isOpenVaultKeyVaultError(error) ? error.code : OPENVAULT_KEYVAULT_UNREACHABLE_CODE;
   console.warn(
-    `[keyvault] openvault_keyvault_unreachable: could not verify an inbound client token at ` +
+    `[keyvault] ${code}: could not verify an inbound client token at ` +
       `${openVaultBaseUrl()}/api/apikeys/verify, treating it as invalid. ` +
       `${error instanceof Error ? error.message : String(error)}`
   );
@@ -289,7 +494,8 @@ function warnOnceVerifyUnreachable(error: unknown): void {
  * an unreachable OpenVault must fail closed for inbound auth, the mirror image
  * of `resolveProviderApiKey` failing loud (503) for outbound provider keys:
  * here there is no safe "loud" option mid-request-auth, so the token is
- * simply rejected and a rate-limited warning is logged.
+ * simply rejected and a rate-limited warning naming the error code is logged.
+ * The same applies to a missing or rejected admin token.
  */
 export async function verifyClientToken(token: string | null | undefined): Promise<ClientTokenVerification> {
   if (!token || typeof token !== "string") return INVALID_VERIFICATION;
@@ -333,6 +539,7 @@ export async function verifyClientToken(token: string | null | undefined): Promi
 
 /** Test-only: drop the in-memory list/secret/verify caches. */
 export function __resetKeyVaultCacheForTest(): void {
+  unreachableWarningLoggedAt = 0;
   keysCache = null;
   keysInflight = null;
   secretCache.clear();

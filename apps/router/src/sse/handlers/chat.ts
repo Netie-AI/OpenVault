@@ -73,6 +73,11 @@ import { isChatGptWebCodexModel } from "@/shared/constants/chatgptWebCodex";
 import { deleteHandoff, getHandoff } from "@/lib/db/contextHandoffs";
 import { getComboByName, updateCombo } from "@/lib/db/combos";
 import { isModelAllowedForKey } from "@/lib/db/apiKeys";
+import {
+  isOpenVaultKeyVaultError,
+  openVaultErrorResponse,
+  type OpenVaultUnreachableError,
+} from "@/lib/netie/keyvault";
 import { promoteSuccessfulComboModel } from "@/lib/combos/autoPromote";
 import {
   deleteSessionAccountAffinity,
@@ -1025,6 +1030,16 @@ async function handleChatImplementation(
     // Pre-check function used by combo routing. For explicit combo live tests,
     // avoid pre-skipping so each model gets a real execution attempt.
     const comboPreselectedCredentials = new Map<string, any>();
+    // FreeRoute: a KeyVault failure (OpenVault down, admin token missing or
+    // rejected, vault sealed) seen by any combo target. The combo may still try
+    // targets that need no key, but a failed final answer must name this cause.
+    let comboKeyVaultError = null as OpenVaultUnreachableError | null;
+    const noteKeyVaultError = (error: unknown): boolean => {
+      if (!isOpenVaultKeyVaultError(error)) return false;
+      comboKeyVaultError = error;
+      log.warn("CHAT", `Combo target skipped, KeyVault error ${error.code}: ${error.message}`);
+      return true;
+    };
     const getComboCredentialCacheKey = (
       modelString: string,
       target?: { connectionId?: string | null; executionKey?: string | null }
@@ -1093,19 +1108,25 @@ async function handleChatImplementation(
         return false;
       }
 
-      const creds = await getProviderCredentialsWithQuotaPreflight(
-        provider,
-        null,
-        allowedConnections,
-        resolvedModel,
-        {
-          sessionKey: sessionAffinityKey,
-          ...(target?.allowRateLimitedConnection ? { allowRateLimitedConnections: true } : {}),
-          ...(target?.connectionId ? { forcedConnectionId: target.connectionId } : {}),
-          ...(bypassProviderQuotaPolicy ? { bypassQuotaPolicy: true } : {}),
-          ...(managedLease ? { lease: credentialLease(managedLease) } : {}),
-        }
-      );
+      let creds;
+      try {
+        creds = await getProviderCredentialsWithQuotaPreflight(
+          provider,
+          null,
+          allowedConnections,
+          resolvedModel,
+          {
+            sessionKey: sessionAffinityKey,
+            ...(target?.allowRateLimitedConnection ? { allowRateLimitedConnections: true } : {}),
+            ...(target?.connectionId ? { forcedConnectionId: target.connectionId } : {}),
+            ...(bypassProviderQuotaPolicy ? { bypassQuotaPolicy: true } : {}),
+            ...(managedLease ? { lease: credentialLease(managedLease) } : {}),
+          }
+        );
+      } catch (error) {
+        if (noteKeyVaultError(error)) return false;
+        throw error;
+      }
       if (
         !creds ||
         ("allRateLimited" in creds && creds.allRateLimited) ||
@@ -1141,7 +1162,7 @@ async function handleChatImplementation(
     // because only this layer knows which connectionId was actually selected.
     const { defer: deferContextOverflowWhenCompressible, exclusions: compressionExclusions } =
       await resolveComboContextOverflowDeferral(log, apiKeyInfo);
-    const response = await (handleComboChat as any)({
+    let response = await (handleComboChat as any)({
       body,
       combo,
       deferContextOverflowWhenCompressible,
@@ -1222,17 +1243,26 @@ async function handleChatImplementation(
           },
           target?.effectiveComboStrategy ?? combo.strategy,
           true
-        ).then(async (res: Response) => {
-          // Auto-promote the winning combo model to position #1 (opt-in flag).
-          if (res?.ok)
-            await promoteSuccessfulComboModel(
-              combo,
-              m,
-              settings as Record<string, unknown>,
-              comboPromoteDeps
-            );
-          return res;
-        }),
+        )
+          .then(async (res: Response) => {
+            // Auto-promote the winning combo model to position #1 (opt-in flag).
+            if (res?.ok)
+              await promoteSuccessfulComboModel(
+                combo,
+                m,
+                settings as Record<string, unknown>,
+                comboPromoteDeps
+              );
+            return res;
+          })
+          .catch((error: unknown) => {
+            // FreeRoute: return the named 503 instead of letting the combo
+            // runner turn the throw into an anonymous 502.
+            if (noteKeyVaultError(error)) {
+              return openVaultErrorResponse(error as OpenVaultUnreachableError);
+            }
+            throw error;
+          }),
       isModelAvailable: checkModelAvailable,
       log,
       settings,
@@ -1301,8 +1331,16 @@ async function handleChatImplementation(
           `Global fallback ${fallbackModel} also failed (${fallbackResponse.status})`
         );
       } catch (err: any) {
+        noteKeyVaultError(err);
         log.warn("GLOBAL_FALLBACK", `Global fallback error: ${err?.message || "unknown"}`);
       }
+    }
+
+    // FreeRoute: if nothing succeeded and a target failed on KeyVault, the
+    // client gets the named 503 (for example openvault_admin_token_rejected),
+    // not a generic "all models failed".
+    if (!response.ok && comboKeyVaultError) {
+      response = openVaultErrorResponse(comboKeyVaultError);
     }
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -1395,7 +1433,21 @@ async function handleChatImplementation(
   );
 }
 
-export const handleChat = chatAdmission.withChatAdmission(handleChatImplementation);
+// FreeRoute: every route that calls handleChat (chat/completions, messages,
+// responses, completions, v1beta, relay, ...) gets the named KeyVault 503 with
+// its specific code in the body, instead of a framework-generic 500.
+async function handleChatWithKeyVaultErrors(
+  ...args: Parameters<typeof handleChatImplementation>
+): Promise<Response> {
+  try {
+    return await handleChatImplementation(...args);
+  } catch (error) {
+    if (isOpenVaultKeyVaultError(error)) return openVaultErrorResponse(error);
+    throw error;
+  }
+}
+
+export const handleChat = chatAdmission.withChatAdmission(handleChatWithKeyVaultErrors);
 
 /** Handle one resolved model through gates, credentials, and retry/fallback. */
 async function handleSingleModelChat(

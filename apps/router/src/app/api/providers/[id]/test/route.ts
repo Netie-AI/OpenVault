@@ -25,6 +25,8 @@ import {
   shouldFallbackToPublicCodeSuggestions,
 } from "@/lib/oauth/gitlab";
 import { providerAllowsOptionalApiKey } from "@/shared/constants/providers";
+import { getRegistryEntry } from "@omniroute/open-sse/config/providerRegistry.ts";
+import { isOpenVaultKeyVaultError, resolveProviderApiKey } from "@/lib/netie/keyvault";
 import { shouldUseApiKeyConnectionTest } from "./webSessionTestDispatch";
 import { testCodexAppServerConnection, makeDiagnosis } from "./codexAppServerHealth";
 import { recoverKeyHealth } from "@omniroute/open-sse/services/apiKeyRotator.ts";
@@ -881,7 +883,32 @@ export async function testOAuthConnection(
 /**
  * Test API key connection
  */
-async function testApiKeyConnection(connection: any) {
+async function testApiKeyConnection(rawConnection: any) {
+  // FreeRoute: the connection row never holds the provider key, OpenVault
+  // does. Test with the same key a real request would use (see
+  // materializeConnection in src/sse/services/auth.ts). Without this every
+  // key-requiring connection failed its test and stayed inactive forever.
+  let connection = rawConnection;
+  if (rawConnection?.authType === "apikey" && !rawConnection.apiKey) {
+    const psd = (rawConnection.providerSpecificData as Record<string, unknown> | null) || {};
+    try {
+      const vaultKey = await resolveProviderApiKey(rawConnection.provider, {
+        baseUrl:
+          (typeof psd.baseUrl === "string" && psd.baseUrl) ||
+          getRegistryEntry(rawConnection.provider)?.baseUrl ||
+          null,
+      });
+      if (vaultKey) connection = { ...rawConnection, apiKey: vaultKey };
+    } catch (error) {
+      if (!isOpenVaultKeyVaultError(error)) throw error;
+      return {
+        valid: false,
+        error: `${error.code}: ${error.message}`,
+        diagnosis: makeDiagnosis("upstream_unavailable", "local", error.message, error.code),
+      };
+    }
+  }
+
   const requiresApiKey = !providerAllowsOptionalApiKey(connection.provider);
   if (requiresApiKey && !connection.apiKey) {
     const error = "Missing API key";

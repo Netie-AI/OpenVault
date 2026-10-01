@@ -1,3 +1,5 @@
+// Modified by Netie AI, 2026: the browser global is __FREEBUILD_API_ORIGIN__
+// (was __OPENSHIP_API_ORIGIN__); it is visible in the page source.
 import { DASHBOARD_RUNTIME_TARGETS, DEFAULT_PORT, alignLoopbackOrigin } from "@repo/core";
 
 // Re-exported for existing importers (and urls.test.ts). The implementation now
@@ -80,12 +82,12 @@ function sameOriginProxyOrigin(): string | null {
 // The desktop app runs the API on a DYNAMIC free port that isn't in the static
 // runtime-target table, so origin-based resolution can't find it. Electron sets
 // `OPENSHIP_LOCAL_API_URL` on the dashboard server; the root layout mirrors it
-// into `window.__OPENSHIP_API_ORIGIN__` for the browser bundle (whose base URL
+// into `window.__FREEBUILD_API_ORIGIN__` for the browser bundle (whose base URL
 // is a module-load constant — a build-time NEXT_PUBLIC var can't carry it).
 
 function localApiOverride(): string | null {
   if (typeof window !== "undefined") {
-    const injected = (window as { __OPENSHIP_API_ORIGIN__?: string }).__OPENSHIP_API_ORIGIN__;
+    const injected = (window as { __FREEBUILD_API_ORIGIN__?: string }).__FREEBUILD_API_ORIGIN__;
     if (!injected) return null;
     return alignLoopbackOrigin(injected.replace(/\/+$/, ""), window.location.origin);
   }

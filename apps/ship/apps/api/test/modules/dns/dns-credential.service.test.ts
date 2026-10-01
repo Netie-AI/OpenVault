@@ -46,7 +46,9 @@ vi.mock("@repo/core", async (importOriginal) => {
     OPENVAULT_MANAGED_CREDENTIAL_PROVIDERS: new Set(["cloudflare"]),
     findKeysForFreeBuildProvider: async (providerId: string) => {
       if (providerId !== "cloudflare") return [];
-      const rows = await credentialRepo.listActiveByProvider("org_1", "cloudflare");
+      // `?? []`: listCredentials now also lists OpenVault keys, and the
+      // sanitization cases leave this mock unconfigured.
+      const rows = (await credentialRepo.listActiveByProvider("org_1", "cloudflare")) ?? [];
       return rows.map((row: { id: string; secretsEnc: string }) => {
         rowById.set(row.id, row);
         return { id: row.id, label: "Cloudflare (test)", provider: "cloudflare", enabled: true };

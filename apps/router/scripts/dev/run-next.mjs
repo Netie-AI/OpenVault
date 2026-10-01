@@ -39,7 +39,7 @@ if (fs.existsSync(rootAppDir) && fs.statSync(rootAppDir).isDirectory()) {
   console.error(`A root-level 'app/' directory was found at: ${rootAppDir}`);
   console.error("This conflicts with the 'src/app/' directory on Windows environments.");
   console.error("Next.js will serve 404s for all pages because it prefers the root 'app/' folder.");
-  console.error("Please rename or delete the root 'app/' directory before starting OmniRoute.\n");
+  console.error("Please rename or delete the root 'app/' directory before starting FreeRoute.\n");
   process.exit(1);
 }
 

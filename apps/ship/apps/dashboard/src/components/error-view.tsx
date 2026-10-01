@@ -1,7 +1,5 @@
 "use client";
 
-import { Icon as UiIcon } from "@repo/ui/icons";
-
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Logo } from "@/components/logo";
@@ -104,7 +102,6 @@ export function ErrorView({
   // fork's site); a caller may still pass its own docsHref.
   docsHref,
   docsLabel,
-  githubLabel,
 }: {
   variant: "crash" | "offline";
   /** Product name for the brand lockup (localized by the caller). */
@@ -119,7 +116,6 @@ export function ErrorView({
   actions: ErrorAction[];
   docsHref?: string;
   docsLabel: string;
-  githubLabel: string;
 }) {
   return (
     <div className="mx-auto flex w-full max-w-md flex-col items-center text-center">
@@ -180,9 +176,8 @@ export function ErrorView({
 
       {/* Escape hatches. These screens are where a self-hoster is most stuck.
           Modified by Netie AI, 2026: the docs link only renders when a caller
-          passes one (openship.io was never this fork's site), and the GitHub
-          link now credits the upstream project instead of implying an issue
-          tracker this fork doesn't use. */}
+          passes one (openship.io was never this fork's site). The upstream
+          GitHub link is gone: upstream credit belongs on the notices only. */}
       <div className="mt-6 flex items-center gap-5 text-xs text-muted-foreground/60">
         {docsHref && (
           <a
@@ -194,16 +189,6 @@ export function ErrorView({
             {docsLabel}
           </a>
         )}
-        {docsHref && <span aria-hidden className="size-1 rounded-full bg-muted-foreground/30" />}
-        <a
-          href="https://github.com/oblien/openship"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground"
-        >
-          <UiIcon name="github" className="size-3.5" />
-          {githubLabel}
-        </a>
       </div>
     </div>
   );

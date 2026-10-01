@@ -1,3 +1,5 @@
+// Modified by Netie AI, 2026: the browser global is __FREEBUILD_API_ORIGIN__
+// (was __OPENSHIP_API_ORIGIN__); it is visible in the page source.
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { alignLoopbackOrigin, resolveApiNavigationUrl } from "./urls";
@@ -22,7 +24,7 @@ describe("external MCP endpoint", () => {
     vi.stubEnv("NEXT_PUBLIC_API_PROXY", "false");
     vi.stubGlobal("window", {
       location: { origin: "http://localhost:41001" },
-      __OPENSHIP_API_ORIGIN__: "http://127.0.0.1:42002",
+      __FREEBUILD_API_ORIGIN__: "http://127.0.0.1:42002",
     });
     vi.resetModules();
     const urls = await import("./urls");

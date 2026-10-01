@@ -1,7 +1,7 @@
 /** Public deployment metadata shared by SDK clients and HTTP health. */
 import { hostname, userInfo } from "node:os";
 import type { SystemInfo } from "@repo/contracts";
-import { cloudRuntimeTarget, env } from "../../config/env";
+import { env } from "../../config/env";
 import { APP_VERSION } from "../../lib/app-version";
 import { getAuthMode } from "../../lib/auth-mode";
 import { resolveProductMode } from "../../lib/product-mode";
@@ -103,10 +103,11 @@ export async function getSystemInfo(): Promise<SystemInfo> {
     teamMode,
     migrationTargetUrl,
     migrationInProgress,
-    // Both respect OPENSHIP_CLOUD_TARGET (cloudRuntimeTarget). The dashboard
-    // must use these, not its static table, to reach the right cloud.
-    cloudAuthUrl: cloudRuntimeTarget.dashboard,
-    cloudApiUrl: cloudRuntimeTarget.api,
+    // Modified by Netie AI, 2026: empty in this self-hosted-only edition. The
+    // upstream hosted cloud is disabled (501 hosted_cloud_disabled), so the
+    // public /health/env body must not point browsers at its URLs.
+    cloudAuthUrl: "",
+    cloudApiUrl: "",
     ...(machineName && { machineName }),
     ...(env.HOST_DOMAIN && { hostDomain: env.HOST_DOMAIN }),
   };

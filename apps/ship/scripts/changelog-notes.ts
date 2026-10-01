@@ -84,7 +84,13 @@ export function buildReleaseNotes(
 
 /* ─── CLI ───────────────────────────────────────────────────────────── */
 
-if (import.meta.main) {
+// Modified by Netie AI, 2026: also detect "run as a script" on Node 22, which
+// has no import.meta.main (Bun and Node 24 do).
+const isMain =
+  (import.meta as { main?: boolean }).main ??
+  process.argv[1] === fileURLToPath(import.meta.url);
+
+if (isMain) {
   const { positionals, values } = parseArgs({
     args: process.argv.slice(2),
     allowPositionals: true,

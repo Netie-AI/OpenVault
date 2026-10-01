@@ -63,8 +63,7 @@
     "docs": "Self-hosting docs"
   },
   "errorLinks": {
-    "docs": "Documentation",
-    "github": "Based on Openship"
+    "docs": "Documentation"
   },
   "window": {
     "minimize": "Minimize",

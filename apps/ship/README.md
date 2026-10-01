@@ -67,6 +67,39 @@ on disk, and outbound SMTP relay credentials all stay exactly where upstream
 put them — moving those into a keys vault meant for provider API tokens would
 not be a clean fit. See the fork report for the file-by-file list.
 
+## Tests
+
+```bash
+npm ci            # plain npm ci works from a fresh clone; no extra flags
+npm run build
+npm test          # every workspace's vitest suite, then test:scripts and test:smoke
+npm run test:e2e  # end to end against a real OpenVault (below)
+```
+
+`npm ci` runs `netie/apply-oblien-patch.mjs` as its postinstall. It applies
+`patches/oblien+2.4.0.patch` with the system `patch` command, skips it when it
+is already applied, and fails the install if the patch no longer applies. On a
+machine without `patch` it prints a warning and leaves the package unpatched.
+
+`npm run test:smoke` uses a stub OpenVault and needs nothing else.
+
+`npm run test:e2e` (`netie/e2e-openvault.mjs`) needs:
+
+- a build (`npm run build`),
+- [`uv`](https://docs.astral.sh/uv/) on `PATH`,
+- the OpenVault repo, with this workspace at `apps/ship` inside it, or
+  `OPENVAULT_REPO=/path/to/openvault`.
+
+It starts the real OpenVault API (`uv run openmw console` in `OpenMW/`) on a
+temp `OPENVAULT_HOME`, adds a "Cloudflare API token" key through OpenVault's
+admin API, then starts the built FreeBuild API and dashboard on free loopback
+ports. It checks that FreeBuild lists and resolves that key over the real
+`X-OpenVault-Admin` path, that OpenVault audits the reveal, the 501 and 503
+refusals, that the secret never reaches FreeBuild's data dir or logs, and that
+the dashboard shows no upstream names. The only stand-in is api.cloudflare.com,
+which is redirected to a local stub so the test can read the token FreeBuild
+sends. Every process and temp dir is removed at the end, pass or fail.
+
 ## Based on Openship
 
 FreeBuild is a fork of [Openship](https://github.com/oblien/openship) by

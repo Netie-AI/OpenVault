@@ -43,7 +43,7 @@ import {
   isNetieDisabledError,
   disabledErrorBody,
 } from "@omniroute/open-sse/netie/policy.ts";
-import { OpenVaultUnreachableError } from "@/lib/netie/keyvault";
+import { isOpenVaultKeyVaultError, openVaultErrorResponse } from "@/lib/netie/keyvault";
 import {
   assertCommonChatGptWebModelAvailable,
   isCommonChatGptWebRetirementError,
@@ -350,11 +350,8 @@ export async function POST(request) {
     );
   } catch (error) {
     admission.lease?.release();
-    if (error instanceof OpenVaultUnreachableError) {
-      return new Response(
-        JSON.stringify({ error: { code: error.code, message: error.message } }),
-        { status: error.status, headers: { ...CORS_HEADERS, "content-type": "application/json" } }
-      );
+    if (isOpenVaultKeyVaultError(error)) {
+      return openVaultErrorResponse(error, CORS_HEADERS);
     }
     throw error;
   }

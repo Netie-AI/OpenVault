@@ -17,10 +17,18 @@ FreeRoute is one of OpenVault's services. OpenVault does not launch it yet
 (see DR-0018 in the OpenVault repo). Start OpenVault first, then run:
 
 ```bash
-npm install
+npm ci
 npm run build
 npm start
 ```
+
+`npm ci` installs exactly what `package-lock.json` pins. It works with the npm
+that ships with Node 22 (npm 10) and with npm 11.
+
+FreeRoute authenticates to OpenVault with the admin token OpenVault writes on
+first start. It reads it from `$OPENVAULT_ADMIN_TOKEN_PATH`, else
+`$OPENVAULT_HOME/admin_token`, else `~/.openvault/admin_token`. Point
+`OPENVAULT_URL` at OpenVault if it is not on `http://127.0.0.1:5000`.
 
 - Default port: `3020`. Override with the `PORT` environment variable.
 - Default bind address: `127.0.0.1` (loopback only). Override with
@@ -43,6 +51,32 @@ Any request to save an API key into FreeRoute's own store returns
 unreachable, FreeRoute fails loudly (`HTTP 503
 openvault_keyvault_unreachable`) rather than falling back to a locally cached
 key.
+
+How a connection finds its key: if an enabled, active OpenVault key has the
+same base URL as the connection (trailing slash and case ignored), that key
+is used. Otherwise FreeRoute maps the connection's provider to an OpenVault
+provider (`openai`, `anthropic`, `groq`, ...) and uses the highest-priority
+key for it. So for an OpenAI-compatible endpoint, store the key in OpenVault
+with that endpoint as its base URL, then add the connection in FreeRoute
+with no key.
+
+## Tests
+
+| Command | Needs | What it checks |
+|---|---|---|
+| `npm test` | a build (`npm run build` or `npm run build:backend`) | policy unit tests, the KeyVault client against a stub, and a smoke run of the built server against a stub OpenVault |
+| `npm run test:e2e` | a build, `uv` on PATH, and the OpenVault repo | the built server against a real OpenVault (see below) |
+
+`npm run test:e2e` runs `netie/e2e-openvault.mjs`. It starts the real
+OpenVault API from the OpenVault repo's `OpenMW/` directory with
+`uv run openmw console` (default path `../../OpenMW` from this directory,
+override with `OPENVAULT_OPENMW_DIR`), a fake OpenAI-compatible upstream, and
+this build. It stores a provider key in OpenVault, routes a chat completion
+through FreeRoute with an OpenVault-issued client token, and checks the
+upstream got the vault key, OpenVault audited the reveal, the disabled
+providers answer 501, a wrong admin token and a stopped OpenVault answer 503,
+and the key never lands in FreeRoute's data directory or logs. Everything
+runs on loopback in temp directories that are removed at the end.
 
 ## What is disabled, and why
 

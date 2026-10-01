@@ -1,7 +1,8 @@
 "use client";
 // Modified by Netie AI, 2026: providers OpenVault manages (see
 // OPENVAULT_MANAGED_PROVIDER_IDS below) link out to OpenVault instead of
-// rendering an add/edit form that the API would refuse anyway.
+// rendering an add/edit form that the API would refuse anyway. Their rows
+// come from OpenVault, so they show no verify, edit or delete buttons.
 
 import { Icon as UiIcon } from "@repo/ui/icons";
 
@@ -229,6 +230,9 @@ export function Credentials() {
                               <p className="mt-1 text-xs text-warning">{row.lastError}</p>
                             )}
                           </div>
+                          {managedByOpenVault ? (
+                            <span className="shrink-0 text-xs text-muted-foreground">In OpenVault</span>
+                          ) : (
                           <div className="flex shrink-0 items-center gap-1">
                             <button
                               onClick={() => void verify(row)}
@@ -260,9 +264,10 @@ export function Credentials() {
                               <UiIcon name="trash" className="size-4" />
                             </button>
                           </div>
+                          )}
                         </div>
 
-                        {editing === row.id && (
+                        {!managedByOpenVault && editing === row.id && (
                           <div className="mt-3">
                             <CredentialForm
                               provider={provider}

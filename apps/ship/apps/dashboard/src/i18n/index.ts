@@ -50,7 +50,9 @@ export type Dictionary = typeof baseDictionary;
 export const locales = ["en"] as const;
 export type Locale = (typeof locales)[number];
 export const defaultLocale: Locale = "en";
-export const LOCALE_COOKIE = "openship-locale";
+// Modified by Netie AI, 2026: renamed from "openship-locale"; the cookie name
+// and localStorage key are visible to the browser.
+export const LOCALE_COOKIE = "freebuild-locale";
 
 /** RTL languages. Modified by Netie AI, 2026: empty — "ar" was the only one,
  *  and its locale dir is gone (English-only). */

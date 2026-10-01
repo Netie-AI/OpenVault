@@ -69,6 +69,17 @@ export function resolveCallLogArtifactWorker(context: WorkerResolutionContext = 
   const cwdJs = path.resolve(cwd, "src/lib/usage/callLogArtifactWorker.js");
   if (exists(cwdJs)) return { workerFile: cwdJs, execArgv: [] };
 
+  // `npm start` runs `next start` from the source tree, where only the .ts
+  // worker exists. A worker thread does not get tsx's resolver, so that .ts
+  // fails on its extensionless imports. The build bundles a self-contained
+  // .js worker into the standalone tree; use it when present.
+  const builtJs = path.resolve(
+    cwd,
+    process.env.NEXT_DIST_DIR || ".build/next",
+    "standalone/src/lib/usage/callLogArtifactWorker.js"
+  );
+  if (exists(builtJs)) return { workerFile: builtJs, execArgv: [] };
+
   const moduleTs = path.join(moduleDir, "callLogArtifactWorker.ts");
   if (exists(moduleTs)) {
     return { workerFile: moduleTs, execArgv: ["--import", "tsx/esm"] };

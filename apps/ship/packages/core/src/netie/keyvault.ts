@@ -1,4 +1,8 @@
 // Copyright (c) 2026 Netie AI. Licensed under Apache-2.0.
+// Modified by Netie AI, 2026: send the X-OpenVault-Admin token, map 401 and
+// 403 openvault_forbidden to named 503 errors, skip non-active keys. Node
+// built-ins are loaded with process.getBuiltinModule, not static imports,
+// because @repo/core is also bundled into the dashboard's client code.
 /**
  * The ONLY client FreeBuild uses to read third-party provider API keys.
  *
@@ -17,6 +21,11 @@
  *   GET  /api/keys/{id}/secret          -> { id, secret }  — header
  *        X-OpenVault-Reveal: intentional required; audited; 403 if the vault
  *        is sealed, 404 if the id is unknown.
+ *   Both need header X-OpenVault-Admin: <token>. The token is the content of a
+ *   file at $OPENVAULT_ADMIN_TOKEN_PATH, else $OPENVAULT_HOME/admin_token, else
+ *   ~/.openvault/admin_token. A missing or wrong token gets 401
+ *   openvault_unauthenticated. A 403 with error.type "openvault_forbidden" is
+ *   the guard refusing the caller, not a sealed vault.
  *
  * See BRIEF.md section 4 for the full contract this implements.
  */
@@ -86,32 +95,141 @@ export class OpenVaultSealedError extends AppError {
   }
 }
 
+/** The admin token file is missing, unreadable or empty. Carries the path, never the token. */
+export class OpenVaultAdminTokenUnavailableError extends AppError {
+  constructor(tokenPath: string) {
+    super(
+      `OpenVault admin token not found at ${tokenPath}. Start OpenVault once to create it, ` +
+        "or set OPENVAULT_ADMIN_TOKEN_PATH.",
+      503,
+      "openvault_admin_token_unavailable",
+    );
+    this.name = "OpenVaultAdminTokenUnavailableError";
+  }
+}
+
+/** OpenVault answered 401: the admin token was missing or wrong. */
+export class OpenVaultAdminTokenRejectedError extends AppError {
+  constructor(tokenPath: string) {
+    super(
+      `OpenVault rejected the admin token read from ${tokenPath}. ` +
+        "Check that it matches the token OpenVault created.",
+      503,
+      "openvault_admin_token_rejected",
+    );
+    this.name = "OpenVaultAdminTokenRejectedError";
+  }
+}
+
+/** OpenVault's guard refused this caller (403 with error.type "openvault_forbidden"). */
+export class OpenVaultForbiddenError extends AppError {
+  constructor() {
+    super(
+      "OpenVault refused this request (openvault_forbidden). FreeBuild must reach it over loopback.",
+      503,
+      "openvault_forbidden",
+    );
+    this.name = "OpenVaultForbiddenError";
+  }
+}
+
 function baseUrl(): string {
   return (process.env.OPENVAULT_URL?.trim() || "http://127.0.0.1:5000").replace(/\/+$/, "");
 }
 
-async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
+/**
+ * Node built-ins, loaded at call time. A static `import "node:fs"` here breaks
+ * the dashboard build: @repo/core is transpiled into client bundles, and
+ * webpack cannot resolve the node: scheme there. Needs Node 22.3 or later.
+ */
+function nodeBuiltins() {
+  const load = typeof process !== "undefined" ? process.getBuiltinModule : undefined;
+  if (!load) throw new Error("The OpenVault client runs only on Node 22.3 or later.");
+  return {
+    fs: load("node:fs/promises"),
+    os: load("node:os"),
+    path: load("node:path"),
+  };
+}
+
+/** Where OpenVault keeps its admin token. Same precedence as OpenVault itself. */
+export function adminTokenPath(): string {
+  const explicit = process.env.OPENVAULT_ADMIN_TOKEN_PATH?.trim();
+  if (explicit) return explicit;
+  const { os, path } = nodeBuiltins();
+  const home = process.env.OPENVAULT_HOME?.trim();
+  if (home) return path.join(home, "admin_token");
+  return path.join(os.homedir(), ".openvault", "admin_token");
+}
+
+/** Read fresh on every request so a rotated token is picked up without a restart. */
+async function readAdminToken(tokenPath: string): Promise<string> {
+  const { fs } = nodeBuiltins();
+  let token: string;
+  try {
+    token = (await fs.readFile(tokenPath, "utf8")).trim();
+  } catch {
+    throw new OpenVaultAdminTokenUnavailableError(tokenPath);
+  }
+  if (!token) throw new OpenVaultAdminTokenUnavailableError(tokenPath);
+  return token;
+}
+
+async function isForbiddenBody(res: Response): Promise<boolean> {
+  try {
+    const body = (await res.json()) as { error?: { type?: unknown } } | null;
+    return body?.error?.type === "openvault_forbidden";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * One authenticated request to OpenVault. Handles the cases every endpoint
+ * shares (network failure, 401, 403 openvault_forbidden) and hands any other
+ * response back. `forbiddenChecked` tells the caller a 403 body was already
+ * read and was not openvault_forbidden.
+ */
+async function openVaultRequest(
+  path: string,
+  extraHeaders: Record<string, string> = {},
+): Promise<{ res: Response; forbiddenChecked: boolean }> {
+  const tokenPath = adminTokenPath();
+  const token = await readAdminToken(tokenPath);
   let res: Response;
   try {
-    res = await fetch(`${baseUrl()}${path}`, init);
+    res = await fetch(`${baseUrl()}${path}`, {
+      headers: { ...extraHeaders, "X-OpenVault-Admin": token },
+    });
   } catch (err) {
-    // Network-level failure (refused, DNS, timeout) — never fall back to a
+    // Network-level failure (refused, DNS, timeout). Never fall back to a
     // local store silently; the caller must fail loud.
     throw new OpenVaultKeyvaultUnreachableError(err);
   }
-  if (res.status === 403) throw new OpenVaultSealedError();
-  if (!res.ok) {
-    throw new OpenVaultKeyvaultUnreachableError(
-      new Error(`OpenVault responded ${res.status} for ${path}`),
-    );
+  if (res.status === 401) throw new OpenVaultAdminTokenRejectedError(tokenPath);
+  if (res.status === 403) {
+    if (await isForbiddenBody(res)) throw new OpenVaultForbiddenError();
+    return { res, forbiddenChecked: true };
   }
-  return (await res.json()) as T;
+  return { res, forbiddenChecked: false };
 }
 
 /** Every key OpenVault currently holds (no plaintext). */
 export async function listKeys(): Promise<OpenVaultKey[]> {
-  const data = await fetchJson<{ keys: OpenVaultKey[] }>("/api/keys");
+  const { res } = await openVaultRequest("/api/keys");
+  if (!res.ok) {
+    throw new OpenVaultKeyvaultUnreachableError(
+      new Error(`OpenVault responded ${res.status} for /api/keys`),
+    );
+  }
+  const data = (await res.json()) as { keys?: OpenVaultKey[] };
   return data.keys ?? [];
+}
+
+/** A key FreeBuild may use: enabled, and active when OpenVault reports a lifecycle. */
+function isUsable(k: OpenVaultKey): boolean {
+  if (!k.enabled) return false;
+  return k.lifecycle == null || k.lifecycle === "active";
 }
 
 /**
@@ -122,7 +240,8 @@ export async function listKeys(): Promise<OpenVaultKey[]> {
  * back to a case-insensitive label match (a "custom" entry labeled
  * "Cloudflare" / "Cloudflare API token") — OpenVault's fixed provider enum
  * has no "cloudflare" member, so `custom` + label is the expected shape.
- * Disabled keys are skipped; the first enabled match wins.
+ * Disabled keys, and keys whose lifecycle is present and not "active"
+ * (revoked, replaced), are skipped; the first usable match wins.
  */
 export async function findKeyForFreeBuildProvider(
   providerId: string,
@@ -131,7 +250,7 @@ export async function findKeyForFreeBuildProvider(
 }
 
 /**
- * Every enabled key matching `providerId` — an operator may label more than
+ * Every usable key (see isUsable) matching `providerId`. An operator may label more than
  * one OpenVault key for the same FreeBuild provider (e.g. one Cloudflare
  * token per zone they own), same as multiple credentials of one provider
  * used to live in the local `credential` table.
@@ -141,9 +260,10 @@ export async function findKeysForFreeBuildProvider(
 ): Promise<OpenVaultKey[]> {
   const keys = await listKeys();
   const wanted = providerId.toLowerCase();
-  const byProvider = keys.filter((k) => k.enabled && k.provider?.toLowerCase() === wanted);
+  const usable = keys.filter(isUsable);
+  const byProvider = usable.filter((k) => k.provider?.toLowerCase() === wanted);
   if (byProvider.length) return byProvider;
-  return keys.filter((k) => k.enabled && k.label?.toLowerCase().includes(wanted));
+  return usable.filter((k) => k.label?.toLowerCase().includes(wanted));
 }
 
 // Plaintext cache: id -> { secret, expiresAt }. In memory ONLY, short TTL, and
@@ -157,15 +277,12 @@ export async function getSecret(id: string): Promise<string> {
   const cached = secretCache.get(id);
   if (cached && cached.expiresAt > Date.now()) return cached.secret;
 
-  let res: Response;
-  try {
-    res = await fetch(`${baseUrl()}/api/keys/${encodeURIComponent(id)}/secret`, {
-      headers: { "X-OpenVault-Reveal": "intentional" },
-    });
-  } catch (err) {
-    throw new OpenVaultKeyvaultUnreachableError(err);
-  }
-  if (res.status === 403) throw new OpenVaultSealedError();
+  const { res, forbiddenChecked } = await openVaultRequest(
+    `/api/keys/${encodeURIComponent(id)}/secret`,
+    { "X-OpenVault-Reveal": "intentional" },
+  );
+  // A 403 that is not openvault_forbidden is the reveal refusing a sealed vault.
+  if (forbiddenChecked) throw new OpenVaultSealedError();
   if (res.status === 404) {
     throw new AppError(`OpenVault has no key "${id}".`, 404, "openvault_key_not_found");
   }

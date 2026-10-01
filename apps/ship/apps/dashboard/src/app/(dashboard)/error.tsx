@@ -1,4 +1,5 @@
 "use client";
+// Modified by Netie AI, 2026: no upstream GitHub credit link on this screen.
 
 import { Icon as UiIcon } from "@repo/ui/icons";
 
@@ -54,7 +55,6 @@ export default function DashboardError({
           },
         ]}
         docsLabel={c.errorLinks.docs}
-        githubLabel={c.errorLinks.github}
       />
     </div>
   );
