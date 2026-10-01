@@ -103,3 +103,25 @@ jobs:
           --cov=openmw.openvault
           --cov-report=term-missing
           --cov-fail-under=75
+
+  # apps/web npm test. Node 20: no .nvmrc and no engines field.
+  test-web:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install dependencies
+        working-directory: apps/web
+        run: npm ci
+
+      - name: Test
+        working-directory: apps/web
+        run: npm test
