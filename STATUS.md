@@ -57,6 +57,7 @@ shell at HTTP 200 is refused and named "compiling", not "unreachable".
 | Verify ghosts | R-0003: a different run must confirm before any deletion. |
 | apps/web build | No CI job exists for it; `npm run build` unverified. |
 | Usage $/unit | NEEDS-YOU. Display SKUs are locked (DR-0013). |
+| #79 cards | Provider cards: Get key, paste once, test and add. |
 
 ## HT gates (#18 CLOSED, boxes ticked)
 
