@@ -58,6 +58,7 @@ shell at HTTP 200 is refused and named "compiling", not "unreachable".
 | apps/web build | No CI job exists for it; `npm run build` unverified. |
 | Usage $/unit | NEEDS-YOU. Display SKUs are locked (DR-0013). |
 | #79 cards | Provider cards: Get key, paste once, test and add. |
+| #86 T3 | Persisted parks, quota-aware health, usable_provider_count. |
 
 ## HT gates (#18 CLOSED, boxes ticked)
 

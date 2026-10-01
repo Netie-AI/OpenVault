@@ -93,6 +93,7 @@ def build_freeroute_router(vault: KeyVault, fallback: FallbackManager) -> APIRou
             "hops": hops,
             "spendable": spendable,
             "spendable_count": len(spendable),
+            "usable_provider_count": 0 if sealed else fallback.usable_provider_count(),
             "local_reason": local_reason,
             "usage_unit_status": "NEEDS-YOU",
             "onboard_path": "/keys#free",

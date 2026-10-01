@@ -2,6 +2,29 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-01 - Close park DB handles and widen error scrub (OpenVault #86)
+
+- `hop_parks` connections close after each ensure, save, delete, and load.
+  The schema is created once when a fallback manager starts.
+- Stored provider messages also redact `csk-`, `xai-`, and any 32+ character
+  token. The 200-character cap and message-only rule stay.
+
+## 2026-10-01 - Persisted parks and quota-aware health (OpenVault #86)
+
+- Hop parks live in `keys.db` table `hop_parks`. A restart keeps them. An
+  expired park is shown as expired and is routed to again. Google stays
+  parked until the next Pacific midnight, which is when its quota resets.
+- Groq health uses the catalog daily token limit (200K) summed from
+  `usage_events`. Over the limit the status is `quota_exhausted` with a
+  reset time. The 18-column usage ledger is unchanged.
+- A park stores a provider message of at most 200 characters. Key-like
+  text is scrubbed. Request and response bodies are not stored.
+- When every hop is parked the gateway returns 503
+  `all hops parked, retry at <ISO time>` and sets `Retry-After`.
+  OpenVault's own 429 already sends `Retry-After`.
+- `GET /api/freeroute/status` adds `usable_provider_count`. `spendable_count`
+  and `pooled_key_count` are unchanged.
+
 ## 2026-10-01 - Provider cards admin field (OpenVault #79)
 
 - The `/providers` proxy no longer reads the admin token file. The operator

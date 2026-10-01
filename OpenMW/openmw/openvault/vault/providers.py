@@ -53,6 +53,11 @@ class ProviderSpec:
     reasoning_models: tuple[str, ...] = ()
     # LOCAL-1: no-cloud-key FreeRoute hop. Distinct from vaulted ollama/litellm.
     local_hop: bool = False
+    # Free-tier tokens per reset window. None means OpenVault does not track one.
+    # The router reads this; it does not hard-code a provider's allowance.
+    daily_token_limit: int | None = None
+    # IANA zone whose local midnight ends the daily window. Empty means none.
+    quota_reset_tz: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         d = asdict(self)
@@ -183,6 +188,9 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
             "openai/gpt-oss-20b",
             "qwen/qwen3.8-27b",
         ),
+        # gpt-oss-120b free tier is about 200K tokens/day. Health sums usage_events.
+        daily_token_limit=200_000,
+        quota_reset_tz="UTC",
     ),
     ProviderSpec(
         id="google",
@@ -223,6 +231,8 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
             "gemini-flash-latest",
             "gemini-3.1-flash-lite",
         ),
+        # AI Studio RPD resets at midnight Pacific. A park lasts until then.
+        quota_reset_tz="America/Los_Angeles",
     ),
     ProviderSpec(
         id="mistral",
