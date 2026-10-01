@@ -137,7 +137,11 @@ async def probe_key(
             latency = (time.perf_counter() - started) * 1000.0
             code = int(resp.status_code)
             if code < 200 or code >= 300:
+                # /api/v1/key is not a models list, so a 404 is not proof of
+                # auth. Only 401/403 and 429 keep the shared classifier.
                 status = classify_http_error(resp.status_code, resp.text[:200])
+                if status not in ("auth_fail", "rate_limit"):
+                    status = "error"
                 return PrecheckResult(record.id, status, latency, f"HTTP {code}")
             try:
                 remaining, free_tier = openrouter_probe_facts(resp.json())

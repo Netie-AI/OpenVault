@@ -2,6 +2,11 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-01 - OpenRouter /key 404 is error; doc corrections (OpenVault #100)
+
+- OpenRouter /api/v1/key: 404 and any other non-2xx except 401/403 (auth_fail) and 429 (rate_limit) now map to `error` with `HTTP {code}`. Other providers keep the shared classifier.
+- Corrections: the #92 chat probe defaults to 3600s, OPENVAULT_CHAT_PROBE_INTERVAL_S has a 600s floor, sambanova and sea_lion are probed at most every 6h, keys with a hop_attempts 2xx inside the gap are skipped, and it uses the first non-reasoning catalog chat model at 16 tokens (512 only if every chat model is reasoning). The #97 OpenRouter precheck statuses are auth_fail / rate_limit / error, not failed.
+
 ## 2026-10-01 - Chat health probe per key (OpenVault #92)
 
 - A chat probe POSTs "Reply with OK" on its own 300s loop, separate from the

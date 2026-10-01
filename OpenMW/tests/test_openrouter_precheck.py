@@ -10,6 +10,7 @@ from unittest.mock import patch
 
 import pytest
 from cryptography.fernet import Fernet
+from structlog.testing import capture_logs
 
 from openmw.openvault.vault.crypto import Seal
 from openmw.openvault.vault.fallback import FallbackManager
@@ -198,6 +199,40 @@ def test_openrouter_precheck_401_is_auth_fail_and_leaves_rotation(vault: KeyVaul
     picked = [row.id for row in FallbackManager(vault).ordered_candidates()]
     assert record.id not in picked
     assert keep.id in picked
+
+
+def test_openrouter_precheck_404_is_error_and_writes_history(vault: KeyVault) -> None:
+    with capture_logs() as logs:
+        record, client, result = _run(
+            vault,
+            provider="openrouter",
+            secret=_FAKE_OR,
+            base_url=_OPENROUTER,
+            resp=_Resp(404, {"error": {"message": _MARKER, "key": _FAKE_OR}}),
+        )
+    assert client.urls == [OPENROUTER_KEY_URL]
+    assert client.resp.json_reads == 0
+    assert client.resp.text_reads == 1
+    assert result.status == "error"
+    assert result.error == "HTTP 404"
+    stored = vault.get(record.id)
+    assert stored is not None
+    assert stored.precheck_status == "error"
+    assert stored.precheck_status != "ok"
+    assert stored.last_error == "HTTP 404"
+    blob = _probe_blob(vault.db_path)
+    assert blob == "[]"
+    view = repr(quota_snapshot(vault))
+    _assert_body_and_key_unstored(vault, record.id, blob, view)
+    history = _history(vault.db_path, record.id)
+    assert history == [("error", "HTTP 404")]
+    assert all(status != "ok" for status, _error in history)
+    precheck_logs = [entry for entry in logs if entry.get("event") == "openvault_precheck"]
+    assert precheck_logs
+    assert precheck_logs[0].get("error") == "HTTP 404"
+    logged = repr(logs)
+    assert _FAKE_OR not in logged
+    assert _MARKER not in logged
 
 
 def test_openrouter_precheck_429_is_rate_limit_and_writes_history(vault: KeyVault) -> None:
