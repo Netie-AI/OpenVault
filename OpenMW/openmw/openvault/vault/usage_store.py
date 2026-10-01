@@ -109,6 +109,8 @@ class HopTrace:
     cache_hit: bool = False
     error_type: str = ""
     served_local: bool = False
+    #: Set when a strict pin is parked. The gateway copies this to Retry-After.
+    retry_after_s: int | None = None
 
     def note_attempt(self) -> None:
         self.attempts += 1
