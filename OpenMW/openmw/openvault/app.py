@@ -109,6 +109,7 @@ from openmw.openvault.ship.openship_client import adapter_status
 from openmw.openvault.ship.playwright_smoke import load_smoke, run_playwright_smoke
 from openmw.openvault.vault import webauthn_unlock
 from openmw.openvault.vault.accounts import AccountStore, AuthProvider
+from openmw.openvault.vault.admin_token import ensure_admin_token
 from openmw.openvault.vault.airgpt_keyvault import keyvault_snapshot, upsert_env_secret
 from openmw.openvault.vault.api_keys import ApiKeyError, ApiKeyStore
 from openmw.openvault.vault.app_grants import (
@@ -1067,6 +1068,8 @@ def create_app(
     enable_precheck_loop: bool = True,
     rate_limiter: TokenBudgetLimiter | None = None,
 ) -> FastAPI:
+    # First start mints the admin credential. The value is not logged.
+    ensure_admin_token()
     if cortex_url is None:
         cortex_url = cortex_base_url()
     # One Seal for the process: lock/unseal must clear every custody store.

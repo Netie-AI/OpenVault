@@ -2,6 +2,9 @@
 
 Provider cards call :func:`add_tested_key`. The CLI is ``openvault add``.
 The key is read from a hidden prompt or stdin, never from argv or an env var.
+Storage is the in-process vault, not an admin HTTP route, so this module does
+not send ``X-OpenVault-Admin``. HTTP admin callers read that token from the
+0600 file.
 """
 
 from __future__ import annotations

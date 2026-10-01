@@ -47,6 +47,7 @@ shell at HTTP 200 is refused and named "compiling", not "unreachable".
 
 | # | Status |
 |---|--------|
+| #83 admin token | Key and secret admin routes plus /keys require X-OpenVault-Admin, even from loopback. |
 | #76 T2 | Dead-model 404/unknown continues; 429 parks (key, model); pinned model is not swapped in-provider. |
 | #80 strict pin | Opt-in field or header. pin_unavailable when the exact catalog id has no healthy hop. |
 | #78 CLI add | openvault add <provider>: hidden prompt or stdin, 1-token chat, HMAC dedupe, one vault. |
