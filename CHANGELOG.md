@@ -2,6 +2,26 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-01 - Provider cards admin field (OpenVault #79)
+
+- The `/providers` proxy no longer reads the admin token file. The operator
+  types `X-OpenVault-Admin` into a password field. It stays in memory or
+  sessionStorage, and the proxy forwards that header. A missing header is 401
+  and does not call upstream.
+- `GET /provider-cards` uses the same field. No GitHub Models card; the catalog
+  row stays because the service is retiring.
+
+## 2026-10-01 - Provider cards (OpenVault #79)
+
+- Cards page in the console (`/providers`) and `GET /provider-cards`. Free and
+  Premium only, for catalog providers. No DeepSeek card, no Cloudflare card,
+  no Sign in with ChatGPT. Premium is a plain paste field.
+- `POST /api/keys/cards` is POST-only, behind `http_guard` and
+  `X-OpenVault-Admin`. It reuses `key_add.add_tested_key`. The response is the
+  label, masked id, and outcome. The key is not echoed.
+- Letter-mark icons are local SVGs (CC0). Catalog `register_url` fixes: NVIDIA,
+  Together, Fireworks, GitHub Models, SiliconFlow.
+
 ## 2026-10-01 - Admin credential for key and secret routes (OpenVault #83)
 
 - `/api/keys`, `/api/secrets`, other key and secret management routes, and

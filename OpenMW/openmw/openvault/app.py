@@ -1156,6 +1156,7 @@ def create_app(
     from openmw.openvault.routers.health import build_health_router
     from openmw.openvault.routers.key_ui import build_key_ui_router
     from openmw.openvault.routers.keys import router as keys_router
+    from openmw.openvault.routers.provider_cards import build_provider_cards_router
     from openmw.openvault.routers.route import router as route_router
     from openmw.openvault.routers.sentinel import router as sentinel_router
     from openmw.openvault.routers.ship import router as ship_router
@@ -1166,6 +1167,7 @@ def create_app(
     app.include_router(route_router)
     app.include_router(keys_router)
     app.include_router(build_health_router(state_vault))
+    app.include_router(build_provider_cards_router(state_vault))
     app.include_router(build_freeroute_router(state_vault, fallback))
 
     def _key_ui_guard(request: Request, action: str) -> None:

@@ -249,7 +249,9 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
         base_url="https://integrate.api.nvidia.com/v1",
         default_role="cheap",
         tier="freemium",
-        register_url="https://build.nvidia.com/",
+        # Keys page: https://build.nvidia.com/settings/api-keys
+        # (quickstart: https://docs.api.nvidia.com/nim/docs/api-quickstart)
+        register_url="https://build.nvidia.com/settings/api-keys",
         docs_url="https://docs.api.nvidia.com/",
         health_path="/models",
         free_notes="build.nvidia.com / NIM OpenAI-compatible; keys typically nvapi-…",
@@ -289,7 +291,8 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
         base_url="https://api.together.xyz/v1",
         default_role="cheap",
         tier="freemium",
-        register_url="https://api.together.xyz/settings/api-keys",
+        # Project keys: https://docs.together.ai/docs/quickstart
+        register_url="https://api.together.ai/settings/projects/~current/api-keys",
         docs_url="https://docs.together.ai/",
         health_path="/models",
         free_notes="Signup credits; OpenAI-compatible",
@@ -312,7 +315,8 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
         base_url="https://api.fireworks.ai/inference/v1",
         default_role="cheap",
         tier="paid",
-        register_url="https://fireworks.ai/account/api-keys",
+        # Dashboard keys: https://docs.fireworks.ai/getting-started/quickstart
+        register_url="https://app.fireworks.ai/settings/users/api-keys",
         docs_url="https://docs.fireworks.ai/",
         health_path="/models",
         needed_by=("cortex",),
@@ -448,7 +452,9 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
         base_url="https://models.inference.ai.azure.com",
         default_role="free",
         tier="freemium",
-        register_url="https://github.com/marketplace/models",
+        # marketplace/models is 404. Retirement notice:
+        # https://docs.github.com/en/github-models
+        register_url="https://docs.github.com/en/github-models",
         docs_url="https://docs.github.com/en/github-models",
         health_path="/models",
         free_notes="Free tier via GitHub token -- inference API retired 2026-07-30",
@@ -477,7 +483,8 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
         base_url="https://api.siliconflow.cn/v1",
         default_role="free",
         tier="freemium",
-        register_url="https://cloud.siliconflow.cn/account/ak",
+        # API keys page: https://docs.siliconflow.com/en/userguide/quickstart
+        register_url="https://cloud.siliconflow.com/account/ak",
         docs_url="https://docs.siliconflow.cn/",
         health_path="/models",
         free_notes="OmniRoute lists as permanently-free pool (region dependent)",

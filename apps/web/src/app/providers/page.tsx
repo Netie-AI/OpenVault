@@ -1,107 +1,200 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { apiFetch, isApiError } from "@/lib/api/client";
+import { useEffect, useState, type FormEvent } from "react";
+import { apiFetch, BROWSER_API_PREFIX, isApiError } from "@/lib/api/client";
 import { PageContainer } from "@/components/ui/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Button } from "@/components/ui/button";
 
-type Provider = {
-  id?: string;
-  name?: string;
-  tier?: string;
-  free_notes?: string;
-  spendable?: boolean;
-  chat_models?: string[];
-  register_url?: string;
-  openai_compatible?: boolean;
+type Card = {
+  id: string;
+  name: string;
+  register_url: string;
+  icon: string;
 };
 
-type Catalog = {
-  providers?: Provider[];
-  count?: number;
+type Section = {
+  id: string;
+  title: string;
+  note: string;
+  cards: Card[];
 };
 
-export default function ProvidersPage() {
-  const [catalog, setCatalog] = useState<Catalog | null>(null);
-  const [err, setErr] = useState("");
+type CardsPayload = {
+  sections: Section[];
+};
 
-  async function load() {
-    setErr("");
+type AddBody = {
+  label?: string;
+  masked_id?: string;
+  outcome?: string;
+};
+
+const ADMIN_KEY = "openvault.admin";
+
+function scrub(text: string, hidden: string): string {
+  if (!hidden || !text.includes(hidden)) return text;
+  return text.split(hidden).join("");
+}
+
+function readAdmin(): string {
+  try {
+    return sessionStorage.getItem(ADMIN_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function writeAdmin(value: string): void {
+  try {
+    sessionStorage.setItem(ADMIN_KEY, value);
+  } catch {
+    /* session storage unavailable; the field still holds it in memory */
+  }
+}
+
+function CardForm({
+  card,
+  note,
+  admin,
+}: {
+  card: Card;
+  note: string;
+  admin: string;
+}) {
+  const [secret, setSecret] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  async function onSubmit(ev: FormEvent) {
+    ev.preventDefault();
+    const pasted = secret;
+    const presented = admin;
+    setSecret("");
+    setBusy(true);
+    setMsg("");
     try {
-      const data = await apiFetch<Catalog>("/api/providers/catalog");
-      setCatalog(data);
-    } catch (e) {
-      setErr(isApiError(e) ? e.message : String(e));
+      const res = await fetch("/api/provider-cards", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          accept: "application/json",
+          "X-OpenVault-Admin": presented,
+        },
+        body: JSON.stringify({ provider: card.id, secret: pasted }),
+      });
+      const data = (await res.json().catch(() => null)) as AddBody | null;
+      const label = scrub(scrub(String(data?.label ?? ""), pasted), presented);
+      const masked = scrub(scrub(String(data?.masked_id ?? ""), pasted), presented);
+      const outcome = scrub(scrub(String(data?.outcome ?? ""), pasted), presented);
+      setMsg([label, masked, outcome].filter(Boolean).join(" "));
+    } catch {
+      setMsg("test call failed (unreachable)");
+    } finally {
+      setBusy(false);
     }
   }
 
+  return (
+    <article
+      data-provider={card.id}
+      className="rounded-2xl border border-border bg-card p-4"
+    >
+      <div className="flex items-center gap-3">
+        <img
+          src={`${BROWSER_API_PREFIX}${card.icon}`}
+          alt=""
+          width={40}
+          height={40}
+        />
+        <h3 className="text-sm font-semibold text-foreground">{card.name}</h3>
+      </div>
+      {note ? <p className="mt-2 text-xs text-muted-foreground">{note}</p> : null}
+      <a
+        className="mt-2 inline-block text-sm text-primary underline"
+        href={card.register_url}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        Get key
+      </a>
+      <form className="mt-3" onSubmit={(ev) => void onSubmit(ev)}>
+        <label className="block text-xs text-muted-foreground">
+          API key
+          <input
+            type="password"
+            name="secret"
+            autoComplete="off"
+            spellCheck={false}
+            value={secret}
+            onChange={(ev) => setSecret(ev.target.value)}
+            className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
+          />
+        </label>
+        <button
+          type="submit"
+          disabled={busy}
+          className="mt-3 rounded-full bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+        >
+          Test and add
+        </button>
+      </form>
+      <p className="mt-2 min-h-[1.2em] text-xs text-muted-foreground">{msg}</p>
+    </article>
+  );
+}
+
+export default function ProvidersPage() {
+  const [sections, setSections] = useState<Section[]>([]);
+  const [err, setErr] = useState("");
+  const [admin, setAdmin] = useState("");
+
   useEffect(() => {
-    void load();
+    setAdmin(readAdmin());
+    const ac = new AbortController();
+    apiFetch<CardsPayload>("/api/providers/cards", { signal: ac.signal })
+      .then((data) => setSections(data.sections ?? []))
+      .catch((e: unknown) => {
+        if (ac.signal.aborted) return;
+        setErr(isApiError(e) ? e.message : "Could not load provider cards.");
+      });
+    return () => ac.abort();
   }, []);
 
-  const providers = catalog?.providers || [];
+  function onAdmin(value: string) {
+    setAdmin(value);
+    writeAdmin(value);
+  }
 
   return (
     <PageContainer>
-      <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
-        <PageHeader
-          title="Providers"
-          description="Curated FreeRoute catalog -- OpenAI-compat hops that resolve model=auto. Not an OmniRoute iframe."
+      <PageHeader
+        title="Providers"
+        description="Paste a key once. OpenVault tests it, then stores it."
+      />
+      <label className="mb-6 block text-xs text-muted-foreground">
+        Admin token
+        <input
+          id="admin-token"
+          type="password"
+          name="admin"
+          autoComplete="off"
+          spellCheck={false}
+          value={admin}
+          onChange={(ev) => onAdmin(ev.target.value)}
+          className="mt-1 w-full max-w-md rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
         />
-        <div className="flex gap-2">
-          <Button asChild variant="outline" size="sm">
-            <Link href="/tool/register">Register</Link>
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => void load()}>
-            Refresh
-          </Button>
-        </div>
-      </div>
-
+      </label>
       {err ? <p className="mb-4 text-sm text-destructive">{err}</p> : null}
-
-      {providers.length ? (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {providers.map((p, i) => (
-            <div
-              key={String(p.id || p.name || i)}
-              data-glass
-              className="rounded-2xl border border-border bg-card p-4"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <h3 className="text-sm font-semibold text-foreground">
-                  {String(p.name || p.id || "provider")}
-                </h3>
-                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                  {p.tier || "?"}
-                </span>
-              </div>
-              <p className="mt-1 font-mono text-xs text-muted-foreground">
-                {String(p.id || "--")}
-              </p>
-              {p.free_notes ? (
-                <p className="mt-2 text-xs text-muted-foreground">{p.free_notes}</p>
-              ) : null}
-              <p className="mt-2 text-xs text-muted-foreground">
-                {p.spendable
-                  ? `spendable · ${p.chat_models?.[0] || "catalogued"}`
-                  : "not a /v1 auto hop"}
-              </p>
-              {p.id ? (
-                <Button asChild className="mt-3" size="sm" variant="outline">
-                  <Link href={`/tool/register?provider=${encodeURIComponent(p.id)}`}>
-                    Register
-                  </Link>
-                </Button>
-              ) : null}
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p className="text-sm text-muted-foreground">{catalog ? "Empty catalog." : "Loading..."}</p>
-      )}
+      {sections.map((section) => (
+        <section key={section.id} data-section={section.id} className="mt-8">
+          <h2 className="text-lg font-semibold text-foreground">{section.title}</h2>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {section.cards.map((card) => (
+              <CardForm key={card.id} card={card} note={section.note} admin={admin} />
+            ))}
+          </div>
+        </section>
+      ))}
     </PageContainer>
   );
 }
