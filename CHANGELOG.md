@@ -4,9 +4,12 @@ Append-only. Never edited, only added to. Newest first.
 
 ## 2026-10-01 - Chat health probe per key (OpenVault #92)
 
-- A chat probe POSTs "Reply with OK" on its own 300s loop, separate from the
-  60s models probe. The model is the provider's first catalog chat id.
-  `max_tokens` is 16, or 512 when that id is a reasoning model.
+- A chat probe POSTs "Reply with OK" on its own loop, separate from the 60s
+  models probe. The default interval is 3600s. `OPENVAULT_CHAT_PROBE_INTERVAL_S`
+  overrides it, with a 600s floor. `sambanova` and `sea_lion` are probed at
+  most once every 6h. A key with a `hop_attempts` 2xx inside that gap is
+  skipped. The model is the first non-reasoning catalog chat id, at 16
+  tokens, or 512 only when every chat model is reasoning.
 - HTTP 402, a 429 whose request-limit header is 0, or a 429 with an account
   or plan error code, marks that key unusable. `usable_provider_count` skips
   it. A transient 429 parks the key and does not mark it unusable.
