@@ -175,6 +175,38 @@ def tokens_used_for_key(
         return 0
 
 
+def tokens_used_by_key(
+    db_path: Path,
+    *,
+    provider: str,
+    since: float,
+) -> dict[str, int]:
+    """Successful ``usage_events`` tokens grouped by vault key since ``since``.
+
+    Read only. One query. Rows with an empty ``vault_key_id`` are skipped.
+    """
+    if not db_path.is_file():
+        return {}
+    try:
+        with contextlib.closing(_connect(db_path)) as conn, conn:
+            found = conn.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='usage_events'"
+            ).fetchone()
+            if found is None:
+                return {}
+            rows = conn.execute(
+                "SELECT vault_key_id, COALESCE(SUM(total_tokens), 0) "
+                "FROM usage_events "
+                "WHERE provider=? AND created_at>=? "
+                "AND status>=200 AND status<300 AND vault_key_id!='' "
+                "GROUP BY vault_key_id",
+                (provider, float(since)),
+            ).fetchall()
+            return {str(row[0]): int(row[1]) for row in rows}
+    except sqlite3.Error:
+        return {}
+
+
 def quota_retry_after_s(provider: str) -> int | None:
     """Whole seconds until the catalog window resets. None when untracked."""
     spec = get_provider(provider)

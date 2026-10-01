@@ -269,10 +269,11 @@ def test_strict_model_park_does_not_call_another_provider(vault: KeyVault) -> No
 
 
 def test_strict_open_circuit_is_pin_unavailable_without_retry_after(vault: KeyVault) -> None:
-    _groq(vault)
+    groq = _groq(vault)
     _google(vault)
     mgr = FallbackManager(vault)
-    breaker = get_circuit_breaker("groq")
+    # Per-key breaker (#106). The provider name is not the gate.
+    breaker = get_circuit_breaker(groq.id)
     for _ in range(breaker.profile.failure_threshold):
         breaker.record_failure(status=500)
     assert breaker.state == "OPEN"

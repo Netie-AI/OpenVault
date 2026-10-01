@@ -2,6 +2,18 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-01 - Spread single-turn keys and break per key (OpenVault #106)
+
+- Single-turn calls, which have no affinity key, pick the least-recently-used
+  key of the same provider inside a priority band. The score is idle steps
+  times quota remaining in the usage ledger. Provider order and band order
+  stay as they are.
+- Multi-turn calls and `prompt_cache_key` still use rendezvous hashing.
+- The chat proxy circuit breaker is per vault key. One open key does not
+  block the other keys of that provider, including under a strict pin.
+  A local hop keeps the provider name.
+- Spread state is in memory. Choosing a key does not add a ledger write.
+
 ## 2026-10-01 - Chat probe cadence is boot plus daily (OpenVault #104)
 
 - `OPENVAULT_CHAT_PROBE_INTERVAL_S` defaults to 86400s with a 3600s floor.

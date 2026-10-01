@@ -15,10 +15,10 @@ import httpx
 import structlog
 
 from openmw.openvault.route.attempt import AttemptOutcome, classify_attempt
-from openmw.openvault.route.breaker import get_circuit_breaker
+from openmw.openvault.route.breaker import CircuitBreaker, get_circuit_breaker
 from openmw.openvault.vault.budget import BudgetDecision, estimate_tokens_for_body, prepare_hop_body
 from openmw.openvault.vault.crypto import VaultCryptoError, VaultSealedError
-from openmw.openvault.vault.fallback import FallbackManager
+from openmw.openvault.vault.fallback import FallbackManager, note_key_used
 from openmw.openvault.vault.hop_attempts import record_hop_attempt
 from openmw.openvault.vault.local_hop import (
     LOCAL_HOP_KEY_ID,
@@ -195,6 +195,18 @@ def _secret_for_candidate(vault: KeyVault, cand: ProxyCandidate, errors: list[st
     return _secret_for_hop(vault, cand.record, errors)
 
 
+def _hop_breaker(cand: ProxyCandidate) -> CircuitBreaker:
+    """Per-key breaker. A local hop has no vault key, so it keeps its provider name."""
+    name = cand.provider if cand.served_local else cand.key_id
+    return get_circuit_breaker(name)
+
+
+def _remember_key_use(cand: ProxyCandidate) -> None:
+    """Single-turn spread reads this. Memory only, including on a multi-turn send."""
+    if not cand.served_local:
+        note_key_used(cand.key_id)
+
+
 def _apply_candidate_outcome(
     vault: KeyVault,
     fallback: FallbackManager,
@@ -205,7 +217,7 @@ def _apply_candidate_outcome(
     error_text: str = "",
 ) -> None:
     if cand.served_local:
-        breaker = get_circuit_breaker(cand.provider)
+        breaker = _hop_breaker(cand)
         if outcome.attempt_class == "success":
             breaker.record_success()
             return
@@ -222,7 +234,6 @@ def _apply_candidate_outcome(
         vault,
         fallback,
         key_id=cand.key_id,
-        provider=cand.provider,
         outcome=outcome,
         error=error,
         error_text=error_text,
@@ -500,15 +511,14 @@ def _apply_outcome(
     fallback: FallbackManager,
     *,
     key_id: str,
-    provider: str,
     outcome: AttemptOutcome,
     error: str,
     error_text: str = "",
 ) -> None:
-    """Mutate hop / provider health according to the attempt policy."""
+    """Mutate hop health. The route breaker is this key, not the provider."""
     if outcome.attempt_class == "success":
         fallback.record_success(key_id)
-        get_circuit_breaker(provider).record_success()
+        get_circuit_breaker(key_id).record_success()
         return
 
     if outcome.candidate == "park":
@@ -538,7 +548,7 @@ def _apply_outcome(
                     status = int(error.split()[1])
                 except (IndexError, ValueError):
                     status = None
-            get_circuit_breaker(provider).record_failure(status=status)
+            get_circuit_breaker(key_id).record_failure(status=status)
 
 
 PIN_UNAVAILABLE = "pin_unavailable"
@@ -675,7 +685,7 @@ def _why_pin_blocked(
             if quota_retry is not None:
                 retries.append(quota_retry)
             continue
-        breaker_open = not get_circuit_breaker(record.provider).can_execute()
+        breaker_open = not get_circuit_breaker(record.id).can_execute()
         if fallback.hop_circuit_is_open(record.id) or breaker_open:
             saw_circuit = True
     if not saw_hop:
@@ -705,7 +715,7 @@ def _strict_candidates(
     for cand in candidates:
         if not _strict_hop_serves(cand.provider, pin, multimodal=multimodal):
             continue
-        if not get_circuit_breaker(cand.provider).can_execute():
+        if not _hop_breaker(cand).can_execute():
             continue
         if not cand.served_local and fallback.model_is_parked(cand.key_id, pin):
             continue
@@ -879,9 +889,9 @@ async def chat_completions(
     async with httpx.AsyncClient(timeout=timeout_s) as client:
         for cand in candidates:
             considered += 1
-            breaker = get_circuit_breaker(cand.provider)
+            breaker = _hop_breaker(cand)
             if not breaker.acquire_probe_slot():
-                errors.append(f"{cand.label}: provider circuit open")
+                errors.append(f"{cand.label}: key circuit open")
                 _remember_circuit(pin_fail)
                 continue
 
@@ -960,6 +970,7 @@ async def chat_completions(
 
                 trace.note_attempt()
                 sent_any = True
+                _remember_key_use(cand)
                 started = time.perf_counter()
                 try:
                     resp = await client.post(url, headers=headers, json=hop_body)
@@ -1147,9 +1158,9 @@ async def prepare_chat_stream(
     try:
         for cand in candidates:
             considered += 1
-            breaker = get_circuit_breaker(cand.provider)
+            breaker = _hop_breaker(cand)
             if not breaker.acquire_probe_slot():
-                errors.append(f"{cand.label}: provider circuit open")
+                errors.append(f"{cand.label}: key circuit open")
                 _remember_circuit(pin_fail)
                 continue
 
@@ -1233,6 +1244,7 @@ async def prepare_chat_stream(
 
                 trace.note_attempt()
                 sent_any = True
+                _remember_key_use(cand)
                 started = time.perf_counter()
                 try:
                     req = client.build_request("POST", url, headers=headers, json=hop_payload)

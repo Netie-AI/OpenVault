@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -18,7 +19,13 @@ from openmw.openvault.vault.parks import (
     load_parks,
     save_park,
 )
-from openmw.openvault.vault.quota import park_wait_s, quota_blocks, quota_view
+from openmw.openvault.vault.quota import (
+    park_wait_s,
+    quota_blocks,
+    quota_view,
+    quota_window,
+    tokens_used_by_key,
+)
 from openmw.openvault.vault.store import KeyRecord, KeyVault
 
 CircuitState = Literal["closed", "open", "half_open"]
@@ -68,11 +75,149 @@ def rendezvous_score(affinity_key: str, key_id: str) -> int:
     return int(digest[:16], 16)
 
 
-def _rank_band(records: list[KeyRecord], affinity_key: str) -> list[KeyRecord]:
-    """Sort one priority band, using affinity only to break exact-priority ties."""
-    if not affinity_key:
-        return sorted(records, key=lambda r: r.priority)
-    return sorted(records, key=lambda r: (r.priority, -rendezvous_score(affinity_key, r.id), r.id))
+# In-memory single-turn recency. Not a ledger write: the event loop must not
+# gain a per-request database insert just to remember which key went last.
+_spread_lock = threading.Lock()
+_last_used: dict[str, int] = {}
+_use_seq = 0
+
+
+def note_key_used(key_id: str) -> None:
+    """Record that this vault key was sent. Memory only."""
+    global _use_seq
+    if not key_id:
+        return
+    with _spread_lock:
+        _use_seq += 1
+        _last_used[key_id] = _use_seq
+
+
+def reset_key_spread() -> None:
+    """Drop in-memory spread state. Used by tests."""
+    global _use_seq
+    with _spread_lock:
+        _last_used.clear()
+        _use_seq = 0
+
+
+def _priority_bands(ranked: list[KeyRecord]) -> list[list[KeyRecord]]:
+    bands: list[list[KeyRecord]] = []
+    current: list[KeyRecord] = []
+    priority: int | None = None
+    for record in ranked:
+        if priority is None or record.priority != priority:
+            if current:
+                bands.append(current)
+            current = [record]
+            priority = record.priority
+        else:
+            current.append(record)
+    if current:
+        bands.append(current)
+    return bands
+
+
+def _sibling_providers(bands: list[list[KeyRecord]]) -> set[str]:
+    found: set[str] = set()
+    for band in bands:
+        counts: dict[str, int] = {}
+        for record in band:
+            counts[record.provider] = counts.get(record.provider, 0) + 1
+        for provider, count in counts.items():
+            if count >= 2:
+                found.add(provider)
+    return found
+
+
+def _quota_weights(records: list[KeyRecord], db_path: Path, providers: set[str]) -> dict[str, int]:
+    """Catalog daily limit minus this key's ledger tokens. Missing limit => weight 1."""
+    weights: dict[str, int] = {}
+    now = time.time()
+    for provider in providers:
+        start, _nxt, limit = quota_window(provider, now)
+        if limit is None:
+            continue
+        used = tokens_used_by_key(db_path, provider=provider, since=start)
+        for record in records:
+            if record.provider == provider:
+                weights[record.id] = max(0, limit - used.get(record.id, 0))
+    return weights
+
+
+def _spread_key(
+    record: KeyRecord,
+    weights: dict[str, int],
+    last: dict[str, int],
+    max_seq: int,
+) -> tuple[int, str]:
+    """Least-recently-used, weighted by quota remaining. Higher score is tried first."""
+    seq = last.get(record.id, 0)
+    idle = (max_seq + 1) - seq
+    weight = weights.get(record.id, 1)
+    score = 0 if weight <= 0 else idle * weight
+    return (-score, record.id)
+
+
+def _fill_provider_slots(
+    band: list[KeyRecord],
+    weights: dict[str, int],
+    last: dict[str, int],
+    max_seq: int,
+) -> list[KeyRecord]:
+    """Reorder same-provider keys into the slots that provider already occupies."""
+    slots: dict[str, list[int]] = {}
+    for index, record in enumerate(band):
+        slots.setdefault(record.provider, []).append(index)
+    arranged = list(band)
+    for indexes in slots.values():
+        if len(indexes) < 2:
+            continue
+        chosen = sorted(
+            (band[index] for index in indexes),
+            key=lambda record: _spread_key(record, weights, last, max_seq),
+        )
+        for index, record in zip(indexes, chosen, strict=True):
+            arranged[index] = record
+    return arranged
+
+
+def _spread_single_turn(ranked: list[KeyRecord], db_path: Path) -> list[KeyRecord]:
+    """Spread keys inside a priority band. Provider order and band order stay."""
+    if len(ranked) < 2:
+        return ranked
+    bands = _priority_bands(ranked)
+    providers = _sibling_providers(bands)
+    if not providers:
+        return ranked
+    weights = _quota_weights(ranked, db_path, providers)
+    with _spread_lock:
+        last = dict(_last_used)
+    max_seq = max(last.values(), default=0)
+    out: list[KeyRecord] = []
+    for band in bands:
+        out.extend(_fill_provider_slots(band, weights, last, max_seq))
+    return out
+
+
+def _rank_band(records: list[KeyRecord], affinity_key: str, db_path: Path) -> list[KeyRecord]:
+    """Sort one role group.
+
+    An affinity key (multi-turn head or ``prompt_cache_key``) keeps rendezvous
+    order inside a priority. A single-turn call has no affinity key: same-provider
+    keys inside a priority band are least-recently-used, weighted by quota
+    remaining. Different providers keep the slots they already had.
+    """
+    if affinity_key:
+        return sorted(
+            records,
+            key=lambda record: (
+                record.priority,
+                -rendezvous_score(affinity_key, record.id),
+                record.id,
+            ),
+        )
+    ranked = sorted(records, key=lambda record: record.priority)
+    return _spread_single_turn(ranked, db_path)
 
 
 class FallbackManager:
@@ -173,11 +318,15 @@ class FallbackManager:
 
         ``affinity_key`` makes the order deterministic for a repeated prompt
         prefix. Without it, a pool of several keys scatters the same
-        conversation across accounts and every upstream prompt cache stays cold
-        — the caller pays full input price on every turn. The re-order happens
-        strictly *within* a priority band, so health, park windows, role order
-        and the operator's own priorities all still win; affinity only breaks
-        ties that were previously broken by insertion order.
+        conversation across accounts and every upstream prompt cache stays cold,
+        so the caller pays full input price on every turn. The re-order happens
+        strictly within a priority band, so health, park windows, role order
+        and the operator's own priorities all still win.
+
+        With an affinity key, rendezvous hashing breaks ties inside the band.
+        With none (a single-turn call), same-provider keys in that band are
+        least-recently-used, weighted by quota remaining in the usage ledger.
+        The order of providers, and the order of bands, does not change.
         """
         now = time.time()
         by_role: dict[str, list[KeyRecord]] = {r: [] for r in self._config.role_order}
@@ -190,8 +339,9 @@ class FallbackManager:
         ordered: list[KeyRecord] = []
         for role in self._config.role_order:
             available = [r for r in by_role.get(role, []) if self._is_available(r, now)]
-            ordered.extend(_rank_band(available, affinity_key))
-        ordered.extend(_rank_band([r for r in extras if self._is_available(r, now)], affinity_key))
+            ordered.extend(_rank_band(available, affinity_key, self._vault.db_path))
+        extras_available = [r for r in extras if self._is_available(r, now)]
+        ordered.extend(_rank_band(extras_available, affinity_key, self._vault.db_path))
         return ordered
 
     def record_success(self, key_id: str) -> None:
