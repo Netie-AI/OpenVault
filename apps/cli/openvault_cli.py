@@ -8,6 +8,7 @@
   openvault home unpack ZIP --to DIR       # restore that zip (passphrase unseal there)
   openvault doctor      # environment preflight (filesystem, node, npm, ports)
   openvault doctor      # environment preflight (filesystem, node, npm, ports)
+  openvault add PROVIDER  # catalog id; key from hidden prompt or stdin only
   openvault demo        # mock-health demo: API + app + open browser
   openvault demo-path   # scripted vault->FreeRoute refuse->ship allow->deny (mocks only)
 
@@ -21,6 +22,7 @@ import argparse
 import contextlib
 import json
 import os
+import re
 import shutil
 import socket
 import subprocess
@@ -100,6 +102,28 @@ def _resolve_port(service_key: str, env_var: str, default: int) -> int:
 
 API_PORT = _resolve_port("api", "OPENVAULT_API_PORT", 5000)
 WEB_PORT = _resolve_port("web", "OPENVAULT_WEB_PORT", 3010)
+
+# Keep in step with openmw.openvault.vault.key_add._SAFE_PROVIDER_ID.
+_SAFE_PROVIDER_ID = re.compile(r"[a-z0-9_]{1,32}\Z")
+_ARGV_KEY_ERROR = (
+    "refusing a key passed on the command line; paste it at the hidden prompt or pipe it on stdin"
+)
+
+
+def refuse_add_command_line(argv: list[str]) -> int | None:
+    """Refuse `add` when a key was passed in argv. Never echo that key.
+
+    Returns an exit code when the command must stop, or None to keep parsing.
+    """
+    if not argv or argv[0] != "add":
+        return None
+    rest = argv[1:]
+    providers = [item for item in rest if item not in ("-h", "--help")]
+    unsafe = [item for item in providers if _SAFE_PROVIDER_ID.fullmatch(item) is None]
+    if unsafe or len(providers) > 1:
+        print(_ARGV_KEY_ERROR, file=sys.stderr)
+        return 2
+    return None
 
 
 def _wait(url: str, timeout: float = 60.0) -> bool:
@@ -286,6 +310,31 @@ def _base_env() -> dict[str, str]:
         "PATH": os.environ.get("PATH")
         or next((v for k, v in os.environ.items() if k.upper() == "PATH"), ""),
     }
+
+
+def cmd_add(args: argparse.Namespace) -> int:
+    """Test a catalog provider key, then store it in the one existing vault.
+
+    The key is not an argument. The child reads a hidden prompt or stdin.
+    """
+    provider = str(args.provider)
+    if _SAFE_PROVIDER_ID.fullmatch(provider) is None:
+        print(_ARGV_KEY_ERROR, file=sys.stderr)
+        return 2
+    uv = shutil.which("uv")
+    if not uv:
+        print("uv is required to run openvault add", file=sys.stderr)
+        return 1
+    cmd = [
+        uv,
+        "run",
+        "--no-sync",
+        "python",
+        "-m",
+        "openmw.openvault.vault.key_add",
+        provider,
+    ]
+    return subprocess.call(cmd, cwd=str(OPENMW))
 
 
 def cmd_doctor(_: argparse.Namespace) -> int:
@@ -586,6 +635,9 @@ def cmd_grant_request(args: argparse.Namespace) -> int:
 
 def main() -> int:
     ensure_utf8_stdio()
+    refused = refuse_add_command_line(sys.argv[1:])
+    if refused is not None:
+        return refused
     parser = argparse.ArgumentParser(prog="openvault")
     sub = parser.add_subparsers(dest="cmd", required=True)
 
@@ -638,6 +690,12 @@ def main() -> int:
     grant_req.add_argument("--no-open", action="store_true")
     grant_req.add_argument("--base-url", default=None)
     grant_req.set_defaults(func=cmd_grant_request)
+    add = sub.add_parser(
+        "add",
+        help="Add a catalog provider key (hidden prompt or stdin; never argv or env)",
+    )
+    add.add_argument("provider", help="catalog provider id")
+    add.set_defaults(func=cmd_add)
     sub.add_parser("doctor", help="Environment preflight").set_defaults(func=cmd_doctor)
 
     secret = sub.add_parser("secret", help="Agent retrieve: keys and site passwords (never cards)")

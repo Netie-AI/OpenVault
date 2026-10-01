@@ -2,6 +2,15 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-01 - CLI openvault add (OpenVault #78)
+
+- `openvault add <provider>` reads the key from a hidden prompt or stdin.
+  A key in argv or an environment variable is refused.
+- The key is stored only after a 1-token chat on the provider's first catalog
+  model, in the existing vault. GET /models is not the test. Bodies are not logged.
+- Dedupe is an HMAC with a vault-held secret, stored beside the key. Output is
+  the label and masked id. The test and dedupe live in `vault/key_add.py`.
+
 ## 2026-10-01 - Opt-in strict model pin (OpenVault #80)
 
 - `strict: true` on the chat body, or header `X-OpenVault-Strict: true`,

@@ -6,7 +6,7 @@
 |------|------|
 | `apps/web` | **The OpenVault app.** Next 16 + Tailwind v4, wearing FreeBuild's token system |
 | `apps/shell` | **Electron desktop shell**, adapted from `vendor/OmniRoute/electron` |
-| `apps/cli/openvault_cli.py` | CLI: `up` / `demo` / `app` / `doctor` / `home pack` / `home unpack` |
+| `apps/cli/openvault_cli.py` | CLI: `add` / `up` / `demo` / `app` / `doctor` / `home pack` / `home unpack` |
 | `vendor/*` | Upstream clones we copy **from**. Gitignored. Not services we run |
 
 ## Run

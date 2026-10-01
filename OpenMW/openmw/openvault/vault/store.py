@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+import secrets
 import sqlite3
 import time
 import uuid
@@ -121,7 +123,16 @@ class KeyVault:
                   account_id TEXT,
                   lifecycle TEXT NOT NULL DEFAULT 'active',
                   replaced_by TEXT,
-                  custody TEXT NOT NULL DEFAULT 'pooled'
+                  custody TEXT NOT NULL DEFAULT 'pooled',
+                  key_fp TEXT
+                )
+                """
+            )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS vault_meta (
+                  name TEXT PRIMARY KEY,
+                  secret_blob BLOB NOT NULL
                 )
                 """
             )
@@ -139,6 +150,9 @@ class KeyVault:
                 conn.execute("ALTER TABLE keys ADD COLUMN custody TEXT NOT NULL DEFAULT 'pooled'")
             if "masked" not in cols:
                 conn.execute("ALTER TABLE keys ADD COLUMN masked TEXT NOT NULL DEFAULT ''")
+            if "key_fp" not in cols:
+                # HMAC of the provider key under a vault-held secret. Not a bare sha256.
+                conn.execute("ALTER TABLE keys ADD COLUMN key_fp TEXT")
             # One-time backfill: persist masks so list_keys never decrypts plaintext.
             # Skip while sealed — decrypt would fail closed, and masks stay empty
             # until an unseal + later write/backfill.
@@ -223,6 +237,57 @@ class KeyVault:
             return None
         return self._seal.decrypt(row["secret_blob"])
 
+    def get_or_create_fingerprint_secret(self) -> bytes:
+        """Random HMAC key for this vault, encrypted at rest.
+
+        Held by the vault so a provider-key fingerprint is not a bare hash.
+        """
+        name = "key_fp_hmac"
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT secret_blob FROM vault_meta WHERE name = ?",
+                (name,),
+            ).fetchone()
+            if row is not None:
+                return base64.b64decode(self._seal.decrypt(row["secret_blob"]))
+            raw = secrets.token_bytes(32)
+            blob = self._seal.encrypt(base64.b64encode(raw).decode("ascii"))
+            conn.execute(
+                "INSERT INTO vault_meta (name, secret_blob) VALUES (?, ?)",
+                (name, blob),
+            )
+            conn.commit()
+            return raw
+
+    def get_fingerprint(self, key_id: str) -> str | None:
+        """HMAC fingerprint stored beside the key, or None when unset."""
+        with self._connect() as conn:
+            row = conn.execute("SELECT key_fp FROM keys WHERE id = ?", (key_id,)).fetchone()
+        if row is None:
+            return None
+        value = row["key_fp"]
+        if value is None or value == "":
+            return None
+        return str(value)
+
+    def find_by_fingerprint(self, key_fp: str) -> KeyRecord | None:
+        """First key row with this fingerprint, oldest first."""
+        if not key_fp:
+            return None
+        with self._connect() as conn:
+            row = conn.execute(
+                """
+                SELECT * FROM keys
+                WHERE key_fp = ?
+                ORDER BY created_at ASC
+                LIMIT 1
+                """,
+                (key_fp,),
+            ).fetchone()
+        if row is None:
+            return None
+        return self._row_to_record(row)
+
     def create(
         self,
         *,
@@ -236,6 +301,7 @@ class KeyVault:
         account_id: str | None = None,
         key_id: str | None = None,
         custody: KeyCustody = "pooled",
+        key_fp: str | None = None,
     ) -> KeyRecord:
         key_id = key_id or uuid.uuid4().hex
         now = time.time()
@@ -246,8 +312,9 @@ class KeyVault:
                 """
                 INSERT INTO keys (
                   id, label, provider, role, base_url, secret_blob, masked, enabled, priority,
-                  precheck_status, created_at, updated_at, account_id, lifecycle, custody
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'unknown', ?, ?, ?, 'active', ?)
+                  precheck_status, created_at, updated_at, account_id, lifecycle, custody,
+                  key_fp
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'unknown', ?, ?, ?, 'active', ?, ?)
                 """,
                 (
                     key_id,
@@ -263,6 +330,7 @@ class KeyVault:
                     now,
                     account_id,
                     custody,
+                    key_fp or None,
                 ),
             )
             conn.commit()
