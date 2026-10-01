@@ -22,26 +22,33 @@ LOCAL-1 (#70): `local_qwen` hop, no cloud key. Chat stamps `served_provider` /
 
 ## Branch estate (2026-09-11 merge wave)
 
-14 squash-merge ghosts and two closed unmerged PRs (#5, #7). Do not delete
-until a different run confirms (R-0003).
+17 branches were unmerged against `origin/main`. Measured, not assumed: 14 are
+squash-merge ghosts - their pull requests landed, so their commits never became
+ancestors of main, and git reports them "ahead" while carrying no content main
+lacks. Two more (PRs #5, #7) were closed unmerged and hold only retired
+scaffolding. Ghost deletion is NOT independently verified - do not delete on
+this note alone.
 
 ## Known-red - do not report this suite as green
 
-Five OpenMW collection errors (quant / prefetch / run, R-0002/R-0004):
-`test_key_channel_quant`, `test_kv_quant`, `test_prefetch_flash`, `test_prefetch_sparsity`, `test_run`.
+`OpenMW` has 5 collection errors, so those files contribute zero coverage
+(R-0002): `test_key_channel_quant`, `test_kv_quant`, `test_prefetch_flash`,
+`test_prefetch_sparsity`, `test_run`. They are all quant / prefetch / run
+files, so one shared root cause at one binding point is likely (R-0004).
 
 ## Distance
 
-Checked: `waitForServer` 9/9. `nvme_sentinel` 96 passed, 6 skipped (needs real
-NVMe). NOT checked here: full `OpenMW`, `apps/web` build, the 14 ghosts.
-Usage $/unit NEEDS-YOU.
+Checked: `waitForServer` 9/9, including a new gate proving a build-in-progress
+shell at HTTP 200 is refused and named "compiling", not "unreachable".
+`nvme_sentinel` 96 passed, 6 skipped (needs real NVMe). NOT checked: a full
+`OpenMW` suite here, the `apps/web` build, the 14 ghosts. Usage $/unit NEEDS-YOU.
 
 ## Next
 
 | # | Status |
 |---|--------|
 | #76 T2 | Dead-model 404/unknown continues; 429 parks (key, model); pinned model is not swapped in-provider. |
-| #80 strict pin | Opt-in field or `X-OpenVault-Strict`. `pin_unavailable` when the exact catalog id has no healthy hop. |
+| #80 strict pin | Opt-in field or header. pin_unavailable when the exact catalog id has no healthy hop. |
 | #72 SEC-GUARD | Fail-closed /api+/keys guard, docs off, GET mesh/connect-pack is read-only. |
 | #70 LOCAL-1 | Hop + served_* + fail-closed local_only. Ceiling: merged, local not proven. |
 | OpenMW collection errors | 5 files, one root-cause class. Blocks a green suite. |
@@ -51,7 +58,8 @@ Usage $/unit NEEDS-YOU.
 
 ## HT gates (#18 CLOSED, boxes ticked)
 
-HT1 `https://netie.ai/ht1-demo/`. HT2 API chat 200. HT3 passphrase-scrypt + bak retired. HT4 Cortex healthy. HT5 inject; public `.env` 403.
+HT1 `https://netie.ai/ht1-demo/`. HT2 API chat 200. HT3 passphrase-scrypt + bak
+retired. HT4 Cortex healthy. HT5 inject; public `.env` 403.
 
 ## Clone-and-verify
 
