@@ -30,7 +30,7 @@ def test_none_is_treated_as_auto() -> None:
 
 
 def test_known_id_is_honoured_unchanged() -> None:
-    assert resolve_model("groq", "llama-3.1-8b-instant") == "llama-3.1-8b-instant"
+    assert resolve_model("groq", "openai/gpt-oss-20b") == "openai/gpt-oss-20b"
     assert resolve_model("google", "gemini-3.5-flash") == "gemini-3.5-flash"
 
 
@@ -45,7 +45,7 @@ def test_other_providers_id_falls_back_rather_than_404ing() -> None:
 
 
 def test_multimodal_uses_vision_pool() -> None:
-    assert resolve_model("groq", "auto", multimodal=True) == "qwen/qwen3.6-27b"
+    assert resolve_model("groq", "auto", multimodal=True) == "qwen/qwen3.8-27b"
     assert resolve_model("google", "auto", multimodal=True) == "gemini-3.5-flash"
 
 
@@ -143,7 +143,10 @@ from openmw.openvault.vault.providers import (  # noqa: E402
 def test_reasoning_models_are_flagged() -> None:
     assert is_reasoning_model("groq", "openai/gpt-oss-120b")
     assert is_reasoning_model("groq", "openai/gpt-oss-20b")
-    assert not is_reasoning_model("groq", "llama-3.1-8b-instant")
+    assert is_reasoning_model("groq", "qwen/qwen3.8-27b")
+    # A model this catalog still serves, and that is not flagged as reasoning.
+    assert "ministral-8b-latest" in models_for("mistral")
+    assert not is_reasoning_model("mistral", "ministral-8b-latest")
     assert not is_reasoning_model("google", "gemini-2.5-flash")
 
 
@@ -164,7 +167,7 @@ def test_budget_is_never_lowered() -> None:
 
 
 def test_non_reasoning_and_unset_budgets_untouched() -> None:
-    assert budget_for("groq", "llama-3.1-8b-instant", 32) is None
+    assert budget_for("mistral", "ministral-8b-latest", 32) is None
     assert budget_for("groq", "openai/gpt-oss-120b", None) is None
     assert budget_for("nope", "whatever", 8) is None
 

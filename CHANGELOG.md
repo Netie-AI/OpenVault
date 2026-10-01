@@ -2,6 +2,22 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-01 - FreeRoute catalog refresh (OpenVault #74)
+
+- OpenRouter `chat_models` are only `:free` ids whose prompt and completion
+  price were 0 on https://openrouter.ai/api/v1/models at 2026-10-01T08:00:04Z.
+  Vision ids are the ones whose `input_modalities` include image.
+- Groq drops `llama-3.1-8b-instant`, `llama-3.3-70b-versatile`, and
+  `qwen/qwen3.6-27b`. Vision is `qwen/qwen3.8-27b`.
+- Cerebras models are `gpt-oss-120b` and `qwen-3.8-27b`. Notes call it a trial
+  ($5 credits, 30 days, 5 RPM), not a free tier.
+- Mistral drops retired `open-mistral-nemo`.
+- NVIDIA drops `meta/llama-3.1-8b-instruct`, `meta/llama-3.1-70b-instruct`,
+  and unlisted `mistralai/mistral-nemotron`. First choice is
+  `nvidia/llama-3.1-nemotron-70b-instruct`.
+- `local_qwen` is unchanged. Routing, precheck, limiter, parks, and guards
+  are unchanged.
+
 ## 2026-09-25 - Fail-closed auth guard on /api and /keys (OpenVault #72)
 
 - Every `/api/*` and `/keys/*` route now requires a valid issued OpenVault API
