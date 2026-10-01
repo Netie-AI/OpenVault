@@ -2,6 +2,13 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-01 - Strict pin binds provider and model (OpenVault #98)
+
+- Strict mode for `openai/gpt-oss-120b` is a pin-site provider bind: groq only.
+  Together lists the same catalog id and is not a hop for that pin.
+- No groq hop for that pin returns 503 `pin_unavailable` with `no_hop`.
+  Non-strict routing for the same model is unchanged.
+
 ## 2026-10-01 - OpenRouter /key 404 is error; doc corrections (OpenVault #100)
 
 - OpenRouter /api/v1/key: 404 and any other non-2xx except 401/403 (auth_fail) and 429 (rate_limit) now map to `error` with `HTTP {code}`. Other providers keep the shared classifier.
