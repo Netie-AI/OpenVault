@@ -9,6 +9,7 @@ column is a scrubbed provider message, never a request or response body.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import re
 import sqlite3
@@ -18,6 +19,7 @@ from pathlib import Path
 
 ERROR_TEXT_MAX = 200
 
+# Prefixes before the 32+ catch-all so a short csk- or xai- key still matches.
 _SECRET = re.compile(
     r"(?i)(?:bearer\s+[A-Za-z0-9._\-]{6,}"
     r"|\bov_[A-Za-z0-9]{6,}"
@@ -26,7 +28,10 @@ _SECRET = re.compile(
     r"|\bAIza[0-9A-Za-z_\-]{6,}"
     r"|\bnvapi-[A-Za-z0-9_\-]{6,}"
     r"|\bhf_[A-Za-z0-9]{6,}"
-    r"|\b(?:api[_-]?key|token|secret|password)\s*[:=]\s*\S+)"
+    r"|\b(?:api[_-]?key|token|secret|password)\s*[:=]\s*\S+"
+    r"|\bcsk-[A-Za-z0-9_\-]{6,}"
+    r"|\bxai-[A-Za-z0-9_\-]{6,}"
+    r"|[A-Za-z0-9_\-]{32,})"
 )
 
 
@@ -103,7 +108,7 @@ def _connect(db_path: Path) -> sqlite3.Connection:
 
 def ensure_park_schema(db_path: Path) -> None:
     """Create ``hop_parks`` if it is missing. Does not touch other tables."""
-    with _connect(db_path) as conn:
+    with contextlib.closing(_connect(db_path)) as conn, conn:
         conn.execute(
             """
             CREATE TABLE IF NOT EXISTS hop_parks (
@@ -117,7 +122,6 @@ def ensure_park_schema(db_path: Path) -> None:
             )
             """
         )
-        conn.commit()
 
 
 def save_park(
@@ -129,9 +133,8 @@ def save_park(
     reason: str,
     error_text: str,
 ) -> None:
-    ensure_park_schema(db_path)
     text = clip_error_text(error_text)
-    with _connect(db_path) as conn:
+    with contextlib.closing(_connect(db_path)) as conn, conn:
         conn.execute(
             """
             INSERT INTO hop_parks (key_id, model, park_until, reason, error_text, updated_at)
@@ -144,32 +147,28 @@ def save_park(
             """,
             (key_id, model, float(park_until), reason, text, time.time()),
         )
-        conn.commit()
 
 
 def delete_park(db_path: Path, key_id: str, model: str = "") -> None:
-    ensure_park_schema(db_path)
-    with _connect(db_path) as conn:
+    with contextlib.closing(_connect(db_path)) as conn, conn:
         conn.execute(
             "DELETE FROM hop_parks WHERE key_id=? AND model=?",
             (key_id, model),
         )
-        conn.commit()
 
 
 def load_parks(db_path: Path) -> list[ParkRow]:
-    ensure_park_schema(db_path)
-    with _connect(db_path) as conn:
+    with contextlib.closing(_connect(db_path)) as conn, conn:
         rows = conn.execute(
             "SELECT key_id, model, park_until, reason, error_text FROM hop_parks"
         ).fetchall()
-    return [
-        ParkRow(
-            key_id=str(row["key_id"]),
-            model=str(row["model"] or ""),
-            park_until=float(row["park_until"]),
-            reason=str(row["reason"] or ""),
-            error_text=str(row["error_text"] or ""),
-        )
-        for row in rows
-    ]
+        return [
+            ParkRow(
+                key_id=str(row["key_id"]),
+                model=str(row["model"] or ""),
+                park_until=float(row["park_until"]),
+                reason=str(row["reason"] or ""),
+                error_text=str(row["error_text"] or ""),
+            )
+            for row in rows
+        ]

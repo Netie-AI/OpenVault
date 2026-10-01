@@ -2,6 +2,13 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-01 - Close park DB handles and widen error scrub (OpenVault #86)
+
+- `hop_parks` connections close after each ensure, save, delete, and load.
+  The schema is created once when a fallback manager starts.
+- Stored provider messages also redact `csk-`, `xai-`, and any 32+ character
+  token. The 200-character cap and message-only rule stay.
+
 ## 2026-10-01 - Persisted parks and quota-aware health (OpenVault #86)
 
 - Hop parks live in `keys.db` table `hop_parks`. A restart keeps them. An

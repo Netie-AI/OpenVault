@@ -11,7 +11,13 @@ from pathlib import Path
 from typing import Literal
 
 from openmw.openvault.paths import fallback_path
-from openmw.openvault.vault.parks import clip_error_text, delete_park, load_parks, save_park
+from openmw.openvault.vault.parks import (
+    clip_error_text,
+    delete_park,
+    ensure_park_schema,
+    load_parks,
+    save_park,
+)
 from openmw.openvault.vault.quota import park_wait_s, quota_blocks, quota_view
 from openmw.openvault.vault.store import KeyRecord, KeyVault
 
@@ -83,6 +89,7 @@ class FallbackManager:
         self._config_path = config_path if config_path is not None else fallback_path()
         self._config = config if config is not None else self._load_config()
         self._circuits: dict[str, HopCircuit] = {}
+        ensure_park_schema(self._vault.db_path)
         self._load_parks()
 
     def _load_config(self) -> FallbackConfig:

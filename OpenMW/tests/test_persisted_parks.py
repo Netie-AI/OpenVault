@@ -7,8 +7,10 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import sqlite3
 import time
+from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -20,9 +22,17 @@ from fastapi.testclient import TestClient
 from openmw.openvault.app import create_app
 from openmw.openvault.route.breaker import reset_all_circuit_breakers
 from openmw.openvault.vault import fallback as fallback_mod
+from openmw.openvault.vault import parks as parks_mod
 from openmw.openvault.vault.crypto import Seal
 from openmw.openvault.vault.fallback import FallbackManager
-from openmw.openvault.vault.parks import ERROR_TEXT_MAX, provider_error_text
+from openmw.openvault.vault.parks import (
+    ERROR_TEXT_MAX,
+    delete_park,
+    ensure_park_schema,
+    load_parks,
+    provider_error_text,
+    save_park,
+)
 from openmw.openvault.vault.providers import spendable_for_freeroute
 from openmw.openvault.vault.proxy import PIN_UNAVAILABLE, chat_completions
 from openmw.openvault.vault.quota import window_bounds
@@ -216,6 +226,101 @@ def test_google_is_parked_until_quota_resets(
     hop = next(item for item in mgr.status().hops if item["key_id"] == key_id)
     assert hop["park_state"] == "expired"
     assert key_id in [row.id for row in mgr.ordered_candidates()]
+
+
+class _CloseRecorder:
+    """Counts close() and forwards the sqlite connection. C types hide close."""
+
+    def __init__(self, conn: sqlite3.Connection, closes: list[int]) -> None:
+        self._conn = conn
+        self._closes = closes
+
+    def close(self) -> None:
+        self._closes.append(1)
+        self._conn.close()
+
+    def __enter__(self) -> _CloseRecorder:
+        self._conn.__enter__()
+        return self
+
+    def __exit__(self, exc_type: object, exc: object, tb: object) -> bool | None:
+        result = self._conn.__exit__(exc_type, exc, tb)
+        return bool(result) if result is not None else None
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._conn, name)
+
+
+def _db_fd_count(db: Path) -> int | None:
+    root = Path("/proc/self/fd")
+    if not root.is_dir():
+        return None
+    needle = str(db.resolve())
+    count = 0
+    for item in root.iterdir():
+        try:
+            target = os.readlink(item)
+        except OSError:
+            continue
+        if target == needle or target.startswith(needle + "-"):
+            count += 1
+    return count
+
+
+def test_park_db_connections_are_closed(tmp_path: Any) -> None:
+    db = tmp_path / "parks.db"
+    ensure_park_schema(db)
+    closes: list[int] = []
+    real_connect = parks_mod._connect
+
+    def _wrapped(db_path: Path) -> _CloseRecorder:
+        return _CloseRecorder(real_connect(db_path), closes)
+
+    rounds = 25
+    before = _db_fd_count(db)
+    with patch.object(parks_mod, "_connect", _wrapped):
+        for i in range(rounds):
+            save_park(
+                db,
+                key_id=f"k{i}",
+                model="",
+                park_until=time.time() + 30,
+                reason="rate_limited",
+                error_text="slow",
+            )
+            saved = load_parks(db)
+            assert [row.key_id for row in saved] == [f"k{i}"]
+            delete_park(db, f"k{i}")
+            assert load_parks(db) == []
+            open_now = _db_fd_count(db)
+            if open_now is not None:
+                assert open_now == 0
+    assert len(closes) == rounds * 4
+    if before is not None:
+        assert _db_fd_count(db) == 0
+
+
+def test_scrub_redacts_long_hex_and_csk_key() -> None:
+    hex_token = "ab" * 20
+    csk = "csk-" + "unitfake12"
+    xai = "xai-" + "unitfake12"
+    message = f"denied {hex_token} {csk} {xai} later"
+    raw = json.dumps(
+        {
+            "error": {"message": message, "body_marker": _BODY_MARKER},
+            "blob": hex_token,
+        }
+    )
+    stored = provider_error_text(raw, status=401)
+    assert len(stored) <= ERROR_TEXT_MAX
+    assert "[redacted]" in stored
+    assert hex_token not in stored
+    assert "csk-" not in stored
+    assert "xai-" not in stored
+    assert "denied" in stored
+    assert "later" in stored
+    assert _BODY_MARKER not in stored
+    assert "blob" not in stored
 
 
 def test_error_text_is_truncated_and_has_no_secrets(vault: KeyVault) -> None:
