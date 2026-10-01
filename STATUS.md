@@ -60,6 +60,7 @@ shell at HTTP 200 is refused and named "compiling", not "unreachable".
 | #79 cards | Provider cards: Get key, paste once, test and add. |
 | #86 T3 | Persisted parks, quota-aware health, usable_provider_count. |
 | #88 sqlite close | Vault and usage connections close after commit. Open handles do not grow. |
+| #90 web CI | apps/web npm test runs in CI on ubuntu-latest with Node 20. |
 
 ## HT gates (#18 CLOSED, boxes ticked)
 
