@@ -2,6 +2,11 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-01 - apps/web npm audit high and critical (OpenVault #95)
+
+- `npm audit fix` (no `--force`) in `apps/web`. Before: 4 vulnerabilities (3 high, 1 critical). After: 0 high, 0 critical.
+- Lockfile only. next 16.2.11 to 16.3.8, sharp 0.34.5 to 0.35.5, nanoid 3.3.16 to 3.3.19. The nested postcss 8.4.31 copy is gone. No major-version bumps.
+
 ## 2026-10-01 - Spread single-turn keys and break per key (OpenVault #106)
 
 - Single-turn calls, which have no affinity key, pick the least-recently-used
