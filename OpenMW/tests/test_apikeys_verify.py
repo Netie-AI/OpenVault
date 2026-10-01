@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from conftest import inject_admin_credential
 from cryptography.fernet import Fernet
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -49,3 +50,22 @@ def test_verify_refuses_non_loopback_peer(app_and_home: FastAPI) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 403
+
+
+def test_verify_requires_the_admin_token(app_and_home: FastAPI) -> None:
+    """The forks must present X-OpenVault-Admin; loopback alone is not enough (#84)."""
+    client = TestClient(app_and_home, client=("127.0.0.1", 5555))
+    token = client.post("/api/apikeys", json={"label": "x", "tier": "free"}).json()["token"]
+
+    reset = inject_admin_credential.set(False)
+    try:
+        bare = client.post("/api/apikeys/verify", json={"token": token})
+        wrong = client.post(
+            "/api/apikeys/verify",
+            json={"token": token},
+            headers={"X-OpenVault-Admin": "not-the-token"},
+        )
+    finally:
+        inject_admin_credential.reset(reset)
+    assert bare.status_code == 401
+    assert wrong.status_code == 401
