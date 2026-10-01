@@ -11,6 +11,7 @@ SKUs was not locked; the 20% usage-credit discount is the locked differentiator.
 
 from __future__ import annotations
 
+import contextlib
 import os
 import sqlite3
 import time
@@ -323,7 +324,7 @@ class EntitlementStore:
         return conn
 
     def _ensure_schema(self) -> None:
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS entitlements (
@@ -357,7 +358,7 @@ class EntitlementStore:
         )
 
     def get(self, account_id: str) -> Entitlement:
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             row = conn.execute(
                 "SELECT * FROM entitlements WHERE account_id=?", (account_id,)
             ).fetchone()
@@ -393,7 +394,7 @@ class EntitlementStore:
         else:
             next_seats = 1
         now = time.time()
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             conn.execute(
                 """
                 INSERT INTO entitlements (account_id, plan_id, seats, unlocked_at, updated_at)
@@ -413,7 +414,7 @@ class EntitlementStore:
         if accounts.get(account_id) is None:
             raise SystemPlaneError("account not found")
         now = time.time()
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             conn.execute(
                 """
                 INSERT INTO entitlements (account_id, plan_id, seats, unlocked_at, updated_at)
@@ -438,7 +439,7 @@ class EntitlementStore:
             raise SystemPlaneError("seats are a team SKU; unlock a team plan first")
         next_seats = _require_team_seats(seats)
         now = time.time()
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             conn.execute(
                 "UPDATE entitlements SET seats=?, updated_at=? WHERE account_id=?",
                 (next_seats, now, account_id),

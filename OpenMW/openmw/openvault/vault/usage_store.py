@@ -23,6 +23,7 @@ billing row is never pruned the way ``health_store`` prunes heartbeats.
 
 from __future__ import annotations
 
+import contextlib
 import sqlite3
 import time
 import uuid
@@ -137,7 +138,7 @@ class UsageStore:
         return conn
 
     def _ensure_schema(self) -> None:
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS usage_events (
@@ -173,7 +174,7 @@ class UsageStore:
             conn.commit()
 
     def record(self, event: UsageEvent) -> UsageEvent:
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             conn.execute(
                 "INSERT INTO usage_events (event_id, created_at, identity, tier, api_key_id, "
                 "model_requested, model_served, provider, vault_key_id, prompt_tokens, "
@@ -251,7 +252,7 @@ class UsageStore:
             sql += " WHERE " + " AND ".join(where)
         sql += " ORDER BY created_at ASC LIMIT ?"
         params.append(max(1, min(int(limit), 1000)))
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             return [self._row(r) for r in conn.execute(sql, params).fetchall()]
 
     def summary(
@@ -291,7 +292,7 @@ class UsageStore:
             params.append(float(since))
         if where:
             sql += " WHERE " + " AND ".join(where)
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             row = conn.execute(sql, params).fetchone()
         return {
             "requests": int(row["requests"]),

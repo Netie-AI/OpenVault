@@ -21,6 +21,7 @@ maps to limits in ``vault/ratelimit.py``. Experience-pack credit lives in
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import hmac
 import re
@@ -105,7 +106,7 @@ class ApiKeyStore:
         return conn
 
     def _ensure_schema(self) -> None:
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS api_keys (
@@ -169,7 +170,7 @@ class ApiKeyStore:
             display=token[: len(TOKEN_PREFIX) + _DISPLAY_CHARS],
             created_at=time.time(),
         )
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             conn.execute(
                 "INSERT INTO api_keys (key_id, token_sha256, label, tier, display, created_at, "
                 "last_used_at, lifecycle, revoked_reason) VALUES (?,?,?,?,?,?,NULL,'active','')",
@@ -196,7 +197,7 @@ class ApiKeyStore:
         if not token:
             return None
         offered = token_digest(token)
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             row = conn.execute("SELECT * FROM api_keys WHERE token_sha256=?", (offered,)).fetchone()
         if row is None:
             return None
@@ -207,7 +208,7 @@ class ApiKeyStore:
 
     def touch(self, key_id: str, *, when: float | None = None) -> None:
         """Record last use. Best-effort — never fails a request that worked."""
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             conn.execute(
                 "UPDATE api_keys SET last_used_at=? WHERE key_id=?",
                 (when if when is not None else time.time(), key_id),
@@ -217,7 +218,7 @@ class ApiKeyStore:
     # -- manage ------------------------------------------------------------
 
     def get(self, key_id: str) -> ApiKeyRecord | None:
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             row = conn.execute("SELECT * FROM api_keys WHERE key_id=?", (key_id,)).fetchone()
         return self._row(row) if row is not None else None
 
@@ -226,11 +227,11 @@ class ApiKeyStore:
         if not include_revoked:
             sql += " WHERE lifecycle='active'"
         sql += " ORDER BY created_at DESC"
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             return [self._row(r) for r in conn.execute(sql).fetchall()]
 
     def revoke(self, key_id: str, *, reason: str = "") -> bool:
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             cur = conn.execute(
                 "UPDATE api_keys SET lifecycle='revoked', revoked_reason=? "
                 "WHERE key_id=? AND lifecycle='active'",

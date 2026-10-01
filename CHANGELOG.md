@@ -2,6 +2,12 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-01 - Close vault sqlite handles (OpenVault #88)
+
+- `with self._connect() as conn` under `openmw/openvault` now closes the
+  connection after the commit. Parks and the quota reader already closed.
+- A repeated vault and usage-store run leaves no extra open database handles.
+
 ## 2026-10-01 - Close park DB handles and widen error scrub (OpenVault #86)
 
 - `hop_parks` connections close after each ensure, save, delete, and load.

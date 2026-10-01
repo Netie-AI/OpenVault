@@ -13,6 +13,7 @@ Write policy: insert on status transition, else at most one row per
 
 from __future__ import annotations
 
+import contextlib
 import math
 import sqlite3
 import time
@@ -108,7 +109,7 @@ class HealthStore:
         return conn
 
     def _init_schema(self) -> None:
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS precheck_history (
@@ -146,7 +147,7 @@ class HealthStore:
         """Drop rows older than 7 days, then cap at MAX_ROWS_PER_KEY newest."""
         ts = time.time() if now is None else now
         cutoff = ts - RETENTION_DAYS * 86400.0
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             conn.execute(
                 "DELETE FROM precheck_history WHERE key_id = ? AND checked_at < ?",
                 (key_id, cutoff),
@@ -179,7 +180,7 @@ class HealthStore:
         """Insert many rows without heartbeat/prune (test and migration helper)."""
         if not rows:
             return
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             conn.executemany(
                 """
                 INSERT INTO precheck_history
@@ -206,7 +207,7 @@ class HealthStore:
         Returns True if a row was written.
         """
         ts = time.time() if checked_at is None else checked_at
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             if force:
                 should_write = True
             else:
@@ -231,7 +232,7 @@ class HealthStore:
         return should_write
 
     def count_for_key(self, key_id: str) -> int:
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             row = conn.execute(
                 "SELECT COUNT(*) AS n FROM precheck_history WHERE key_id = ?",
                 (key_id,),
@@ -243,7 +244,7 @@ class HealthStore:
     ) -> list[HistorySample]:
         ts = time.time() if now is None else now
         since = ts - window_s
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             rows = conn.execute(
                 """
                 SELECT checked_at, status, latency_ms, error

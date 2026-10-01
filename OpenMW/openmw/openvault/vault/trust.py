@@ -30,6 +30,7 @@ Three properties this module exists to hold:
 from __future__ import annotations
 
 import base64
+import contextlib
 import hashlib
 import hmac
 import json
@@ -160,7 +161,7 @@ class TrustStore:
         return conn
 
     def _init_schema(self) -> None:
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS signing_keys (
@@ -215,7 +216,7 @@ class TrustStore:
         Created lazily rather than at install so a vault that never signs
         anything never holds a signing key at all.
         """
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             row = conn.execute(
                 "SELECT * FROM signing_keys WHERE kind='root' AND lifecycle='active' "
                 "ORDER BY created_at DESC LIMIT 1"
@@ -238,7 +239,7 @@ class TrustStore:
             lifecycle="active",
             created_at=now,
         )
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             conn.execute(
                 "INSERT INTO signing_keys (kid, kind, subject, public_key, private_blob, "
                 "parent_kid, chain_signature, not_before, not_after, lifecycle, created_at) "
@@ -262,7 +263,7 @@ class TrustStore:
 
     def _root_private(self) -> Ed25519PrivateKey:
         root = self.ensure_root()
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             row = conn.execute(
                 "SELECT private_blob FROM signing_keys WHERE kid=?", (root.kid,)
             ).fetchone()
@@ -284,7 +285,7 @@ class TrustStore:
             raise TrustError("service_id is required")
         token = secrets.token_urlsafe(32)
         digest = hashlib.sha256(token.encode("utf-8")).hexdigest()
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             conn.execute(
                 "INSERT INTO signing_services (service_id, token_sha256, created_at, lifecycle) "
                 "VALUES (?,?,?,'active') "
@@ -297,7 +298,7 @@ class TrustStore:
 
     def verify_service(self, service_id: str, token: str) -> bool:
         """Constant-time check of a service bearer token."""
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             row = conn.execute(
                 "SELECT token_sha256, lifecycle FROM signing_services WHERE service_id=?",
                 (service_id.strip(),),
@@ -310,7 +311,7 @@ class TrustStore:
         return hmac.compare_digest(offered, row["token_sha256"])
 
     def revoke_service(self, service_id: str) -> bool:
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             cur = conn.execute(
                 "UPDATE signing_services SET lifecycle='revoked' WHERE service_id=?",
                 (service_id.strip(),),
@@ -365,7 +366,7 @@ class TrustStore:
             lifecycle="active",
             created_at=float(now),
         )
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             conn.execute(
                 "INSERT INTO signing_keys (kid, kind, subject, public_key, private_blob, "
                 "parent_kid, chain_signature, not_before, not_after, lifecycle, created_at) "
@@ -387,7 +388,7 @@ class TrustStore:
         return IssuedIntermediate(record=record, private_key=b64u(_raw_private(private)))
 
     def revoke_key(self, kid: str, *, reason: str = "operator_revoke") -> bool:
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             cur = conn.execute(
                 "UPDATE signing_keys SET lifecycle='revoked', revoked_reason=? "
                 "WHERE kid=? AND kind='intermediate'",
@@ -398,7 +399,7 @@ class TrustStore:
 
     def active_intermediates(self, *, now: float | None = None) -> list[SigningKeyRecord]:
         moment = time.time() if now is None else now
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             rows = conn.execute(
                 "SELECT * FROM signing_keys WHERE kind='intermediate' AND lifecycle='active' "
                 "ORDER BY created_at DESC"
@@ -441,7 +442,7 @@ class TrustStore:
 
     def _pin_root(self) -> SigningKeyRecord | None:
         """Public root for JWKS pin. Does not mint intermediates."""
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             row = conn.execute(
                 "SELECT * FROM signing_keys WHERE kind='root' AND lifecycle='active' "
                 "ORDER BY created_at DESC LIMIT 1"

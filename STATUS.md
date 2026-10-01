@@ -59,6 +59,7 @@ shell at HTTP 200 is refused and named "compiling", not "unreachable".
 | Usage $/unit | NEEDS-YOU. Display SKUs are locked (DR-0013). |
 | #79 cards | Provider cards: Get key, paste once, test and add. |
 | #86 T3 | Persisted parks, quota-aware health, usable_provider_count. |
+| #88 sqlite close | Vault and usage connections close after commit. Open handles do not grow. |
 
 ## HT gates (#18 CLOSED, boxes ticked)
 
