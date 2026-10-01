@@ -2,6 +2,17 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-01 - Per-key quota, OpenRouter precheck, hop attempts (OpenVault #93)
+
+- `GET /api/keys/quota` is admin-only (`http_guard` and `X-OpenVault-Admin`).
+  Each row is a masked id, provider, tokens used today against the catalog
+  daily limit, reset time, park state, and a scrubbed error. No secret.
+- OpenRouter precheck calls `GET https://openrouter.ai/api/v1/key` and stores
+  `limit_remaining` and `is_free_tier` only. A non-2xx sets `precheck_status`
+  to `failed` with the HTTP code. Other providers are unchanged.
+- `hop_attempts` records one row per fallback hop. No bodies and no keys.
+  Rows older than 7 days, and rows past the cap, are pruned on write.
+
 ## 2026-10-01 - Catalog SambaNova, SEA-LION, and NVIDIA NIM (OpenVault #94)
 
 - SambaNova Cloud is an OpenAI-compatible catalog row. Chat ids come from the
