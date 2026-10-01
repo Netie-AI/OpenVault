@@ -102,9 +102,7 @@ def test_404_model_not_found_is_served_by_hop_2(vault: KeyVault) -> None:
         capture_logs() as logs,
         patch("openmw.openvault.vault.proxy.httpx.AsyncClient", return_value=mock),
     ):
-        status, payload = asyncio.run(
-            chat_completions(vault, mgr, _chat(_MODEL_A), trace=trace)
-        )
+        status, payload = asyncio.run(chat_completions(vault, mgr, _chat(_MODEL_A), trace=trace))
 
     assert status == 200
     assert isinstance(payload, dict)
@@ -180,9 +178,7 @@ def test_pinned_model_is_not_swapped_within_a_provider(vault: KeyVault) -> None:
     trace = HopTrace()
 
     with patch("openmw.openvault.vault.proxy.httpx.AsyncClient", return_value=mock):
-        status, payload = asyncio.run(
-            chat_completions(vault, mgr, _chat(_MODEL_A), trace=trace)
-        )
+        status, payload = asyncio.run(chat_completions(vault, mgr, _chat(_MODEL_A), trace=trace))
 
     assert status == 200
     assert isinstance(payload, dict)
