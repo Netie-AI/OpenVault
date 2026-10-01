@@ -5,11 +5,17 @@ The body is the fixed prompt "Reply with OK" and is not stored. ``max_tokens``
 is 16 on a non-reasoning catalog chat model. A provider whose chat models are
 all reasoning models uses the 512-token floor on its first chat model.
 
-Default period is 3600s (``OPENVAULT_CHAT_PROBE_INTERVAL_S``, floored at 600s).
-SambaNova and SEA-LION are probed at most once every 6h. A key with a 2xx
-``hop_attempts`` row inside the current gap is skipped. The probe writes no
-``usage_events`` rows. A 402, or a plan-level 429, marks the key unusable for
-``usable_provider_count``. A transient 429 is a park.
+Default period is 86400s (``OPENVAULT_CHAT_PROBE_INTERVAL_S``, floored at
+3600s). Startup runs one pass after a random 30-120s jitter, and skips a key
+whose last chat probe is younger than that floor. SambaNova and SEA-LION are
+probed at most once every 6h. A key with a 2xx ``hop_attempts`` row inside
+the current gap is skipped. The probe writes no ``usage_events`` rows.
+
+The client timeout defaults to 120s (``OPENVAULT_CHAT_PROBE_TIMEOUT_S``,
+floored at 30s). A timeout or connect error records status only. A 402, a
+plan-level 429, or 401/403 marks the key unusable for
+``usable_provider_count``. A transient 429 is a park. Only a 2xx clears
+unusable.
 """
 
 from __future__ import annotations
@@ -18,6 +24,7 @@ import contextlib
 import json
 import math
 import os
+import random
 import re
 import sqlite3
 import time
@@ -49,13 +56,17 @@ from openmw.openvault.vault.store import KeyVault
 
 log = structlog.get_logger()
 
-DEFAULT_CHAT_PROBE_INTERVAL_S = 3600.0
-CHAT_PROBE_INTERVAL_MIN_S = 600.0
+DEFAULT_CHAT_PROBE_INTERVAL_S = 86400.0
+CHAT_PROBE_INTERVAL_MIN_S = 3600.0
 CHAT_PROBE_INTERVAL_ENV = "OPENVAULT_CHAT_PROBE_INTERVAL_S"
 # Free-tier request caps (SambaNova 20 RPD). Once per 6h is 4 probes/day.
 CHAT_PROBE_LOW_CAP_INTERVAL_S = 6.0 * 60.0 * 60.0
 CHAT_PROBE_LOW_CAP_PROVIDERS: frozenset[str] = frozenset({"sambanova", "sea_lion"})
-DEFAULT_CHAT_PROBE_TIMEOUT_S = 20.0
+DEFAULT_CHAT_PROBE_TIMEOUT_S = 120.0
+CHAT_PROBE_TIMEOUT_MIN_S = 30.0
+CHAT_PROBE_TIMEOUT_ENV = "OPENVAULT_CHAT_PROBE_TIMEOUT_S"
+CHAT_PROBE_BOOT_JITTER_MIN_S = 30.0
+CHAT_PROBE_BOOT_JITTER_MAX_S = 120.0
 CHAT_PROBE_PROMPT = "Reply with OK"
 CHAT_PROBE_MAX_TOKENS = 16
 
@@ -106,24 +117,60 @@ class ChatProbeResult:
     error: str
 
 
-def chat_probe_interval_s(environ: Mapping[str, str] | None = None) -> float:
-    """Probe period in seconds. Blank or non-numeric env keeps the 3600s default.
-
-    Numeric values below ``CHAT_PROBE_INTERVAL_MIN_S`` clamp up to that floor.
-    """
+def _env_float(
+    environ: Mapping[str, str] | None,
+    name: str,
+    *,
+    default: float,
+    floor: float,
+) -> float:
+    """Env seconds. Blank, junk, or non-finite values keep ``default``; else the floor."""
     source: Mapping[str, str] = os.environ if environ is None else environ
-    raw = str(source.get(CHAT_PROBE_INTERVAL_ENV, "") or "").strip()
+    raw = str(source.get(name, "") or "").strip()
     if not raw:
-        return DEFAULT_CHAT_PROBE_INTERVAL_S
+        return default
     try:
         value = float(raw)
     except ValueError:
-        return DEFAULT_CHAT_PROBE_INTERVAL_S
+        return default
     if not math.isfinite(value):
-        return DEFAULT_CHAT_PROBE_INTERVAL_S
-    if value < CHAT_PROBE_INTERVAL_MIN_S:
-        return CHAT_PROBE_INTERVAL_MIN_S
+        return default
+    if value < floor:
+        return floor
     return value
+
+
+def chat_probe_interval_s(environ: Mapping[str, str] | None = None) -> float:
+    """Probe period in seconds. Blank, junk, or non-finite env keeps 86400s.
+
+    Numeric values below ``CHAT_PROBE_INTERVAL_MIN_S`` clamp up to that floor.
+    """
+    return _env_float(
+        environ,
+        CHAT_PROBE_INTERVAL_ENV,
+        default=DEFAULT_CHAT_PROBE_INTERVAL_S,
+        floor=CHAT_PROBE_INTERVAL_MIN_S,
+    )
+
+
+def chat_probe_timeout_s(environ: Mapping[str, str] | None = None) -> float:
+    """Client timeout in seconds. Blank, junk, or non-finite env keeps 120s.
+
+    Numeric values below ``CHAT_PROBE_TIMEOUT_MIN_S`` clamp up to that floor.
+    """
+    return _env_float(
+        environ,
+        CHAT_PROBE_TIMEOUT_ENV,
+        default=DEFAULT_CHAT_PROBE_TIMEOUT_S,
+        floor=CHAT_PROBE_TIMEOUT_MIN_S,
+    )
+
+
+def boot_jitter_s(rng: random.Random | None = None) -> float:
+    """Startup delay in seconds, uniformly chosen from 30 to 120 inclusive."""
+    if rng is None:
+        return random.uniform(CHAT_PROBE_BOOT_JITTER_MIN_S, CHAT_PROBE_BOOT_JITTER_MAX_S)
+    return rng.uniform(CHAT_PROBE_BOOT_JITTER_MIN_S, CHAT_PROBE_BOOT_JITTER_MAX_S)
 
 
 def probe_gap_s(provider: str, base_interval: float) -> float:
@@ -265,16 +312,24 @@ def _probe_suppressed(
     provider: str,
     now: float,
     interval_s: float | None,
+    *,
+    boot: bool = False,
 ) -> bool:
     """Skip a key that already succeeded, or that was probed inside its gap.
 
     The cadence check runs only when the caller passes ``interval_s`` (the
-    scheduled loop). A direct probe still skips a recent hop 2xx.
+    scheduled loop). A direct probe still skips a recent hop 2xx. A boot pass
+    uses the 3600s floor (low-cap providers still take ``max`` with 6h) so a
+    crash-loop restart inside that window does not probe again.
     """
     base = chat_probe_interval_s() if interval_s is None else float(interval_s)
     gap = probe_gap_s(provider, base)
     if _hop_success_within(db_path, key_id, now, gap):
         return True
+    if boot:
+        last = _last_checked_at(db_path, key_id)
+        floor_gap = probe_gap_s(provider, CHAT_PROBE_INTERVAL_MIN_S)
+        return last is not None and (now - last) < floor_gap
     if interval_s is None:
         return False
     last = _last_checked_at(db_path, key_id)
@@ -372,14 +427,16 @@ def _apply_http(
         stored = clip_error_text(provider_error_text(raw, status=code))
     unusable: bool | None
     park = False
+    plan_429 = code == 429 and _plan_level_429(headers, raw)
     if 200 <= code < 300:
         unusable = False
-    elif code == 402 or (code == 429 and _plan_level_429(headers, raw)):
+    elif code in (401, 402, 403) or plan_429:
         unusable = True
     elif code == 429:
         unusable = None
         park = True
     else:
+        # 404 and 5xx record status only. They do not park or change unusable.
         unusable = None
     flag = _save_status(
         vault.db_path,
@@ -413,9 +470,10 @@ async def probe_key_chat(
     key_id: str,
     *,
     client: httpx.AsyncClient | None = None,
-    timeout_s: float = DEFAULT_CHAT_PROBE_TIMEOUT_S,
+    timeout_s: float | None = None,
     now: float | None = None,
     interval_s: float | None = None,
+    boot: bool = False,
 ) -> ChatProbeResult:
     """Chat-probe one key. Does not record usage. Does not log the body or the key."""
     record = vault.get(key_id)
@@ -425,8 +483,16 @@ async def probe_key_chat(
     if target is None:
         return ChatProbeResult(key_id, "skipped", None, False, False, "", "")
     stamp = time.time() if now is None else float(now)
-    if _probe_suppressed(vault.db_path, key_id, record.provider, stamp, interval_s):
+    if _probe_suppressed(
+        vault.db_path,
+        key_id,
+        record.provider,
+        stamp,
+        interval_s,
+        boot=boot,
+    ):
         return ChatProbeResult(key_id, "skipped", None, False, False, target.model, "")
+    limit_s = chat_probe_timeout_s() if timeout_s is None else float(timeout_s)
     base = _default_base_url(record.provider, record.base_url)
     if not base:
         return ChatProbeResult(
@@ -444,7 +510,7 @@ async def probe_key_chat(
 
     owns = client is None
     http = client or httpx.AsyncClient(
-        timeout=timeout_s,
+        timeout=limit_s,
         trust_env=False,
         follow_redirects=False,
     )
@@ -519,14 +585,16 @@ async def probe_enabled_chats(
     fallback: FallbackManager,
     *,
     client: httpx.AsyncClient | None = None,
-    timeout_s: float = DEFAULT_CHAT_PROBE_TIMEOUT_S,
+    timeout_s: float | None = None,
     now: float | None = None,
     interval_s: float | None = None,
+    boot: bool = False,
 ) -> list[ChatProbeResult]:
     """Probe every enabled key that is due and has a catalog chat model. No usage rows."""
+    limit_s = chat_probe_timeout_s() if timeout_s is None else float(timeout_s)
     owns = client is None
     http = client or httpx.AsyncClient(
-        timeout=timeout_s,
+        timeout=limit_s,
         trust_env=False,
         follow_redirects=False,
     )
@@ -545,9 +613,10 @@ async def probe_enabled_chats(
                         fallback,
                         record.id,
                         client=http,
-                        timeout_s=timeout_s,
+                        timeout_s=limit_s,
                         now=now,
                         interval_s=period,
+                        boot=boot,
                     )
                 )
             except Exception as exc:
@@ -571,29 +640,53 @@ class ChatProbeLoop:
         fallback: FallbackManager,
         *,
         interval_s: float = DEFAULT_CHAT_PROBE_INTERVAL_S,
+        timeout_s: float | None = None,
+        jitter_s: float | None = None,
     ) -> None:
         self._vault = vault
         self._fallback = fallback
         self._interval_s = interval_s
+        self._timeout_s = chat_probe_timeout_s() if timeout_s is None else float(timeout_s)
+        self._jitter_s = jitter_s
         self._stop = False
 
     @property
     def interval_s(self) -> float:
         return self._interval_s
 
+    @property
+    def timeout_s(self) -> float:
+        return self._timeout_s
+
     def stop(self) -> None:
         self._stop = True
+
+    async def _pass(self, *, boot: bool) -> None:
+        await probe_enabled_chats(
+            self._vault,
+            self._fallback,
+            timeout_s=self._timeout_s,
+            interval_s=self._interval_s,
+            boot=boot,
+        )
 
     async def run_forever(self) -> None:
         import asyncio
 
+        delay = boot_jitter_s() if self._jitter_s is None else self._jitter_s
+        await asyncio.sleep(delay)
+        if self._stop:
+            return
+        try:
+            await self._pass(boot=True)
+        except Exception as exc:
+            log.warning(
+                "openvault_chat_probe_loop_error",
+                error=clip_error_text(type(exc).__name__),
+            )
         while not self._stop:
             try:
-                await probe_enabled_chats(
-                    self._vault,
-                    self._fallback,
-                    interval_s=self._interval_s,
-                )
+                await self._pass(boot=False)
             except Exception as exc:
                 log.warning(
                     "openvault_chat_probe_loop_error",

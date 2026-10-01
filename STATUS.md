@@ -66,6 +66,7 @@ shell at HTTP 200 is refused and named "compiling", not "unreachable".
 | #92 chat probe | Per-key chat probe on its own 300s schedule. 402 and plan-level 429 are unusable. |
 | #100 OpenRouter 404 | /key precheck maps 404 and other non-2xx (not 401/403/429) to error with the HTTP code. |
 | #98 strict pin | openai/gpt-oss-120b strict pin binds to groq. A together key listing that id is not a hop. |
+| #104 chat probe cadence | Boot after 30-120s jitter, then once a day (86400s, floor 3600). Timeout 120s. Unusable only for 402, plan 429, or 401/403. |
 
 ## HT gates (#18 CLOSED, boxes ticked)
 
