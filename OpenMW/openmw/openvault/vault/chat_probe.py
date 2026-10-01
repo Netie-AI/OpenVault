@@ -1,17 +1,23 @@
 """Per-key chat probe, on its own schedule from the 60s models list probe.
 
-One POST ``/chat/completions`` per enabled OpenAI-compatible key. The body is
-the fixed prompt "Reply with OK" and is not stored. ``max_tokens`` is 16, or
-512 when that key's first catalog chat model is a reasoning model.
+One POST ``/chat/completions`` per enabled OpenAI-compatible key that is due.
+The body is the fixed prompt "Reply with OK" and is not stored. ``max_tokens``
+is 16 on a non-reasoning catalog chat model. A provider whose chat models are
+all reasoning models uses the 512-token floor on its first chat model.
 
-The probe writes no ``usage_events`` rows. A 402, or a plan-level 429, marks
-the key unusable for ``usable_provider_count``. A transient 429 is a park.
+Default period is 3600s (``OPENVAULT_CHAT_PROBE_INTERVAL_S``, floored at 600s).
+SambaNova and SEA-LION are probed at most once every 6h. A key with a 2xx
+``hop_attempts`` row inside the current gap is skipped. The probe writes no
+``usage_events`` rows. A 402, or a plan-level 429, marks the key unusable for
+``usable_provider_count``. A transient 429 is a park.
 """
 
 from __future__ import annotations
 
 import contextlib
 import json
+import math
+import os
 import re
 import sqlite3
 import time
@@ -43,7 +49,12 @@ from openmw.openvault.vault.store import KeyVault
 
 log = structlog.get_logger()
 
-DEFAULT_CHAT_PROBE_INTERVAL_S = 300.0
+DEFAULT_CHAT_PROBE_INTERVAL_S = 3600.0
+CHAT_PROBE_INTERVAL_MIN_S = 600.0
+CHAT_PROBE_INTERVAL_ENV = "OPENVAULT_CHAT_PROBE_INTERVAL_S"
+# Free-tier request caps (SambaNova 20 RPD). Once per 6h is 4 probes/day.
+CHAT_PROBE_LOW_CAP_INTERVAL_S = 6.0 * 60.0 * 60.0
+CHAT_PROBE_LOW_CAP_PROVIDERS: frozenset[str] = frozenset({"sambanova", "sea_lion"})
 DEFAULT_CHAT_PROBE_TIMEOUT_S = 20.0
 CHAT_PROBE_PROMPT = "Reply with OK"
 CHAT_PROBE_MAX_TOKENS = 16
@@ -95,21 +106,50 @@ class ChatProbeResult:
     error: str
 
 
+def chat_probe_interval_s(environ: Mapping[str, str] | None = None) -> float:
+    """Probe period in seconds. Blank or non-numeric env keeps the 3600s default.
+
+    Numeric values below ``CHAT_PROBE_INTERVAL_MIN_S`` clamp up to that floor.
+    """
+    source: Mapping[str, str] = os.environ if environ is None else environ
+    raw = str(source.get(CHAT_PROBE_INTERVAL_ENV, "") or "").strip()
+    if not raw:
+        return DEFAULT_CHAT_PROBE_INTERVAL_S
+    try:
+        value = float(raw)
+    except ValueError:
+        return DEFAULT_CHAT_PROBE_INTERVAL_S
+    if not math.isfinite(value):
+        return DEFAULT_CHAT_PROBE_INTERVAL_S
+    if value < CHAT_PROBE_INTERVAL_MIN_S:
+        return CHAT_PROBE_INTERVAL_MIN_S
+    return value
+
+
+def probe_gap_s(provider: str, base_interval: float) -> float:
+    """Seconds this provider must wait between probes. Low-cap rows wait 6h."""
+    if provider in CHAT_PROBE_LOW_CAP_PROVIDERS:
+        return max(base_interval, CHAT_PROBE_LOW_CAP_INTERVAL_S)
+    return base_interval
+
+
 def chat_probe_target(provider: str) -> ChatProbeTarget | None:
-    """First catalog chat model for this provider, or None when chat cannot be probed.
+    """Catalog chat model for this provider, or None when chat cannot be probed.
 
     OpenAI-compatible catalog rows only. Local loopback hops and providers
-    without a chat id are skipped. A reasoning model uses the 512-token floor.
+    without a chat id are skipped. Prefer the first non-reasoning chat model
+    at 16 tokens. When every chat model is reasoning, use the first one at the
+    512-token floor, the smallest budget those models accept.
     """
     spec = get_provider(provider)
     if spec is None or spec.local_hop or not spec.openai_compatible:
         return None
     if not spec.chat_models:
         return None
-    model = spec.chat_models[0]
-    if is_reasoning_model(provider, model):
-        return ChatProbeTarget(model, MIN_REASONING_BUDGET)
-    return ChatProbeTarget(model, CHAT_PROBE_MAX_TOKENS)
+    for model in spec.chat_models:
+        if not is_reasoning_model(provider, model):
+            return ChatProbeTarget(model, CHAT_PROBE_MAX_TOKENS)
+    return ChatProbeTarget(spec.chat_models[0], MIN_REASONING_BUDGET)
 
 
 def _connect(db_path: Path) -> sqlite3.Connection:
@@ -144,6 +184,7 @@ def _save_status(
     status: str,
     error_text: str,
     unusable: bool | None,
+    checked_at: float | None = None,
 ) -> bool:
     """Write one row. ``unusable is None`` keeps the flag already stored."""
     text = clip_error_text(error_text)
@@ -167,9 +208,77 @@ def _save_status(
               error_text=excluded.error_text,
               checked_at=excluded.checked_at
             """,
-            (key_id, int(flag), status, text, time.time()),
+            (key_id, int(flag), status, text, time.time() if checked_at is None else checked_at),
         )
     return flag
+
+
+def _last_checked_at(db_path: Path, key_id: str) -> float | None:
+    """Last probe stamp, or None. Does not create ``chat_probe``."""
+    if not db_path.is_file():
+        return None
+    with contextlib.closing(_connect(db_path)) as conn, conn:
+        found = conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='chat_probe'"
+        ).fetchone()
+        if found is None:
+            return None
+        row = conn.execute(
+            "SELECT checked_at FROM chat_probe WHERE key_id=?",
+            (key_id,),
+        ).fetchone()
+    if row is None:
+        return None
+    return float(row["checked_at"])
+
+
+def _hop_success_within(db_path: Path, key_id: str, now: float, gap: float) -> bool:
+    """True when ``hop_attempts`` has a 2xx for this key younger than ``gap``.
+
+    Reads the #97 ledger only. A missing table is not created.
+    """
+    if not db_path.is_file():
+        return False
+    with contextlib.closing(_connect(db_path)) as conn, conn:
+        found = conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='hop_attempts'"
+        ).fetchone()
+        if found is None:
+            return False
+        rows = conn.execute(
+            "SELECT status, ts FROM hop_attempts WHERE key_id=?",
+            (key_id,),
+        ).fetchall()
+    for row in rows:
+        status = str(row["status"] or "")
+        if not status.isdigit():
+            continue
+        code = int(status)
+        if 200 <= code < 300 and (now - float(row["ts"])) < gap:
+            return True
+    return False
+
+
+def _probe_suppressed(
+    db_path: Path,
+    key_id: str,
+    provider: str,
+    now: float,
+    interval_s: float | None,
+) -> bool:
+    """Skip a key that already succeeded, or that was probed inside its gap.
+
+    The cadence check runs only when the caller passes ``interval_s`` (the
+    scheduled loop). A direct probe still skips a recent hop 2xx.
+    """
+    base = chat_probe_interval_s() if interval_s is None else float(interval_s)
+    gap = probe_gap_s(provider, base)
+    if _hop_success_within(db_path, key_id, now, gap):
+        return True
+    if interval_s is None:
+        return False
+    last = _last_checked_at(db_path, key_id)
+    return last is not None and (now - last) < gap
 
 
 def _request_limit_is_zero(headers: Mapping[str, str]) -> bool:
@@ -255,6 +364,7 @@ def _apply_http(
     code: int,
     raw: str,
     headers: Mapping[str, str],
+    checked_at: float | None = None,
 ) -> ChatProbeResult:
     classified = classify_http_error(code)
     stored = ""
@@ -277,6 +387,7 @@ def _apply_http(
         status=classified,
         error_text=stored,
         unusable=unusable,
+        checked_at=checked_at,
     )
     if park:
         fallback.record_park(
@@ -303,6 +414,8 @@ async def probe_key_chat(
     *,
     client: httpx.AsyncClient | None = None,
     timeout_s: float = DEFAULT_CHAT_PROBE_TIMEOUT_S,
+    now: float | None = None,
+    interval_s: float | None = None,
 ) -> ChatProbeResult:
     """Chat-probe one key. Does not record usage. Does not log the body or the key."""
     record = vault.get(key_id)
@@ -311,6 +424,9 @@ async def probe_key_chat(
     target = chat_probe_target(record.provider)
     if target is None:
         return ChatProbeResult(key_id, "skipped", None, False, False, "", "")
+    stamp = time.time() if now is None else float(now)
+    if _probe_suppressed(vault.db_path, key_id, record.provider, stamp, interval_s):
+        return ChatProbeResult(key_id, "skipped", None, False, False, target.model, "")
     base = _default_base_url(record.provider, record.base_url)
     if not base:
         return ChatProbeResult(
@@ -349,6 +465,7 @@ async def probe_key_chat(
                 status="timeout",
                 error_text=clip_error_text("timeout"),
                 unusable=None,
+                checked_at=stamp,
             )
             return ChatProbeResult(key_id, "timeout", None, flag, False, target.model, "timeout")
         except httpx.HTTPError:
@@ -358,6 +475,7 @@ async def probe_key_chat(
                 status="error",
                 error_text=clip_error_text("unreachable"),
                 unusable=None,
+                checked_at=stamp,
             )
             return ChatProbeResult(key_id, "error", None, flag, False, target.model, "unreachable")
         code = int(resp.status_code)
@@ -370,6 +488,7 @@ async def probe_key_chat(
             code=code,
             raw=raw,
             headers=header_map,
+            checked_at=stamp,
         )
         log.info(
             "openvault_chat_probe",
@@ -401,8 +520,10 @@ async def probe_enabled_chats(
     *,
     client: httpx.AsyncClient | None = None,
     timeout_s: float = DEFAULT_CHAT_PROBE_TIMEOUT_S,
+    now: float | None = None,
+    interval_s: float | None = None,
 ) -> list[ChatProbeResult]:
-    """Probe every enabled key that has a catalog chat model. No usage rows."""
+    """Probe every enabled key that is due and has a catalog chat model. No usage rows."""
     owns = client is None
     http = client or httpx.AsyncClient(
         timeout=timeout_s,
@@ -410,6 +531,7 @@ async def probe_enabled_chats(
         follow_redirects=False,
     )
     results: list[ChatProbeResult] = []
+    period = chat_probe_interval_s() if interval_s is None else float(interval_s)
     try:
         for record in vault.list_keys():
             if not record.enabled:
@@ -424,6 +546,8 @@ async def probe_enabled_chats(
                         record.id,
                         client=http,
                         timeout_s=timeout_s,
+                        now=now,
+                        interval_s=period,
                     )
                 )
             except Exception as exc:
@@ -465,7 +589,11 @@ class ChatProbeLoop:
 
         while not self._stop:
             try:
-                await probe_enabled_chats(self._vault, self._fallback)
+                await probe_enabled_chats(
+                    self._vault,
+                    self._fallback,
+                    interval_s=self._interval_s,
+                )
             except Exception as exc:
                 log.warning(
                     "openvault_chat_probe_loop_error",
