@@ -2,6 +2,19 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-01 - Catalog SambaNova, SEA-LION, and NVIDIA NIM (OpenVault #94)
+
+- SambaNova Cloud is an OpenAI-compatible catalog row. Chat ids come from the
+  public models list. DeepSeek ids on that list are not copied. Llama 3.1 405B
+  is not on the list.
+- AI Singapore SEA-LION is a catalog row for the three documented chat ids.
+  The guard model and the embedding model are not chat hops.
+- NVIDIA NIM chat models are refreshed from the public models list. DeepSeek
+  ids on that list are not copied. The separate deepseek provider is unchanged.
+  Cerebras and Mistral catalog rows are unchanged.
+- Letter-mark icons for the two new rows, so the existing card page can render
+  them. No card-renderer change.
+
 ## 2026-10-01 - Close vault sqlite handles (OpenVault #88)
 
 - `with self._connect() as conn` under `openmw/openvault` now closes the

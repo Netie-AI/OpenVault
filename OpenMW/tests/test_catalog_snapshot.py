@@ -3,6 +3,9 @@
 No network. A future edit to one of these pools shows up as a reviewed diff
 in this file. The seven are the catalogs named by OpenVault #74: openrouter,
 groq, google, mistral, nvidia, cerebras, and the local hop.
+
+OpenVault #94 adds SambaNova and SEA-LION beside that snapshot, and refreshes
+the NVIDIA chat pool. Cerebras and Mistral stay as pinned below.
 """
 
 from __future__ import annotations
@@ -84,9 +87,26 @@ SEVEN_CATALOGS: dict[str, dict[str, object]] = {
     },
     "nvidia": {
         "free_notes": "build.nvidia.com / NIM OpenAI-compatible; keys typically nvapi-…",
-        "chat_models": ("nvidia/llama-3.1-nemotron-70b-instruct",),
-        "vision_models": (),
-        "reasoning_models": ("nvidia/llama-3.1-nemotron-70b-instruct",),
+        "chat_models": (
+            "nvidia/nemotron-3-ultra-550b-a55b",
+            "nvidia/nemotron-4-340b-instruct",
+            "nvidia/llama-3.1-nemotron-ultra-253b-v1",
+            "nvidia/nemotron-3-super-120b-a12b",
+            "writer/palmyra-creative-122b",
+            "meta/llama-3.2-90b-vision-instruct",
+            "nvidia/llama-3.1-nemotron-70b-instruct",
+            "mistralai/mistral-large-2-instruct",
+            "moonshotai/kimi-k3",
+            "openai/gpt-oss-20b",
+            "google/gemma-4-31b-it",
+            "z-ai/glm-5.3",
+        ),
+        "vision_models": ("meta/llama-3.2-90b-vision-instruct",),
+        "reasoning_models": (
+            "nvidia/nemotron-3-super-120b-a12b",
+            "nvidia/llama-3.1-nemotron-70b-instruct",
+            "openai/gpt-oss-20b",
+        ),
     },
     "cerebras": {
         "free_notes": "Trial ($5 credits, 30 days, 5 RPM), not a free tier",
@@ -113,6 +133,50 @@ SEVEN_CATALOGS: dict[str, dict[str, object]] = {
         "reasoning_models": (),
     },
 }
+
+# OpenVault #94. Checked the same way as the seven, without rewriting them.
+ADDED_CATALOGS: dict[str, dict[str, object]] = {
+    "sambanova": {
+        "name": "SambaNova Cloud",
+        "base_url": "https://api.sambanova.ai/v1",
+        "tier": "freemium",
+        "register_url": "https://cloud.sambanova.ai/apis",
+        "docs_url": "https://docs.sambanova.ai/docs/en/models/sambacloud-models",
+        "health_path": "/models",
+        "free_notes": "Free tier with no payment method: 20 RPM, 20 RPD, 200K TPD",
+        "chat_models": (
+            "gpt-oss-120b",
+            "MiniMax-M2.7",
+            "Meta-Llama-3.3-70B-Instruct",
+            "MiniMax-M3",
+            "gemma-4-31B-it",
+        ),
+        "vision_models": ("gemma-4-31B-it",),
+        "reasoning_models": ("gpt-oss-120b",),
+    },
+    "sea_lion": {
+        "name": "AI Singapore SEA-LION",
+        "base_url": "https://api.sea-lion.ai/v1",
+        "tier": "freemium",
+        "register_url": "https://playground.sea-lion.ai/key-manager",
+        "docs_url": "https://docs.sea-lion.ai/guides/inferencing/api",
+        "health_path": "/models",
+        "free_notes": "Trial API key; 10 requests per minute (docs, 04 Jun 2026)",
+        "chat_models": (
+            "aisingapore/Llama-SEA-LION-v3.5-70B-R",
+            "aisingapore/Qwen-SEA-LION-v4.5-27B-IT",
+            "aisingapore/Gemma-SEA-LION-v4-27B-IT",
+        ),
+        "vision_models": (),
+        "reasoning_models": ("aisingapore/Llama-SEA-LION-v3.5-70B-R",),
+    },
+}
+
+# Not on the 2026-10-01 SambaNova or NVIDIA public lists.
+ABSENT_MODEL_IDS: tuple[str, ...] = (
+    "Meta-Llama-3.1-405B-Instruct",
+    "meta/llama-3.1-405b-instruct",
+)
 
 REMOVED_MODEL_IDS: tuple[str, ...] = (
     "google/gemini-2.5-flash",
@@ -187,3 +251,31 @@ def test_cerebras_notes_say_trial_not_free_tier() -> None:
     notes = _spec("cerebras").free_notes
     assert notes == "Trial ($5 credits, 30 days, 5 RPM), not a free tier"
     assert "free tier for" not in notes
+
+
+def test_added_catalogs_match_offline_snapshot() -> None:
+    assert set(ADDED_CATALOGS) == {"sambanova", "sea_lion"}
+    for provider_id, expected in ADDED_CATALOGS.items():
+        spec = _spec(provider_id)
+        for field, want in expected.items():
+            assert getattr(spec, field) == want, provider_id + "." + field
+
+
+def test_no_deepseek_chat_model_outside_deepseek_provider() -> None:
+    """Founder hide: deepseek ids stay on the deepseek provider only."""
+    deepseek = _spec("deepseek")
+    assert deepseek.chat_models == (
+        "deepseek-v4-pro",
+        "deepseek-v4-flash",
+    )
+    for spec in PROVIDER_CATALOG:
+        if spec.id == "deepseek":
+            continue
+        for model_id in spec.chat_models:
+            assert "deepseek" not in model_id.lower(), spec.id + " " + model_id
+
+
+@pytest.mark.parametrize("model_id", ABSENT_MODEL_IDS)
+def test_llama_405b_ids_are_absent(model_id: str) -> None:
+    for spec in PROVIDER_CATALOG:
+        assert model_id not in _served_ids(spec), spec.id

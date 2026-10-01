@@ -47,6 +47,7 @@ shell at HTTP 200 is refused and named "compiling", not "unreachable".
 
 | # | Status |
 |---|--------|
+| #94 catalog | SambaNova and SEA-LION rows added. NVIDIA NIM chat models refreshed. DeepSeek stays on its own provider. |
 | #83 admin token | Key and secret admin routes plus /keys require X-OpenVault-Admin, even from loopback. |
 | #76 T2 | Dead-model 404/unknown continues; 429 parks (key, model); pinned model is not swapped in-provider. |
 | #80 strict pin | Opt-in field or header. pin_unavailable when the exact catalog id has no healthy hop. |
