@@ -8,13 +8,16 @@ writes retrieved passwords to disk.
 from __future__ import annotations
 
 import json
+import os
 import urllib.error
 import urllib.request
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 REVEAL_HEADER = "X-OpenVault-Reveal"
 REVEAL_VALUE = "intentional"
+ADMIN_HEADER = "X-OpenVault-Admin"
 PAN_DENY = "payment_card / PAN is denied to agents; OpenVault will not return card numbers"
 
 HttpFn = Callable[[str, str, dict[str, str] | None, bytes | None], tuple[int, dict[str, Any], str]]
@@ -26,6 +29,26 @@ class RetrieveError(RuntimeError):
     def __init__(self, message: str, *, status: int = 1) -> None:
         super().__init__(message)
         self.status = status
+
+
+def admin_token_path() -> Path:
+    """Same 0600 file the server writes. Never an argv value."""
+    override = (os.environ.get("OPENVAULT_ADMIN_TOKEN_PATH") or "").strip()
+    if override:
+        return Path(override).expanduser()
+    home = (os.environ.get("OPENVAULT_HOME") or "").strip()
+    root = Path(home).expanduser() if home else Path.home() / ".openvault"
+    return root / "admin_token"
+
+
+def read_admin_token() -> str:
+    path = admin_token_path()
+    if not path.is_file():
+        raise RetrieveError(f"admin token file is missing: {path}")
+    token = path.read_text(encoding="utf-8").strip()
+    if not token:
+        raise RetrieveError(f"admin token file is empty: {path}")
+    return token
 
 
 def urllib_http(
@@ -88,7 +111,9 @@ def retrieve_secret(
     def call(
         method: str, path: str, headers: dict[str, str] | None = None
     ) -> tuple[int, dict[str, Any], str]:
-        return transport(method, f"{root}{path}", headers, None)
+        merged = dict(headers or {})
+        merged[ADMIN_HEADER] = read_admin_token()
+        return transport(method, f"{root}{path}", merged, None)
 
     status, payload, text = call("GET", "/api/vault/status")
     if status != 200:

@@ -565,6 +565,9 @@ def cmd_secret_get(args: argparse.Namespace) -> int:
         sys.path.insert(0, cli_dir)
     from secret_retrieve import RetrieveError, retrieve_secret
 
+    # The retrieve client reads this path. It matches the home `openvault up` gives the API.
+    if not (os.environ.get("OPENVAULT_ADMIN_TOKEN_PATH") or "").strip():
+        os.environ["OPENVAULT_ADMIN_TOKEN_PATH"] = str(_admin_token_path())
     base = args.base_url or f"http://127.0.0.1:{API_PORT}"
     try:
         payload = retrieve_secret(base, args.target, kind_hint=args.kind)
@@ -582,11 +585,57 @@ def cmd_app(_: argparse.Namespace) -> int:
     return subprocess.call([_npm(), "run", "dev"], cwd=str(SHELL))
 
 
+def _admin_token_path() -> Path:
+    override = (os.environ.get("OPENVAULT_ADMIN_TOKEN_PATH") or "").strip()
+    if override:
+        return Path(override).expanduser()
+    return _home_dir() / "admin_token"
+
+
+def _read_admin_token() -> str:
+    """Admin credential from the 0600 file. Never from argv."""
+    path = _admin_token_path()
+    if not path.is_file():
+        raise SystemExit(f"admin token file is missing: {path}")
+    token = path.read_text(encoding="utf-8").strip()
+    if not token:
+        raise SystemExit(f"admin token file is empty: {path}")
+    return token
+
+
+def _url_needs_admin(url: str) -> bool:
+    path = url.split("?", 1)[0]
+    marker = path.find("://")
+    if marker != -1:
+        slash = path.find("/", marker + 3)
+        path = path[slash:] if slash != -1 else "/"
+    roots = (
+        "/api/keys",
+        "/api/keyvault",
+        "/api/apikeys",
+        "/api/secrets",
+        "/api/vault",
+        "/api/ship/github/pat",
+        "/keys",
+    )
+    if any(path == root or path.startswith(root + "/") for root in roots):
+        return True
+    parts = [part for part in path.split("/") if part]
+    return (
+        len(parts) >= 4
+        and parts[0] == "api"
+        and parts[1] == "accounts"
+        and parts[3] in {"keys", "cortex-key"}
+    )
+
+
 def _http_json(method: str, url: str, payload: dict | None = None) -> tuple[int, dict]:
     data = None if payload is None else json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(url, data=data, method=method)
     if payload is not None:
         req.add_header("Content-Type", "application/json")
+    if _url_needs_admin(url):
+        req.add_header("X-OpenVault-Admin", _read_admin_token())
     try:
         with urllib.request.urlopen(req, timeout=10) as resp:
             raw = resp.read().decode("utf-8") or "{}"

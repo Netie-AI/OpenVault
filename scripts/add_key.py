@@ -26,12 +26,15 @@ from __future__ import annotations
 import argparse
 import getpass
 import json
+import os
 import sys
 import urllib.error
 import urllib.request
+from pathlib import Path
 
 DEFAULT_API = "http://127.0.0.1:5000"
 TIMEOUT_S = 20
+ADMIN_HEADER = "X-OpenVault-Admin"
 
 # Enough to name the provider from a pasted key. Mirrors the console's
 # inferProvider rules; keep the two in step when either gains a vendor.
@@ -57,13 +60,38 @@ def guess_provider(secret: str) -> str | None:
     return None
 
 
+def admin_token_path() -> Path:
+    """Same file the server writes. ``OPENVAULT_ADMIN_TOKEN_PATH`` overrides it."""
+    override = (os.environ.get("OPENVAULT_ADMIN_TOKEN_PATH") or "").strip()
+    if override:
+        return Path(override).expanduser()
+    home = (os.environ.get("OPENVAULT_HOME") or "").strip()
+    root = Path(home).expanduser() if home else Path.home() / ".openvault"
+    return root / "admin_token"
+
+
+def read_admin_token() -> str:
+    """Read the admin credential from the 0600 file. Never from argv."""
+    path = admin_token_path()
+    if not path.is_file():
+        raise SystemExit(f"admin token file is missing: {path}")
+    token = path.read_text(encoding="utf-8").strip()
+    if not token:
+        raise SystemExit(f"admin token file is empty: {path}")
+    return token
+
+
 def call(api: str, path: str, method: str = "GET", payload: dict | None = None) -> dict:
     body = json.dumps(payload).encode() if payload is not None else None
     req = urllib.request.Request(
         f"{api}{path}",
         data=body,
         method=method,
-        headers={"Content-Type": "application/json", "Accept": "application/json"},
+        headers={
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            ADMIN_HEADER: read_admin_token(),
+        },
     )
     try:
         with urllib.request.urlopen(req, timeout=TIMEOUT_S) as res:

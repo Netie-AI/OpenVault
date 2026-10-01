@@ -2,6 +2,17 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-01 - Admin credential for key and secret routes (OpenVault #83)
+
+- `/api/keys`, `/api/secrets`, other key and secret management routes, and
+  `/keys` require `X-OpenVault-Admin` even from loopback. The token is not an
+  `ov_` key. It is created with `secrets.token_urlsafe(32)` at
+  `<vault home>/admin_token` (mode 0600) and compared with `hmac.compare_digest`.
+- `OPENVAULT_ADMIN_TOKEN_PATH` overrides the file location. The value is not logged.
+- `scripts/add_key.py`, `openvault secret get`, and other admin HTTP callers
+  read that file. `openvault add` still writes the vault in process.
+- `/api/freeroute/status`, `/api/healthz`, and `/v1/*` are unchanged.
+
 ## 2026-10-01 - CLI openvault add (OpenVault #78)
 
 - `openvault add <provider>` reads the key from a hidden prompt or stdin.
