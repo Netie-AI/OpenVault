@@ -164,7 +164,7 @@ export const BUILTIN_BADGES: Omit<BadgeDefinition, "createdAt">[] = [
   {
     id: "radar-supporter",
     name: "Radar Supporter",
-    description: "Verified a live OmniRoute Radar supporter feed",
+    description: "Verified a live FreeRoute Radar supporter feed",
     icon: "radar",
     category: "contribution",
     rarity: "rare",

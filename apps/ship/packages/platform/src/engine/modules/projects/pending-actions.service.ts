@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * @module pending-actions
  *
@@ -179,17 +180,17 @@ function buildDeployBlocked(dep: Deployment): PendingAction | null {
     const ownership =
       details.stopTarget === "none"
         ? (dep.errorMessage ??
-          `${subject} is held by ${holder}, which Openship will not stop for you. ` +
+          `${subject} is held by ${holder}, which FreeBuild will not stop for you. ` +
             `Free the port on the server, or deploy on a different port, then redeploy.`)
         : details.isManagedDeployment === true
-        ? `${subject} is held by a previous Openship deployment (${holder}). ` +
-          `Redeploy and confirm the prompt, and Openship will ${offer} first.`
+        ? `${subject} is held by a previous FreeBuild deployment (${holder}). ` +
+          `Redeploy and confirm the prompt, and FreeBuild will ${offer} first.`
         : details.isManagedDeployment === false
-          ? `${subject} is held by ${holder}, which Openship does not manage. ` +
+          ? `${subject} is held by ${holder}, which FreeBuild does not manage. ` +
             `Stop it on the server or change the app's port, then redeploy. ` +
             `Redeploying will offer to ${offer}, but that stops something ` +
-            `Openship didn't start.`
-          : `${subject} is held by ${holder}. Openship could not tell whether that is ` +
+            `FreeBuild didn't start.`
+          : `${subject} is held by ${holder}. FreeBuild could not tell whether that is ` +
             `one of its own previous deployments, so check before freeing it — ` +
             `redeploying will offer to ${offer} either way.`;
     return {

@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026
 // No DOM needed: renderToStaticMarkup runs no effects and both subjects are pure.
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";

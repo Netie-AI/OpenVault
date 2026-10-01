@@ -1,3 +1,5 @@
+import { netieErrorResponse } from "@/lib/netie/providerGuards";
+import { withNetiePolicy } from "@/lib/netie/routeGuard";
 import { handleSearch } from "@omniroute/open-sse/handlers/search.ts";
 import {
   getProviderCredentialsWithQuotaPreflight,
@@ -78,13 +80,24 @@ export async function GET() {
 type SearchCredentials = Record<string, any>;
 type SearchCredentialLookup = SearchCredentials | RateLimitedCredentials | null;
 
+// FreeRoute: an ordinary lookup failure means "no credentials, try the
+// fallback provider". A KeyVault error (OpenVault down, admin token missing or
+// rejected, vault sealed) or a policy 501 is rethrown so the client gets the
+// named code instead of a silent switch to another provider.
+function noCredentialsUnlessNamed(error: unknown): null {
+  if (netieErrorResponse(error)) throw error;
+  return null;
+}
+
 async function resolveSearchCredentials(providerId: string): Promise<SearchCredentialLookup> {
-  const credentials = await getProviderCredentialsWithQuotaPreflight(providerId).catch(() => null);
+  const credentials = await getProviderCredentialsWithQuotaPreflight(providerId).catch(
+    noCredentialsUnlessNamed
+  );
   if (credentials && !isAllRateLimitedCredentials(credentials)) return credentials;
 
   for (const fallbackId of getSearchCredentialFallbacks(providerId)) {
     const fallbackCredentials = await getProviderCredentialsWithQuotaPreflight(fallbackId).catch(
-      () => null
+      noCredentialsUnlessNamed
     );
     if (fallbackCredentials && !isAllRateLimitedCredentials(fallbackCredentials)) {
       return fallbackCredentials;
@@ -428,6 +441,9 @@ async function postHandler(request: Request, context: unknown) {
       headers: { "Content-Type": "application/json", ...CORS_HEADERS },
     });
   } catch (err: any) {
+    // FreeRoute: KeyVault 503s and policy 501s keep their named code.
+    const named = netieErrorResponse(err);
+    if (named) return named;
     if (err instanceof SearchError) {
       const errorPayload = toJsonErrorPayload(err.message, "Search provider error");
       return new Response(JSON.stringify(errorPayload), {
@@ -453,4 +469,6 @@ class SearchError extends Error {
   }
 }
 
-export const POST = withInjectionGuard(postHandler);
+// FreeRoute: named 501 for a disabled provider, named 503/501 for KeyVault
+// and key-storage errors (src/lib/netie/routeGuard.ts).
+export const POST = withNetiePolicy(withInjectionGuard(postHandler));

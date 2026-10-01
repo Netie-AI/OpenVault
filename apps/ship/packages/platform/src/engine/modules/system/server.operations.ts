@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 import { networkCollection, computeClusterCollection, infrastructureResources } from "./infrastructure-resources.operations";
 /**
  * Shared server operations — retained CRUD, teardown, execution and audit.
@@ -298,9 +299,9 @@ async function updateServer(ctx: ExecutionContext, id: string, body: UpdateServe
     if (attempted.length > 0) {
       return failServer({
           error:
-            "This row is the machine Openship runs on, so its SSH details are display-only " +
+            "This row is the machine FreeBuild runs on, so its SSH details are display-only " +
             "— the connection to this host uses the channel key provisioned by " +
-            "`openship up`, not credentials stored here. Re-run `openship up` to change it.",
+            "`freebuild up`, not credentials stored here. Re-run `freebuild up` to change it.",
           fields: attempted,
         }, 400);
     }
@@ -516,7 +517,7 @@ async function deleteServerUnderLock(ctx: ExecutionContext, id: string, input: N
         id: p.id,
         name: p.name,
         ok: false,
-        error: "The Openship control plane can't be torn down via the API.",
+        error: "The FreeBuild control plane can't be torn down via the API.",
       });
       continue;
     }

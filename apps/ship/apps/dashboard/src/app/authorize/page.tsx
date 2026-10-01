@@ -1,4 +1,5 @@
 "use client";
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 
 import { Icon as UiIcon } from "@repo/ui/icons";
 
@@ -39,7 +40,7 @@ function AuthorizePageInner() {
   const { t } = useI18n();
 
   const callback = searchParams.get("callback");
-  const appName = searchParams.get("app") || "Openship Desktop";
+  const appName = searchParams.get("app") || "FreeBuild Desktop";
   const machine = searchParams.get("machine");
   const state = searchParams.get("state");
   const codeChallenge = searchParams.get("code_challenge");

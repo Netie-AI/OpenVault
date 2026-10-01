@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Pre-flight checks for the "move to my own server" migration path.
  *
@@ -100,7 +101,7 @@ function checkReleaseDistPresent(): { ok: boolean; detail: string } {
   return {
     ok: false,
     detail:
-      "Openship release dist not built. Run `bun run --cwd apps/api build-release` " +
+      "FreeBuild release dist not built. Run `bun run --cwd apps/api build-release` " +
       "before starting the migration (or set OPENSHIP_RELEASE_DIST_PATH).",
   };
 }
@@ -219,6 +220,6 @@ async function checkFreeSubdomainAvailable(
   // detected at deploy time and surfaces with a clean error.
   return {
     ok: true,
-    detail: `Slug "${slug}.opsh.io" is structurally valid; availability confirmed at deploy time.`,
+    detail: `Slug "${slug}" is structurally valid; availability confirmed at deploy time.`,
   };
 }

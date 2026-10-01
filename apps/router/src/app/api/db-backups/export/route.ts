@@ -26,7 +26,7 @@ export async function GET(request: Request) {
     }
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-    const exportFilename = `omniroute-backup-${timestamp}.sqlite`;
+    const exportFilename = `freeroute-backup-${timestamp}.sqlite`;
     // Use mkdtempSync (exclusive creation, random suffix) instead of a
     // deterministic timestamp path — a predictable path lets a local
     // attacker pre-place a symlink and redirect the write (TOCTOU).

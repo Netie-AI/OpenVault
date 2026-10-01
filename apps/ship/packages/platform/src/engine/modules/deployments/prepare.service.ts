@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Prepare service - resolves project info from a source (GitHub or local path).
  *
@@ -337,7 +338,7 @@ const MAX_CONFIG_DIAGNOSTIC_CHARS = 240;
  * validate` runs on the user's own machine and still prints the precise message.
  */
 const OPENSHIP_JSON_UNPARSEABLE =
-  "openship.json is not valid JSON — run `openship config validate` in the repo to see the " +
+  "openship.json is not valid JSON — run `freebuild config validate` in the repo to see the " +
   "parse error.";
 
 /**
@@ -1119,7 +1120,7 @@ function toProjectInfo(
     if (blocking.length > 0) {
       const where = opts?.declaredCompose ? ` at "${projectRoot.rootDirectory || "."}"` : "";
       throw new ComposeConfigurationError(
-        `The Docker Compose file${where} declares options Openship can't deploy faithfully:\n` +
+        `The Docker Compose file${where} declares options FreeBuild can't deploy faithfully:\n` +
           describeBlockingComposeFields(blocking),
       );
     }

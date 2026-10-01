@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 import {
   AppError,
   PRICING,
@@ -37,7 +38,7 @@ export const offerReference = (tier: PlanTierId) => `openship:${tier}:v${OFFER_V
 
 function invalidContract(): never {
   throw new AppError(
-    "This organization's saved Cloud offer could not be verified. Contact Openship support.",
+    "This organization's saved Cloud offer could not be verified. Contact FreeBuild support.",
     502,
     "OBLIEN_RESELLER_CONTRACT_INVALID",
   );
@@ -50,7 +51,7 @@ export function subscriptionPlan(subscription: OblienSubscription, organizationI
   if (subscription?.tierId !== "reseller") {
     const providerTier = subscription?.tierId;
     const tier = providerTier == null ? "free" : PLAN_IDS.find(id => LEGACY_PLAN_IDS[id] === providerTier);
-    if (!tier) throw new AppError("This cloud plan is not supported by this Openship version", 503, "OBLIEN_PLAN_UNSUPPORTED");
+    if (!tier) throw new AppError("This cloud plan is not supported by this FreeBuild version", 503, "OBLIEN_PLAN_UNSUPPORTED");
     return { tier, limits: planLimits(tier), resourceLimits: cloudNamespaceLimits(tier) };
   }
   const { offer, metadata } = subscription;
@@ -76,7 +77,7 @@ export function subscriptionOffer(tier: PlanTierId, interval: "monthly" | "annua
   }
   const plan = resolvePlan(tier);
   return {
-    reference: offerReference(tier), name: raw.billing.checkoutName ?? `Openship ${plan.name}`,
+    reference: offerReference(tier), name: raw.billing.checkoutName ?? `FreeBuild ${plan.name}`,
     description: raw.billing.checkoutDescription ?? plan.description,
     unitAmount: amount, currency: "usd", credits,
     policy: { overdraft: raw.billing.overdraft, suspendThreshold: raw.billing.suspendThreshold,
@@ -105,7 +106,7 @@ export function topupOffer(packId: string): OblienOffer {
     throw new AppError("This credit pack is no longer available", 404, "BILLING_PACK_NOT_FOUND");
   return {
     reference: `openship:${pack.id}:v${OFFER_VERSION}`,
-    name: "Openship compute credits",
+    name: "FreeBuild compute credits",
     description: `${toOblienCredits(pack.creditsMilli).toLocaleString("en-US")} additional credits for your namespace`,
     unitAmount: pack.priceCents,
     currency: "usd",

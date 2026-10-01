@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 // @vitest-environment happy-dom
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -112,7 +113,9 @@ describe("checkout return confirmation", () => {
       mocks.checkout.mockResolvedValue({ ...paid, fulfillmentStatus });
       await render(subscription);
       expect(container.textContent).toContain(copy.reversed);
-      expect(container.querySelector("a")?.href).toBe("mailto:support@openship.io");
+      // FreeBuild has no support mailbox (BRAND_LINKS.supportEmail is empty),
+      // so no mailto link is rendered instead of the upstream vendor's address.
+      expect(container.querySelector('a[href^="mailto:"]')).toBeNull();
     },
   );
   it("rejects a different kind of checkout", async () => {

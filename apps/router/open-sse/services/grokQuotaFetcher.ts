@@ -234,7 +234,7 @@ async function refreshAccessToken(auth: ResolvedAuth, signal: AbortSignal): Prom
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
       Accept: "application/json",
-      "User-Agent": "omniroute-grok-usage/1.0",
+      "User-Agent": "freeroute-grok-usage/1.0",
     },
     body: new URLSearchParams({
       grant_type: "refresh_token",
@@ -354,7 +354,7 @@ async function fetchBilling(token: string, signal: AbortSignal): Promise<UsageSn
     headers: {
       Authorization: `Bearer ${token}`,
       Accept: "application/json",
-      "User-Agent": "omniroute-grok-usage/1.0",
+      "User-Agent": "freeroute-grok-usage/1.0",
       "x-grok-client-mode": "cli",
     },
     signal,

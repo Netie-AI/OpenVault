@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Where an app template's generated config files (`advanced.files`) live, and which
  * executor is allowed to write them.
@@ -122,7 +123,7 @@ export async function writeAppConfigFile(
     throw new Error(
       `Service "${serviceName}": couldn't write its generated config file ${containerPath} to ` +
         `${hostPath} on the deploy target. Docker mounts this file by HOST path, so it has to ` +
-        `be written on the machine running the containers — the usual causes are that Openship ` +
+        `be written on the machine running the containers — the usual causes are that FreeBuild ` +
         `can't reach that machine, or can't write that path. Underlying error: ${detail}`,
     );
   } finally {

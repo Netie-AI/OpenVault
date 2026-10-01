@@ -3,6 +3,7 @@
 // OPENVAULT_MANAGED_PROVIDER_IDS below) link out to OpenVault instead of
 // rendering an add/edit form that the API would refuse anyway. Their rows
 // come from OpenVault, so they show no verify, edit or delete buttons.
+// The empty state names the label convention the KeyVault client matches.
 
 import { Icon as UiIcon } from "@repo/ui/icons";
 
@@ -185,8 +186,9 @@ export function Credentials() {
 
                 {managedByOpenVault && held.length === 0 ? (
                   <p className="py-1 text-xs text-muted-foreground">
-                    Add a {provider.label} key in OpenVault's KeyVault; FreeBuild reads it from
-                    there and never stores it itself.
+                    Add a {provider.label} key in OpenVault's KeyVault as provider "custom" with a
+                    label that starts with "{provider.label}". FreeBuild reads it from there and
+                    never stores it itself.
                   </p>
                 ) : null}
 

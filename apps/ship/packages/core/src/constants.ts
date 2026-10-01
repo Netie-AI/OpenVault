@@ -57,18 +57,61 @@ export function isInvitationClaimPath(path: string): boolean {
 export const DEFAULT_IMAGE_REGISTRY = "ghcr.io/oblien";
 
 // Modified by Netie AI, 2026: openship.io / discord.gg / x.com were Openship's
-// own site, support form, and social account — none of them are FreeBuild's.
-// `github` stays as the upstream credit link (Apache-2.0 attribution); the
-// rest are empty rather than pointing at pages this fork does not run.
-export const BRAND_LINKS = {
+// own site, support form, and social account, and none of them are FreeBuild's.
+// Every link is empty until FreeBuild has its own page. Callers hide a link
+// whose URL is empty. The upstream credit lives in UPSTREAM_CREDIT and is shown
+// only on the About surface (Settings > Instance).
+export interface BrandLinks {
+  site: string;
+  docs: string;
+  support: string;
+  contact: string;
+  github: string;
+  issues: string;
+  community: string;
+  x: string;
+  /** Desktop app download page. */
+  download: string;
+  /** Hosted plan pricing page. */
+  pricing: string;
+  /** Support mailbox, without the mailto: prefix. */
+  supportEmail: string;
+}
+
+export const BRAND_LINKS: Readonly<BrandLinks> = {
   site: "",
   docs: "",
   support: "",
   contact: "",
-  github: "https://github.com/oblien/openship",
+  // FreeBuild's own source (apps/ship in the OpenVault repo), not the upstream.
+  github: "https://github.com/Netie-AI/openvault",
   issues: "",
   community: "",
   x: "",
+  download: "",
+  pricing: "",
+  supportEmail: "",
+};
+
+/** A docs page under BRAND_LINKS.docs, or "" when there are no docs to link. */
+export function brandDocsUrl(path = ""): string {
+  return BRAND_LINKS.docs ? `${BRAND_LINKS.docs.replace(/\/+$/, "")}${path}` : "";
+}
+
+/** mailto: link for BRAND_LINKS.supportEmail, or "" when there is none. */
+export function brandSupportMailto(): string {
+  return BRAND_LINKS.supportEmail ? `mailto:${BRAND_LINKS.supportEmail}` : "";
+}
+
+/**
+ * Apache-2.0 attribution for the upstream project. Shown only on the About
+ * surface (Settings > Instance), never in other UI.
+ */
+export const UPSTREAM_CREDIT = {
+  name: "Openship",
+  author: "Oblien",
+  license: "Apache-2.0",
+  url: "https://github.com/oblien/openship",
 } as const;
 
 export const DEPLOYMENT_STATUSES = [

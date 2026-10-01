@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: expectations follow the FreeBuild product name.
 import { describe, it, expect } from "vitest";
 import { PLANS, CREDIT_PACKS } from "@repo/core";
 import {
@@ -21,7 +22,7 @@ describe("credit-unit boundary", () => {
 
   it("throws above the 10,000,000-credit ceiling", () => {
     expect(() => toOblienCredits(OBLIEN_QUOTA_MAX_MILLI + MILLI_PER_CREDIT)).toThrow(
-      /exceeds Oblien's/,
+      /exceeds the cloud provider's/,
     );
   });
 

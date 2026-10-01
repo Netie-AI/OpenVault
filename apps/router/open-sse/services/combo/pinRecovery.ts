@@ -28,7 +28,7 @@ export function buildRecoveryHint(
       return {
         action: "try-auto",
         next_step:
-          "Every candidate in this combo failed. Switch to model: auto to let OmniRoute pick a working provider, or pick a different combo.",
+          "Every candidate in this combo failed. Switch to model: auto to let FreeRoute pick a working provider, or pick a different combo.",
       };
     case "all_accounts_inactive":
       return {
@@ -46,7 +46,7 @@ export function buildRecoveryHint(
       return {
         action: "try-auto",
         next_step:
-          "Every model in this combo failed. Switch to model: auto to let OmniRoute pick a working provider, or wait a few seconds for rate limits to recover.",
+          "Every model in this combo failed. Switch to model: auto to let FreeRoute pick a working provider, or wait a few seconds for rate limits to recover.",
         ...(typeof retryAfterSeconds === "number" && retryAfterSeconds > 0
           ? { retry_after_seconds: retryAfterSeconds }
           : {}),

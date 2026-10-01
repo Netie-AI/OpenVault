@@ -20,28 +20,21 @@ import { Label } from '@/components/ui/label';
 import { useTRPC } from '@/providers/query-provider';
 import { runtimeBranding } from '@/lib/runtime-branding';
 
-/** OpenShip mark - a hollow ring. Matches packages/dashboard's `<Logo>`. */
-function OpenshipLogo({ size = 44 }: { size?: number }) {
+/** FreeBuild mark: the "FB" monogram square, matching the dashboard's `<Logo>`. */
+function BrandMark({ size = 44 }: { size?: number }) {
   return (
     <div
       aria-hidden
-      className="shrink-0 rounded-full border-[3px] border-foreground"
-      style={{ width: size, height: size }}
-    />
-  );
-}
-
-/** Inline GitHub mark - lucide removed `Github` for trademark reasons. */
-function GitHubMark(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" {...props}>
-      <path d="M12 .5C5.65.5.5 5.65.5 12.02c0 5.1 3.29 9.42 7.86 10.95.58.1.79-.25.79-.56 0-.27-.01-1-.02-1.96-3.2.7-3.88-1.54-3.88-1.54-.52-1.34-1.28-1.7-1.28-1.7-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.2 1.77 1.2 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.7 0-1.26.45-2.28 1.2-3.08-.12-.3-.52-1.5.12-3.13 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.78 0c2.2-1.5 3.18-1.18 3.18-1.18.64 1.63.24 2.83.12 3.13.74.8 1.2 1.82 1.2 3.08 0 4.43-2.7 5.41-5.27 5.69.41.36.78 1.06.78 2.13 0 1.54-.01 2.78-.01 3.16 0 .31.21.67.8.56A11.52 11.52 0 0 0 23.5 12.02C23.5 5.65 18.35.5 12 .5Z" />
-    </svg>
+      className="flex shrink-0 items-center justify-center rounded-lg bg-foreground text-background"
+      style={{ width: size, height: size, fontSize: Math.round(size * 0.32), fontWeight: 700 }}
+    >
+      FB
+    </div>
   );
 }
 
 const FALLBACK_BRANDING = {
-  loginHeading: 'OpenShip Mail',
+  loginHeading: 'FreeBuild Mail',
   loginSubtext: 'Sign in with your mailbox credentials',
   loginFooter: 'Self-hosted on your own mail server. No third parties.',
 };
@@ -109,9 +102,9 @@ export function LoginClient() {
       {/* Main */}
       <main className="relative z-10 flex flex-1 flex-col items-center justify-center px-4 py-12">
         <div className="w-full max-w-[440px]">
-          {/* Brand mark - OpenShip ring above the heading. */}
+          {/* Brand mark above the heading. */}
           <div className="mb-10 flex flex-col items-center text-center">
-            <OpenshipLogo size={44} />
+            <BrandMark size={44} />
             <h1 className="mt-5 text-3xl font-semibold tracking-tight text-foreground sm:text-[34px]">
               {heading}
             </h1>
@@ -220,26 +213,13 @@ export function LoginClient() {
         <footer className="relative z-10">
           <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-3 px-6 py-6 sm:flex-row">
             {/* Modified by Netie AI, 2026: "OpenShip" -> "FreeBuild"; the
-                openship.io Docs/Privacy/Terms links are gone (not this
-                project's site) and the GitHub link now credits the upstream
-                project this is based on, matching the "credit upstream on an
-                About/notices surface" rule. */}
+                upstream Docs/Privacy/Terms and GitHub links are gone. The
+                upstream credit is shown only on the dashboard's About surface
+                (Settings > Instance). */}
             <div className="flex items-center gap-2 text-[13px] text-muted-foreground">
               <span>Powered by</span>
               <span className="font-medium text-foreground">FreeBuild</span>
             </div>
-            <nav className="flex items-center gap-6 text-[13px] text-muted-foreground">
-              <a
-                href="https://github.com/oblien/openship"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="GitHub"
-                className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground"
-              >
-                <GitHubMark className="h-4 w-4" />
-                <span className="hidden sm:inline">Based on Openship</span>
-              </a>
-            </nav>
           </div>
         </footer>
       )}

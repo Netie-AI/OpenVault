@@ -234,7 +234,7 @@ const VISION_BRIDGE_UA_FETCH: typeof fetch = ((input: RequestInfo | URL, init?: 
   undiciFetch(input as string | URL, {
     ...(init as Parameters<typeof undiciFetch>[1]),
     headers: {
-      "user-agent": "omniroute-vision-bridge",
+      "user-agent": "freeroute-vision-bridge",
       ...((init?.headers as Record<string, string> | undefined) ?? {}),
     },
   })) as unknown as typeof fetch;

@@ -19,6 +19,7 @@
 const CONSUMER_SUBSCRIPTION = "consumer_subscription_pooling_disabled";
 const SESSION_RELAY = "consumer_session_relay_disabled";
 const UPSTREAM_SERVICE_NOT_INCLUDED = "upstream_service_not_included";
+const KEYS_MANAGED_BY_OPENVAULT = "keys_managed_by_openvault";
 
 const CONSUMER_SUBSCRIPTION_MESSAGE =
   "Pooling a consumer subscription account (e.g. Claude Code, Codex/ChatGPT, Cursor, " +
@@ -28,6 +29,8 @@ const SESSION_RELAY_MESSAGE =
   "Relaying a browser chat session (a cookie or session token pasted in place of an " +
   "API key, or an imported/pooled browser login) is disabled in this edition of " +
   "FreeRoute. Connect this provider with a real API key instead.";
+const KEYS_MANAGED_BY_OPENVAULT_MESSAGE =
+  "Provider keys are stored in OpenVault. Add them at http://127.0.0.1:3010/keys.";
 const UPSTREAM_SERVICE_NOT_INCLUDED_MESSAGE =
   "This integration starts or adopts a separate upstream product that is not included in " +
   "this edition of FreeRoute.";
@@ -35,7 +38,11 @@ const UPSTREAM_SERVICE_NOT_INCLUDED_MESSAGE =
 interface HardDisabledRule {
   /** Matches this prefix and everything under it (`/api/oauth` also matches `/api/oauth/codex/import`). */
   prefix: string;
-  code: typeof CONSUMER_SUBSCRIPTION | typeof SESSION_RELAY | typeof UPSTREAM_SERVICE_NOT_INCLUDED;
+  code:
+    | typeof CONSUMER_SUBSCRIPTION
+    | typeof SESSION_RELAY
+    | typeof UPSTREAM_SERVICE_NOT_INCLUDED
+    | typeof KEYS_MANAGED_BY_OPENVAULT;
   message: string;
   /** One-line note on what lives at this prefix, for the report / future readers. */
   reason: string;
@@ -44,6 +51,14 @@ interface HardDisabledRule {
 // Checked in order; first match wins. Longest/most-specific prefixes first so
 // a narrower carve-out (none needed today) could be added above a broader one.
 const RULES: HardDisabledRule[] = [
+  {
+    prefix: "/authorize",
+    code: CONSUMER_SUBSCRIPTION,
+    message: CONSUMER_SUBSCRIPTION_MESSAGE,
+    reason:
+      "Trae SOLO OAuth loopback callback at the app root. It stored the query-string " +
+      "credentials as a pooled Trae connection with no auth.",
+  },
   {
     prefix: "/api/oauth",
     code: CONSUMER_SUBSCRIPTION,
@@ -144,12 +159,58 @@ const RULES: HardDisabledRule[] = [
     reason: "Traffic capture/replay for the MITM subsystem.",
   },
   {
+    prefix: "/api/providers/volcengine-plan",
+    code: SESSION_RELAY,
+    message: SESSION_RELAY_MESSAGE,
+    reason:
+      "Signs in to the Volcengine console, keeps the console cookie and CSRF token on the " +
+      "connection, and writes the API key it reads back into the local store.",
+  },
+  {
+    prefix: "/api/providers/command-code/auth",
+    code: KEYS_MANAGED_BY_OPENVAULT,
+    message: KEYS_MANAGED_BY_OPENVAULT_MESSAGE,
+    reason:
+      "Command Code key handoff: the callback stores the key the site hands back and " +
+      "apply writes it onto a connection. Provider keys live only in OpenVault.",
+  },
+  {
     prefix: "/api/services/9router",
     code: UPSTREAM_SERVICE_NOT_INCLUDED,
     message: UPSTREAM_SERVICE_NOT_INCLUDED_MESSAGE,
     reason:
       "Installs/starts/stops/adopts a separate upstream product (9router) as a managed " +
       "child service, a distinct product FreeRoute does not bundle or manage.",
+  },
+];
+
+// Per-connection sub-routes under /api/providers/{id}/ that exist only for a
+// pooled subscription login or a captured browser session. The id segment
+// varies, so these are matched by pattern instead of prefix.
+interface HardDisabledPatternRule {
+  pattern: RegExp;
+  code: typeof CONSUMER_SUBSCRIPTION | typeof SESSION_RELAY;
+  message: string;
+  reason: string;
+}
+
+const PATTERN_RULES: HardDisabledPatternRule[] = [
+  {
+    pattern: /^\/api\/providers\/[^/]+\/(login|chatgpt-web-codex-doctor|refresh-token)(\/|$)/,
+    code: SESSION_RELAY,
+    message: SESSION_RELAY_MESSAGE,
+    reason:
+      "login launches a browser and stores the captured cookies or token on the " +
+      "connection; refresh-token renews a kimi-web session; the doctor inspects a " +
+      "chatgpt-web session.",
+  },
+  {
+    pattern: /^\/api\/providers\/[^/]+\/(refresh|refresh-cursor|claude-auth|codex-auth)(\/|$)/,
+    code: CONSUMER_SUBSCRIPTION,
+    message: CONSUMER_SUBSCRIPTION_MESSAGE,
+    reason:
+      "Manual OAuth refresh, Cursor session renewal, and Claude Code or Codex CLI " +
+      "auth-file export and apply for pooled subscription connections.",
   },
 ];
 
@@ -160,8 +221,16 @@ export interface HardDisabledMatch {
 
 /** Returns the 501 body to send for `pathname`, or `null` if it isn't hard-disabled. */
 export function matchHardDisabledRoute(pathname: string): HardDisabledMatch | null {
+  // Lowercased so a case variant of a disabled prefix cannot slip past (the
+  // proxy matcher is case-insensitive for the same reason).
+  const path = pathname.toLowerCase();
   for (const rule of RULES) {
-    if (pathname === rule.prefix || pathname.startsWith(`${rule.prefix}/`)) {
+    if (path === rule.prefix || path.startsWith(`${rule.prefix}/`)) {
+      return { status: 501, body: { error: { code: rule.code, message: rule.message } } };
+    }
+  }
+  for (const rule of PATTERN_RULES) {
+    if (rule.pattern.test(path)) {
       return { status: 501, body: { error: { code: rule.code, message: rule.message } } };
     }
   }

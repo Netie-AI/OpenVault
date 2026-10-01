@@ -161,5 +161,5 @@ export function downloadTextFile(content: string, filename: string, mimeType: st
 }
 
 export function downloadProviderImportCsvTemplate(): void {
-  downloadTextFile(PROVIDER_IMPORT_CSV_TEMPLATE, "omniroute-provider-import-template.csv", "text/csv");
+  downloadTextFile(PROVIDER_IMPORT_CSV_TEMPLATE, "freeroute-provider-import-template.csv", "text/csv");
 }

@@ -1,9 +1,10 @@
 "use client";
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 
 import { Icon as UiIcon } from "@repo/ui/icons";
 
 import { useState } from "react";
-import { isValidAppTemplate } from "@repo/core";
+import { isValidAppTemplate, brandDocsUrl } from "@repo/core";
 import { Modal } from "@/components/ui/Modal";
 import { appsApi } from "@/lib/api";
 import { getApiErrorMessage } from "@/lib/api/client";
@@ -81,14 +82,16 @@ export function AddCustomAppModal({
         <h3 className="text-base font-semibold text-foreground">Add a custom app</h3>
         <p className="mt-0.5 text-xs text-muted-foreground">
           Upload an app definition (JSON). It&apos;s added to your catalog and marked unverified.{" "}
+          {brandDocsUrl("/guides/add-an-app") && (
           <a
-            href="https://openship.io/docs/guides/add-an-app"
+            href={brandDocsUrl("/guides/add-an-app")}
             target="_blank"
             rel="noopener noreferrer"
             className="text-primary hover:underline"
           >
             How to write one
           </a>
+          )}
         </p>
 
         <label

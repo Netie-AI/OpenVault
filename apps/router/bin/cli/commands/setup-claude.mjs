@@ -203,7 +203,7 @@ export async function runSetupClaudeCommand(opts = {}) {
     printSuccess(`${written} Claude Code profiles written to ${profilesRoot}`);
     if (skipped > 0) printInfo(`${skipped} models skipped (no matching profile pattern)`);
     console.log("\nTo use a profile:");
-    console.log("  omniroute launch --profile <name>     # e.g. omniroute launch --profile glm52");
+    console.log("  freeroute launch --profile <name>     # e.g. freeroute launch --profile glm52");
     console.log(
       "  # or: CLAUDE_CONFIG_DIR=~/.claude/profiles/<name> claude  (export ANTHROPIC_AUTH_TOKEN first)"
     );

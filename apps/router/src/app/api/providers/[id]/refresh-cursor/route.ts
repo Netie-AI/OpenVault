@@ -1,3 +1,4 @@
+import { DISABLED, renderDisabled } from "@omniroute/open-sse/netie/policy.ts";
 import { NextResponse } from "next/server";
 import { getCachedProviderConnectionById } from "@/lib/db/readCache";
 import { updateProviderConnection } from "@/lib/db/providers";
@@ -72,6 +73,10 @@ function evictExpiredManualRefreshAttempts(now: number): void {
  * intentionally remains remote-reachable.
  */
 export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  // FreeRoute: refreshing a pooled subscription login is not shipped. Also
+  // matched in src/lib/netie/hardDisabledRoutes.ts before this handler runs.
+  const disabled = renderDisabled(DISABLED.consumerSubscription);
+  if (disabled) return disabled;
   try {
     const { id } = await params;
 

@@ -7,9 +7,9 @@ import { t } from "../i18n.mjs";
 const execFile = promisify(execFileCb);
 
 const DEFAULT_IMAGE = "docker.io/redis:7-alpine";
-const DEFAULT_NAME = "omniroute-redis";
+const DEFAULT_NAME = "freeroute-redis";
 const DEFAULT_PORT = "6379";
-const DEFAULT_VOLUME = "omniroute-redis-data";
+const DEFAULT_VOLUME = "freeroute-redis-data";
 // The launcher starts Redis without AUTH unless --password is given, so the
 // published port stays on loopback. `-p 6379:6379` would bind 0.0.0.0 and hand
 // the whole LAN an unauthenticated Redis.

@@ -433,14 +433,14 @@ export function extractTailscaleFunnelUrl(text: string) {
 async function getDefaultHostname() {
   try {
     const machineId = await getConsistentMachineId();
-    const normalized = `omniroute-${machineId.slice(0, 8)}`.replace(/[^a-zA-Z0-9-]/g, "-");
+    const normalized = `freeroute-${machineId.slice(0, 8)}`.replace(/[^a-zA-Z0-9-]/g, "-");
     return normalized.toLowerCase();
   } catch {
     const hostname = os
       .hostname()
       .replace(/[^a-zA-Z0-9-]/g, "-")
       .toLowerCase();
-    return hostname || "omniroute";
+    return hostname || "freeroute";
   }
 }
 

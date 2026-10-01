@@ -1,6 +1,6 @@
-# bin/cli — OmniRoute CLI internals
+# bin/cli — FreeRoute CLI internals
 
-This directory contains the CLI runtime, helpers, and commands for the `omniroute` binary.
+This directory contains the CLI runtime, helpers, and commands for the `freeroute` binary.
 
 ## Structure
 
@@ -41,7 +41,7 @@ bin/cli/
 
 ### `apiFetch(path, opts)` — `api.mjs`
 
-All HTTP calls to the OmniRoute server must go through this wrapper.
+All HTTP calls to the FreeRoute server must go through this wrapper.
 
 ```js
 import { apiFetch } from "./api.mjs";
@@ -117,16 +117,16 @@ The CLI displays text in the user's language. Detection order:
 **Set permanently:**
 
 ```bash
-omniroute config lang set pt-BR       # saves to ~/.omniroute/.env
-omniroute config lang list            # show all 42 available locales
-omniroute config lang get             # show currently active locale
+freeroute config lang set pt-BR       # saves to ~/.omniroute/.env
+freeroute config lang list            # show all 42 available locales
+freeroute config lang get             # show currently active locale
 ```
 
 **One-time override:**
 
 ```bash
-omniroute --lang de providers list    # run in German, not persisted
-OMNIROUTE_LANG=ja omniroute status    # same effect via env
+freeroute --lang de providers list    # run in German, not persisted
+OMNIROUTE_LANG=ja freeroute status    # same effect via env
 ```
 
 **Adding a new locale**: add entry to `config/i18n.json`, then run:

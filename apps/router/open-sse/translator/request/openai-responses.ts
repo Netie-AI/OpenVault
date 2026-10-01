@@ -178,7 +178,7 @@ export function openaiResponsesToOpenAIRequest(
         !tool.function
       ) {
         throw unsupportedFeature(
-          `Unsupported Responses API feature: ${toolType} tool type is not supported by omniroute`
+          `Unsupported Responses API feature: ${toolType} tool type is not supported by FreeRoute`
         );
       }
     }
@@ -817,7 +817,7 @@ export function openaiResponsesToOpenAIRequest(
       const mode = toString(tc.mode);
       if (mode !== "auto" && mode !== "required") {
         throw unsupportedFeature(
-          `Unsupported Responses API feature: allowed_tools mode '${mode || "missing"}' is not supported by omniroute`
+          `Unsupported Responses API feature: allowed_tools mode '${mode || "missing"}' is not supported by FreeRoute`
         );
       }
       if (!Array.isArray(tc.tools) || tc.tools.length === 0) {
@@ -867,7 +867,7 @@ export function openaiResponsesToOpenAIRequest(
     } else if (tcType && tcType !== "function") {
       // Built-in tool types (web_search_preview, file_search, etc.) have no Chat equivalent
       throw unsupportedFeature(
-        `Unsupported Responses API feature: tool_choice type '${tcType}' is not supported by omniroute`
+        `Unsupported Responses API feature: tool_choice type '${tcType}' is not supported by FreeRoute`
       );
     }
   }

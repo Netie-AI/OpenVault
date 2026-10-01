@@ -113,8 +113,8 @@ export function renderNamed501(code: string, message: string): Response {
 
 export const UPSTREAM_UPDATES_DISABLED_CODE = "upstream_updates_disabled";
 export const UPSTREAM_UPDATES_DISABLED_MESSAGE =
-  "Checking for, downloading, or installing upstream OmniRoute releases is disabled in " +
-  "this edition of FreeRoute. FreeRoute ships and updates as part of OpenVault.";
+  "Checking for, downloading, or installing upstream releases is disabled in this " +
+  "edition of FreeRoute. FreeRoute ships and updates as part of OpenVault.";
 export function renderUpstreamUpdatesDisabled(): Response {
   return renderNamed501(UPSTREAM_UPDATES_DISABLED_CODE, UPSTREAM_UPDATES_DISABLED_MESSAGE);
 }
@@ -176,6 +176,44 @@ function isWebCookieProviderId(id: string): boolean {
   return Object.prototype.hasOwnProperty.call(WEB_COOKIE_PROVIDERS, id);
 }
 
+// Providers whose registry row says `authType: "none"` because the
+// credential never passes through this app, but whose executor still spends a
+// human's own consumer login or depends on a browser-grade fingerprint. The
+// registry fields cannot tell these apart, so they are listed by id, alias and
+// executor name, and checked BEFORE any registry lookup.
+const EXECUTOR_AUTH_OVERRIDES: Record<string, DisabledCode> = {
+  // devin-cli-agentic.ts spawns `devin acp` on the operator's own Devin login
+  // ("Authentication is owned exclusively by the official Devin CLI").
+  "devin-cli-agentic": DISABLED.consumerSubscription,
+  dva: DISABLED.consumerSubscription,
+  // auggie.ts: "Auggie delegates auth entirely to the user's local `auggie
+  // login` session", an Augment subscription.
+  auggie: DISABLED.consumerSubscription,
+  aug: DISABLED.consumerSubscription,
+  // zcode.ts: DEFAULT_PROVIDER_ID "builtin:zai-coding-plan", "the local ZCode
+  // profile owns auth", a Z.ai coding-plan subscription.
+  zcode: DISABLED.consumerSubscription,
+  zc: DISABLED.consumerSubscription,
+  // codex-app-server drives the local `codex app-server`, which "OWNS and
+  // self-refreshes its OpenAI auth (~/.codex/auth.json)": a ChatGPT
+  // subscription login, the same pooling as the `codex` provider.
+  "codex-app-server": DISABLED.consumerSubscription,
+  cxa: DISABLED.consumerSubscription,
+  // cloudflare-playground.ts: "the only gate is a browser-grade TLS
+  // fingerprint on the WS upgrade", passed by driving headless Chromium.
+  "cloudflare-playground": DISABLED.tlsStealth,
+  cfp: DISABLED.tlsStealth,
+};
+
+function executorAuthOverride(...names: string[]): DisabledCode | null {
+  for (const name of names) {
+    if (name && Object.prototype.hasOwnProperty.call(EXECUTOR_AUTH_OVERRIDES, name)) {
+      return EXECUTOR_AUTH_OVERRIDES[name];
+    }
+  }
+  return null;
+}
+
 /**
  * Classify a provider registry entry (or an entry-shaped object, e.g. a row
  * read back from a DB) into a disabled-feature bucket, or `null` if the
@@ -187,6 +225,9 @@ export function classifyProvider(entry: ClassifiableProvider | null | undefined)
   const authHeader = String(entry.authHeader ?? "").toLowerCase();
   const id = String(entry.id ?? "").toLowerCase();
   const executor = String(entry.executor ?? "").toLowerCase();
+
+  const override = executorAuthOverride(id, executor);
+  if (override) return override;
 
   // Subscription accounts authenticated through a real OAuth device/PKCE/
   // browser-callback flow: Claude Code, Codex, Cursor, GitHub/GHE Copilot,
@@ -261,6 +302,9 @@ export function classifyProviderId(providerId: string | null | undefined): Disab
   if (!providerId) return null;
   const id = providerId.trim().toLowerCase();
   if (!id) return null;
+
+  const override = executorAuthOverride(id);
+  if (override) return override;
 
   const entry = getRegistryEntry(id);
   if (entry) return classifyProvider(entry);

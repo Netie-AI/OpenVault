@@ -96,7 +96,7 @@ export function createSqliteNativeError(error) {
     return new Error(
       `better-sqlite3 native binding is incompatible with this runtime. ` +
         `Run \`${rebuildCmd}\` in the FreeRoute project and try again. ` +
-        `Or run: omniroute runtime repair  ` +
+        `Or run: freeroute runtime repair  ` +
         `(rebuilds into a user-writable runtime; works without a C++ toolchain).`
     );
   }
@@ -107,7 +107,7 @@ export function createSqliteNativeError(error) {
   ) {
     return new Error(
       `better-sqlite3 native binding could not be found (no prebuilt addon for this platform). ` +
-        `Run: omniroute runtime repair  ` +
+        `Run: freeroute runtime repair  ` +
         `(rebuilds into a user-writable runtime; works without a C++ toolchain).`
     );
   }

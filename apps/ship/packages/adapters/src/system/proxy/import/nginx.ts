@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Parse an existing nginx config into normalized ImportedSites.
  *
@@ -179,7 +180,7 @@ function strictLoopbackUpstreamPorts(config: string): Set<number> {
     if (!raw) continue;
     const resolved = resolveProxyTarget(raw, upstreams, { allowVariablesAfterAuthority: true });
     if ("reason" in resolved && !resolved.unixSocket) {
-      throw new Error(`Cannot inventory Openship edge routes: ${resolved.reason}`);
+      throw new Error(`Cannot inventory FreeBuild edge routes: ${resolved.reason}`);
     }
 
     // The migration parser intentionally selects the first member of a named
@@ -203,12 +204,12 @@ function strictLoopbackUpstreamPorts(config: string): Set<number> {
       try {
         url = new URL(target);
       } catch {
-        throw new Error(`Cannot inventory Openship edge routes: invalid proxy_pass "${raw}"`);
+        throw new Error(`Cannot inventory FreeBuild edge routes: invalid proxy_pass "${raw}"`);
       }
       if (!isLoopbackHost(url.hostname)) continue;
       const port = url.port ? Number(url.port) : url.protocol === "https:" ? 443 : 80;
       if (!Number.isSafeInteger(port) || port < 1 || port > 65_535) {
-        throw new Error(`Cannot inventory Openship edge routes: invalid loopback port in "${raw}"`);
+        throw new Error(`Cannot inventory FreeBuild edge routes: invalid loopback port in "${raw}"`);
       }
       ports.add(port);
     }
@@ -670,7 +671,7 @@ export async function scanOpenshipEdgeStrict(
     const bareConfig = await dumpResolvedConfig(executor, ["openresty"]);
     if (bareConfig) return parseStrictEdgeConfig(bareConfig);
     throw new Error(
-      "Cannot read Openship edge routes: neither Docker nor bare OpenResty inventory is available",
+      "Cannot read FreeBuild edge routes: neither Docker nor bare OpenResty inventory is available",
     );
   }
   if (!detected.exists) {
@@ -683,14 +684,14 @@ export async function scanOpenshipEdgeStrict(
     const bareConfig = await dumpResolvedConfig(executor, ["openresty"]);
     if (bareConfig) return parseStrictEdgeConfig(bareConfig);
     throw new Error(
-      "Cannot read Openship edge routes: no running Openship edge or bare OpenResty inventory is available",
+      "Cannot read FreeBuild edge routes: no running FreeBuild edge or bare OpenResty inventory is available",
     );
   }
   if (!detected.running) {
-    throw new Error("Cannot read Openship edge routes: the edge container is not running");
+    throw new Error("Cannot read FreeBuild edge routes: the edge container is not running");
   }
   const container = knownContainer ?? detected.name;
-  if (!container) throw new Error("Cannot read Openship edge routes: container identity missing");
+  if (!container) throw new Error("Cannot read FreeBuild edge routes: container identity missing");
   // Dump the FULL resolved config from the active process namespace. Reading
   // only sites-enabled misses loopback upstreams in the baked/base config (ACME,
   // webhook/control routes) and misses includes outside the known site globs.
@@ -698,7 +699,7 @@ export async function scanOpenshipEdgeStrict(
     containerCommand(container, "openresty -T 2>/dev/null"),
   );
   if (!fromContainer.trim() || !/server\s*\{/.test(fromContainer)) {
-    throw new Error("Cannot read Openship edge routes: active OpenResty config dump was empty");
+    throw new Error("Cannot read FreeBuild edge routes: active OpenResty config dump was empty");
   }
   return parseStrictEdgeConfig(fromContainer);
 }

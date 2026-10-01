@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 import type { Oblien, DomainRoute } from "oblien";
 import type { ManualCert, RouteConfig, SslResult } from "../types";
 import type { RoutingProvider, SslProvider, ProvisionCertOptions } from "./types";
@@ -173,6 +174,6 @@ export class CloudInfraProvider implements RoutingProvider, SslProvider {
   }
 
   async installCert(_domain: string, _cert: ManualCert): Promise<SslResult> {
-    throw new Error("Manual certificates are not supported on Openship Cloud");
+    throw new Error("Manual certificates are not supported on FreeBuild Cloud");
   }
 }

@@ -27,7 +27,7 @@
     "loginEnabled": "Вход: активиран (паролата е актуализирана)",
     "loginDisabled": "Вход: деактивиран",
     "providerInfo": "Доставчик: {info}",
-    "opencode": "Инсталиране и конфигуриране на включения @omniroute/opencode-plugin за OpenCode"
+    "opencode": "Инсталиране и конфигуриране на включения OpenCode plugin за OpenCode"
   },
   "doctor": {
     "title": "Диагностика на FreeRoute",

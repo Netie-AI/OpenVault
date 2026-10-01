@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 import { stripVTControlCharacters } from "node:util";
 
 /**
@@ -56,8 +57,7 @@ export class ServiceBuildDnsDiagnostics {
       "Docker builds do not automatically join the service network, even when the service is running; dependsOn only controls container startup. " +
       "Move connections needed only at runtime into a request handler or startup code. " +
       "For Next.js/Payload, check the route and its imports for top-level getPayload() calls; force-dynamic alone does not prevent module initialization. " +
-      "If the build needs data, use a source reachable from the build environment. " +
-      "See https://openship.io/docs/guides/compose-multi-service#database-access-during-a-nextjs-build"
+      "If the build needs data, use a source reachable from the build environment."
     );
   }
 }

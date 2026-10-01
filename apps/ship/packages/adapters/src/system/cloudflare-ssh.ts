@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 import { spawn } from "node:child_process";
 import { statSync } from "node:fs";
 import { delimiter, isAbsolute, join, win32 } from "node:path";
@@ -32,7 +33,7 @@ export function resolveCloudflaredExecutable(options: CloudflaredOptions = {}): 
     const candidate = path.join(directory, platform === "win32" ? "cloudflared.exe" : "cloudflared");
     if (isFile(candidate)) return candidate;
   }
-  throw new Error("Cloudflare Access requires cloudflared on the machine running OpenShip. Install it or set OPENSHIP_CLOUDFLARED_PATH, then retry.");
+  throw new Error("Cloudflare Access requires cloudflared on the machine running FreeBuild. Install it or set OPENSHIP_CLOUDFLARED_PATH, then retry.");
 }
 
 /** Generated from a fixed command and validated hostname, never raw SSH options. */

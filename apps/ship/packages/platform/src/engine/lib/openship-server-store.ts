@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * The single owner of the `/root/.openship/` folder on a target server.
  *
@@ -121,7 +122,7 @@ function unreadable<T>(name: string, err: unknown, fallback: T): T {
  * place the folder is created — callers never `mkdir` it themselves.
  */
 export async function ensureOpenshipDir(exec: CommandExecutor): Promise<void> {
-  await mkdirOpenship((await storeExecutor(exec, "Writing Openship server state")).executor);
+  await mkdirOpenship((await storeExecutor(exec, "Writing FreeBuild server state")).executor);
 }
 
 /**
@@ -137,7 +138,7 @@ export async function ensureOpenshipDir(exec: CommandExecutor): Promise<void> {
 export async function readOpenshipFile(exec: CommandExecutor, name: string): Promise<string> {
   const path = `${OPENSHIP_DIR}/${name}`;
   try {
-    const p = await storeExecutor(exec, "Reading Openship server state");
+    const p = await storeExecutor(exec, "Reading FreeBuild server state");
     const blocked = cannotAttemptRead(p);
     if (blocked) return unreadable(name, blocked, "");
     return (await p.executor.exec(`cat ${sq(path)} 2>/dev/null || echo ""`)).trim();
@@ -162,7 +163,7 @@ export async function writeOpenshipFile(
   // No `cannotAttemptRead` gate here on purpose: a write that cannot be elevated must
   // FAIL, and it does — `mkdir -p /root/.openship` throws on its own. Only the reads
   // have a non-throwing contract to protect, and only they can be fooled by it.
-  const { executor: e } = await storeExecutor(exec, "Writing Openship server state");
+  const { executor: e } = await storeExecutor(exec, "Writing FreeBuild server state");
   await mkdirOpenship(e);
   await e.writeFile(tmp, content);
   await e.exec(`mv -f ${sq(tmp)} ${sq(path)} && chmod 0600 ${sq(path)}`);
@@ -171,7 +172,7 @@ export async function writeOpenshipFile(
 /** Remove a file (and any stale temp) from `.openship`. Idempotent. */
 export async function removeOpenshipFile(exec: CommandExecutor, name: string): Promise<void> {
   const path = `${OPENSHIP_DIR}/${name}`;
-  const { executor: e } = await storeExecutor(exec, "Removing Openship server state");
+  const { executor: e } = await storeExecutor(exec, "Removing FreeBuild server state");
   await e.exec(`rm -f ${sq(path)} ${sq(`${path}.tmp`)}`);
 }
 
@@ -182,7 +183,7 @@ export async function removeOpenshipFile(exec: CommandExecutor, name: string): P
 export async function openshipFileExists(exec: CommandExecutor, name: string): Promise<boolean> {
   const path = `${OPENSHIP_DIR}/${name}`;
   try {
-    const p = await storeExecutor(exec, "Reading Openship server state");
+    const p = await storeExecutor(exec, "Reading FreeBuild server state");
     const blocked = cannotAttemptRead(p);
     if (blocked) return unreadable(name, blocked, false);
     return (await p.executor.exec(`test -f ${sq(path)} && echo yes || echo no`)).trim() === "yes";

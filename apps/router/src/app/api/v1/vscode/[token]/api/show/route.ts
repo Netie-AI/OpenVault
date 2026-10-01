@@ -72,7 +72,7 @@ function getOllamaModelFamily(model: OpenAiCatalogModel, canonicalFamily?: strin
 
   return typeof model.owned_by === "string" && model.owned_by.trim().length > 0
     ? model.owned_by.trim()
-    : "omniroute";
+    : "freeroute";
 }
 
 function matchesRequestedModel(model: OpenAiCatalogModel, requestedName: string): boolean {

@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: expectations follow the FreeBuild product name.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({
@@ -115,7 +116,7 @@ describe("network setup controller lifecycle", () => {
     expect(interrupt).toHaveBeenCalledWith(worker);
     await queue[0]!();
     expect(hostWork).not.toHaveBeenCalled();
-    expect(() => lifecycle.assertAcceptingWork()).toThrow("OpenShip is stopping");
+    expect(() => lifecycle.assertAcceptingWork()).toThrow("FreeBuild is stopping");
   });
   it("fences running work before aborting it and does not revisit completed work", async () => {
     const started = deferred();
@@ -224,7 +225,7 @@ describe("network setup controller lifecycle", () => {
     expect(h.interruptPreparation).toHaveBeenCalledWith(
       "prep-a",
       3,
-      expect.stringContaining("OpenShip stopped"),
+      expect.stringContaining("FreeBuild stopped"),
     );
     expect(h.interruptOperation).toHaveBeenCalledWith(
       "operation-a",
@@ -238,7 +239,7 @@ describe("network setup controller lifecycle", () => {
     expect(h.interruptRuntime).toHaveBeenCalledWith(
       "runtime-a",
       2,
-      expect.stringContaining("OpenShip stopped"),
+      expect.stringContaining("FreeBuild stopped"),
     );
     expect(h.notify.mock.calls).toEqual([
       ["org-a", "preparation", "prep-a"],

@@ -1,4 +1,5 @@
 // Re-export from open-sse with local logger
+import { assertProviderAllowed } from "@omniroute/open-sse/netie/policy.ts";
 import * as log from "../utils/logger";
 import { updateProviderConnection } from "@/lib/db/providers";
 import { resolveProxyForConnection } from "@/lib/db/settings";
@@ -235,6 +236,10 @@ export async function updateProviderCredentials(connectionId: string, newCredent
 
 // Local-specific: Check and refresh token proactively
 export async function checkAndRefreshToken(provider: string, credentials: any) {
+  // FreeRoute: refreshing a subscription or browser-session login is the
+  // pooling feature itself. Throws NetieDisabledError (named 501) before any
+  // call to the provider's token endpoint.
+  assertProviderAllowed(provider);
   let updatedCredentials = { ...credentials };
 
   // Check regular token expiry. Use the provider-specific lead time so rotating-

@@ -1,4 +1,5 @@
 "use client";
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 
 import { Icon as UiIcon } from "@repo/ui/icons";
 
@@ -10,7 +11,7 @@ import { Icon as UiIcon } from "@repo/ui/icons";
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { changelogUrl } from "@repo/core";
+import { BRAND_LINKS, changelogUrl } from "@repo/core";
 import { SettingsSection } from "./SettingsSection";
 import { SettingsToggleRow } from "./SettingsToggleRow";
 import { useUpdates } from "@/components/updates/useUpdates";
@@ -137,11 +138,18 @@ export function UpdatesTab() {
         iconColor="text-success"
       >
         <p className="text-[13.5px] leading-relaxed text-muted-foreground">
-          {t.settings.updates.security1} <span className="font-medium text-foreground">{t.settings.updates.securityOnlyGithub}</span> {t.settings.updates.security2}
-          <a href="https://github.com/oblien/openship" target="_blank" rel="noopener noreferrer" className="text-foreground underline underline-offset-4">
-            github.com/oblien/openship
-          </a>
-          {t.settings.updates.security3} <span className="font-medium text-foreground">{t.settings.updates.securityPulls}</span> {t.settings.updates.security4}
+          {t.settings.updates.security1} <span className="font-medium text-foreground">{t.settings.updates.securityOnlyGithub}</span>
+          {BRAND_LINKS.github ? (
+            <>
+              {" "}{t.settings.updates.security2}
+              <a href={BRAND_LINKS.github} target="_blank" rel="noopener noreferrer" className="text-foreground underline underline-offset-4">
+                {BRAND_LINKS.github.replace(/^https?:\/\//, "")}
+              </a>
+              {t.settings.updates.security3}
+            </>
+          ) : (
+            t.settings.updates.security3NoLink
+          )} <span className="font-medium text-foreground">{t.settings.updates.securityPulls}</span> {t.settings.updates.security4}
         </p>
       </SettingsSection>
     </div>

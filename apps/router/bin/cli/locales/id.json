@@ -27,7 +27,7 @@
     "loginEnabled": "Login: diaktifkan (kata sandi diperbarui)",
     "loginDisabled": "Login: dinonaktifkan",
     "providerInfo": "Penyedia: {info}",
-    "opencode": "Instal dan konfigurasikan @omniroute/opencode-plugin bawaan untuk OpenCode"
+    "opencode": "Instal dan konfigurasikan OpenCode plugin bawaan untuk OpenCode"
   },
   "doctor": {
     "title": "Diagnostik FreeRoute",

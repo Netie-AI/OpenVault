@@ -102,7 +102,7 @@ export async function restartRunningServer(
       return {
         method: "own-supervisor",
         status: "done",
-        message: "Restarted via the OmniRoute supervisor (server process recycled).",
+        message: "Restarted via the FreeRoute supervisor (server process recycled).",
       };
     } catch {
       // Fall through to pm2 / restart-required below.
@@ -117,7 +117,7 @@ export async function restartRunningServer(
       method: "none",
       status: "restart-required",
       message:
-        "Files were updated, but no supported process manager (OmniRoute's own supervisor or pm2) was detected — restart the server manually to apply the update.",
+        "Files were updated, but no supported process manager (FreeRoute's own supervisor or pm2) was detected — restart the server manually to apply the update.",
     };
   }
 }

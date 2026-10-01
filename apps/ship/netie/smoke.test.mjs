@@ -2,6 +2,10 @@
 // Modified by Netie AI, 2026: the stub OpenVault enforces X-OpenVault-Admin,
 // and the keyvault cases cover the admin token, openvault_forbidden and
 // revoked keys.
+// Modified by Netie AI, 2026: the stub key's custody is "pooled" (OpenVault's
+// KeyCustody is "pooled" | "tenant"; "openvault" was never a real value), and
+// new keyvault cases cover custody, the custom-only label fallback, the 5s
+// request timeout, ~ expansion and expiry of the in-memory secret cache.
 //
 // FreeBuild smoke test (node:test, plain Node — no test framework dependency).
 // Run with `npm run test:smoke` from the repo root.
@@ -31,7 +35,7 @@
 // A stub HTTP server stands in for OpenVault for the whole run (`OPENVAULT_URL`
 // points at it) — the real OpenVault is never required to run this test.
 
-import { test, describe, before, after } from "node:test";
+import { test, describe, before, after, mock } from "node:test";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { spawn } from "node:child_process";
@@ -62,7 +66,7 @@ const STUB_KEY = {
   precheck_status: "ok",
   account_id: "acct_stub",
   lifecycle: "active",
-  custody: "openvault",
+  custody: "pooled",
 };
 const STUB_SECRET = "stub-cloudflare-token-value";
 
@@ -74,6 +78,8 @@ let revealCalls = 0;
 let stubKeys = [STUB_KEY];
 /** When set, every keys route answers this 403 body (the guard or a sealed vault). */
 let stubForce403 = null;
+/** When true, every keys route accepts the request and never answers (a hung OpenVault). */
+let stubHang = false;
 
 function startStubOpenVault() {
   const server = createServer((req, res) => {
@@ -86,6 +92,7 @@ function startStubOpenVault() {
         res.end(JSON.stringify({ error: { message: "unauthorized", type: "openvault_unauthenticated" } }));
         return;
       }
+      if (stubHang) return;
       if (stubForce403) {
         res.writeHead(403, { "content-type": "application/json" });
         res.end(JSON.stringify(stubForce403));
@@ -401,5 +408,136 @@ test("keyvault client: findKeysForFreeBuildProvider skips revoked and replaced k
     assert.deepEqual(await keyvault.findKeysForFreeBuildProvider("cloudflare"), []);
   } finally {
     stubKeys = [STUB_KEY];
+  }
+});
+
+test("keyvault client: spends only pooled keys or keys with no custody field", async () => {
+  process.env.OPENVAULT_URL = openVaultUrl;
+  process.env.OPENVAULT_ADMIN_TOKEN_PATH = adminTokenPath;
+  const tenant = { ...STUB_KEY, id: "key_stub_cloudflare_tenant", priority: 0, custody: "tenant" };
+  const other = { ...STUB_KEY, id: "key_stub_cloudflare_other", custody: "operator" };
+  const noCustody = { ...STUB_KEY, id: "key_stub_cloudflare_untagged" };
+  delete noCustody.custody;
+  stubKeys = [tenant, other, STUB_KEY, noCustody];
+  try {
+    assert.equal(keyvault.isSpendableCustody("pooled"), true);
+    assert.equal(keyvault.isSpendableCustody(undefined), true);
+    assert.equal(keyvault.isSpendableCustody(null), true);
+    assert.equal(keyvault.isSpendableCustody("tenant"), false);
+    const ids = (await keyvault.findKeysForFreeBuildProvider("cloudflare")).map((k) => k.id);
+    assert.deepEqual(ids, [STUB_KEY.id, noCustody.id]);
+
+    stubKeys = [tenant];
+    assert.deepEqual(await keyvault.findKeysForFreeBuildProvider("cloudflare"), []);
+    // The provider-id match obeys custody too, not only the label fallback.
+    stubKeys = [{ ...tenant, provider: "cloudflare" }];
+    assert.deepEqual(await keyvault.findKeysForFreeBuildProvider("cloudflare"), []);
+  } finally {
+    stubKeys = [STUB_KEY];
+  }
+});
+
+test("keyvault client: the label fallback never picks another provider's key", async () => {
+  process.env.OPENVAULT_URL = openVaultUrl;
+  process.env.OPENVAULT_ADMIN_TOKEN_PATH = adminTokenPath;
+  const gateway = {
+    ...STUB_KEY,
+    id: "key_stub_openai_gateway",
+    provider: "openai",
+    label: "OpenAI via Cloudflare AI Gateway",
+  };
+  const midLabel = { ...STUB_KEY, id: "key_stub_custom_mid", label: "My Cloudflare token" };
+  try {
+    stubKeys = [gateway, midLabel];
+    assert.deepEqual(await keyvault.findKeysForFreeBuildProvider("cloudflare"), []);
+    assert.equal(await keyvault.findKeyForFreeBuildProvider("cloudflare"), undefined);
+
+    stubKeys = [gateway, STUB_KEY];
+    const ids = (await keyvault.findKeysForFreeBuildProvider("cloudflare")).map((k) => k.id);
+    assert.deepEqual(ids, [STUB_KEY.id]);
+
+    // A key whose provider id is "cloudflare" still wins over the label fallback.
+    const byProvider = { ...STUB_KEY, id: "key_stub_cf_provider", provider: "Cloudflare", label: "zone A" };
+    stubKeys = [STUB_KEY, byProvider];
+    const preferred = (await keyvault.findKeysForFreeBuildProvider("cloudflare")).map((k) => k.id);
+    assert.deepEqual(preferred, [byProvider.id]);
+  } finally {
+    stubKeys = [STUB_KEY];
+  }
+});
+
+test("keyvault client: a hung OpenVault fails with the named 503 after the timeout", async () => {
+  process.env.OPENVAULT_URL = openVaultUrl;
+  process.env.OPENVAULT_ADMIN_TOKEN_PATH = adminTokenPath;
+  keyvault._resetSecretCacheForTests();
+  stubHang = true;
+  const started = Date.now();
+  try {
+    await assert.rejects(
+      () => keyvault.listKeys(),
+      (err) => {
+        assert.equal(err.code, "openvault_keyvault_unreachable");
+        assert.equal(err.statusCode, 503);
+        return true;
+      },
+    );
+  } finally {
+    stubHang = false;
+    stubOpenVault.closeAllConnections();
+  }
+  const elapsed = Date.now() - started;
+  assert.ok(elapsed >= 4_500 && elapsed < 15_000, `timed out after ${elapsed}ms, expected about 5000ms`);
+});
+
+test("keyvault client: expands ~ in OPENVAULT_ADMIN_TOKEN_PATH and OPENVAULT_HOME", async () => {
+  process.env.OPENVAULT_URL = openVaultUrl;
+  const saved = {
+    HOME: process.env.HOME,
+    USERPROFILE: process.env.USERPROFILE,
+    OPENVAULT_HOME: process.env.OPENVAULT_HOME,
+  };
+  process.env.HOME = dataDir;
+  process.env.USERPROFILE = dataDir;
+  keyvault._resetSecretCacheForTests();
+  try {
+    process.env.OPENVAULT_ADMIN_TOKEN_PATH = "~/admin_token";
+    assert.equal(keyvault.adminTokenPath(), adminTokenPath);
+    assert.equal((await keyvault.listKeys()).length, 1);
+
+    delete process.env.OPENVAULT_ADMIN_TOKEN_PATH;
+    process.env.OPENVAULT_HOME = "~";
+    assert.equal(keyvault.adminTokenPath(), adminTokenPath);
+    assert.equal(await keyvault.getSecret(STUB_KEY.id), STUB_SECRET);
+  } finally {
+    for (const [k, v] of Object.entries(saved)) {
+      if (v === undefined) delete process.env[k];
+      else process.env[k] = v;
+    }
+    process.env.OPENVAULT_ADMIN_TOKEN_PATH = adminTokenPath;
+  }
+});
+
+test("keyvault client: an expired secret is deleted from the in-memory cache", async () => {
+  process.env.OPENVAULT_URL = openVaultUrl;
+  process.env.OPENVAULT_ADMIN_TOKEN_PATH = adminTokenPath;
+  keyvault._resetSecretCacheForTests();
+  const realNow = Date.now.bind(Date);
+  let offset = 0;
+  const clock = mock.method(Date, "now", () => realNow() + offset);
+  try {
+    assert.equal(await keyvault.getSecret(STUB_KEY.id), STUB_SECRET);
+    assert.equal(keyvault._secretCacheSizeForTests(), 1);
+
+    offset = 61_000; // past the 60s TTL
+    // Any later lookup sweeps the cache first, even one for a different key that fails.
+    await assert.rejects(() => keyvault.getSecret("key_unknown"), (err) => err.code === "openvault_key_not_found");
+    assert.equal(keyvault._secretCacheSizeForTests(), 0, "the expired plaintext must be gone");
+
+    const before = revealCalls;
+    assert.equal(await keyvault.getSecret(STUB_KEY.id), STUB_SECRET);
+    assert.equal(revealCalls, before + 1, "an expired entry is fetched again, not served");
+  } finally {
+    clock.mock.restore();
+    keyvault._resetSecretCacheForTests();
   }
 });

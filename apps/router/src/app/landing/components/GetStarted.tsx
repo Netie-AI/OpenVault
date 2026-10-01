@@ -10,7 +10,8 @@ export default function GetStarted() {
 
   const endpoint = useDisplayBaseUrl();
   const dashboardUrl = `${endpoint}/dashboard`;
-  const command = "npx omniroute";
+  // FreeRoute ships inside OpenVault and starts from its apps/router directory.
+  const command = "npm start";
 
   const handleCopy = async (text: string) => {
     await copyToClipboard(text);
@@ -106,10 +107,10 @@ export default function GetStarted() {
                   <span className="text-purple-400">{t("dataLocation")}</span>
                   <br />
                   <span className="text-gray-500">{t("dataLocationMacLinux")}</span>{" "}
-                  <span className="break-all">~/.omniroute/db.json</span>
+                  <span className="break-all">~/.omniroute/</span>
                   <br />
                   <span className="text-gray-500">{t("dataLocationWindows")}</span>{" "}
-                  <span className="break-all">%APPDATA%/omniroute/db.json</span>
+                  <span className="break-all">%APPDATA%/omniroute/</span>
                 </div>
               </div>
             </div>

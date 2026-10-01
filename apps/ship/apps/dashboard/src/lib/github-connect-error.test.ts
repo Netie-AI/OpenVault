@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: expectations follow the FreeBuild product name.
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -10,7 +11,7 @@ import {
 describe("githubConnectErrorMessage", () => {
   it("maps known OAuth error codes to actionable copy", () => {
     expect(githubConnectErrorMessage("account_already_linked_to_different_user")).toContain(
-      "already linked to a different Openship user",
+      "already linked to a different FreeBuild user",
     );
   });
 

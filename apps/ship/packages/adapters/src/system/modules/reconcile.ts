@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Native-module reconcile runner — applies a VERIFIED catalog's pending
  * migrations to one server, in semver order, run-once, stamp-last, never-throw.
@@ -247,7 +248,7 @@ export async function reconcileServerModule(
               ok: false,
               error:
                 `step ${step.id} is gated to ${step.distroFamily.join("/")}, but this host's ` +
-                `distro family is not one Openship recognizes ` +
+                `distro family is not one FreeBuild recognizes ` +
                 `(${JSON.stringify(String(hostFamily))}, os-release ID ` +
                 `${JSON.stringify(opts.profile.distroId ?? "")}) — refusing to guess`,
             };

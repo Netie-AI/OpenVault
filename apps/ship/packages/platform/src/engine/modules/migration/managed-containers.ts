@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * "Does this instance already manage these containers?" — asked once, answered for
  * every caller that needs it.
@@ -136,8 +137,8 @@ export async function excludeAlreadyManaged(
   const kept = chosen.filter((s) => !(s.containerId && controlPlane.has(s.containerId)));
   if (kept.length === 0) {
     throw new Error(
-      "Only Openship's own containers matched the selected service names. " +
-        "Openship manages its own runtime — pick the services you want to migrate instead.",
+      "Only FreeBuild's own containers matched the selected service names. " +
+        "FreeBuild manages its own runtime — pick the services you want to migrate instead.",
     );
   }
   return kept;

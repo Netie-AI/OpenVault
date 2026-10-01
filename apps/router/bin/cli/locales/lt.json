@@ -27,7 +27,7 @@
     "loginEnabled": "Prisijungimas: įjungtas (slaptažodis atnaujintas)",
     "loginDisabled": "Prisijungimas: išjungtas",
     "providerInfo": "Teikėjas: {info}",
-    "opencode": "Įdiegti ir sukonfigūruoti pridėtą @omniroute/opencode-plugin, skirtą OpenCode"
+    "opencode": "Įdiegti ir sukonfigūruoti pridėtą OpenCode plugin, skirtą OpenCode"
   },
   "doctor": {
     "title": "FreeRoute diagnostika",

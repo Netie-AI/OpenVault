@@ -5,7 +5,7 @@
       "available": true,
       "verified": true,
       "id": "mail",
-      "name": "Openship Mail",
+      "name": "FreeBuild Mail",
       "description": "Your own mail on your own domain — SMTP/IMAP, mailboxes and webmail on one server. Or keep the mailboxes you already have and just run the webmail.",
       "kind": "flow",
       "logo": "mail",
@@ -3438,7 +3438,7 @@
         {
           "service": "proxy",
           "path": "/etc/caddy/Caddyfile",
-          "content": "{\n\tservers {\n\t\ttrusted_proxies static 127.0.0.1/32 ::1/128 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16\n\t}\n}\n\n# Host-less site address on purpose. PostHog's own default is\n# `http://localhost:8000`, which compiles to a Host matcher — behind Openship's\n# edge a foreign Host then returns an empty HTTP 200 instead of a 404, so every\n# ingestion POST would look successful while the events were silently dropped.\n# `:80` also emits no automatic_https and no tls app, so Caddy never tries ACME.\n:80 {\n\t# Health target for the container healthcheck. Deliberately answered by\n\t# Caddy itself: proxying /_health through to Django would report unhealthy\n\t# for the whole first-boot migration window and raise a false incident.\n\t@openship-health {\n\t\tpath /openship-health\n\t}\n\n\thandle @openship-health {\n\t\trespond \"ok\" 200\n\t}\n\n\t@replay-capture {\n\t\tpath /s\n\t\tpath /s/\n\t\tpath /s/*\n\t}\n\n\t@capture {\n\t\tpath /e\n\t\tpath /e/\n\t\tpath /e/*\n\t\tpath /i/v0\n\t\tpath /i/v0/\n\t\tpath /i/v0/*\n\t\tpath /i/v1/analytics/events\n\t\tpath /i/v1/analytics/events/\n\t\tpath /batch\n\t\tpath /batch/\n\t\tpath /batch/*\n\t\tpath /capture\n\t\tpath /capture/\n\t\tpath /capture/*\n\t}\n\n\t@flags {\n\t\tpath /flags\n\t\tpath /flags/\n\t\tpath /flags/*\n\t\tpath /api/feature_flag/local_evaluation\n\t\tpath /api/feature_flag/local_evaluation/\n\t\tpath /api/feature_flag/local_evaluation/*\n\t}\n\n\t@surveys {\n\t\tpath /surveys\n\t\tpath /surveys/\n\t\tpath /api/surveys\n\t\tpath /api/surveys/\n\t}\n\n\t@remote-config {\n\t\tpath /array/*\n\t}\n\n\t@webhooks {\n\t\tpath /public/webhooks\n\t\tpath /public/webhooks/\n\t\tpath /public/webhooks/*\n\t\tpath /public/m/\n\t\tpath /public/m/*\n\t}\n\n\t@objectstorage {\n\t\tpath /posthog\n\t\tpath /posthog/\n\t\tpath /posthog/*\n\t}\n\n\thandle @capture {\n\t\treverse_proxy capture:3000\n\t}\n\n\thandle @replay-capture {\n\t\treverse_proxy replay-capture:3000\n\t}\n\n\thandle @flags {\n\t\treverse_proxy feature-flags:3001\n\t}\n\n\thandle @surveys {\n\t\treverse_proxy hypercache-server:3002\n\t}\n\n\thandle @remote-config {\n\t\treverse_proxy hypercache-server:3002\n\t}\n\n\thandle @webhooks {\n\t\treverse_proxy plugins:6738\n\t}\n\n\thandle @objectstorage {\n\t\treverse_proxy objectstorage:8333\n\t}\n\n\thandle {\n\t\treverse_proxy web:8000\n\t}\n}\n"
+          "content": "{\n\tservers {\n\t\ttrusted_proxies static 127.0.0.1/32 ::1/128 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16\n\t}\n}\n\n# Host-less site address on purpose. PostHog's own default is\n# `http://localhost:8000`, which compiles to a Host matcher — behind FreeBuild's\n# edge a foreign Host then returns an empty HTTP 200 instead of a 404, so every\n# ingestion POST would look successful while the events were silently dropped.\n# `:80` also emits no automatic_https and no tls app, so Caddy never tries ACME.\n:80 {\n\t# Health target for the container healthcheck. Deliberately answered by\n\t# Caddy itself: proxying /_health through to Django would report unhealthy\n\t# for the whole first-boot migration window and raise a false incident.\n\t@openship-health {\n\t\tpath /openship-health\n\t}\n\n\thandle @openship-health {\n\t\trespond \"ok\" 200\n\t}\n\n\t@replay-capture {\n\t\tpath /s\n\t\tpath /s/\n\t\tpath /s/*\n\t}\n\n\t@capture {\n\t\tpath /e\n\t\tpath /e/\n\t\tpath /e/*\n\t\tpath /i/v0\n\t\tpath /i/v0/\n\t\tpath /i/v0/*\n\t\tpath /i/v1/analytics/events\n\t\tpath /i/v1/analytics/events/\n\t\tpath /batch\n\t\tpath /batch/\n\t\tpath /batch/*\n\t\tpath /capture\n\t\tpath /capture/\n\t\tpath /capture/*\n\t}\n\n\t@flags {\n\t\tpath /flags\n\t\tpath /flags/\n\t\tpath /flags/*\n\t\tpath /api/feature_flag/local_evaluation\n\t\tpath /api/feature_flag/local_evaluation/\n\t\tpath /api/feature_flag/local_evaluation/*\n\t}\n\n\t@surveys {\n\t\tpath /surveys\n\t\tpath /surveys/\n\t\tpath /api/surveys\n\t\tpath /api/surveys/\n\t}\n\n\t@remote-config {\n\t\tpath /array/*\n\t}\n\n\t@webhooks {\n\t\tpath /public/webhooks\n\t\tpath /public/webhooks/\n\t\tpath /public/webhooks/*\n\t\tpath /public/m/\n\t\tpath /public/m/*\n\t}\n\n\t@objectstorage {\n\t\tpath /posthog\n\t\tpath /posthog/\n\t\tpath /posthog/*\n\t}\n\n\thandle @capture {\n\t\treverse_proxy capture:3000\n\t}\n\n\thandle @replay-capture {\n\t\treverse_proxy replay-capture:3000\n\t}\n\n\thandle @flags {\n\t\treverse_proxy feature-flags:3001\n\t}\n\n\thandle @surveys {\n\t\treverse_proxy hypercache-server:3002\n\t}\n\n\thandle @remote-config {\n\t\treverse_proxy hypercache-server:3002\n\t}\n\n\thandle @webhooks {\n\t\treverse_proxy plugins:6738\n\t}\n\n\thandle @objectstorage {\n\t\treverse_proxy objectstorage:8333\n\t}\n\n\thandle {\n\t\treverse_proxy web:8000\n\t}\n}\n"
         },
         {
           "service": "clickhouse",
@@ -3820,8 +3820,8 @@
       "verified": true,
       "unlisted": true,
       "id": "webmail",
-      "name": "Openship Webmail",
-      "description": "A fast, self-hosted webmail client. Point it at any IMAP/SMTP mailbox — an Openship Mail server, Gmail, Fastmail, or your company's — and read, search and send from a clean UI on your own domain. Nothing is stored outside your server.",
+      "name": "FreeBuild Webmail",
+      "description": "A fast, self-hosted webmail client. Point it at any IMAP/SMTP mailbox — a FreeBuild Mail server, Gmail, Fastmail, or your company's — and read, search and send from a clean UI on your own domain. Nothing is stored outside your server.",
       "kind": "template",
       "logo": "webmail",
       "category": "mail",
@@ -3862,7 +3862,7 @@
           "key": "BRANDING_ADMIN_TOKEN",
           "service": "webmail",
           "label": "Branding admin token",
-          "help": "Auto-generated. Lets Openship write this webmail's white-label login page (logo, name, colors) over its admin API. Nothing else accepts it.",
+          "help": "Auto-generated. Lets FreeBuild write this webmail's white-label login page (logo, name, colors) over its admin API. Nothing else accepts it.",
           "generate": "secret",
           "secret": true
         }
@@ -3871,7 +3871,7 @@
         {
           "id": "backend",
           "label": "Mail backend",
-          "description": "Which IMAP/SMTP server this webmail talks to. Leave the hosts blank and each address resolves to mail.<its own domain> at sign-in — the convention Openship Mail and iRedMail install. Set them to pin every mailbox to one server. Users can still override host and port on the sign-in screen.",
+          "description": "Which IMAP/SMTP server this webmail talks to. Leave the hosts blank and each address resolves to mail.<its own domain> at sign-in — the convention FreeBuild Mail and iRedMail install. Set them to pin every mailbox to one server. Users can still override host and port on the sign-in screen.",
           "fields": [
             {
               "key": "DEFAULT_IMAP_HOST",
@@ -3932,7 +3932,7 @@
               "key": "TRUSTED_ORIGINS",
               "service": "webmail",
               "label": "Trusted origins",
-              "help": "Comma-separated origins allowed to sign in — scheme + host, no path. Defaults to this app's own public URL. Set it when the app is served through a proxy Openship doesn't route, e.g. an Openship Mail server fronting mail.<domain> for a cloud deploy.",
+              "help": "Comma-separated origins allowed to sign in — scheme + host, no path. Defaults to this app's own public URL. Set it when the app is served through a proxy FreeBuild doesn't route, e.g. a FreeBuild Mail server fronting mail.<domain> for a cloud deploy.",
               "type": "text",
               "placeholder": "https://mail.example.com",
               "advanced": true,

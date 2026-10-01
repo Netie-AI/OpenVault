@@ -27,7 +27,7 @@
     "loginEnabled": "Giriş: aktivdir (parol yeniləndi)",
     "loginDisabled": "Giriş: deaktivdir",
     "providerInfo": "Provayder: {info}",
-    "opencode": "OpenCode üçün paketə daxil olan @omniroute/opencode-plugin plaginini quraşdırın və konfiqurasiya edin"
+    "opencode": "OpenCode üçün paketə daxil olan OpenCode plugin plaginini quraşdırın və konfiqurasiya edin"
   },
   "doctor": {
     "title": "FreeRoute Diaqnostikası",

@@ -31,9 +31,11 @@ first start. It reads it from `$OPENVAULT_ADMIN_TOKEN_PATH`, else
 `OPENVAULT_URL` at OpenVault if it is not on `http://127.0.0.1:5000`.
 
 - Default port: `3020`. Override with the `PORT` environment variable.
-- Default bind address: `127.0.0.1` (loopback only). Override with
-  `OMNIROUTE_HOSTNAME` if you need FreeRoute reachable from another host -
-  do this only on a trusted network.
+- Default bind address: `127.0.0.1` (loopback only), for `npm start`,
+  `npm run dev` and `freeroute serve`. Override with `HOST` or
+  `OMNIROUTE_HOSTNAME` (and `OMNIROUTE_SERVER_HOST` for `freeroute serve`) if
+  you need FreeRoute reachable from another host. Do this only on a trusted
+  network. The shell's `HOSTNAME` variable does not move the bind.
 - `npm run dev` runs it in development mode on the same port/bind rules.
 
 ## Where provider API keys live
@@ -52,13 +54,27 @@ unreachable, FreeRoute fails loudly (`HTTP 503
 openvault_keyvault_unreachable`) rather than falling back to a locally cached
 key.
 
-How a connection finds its key: if an enabled, active OpenVault key has the
+How a connection finds its key: FreeRoute only spends keys OpenVault owns
+(custody `pooled`, or no custody field), the same rule as OpenVault's own
+router; a `tenant` key is never used. If such an enabled, active key has the
 same base URL as the connection (trailing slash and case ignored), that key
 is used. Otherwise FreeRoute maps the connection's provider to an OpenVault
 provider (`openai`, `anthropic`, `groq`, ...) and uses the highest-priority
-key for it. So for an OpenAI-compatible endpoint, store the key in OpenVault
-with that endpoint as its base URL, then add the connection in FreeRoute
-with no key.
+key for it. A provider the map cannot name only matches a key filed under
+its exact id; it never borrows another endpoint's `custom` key. So for an
+OpenAI-compatible endpoint, store the key in OpenVault with that endpoint as
+its base URL, then add the connection in FreeRoute with no key.
+
+Client tokens are checked the same way: FreeRoute asks OpenVault
+(`POST /api/apikeys/verify`) and caches each answer in memory for up to 60
+seconds. So a token you revoke in OpenVault can keep working at FreeRoute
+for up to 60 seconds, and OpenVault's "last used" time for a token moves at
+most once a minute while FreeRoute holds a cached answer.
+
+Keys never land in FreeRoute's database by any route: the write layer refuses
+an API key, `extraApiKeys`, or any other secret `providerSpecificData` field
+(`keys_managed_by_openvault`), and a backup or JSON import has those fields
+cleared before it is written.
 
 ## Tests
 
@@ -99,12 +115,26 @@ into one of these buckets (or leaves it enabled) from the provider registry's
 own fields. See that file for exactly how, and for the full list of
 affected providers.
 
+## Names kept from upstream
+
+The product, its UI, CLI output, MCP server name, emails and the configs it
+writes into your tools say FreeRoute. Some identifiers keep the upstream
+name because clients, files or scripts already depend on them:
+
+- environment variables (`OMNIROUTE_*`) and `X-OmniRoute-*` header names
+- the data directory (`~/.omniroute`, `%APPDATA%/omniroute`) and database names
+- MCP tool names (`omniroute_get_health` and the rest), which MCP clients call
+- the `omniroute` provider id that FreeRoute writes into tool configs (Codex,
+  OpenCode, Crush, OpenClaw and others), so a model reads `omniroute/<model>`
+- the default local key `sk_omniroute` and the `/api/omniroute/status` path
+
 ## Credit
 
 Based on [OmniRoute](https://github.com/diegosouzapw/OmniRoute) by
-diegosouzapw (MIT), itself based on 9router (MIT). See
-OpenVault's root `THIRD_PARTY_NOTICES.md` for the 9router license text, and
-`/notices` in the running app.
+diegosouzapw (MIT), itself based on 9router (MIT), including a TypeScript
+port of CLIProxyAPI (MIT). `NETIE_NOTICES.md` carries the 9router and
+CLIProxyAPI license texts, `THIRD_PARTY_NOTICES.md` is OmniRoute's own, and
+`/notices` in the running app shows all three licenses.
 
 ## License
 

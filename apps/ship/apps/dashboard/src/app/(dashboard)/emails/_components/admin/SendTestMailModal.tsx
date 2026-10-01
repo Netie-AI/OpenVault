@@ -1,4 +1,5 @@
 "use client";
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 
 import { Icon as UiIcon } from "@repo/ui/icons";
 
@@ -180,7 +181,7 @@ function SendTestMailContent({
       <p className="text-sm text-muted-foreground leading-relaxed -mt-1">
         {s.sendsFromBefore}
         <span className="font-mono text-[12.5px] text-foreground">
-          openship@{senderDomain || "…"}
+          freebuild@{senderDomain || "…"}
         </span>
         {s.sendsFromAfter}
       </p>

@@ -549,7 +549,7 @@ export async function checkMachineTokenAuth(options = {}) {
     if (response.status === 401 || response.status === 403) {
       return warn(
         "CLI machine token",
-        "Server rejected the local machine token; if the CLI and server are on different hosts or container boundaries, run `omniroute connect <host> --key <oma_live_...>`",
+        "Server rejected the local machine token; if the CLI and server are on different hosts or container boundaries, run `freeroute connect <host> --key <oma_live_...>`",
         {
           url,
           status: response.status,

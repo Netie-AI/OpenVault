@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Adopt a discovered Docker stack as an Openship project.
  *
@@ -107,7 +108,7 @@ export async function parseRepoCompose(
       const blocking = blockingComposeFields(parsed.unsupported);
       if (blocking.length > 0) {
         throw new Error(
-          "The repo's Docker Compose file declares options Openship can't deploy faithfully:\n" +
+          "The repo's Docker Compose file declares options FreeBuild can't deploy faithfully:\n" +
             describeBlockingComposeFields(blocking),
         );
       }
@@ -589,7 +590,7 @@ export async function adoptServerStack(opts: {
   // matching rules live in ensureProject and must not be duplicated here.
   if (!created && isControlPlaneProject(await repos.project.findById(project_id))) {
     throw new Error(
-      `"${projectName}" is reserved — that is Openship's own project on this instance. ` +
+      `"${projectName}" is reserved — that is FreeBuild's own project on this instance. ` +
         `Pick a different project name.`,
     );
   }
@@ -1149,7 +1150,7 @@ export async function reimportOpenshipProject(opts: {
 
   // Never trust a raw label as a primary key without shape-checking it.
   if (!PROJECT_ID_RE.test(projectId)) {
-    throw new Error("Invalid Openship project id.");
+    throw new Error("Invalid FreeBuild project id.");
   }
   // Refuse-not-merge: if ANY project (any org, incl. soft-deleted) already owns
   // this id, do not graft server-supplied state onto it.
@@ -1161,10 +1162,10 @@ export async function reimportOpenshipProject(opts: {
   const stack = await discoverServerStack(serverId, organizationId);
   const group = stack.openshipProjects.find((p) => p.projectId === projectId);
   if (!group) {
-    throw new Error("That Openship project was not found on the server.");
+    throw new Error("That FreeBuild project was not found on the server.");
   }
   if (group.knownHere) {
-    throw new Error("That Openship project is already managed by this instance.");
+    throw new Error("That FreeBuild project is already managed by this instance.");
   }
 
   // PRIMARY: a full server-side subgraph snapshot → restore it faithfully (exact

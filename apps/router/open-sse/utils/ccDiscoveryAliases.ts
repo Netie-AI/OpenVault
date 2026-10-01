@@ -101,7 +101,7 @@ export function appendCcDiscoveryAliases<T extends CcDiscoveryCatalogEntry>(
       // root must stay the full name verbatim — only real provider-qualified ids get
       // the "/" stripped down to the bare model name.
       root: isCombo ? id : bareModelName(id),
-      display_name: `${label} (OmniRoute)`,
+      display_name: `${label} (FreeRoute)`,
     } as T);
   }
 

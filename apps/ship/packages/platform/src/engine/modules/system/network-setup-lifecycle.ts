@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 import { AppError } from "@repo/core";
 import { repos } from "@repo/db";
 import { deferBackgroundWork } from "../../lib/background-work";
@@ -20,7 +21,7 @@ export function createNetworkSetupLifecycle(dependencies: {
   let stopping = false;
   const stopped = () =>
     new AppError(
-      "OpenShip is stopping. Reopen the saved setup after restarting.",
+      "FreeBuild is stopping. Reopen the saved setup after restarting.",
       503,
       "NETWORK_SETUP_STOPPING",
     );
@@ -74,33 +75,33 @@ const lifecycle = createNetworkSetupLifecycle({
   defer: deferBackgroundWork,
   async interrupt(worker) {
     if (worker.kind === "database") {
-      const changed = await repos.clusterDatabase.interrupt(worker.id, worker.generation, "OpenShip stopped during database setup. Retry to inspect the saved resources and continue.");
+      const changed = await repos.clusterDatabase.interrupt(worker.id, worker.generation, "FreeBuild stopped during database setup. Retry to inspect the saved resources and continue.");
       if (changed.length) notifyClusterDatabase(worker.organizationId, worker.projectId);
     } else if (worker.kind === "runtime") {
       const changed = await repos.clusterRuntime.interrupt(
         worker.id,
         worker.generation,
-        "OpenShip stopped before cluster setup finished. Retry to inspect the saved installation and continue.",
+        "FreeBuild stopped before cluster setup finished. Retry to inspect the saved installation and continue.",
       );
       if (changed.length) notifyNetworkSetup(worker.organizationId, "runtime", worker.clusterId);
     } else if (worker.kind === "preparation") {
       const changed = await repos.networkPreparation.interrupt(
         worker.id,
         worker.generation,
-        "OpenShip stopped before server preparation finished. Retry preparation to recheck each server and continue installing missing tools.",
+        "FreeBuild stopped before server preparation finished. Retry preparation to recheck each server and continue installing missing tools.",
       );
       if (changed.length) notifyNetworkSetup(worker.organizationId, "preparation", worker.id);
     } else if (worker.kind === "operation") {
       const changed = await repos.serverCluster.interruptOperation(
         worker.id,
         worker.generation,
-        "OpenShip stopped before network setup finished. Resume or restore this operation to check the host recovery state; host rollback timers run independently.",
+        "FreeBuild stopped before network setup finished. Resume or restore this operation to check the host recovery state; host rollback timers run independently.",
       );
       if (changed.length) notifyNetworkSetup(worker.organizationId, "operation", worker.id);
     } else {
       const changed = await repos.serverCluster.interruptVerification(
         worker.id,
-        "OpenShip stopped during network verification. Run the checks again.",
+        "FreeBuild stopped during network verification. Run the checks again.",
       );
       if (changed.length) notifyNetworkSetup(worker.organizationId, "overview");
     }

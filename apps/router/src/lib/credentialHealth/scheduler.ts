@@ -21,6 +21,7 @@ import { setImmediate as yieldToEventLoop } from "node:timers/promises";
 
 import { testSingleConnection } from "@/app/api/providers/[id]/test/route";
 import { getProviderConnections } from "@/lib/db/providers";
+import { classifyConnection } from "@/lib/netie/providerGuards";
 import { getCachedSettings } from "@/lib/db/readCache";
 import { setCredentialHealth, initCredentialCache } from "@/lib/credentialHealth/cache";
 import {
@@ -342,6 +343,10 @@ export async function sweep(): Promise<void> {
           conn &&
           conn.id &&
           (conn.authType === "apikey" || conn.authType === "oauth") &&
+          // FreeRoute: subscription and browser-session connections are never
+          // tested against consumer endpoints. API-key connections are tested
+          // with their key from OpenVault (testSingleConnection).
+          !classifyConnection(conn) &&
           // #9970: search-provider "validation" fires a REAL billed upstream
           // query (e.g. POST api.tavily.com/search) — never sweep these.
           !(conn.provider in SEARCH_VALIDATOR_CONFIGS)

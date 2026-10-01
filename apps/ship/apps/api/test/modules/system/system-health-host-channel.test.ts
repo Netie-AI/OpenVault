@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: expectations follow the FreeBuild product name.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Context } from "hono";
 
@@ -80,17 +81,17 @@ describe("GET /api/system/health — host channel", () => {
       ok: false,
       code: "not_configured",
       hint:
-        "Openship is running in a container with no host channel — OPENSHIP_HOST_SSH_HOST is " +
+        "FreeBuild is running in a container with no host channel — OPENSHIP_HOST_SSH_HOST is " +
         "unset, so there is no address to reach the host at and nothing has been dialed. " +
-        "Re-run `openship up` to provision the host channel. `openship doctor` reports whether it worked.",
+        "Re-run `freebuild up` to provision the host channel. `freebuild doctor` reports whether it worked.",
     });
     const body = await call();
     expect(body.hostChannel?.ok).toBe(false);
     expect(body.hostChannel?.state).toBe("not_configured");
     // Both halves: the repair runs on the host and the fault is observed in a
     // container, so "did it work" is a separate question from "did it succeed".
-    expect(body.hostChannel?.remedy).toContain("openship up");
-    expect(body.hostChannel?.remedy).toContain("openship doctor");
+    expect(body.hostChannel?.remedy).toContain("freebuild up");
+    expect(body.hostChannel?.remedy).toContain("freebuild doctor");
   });
 
   it("does not fail the rollup — a channelless box is degraded, not down", async () => {
@@ -128,22 +129,22 @@ describe("GET /api/system/health — host channel", () => {
       host: "host.docker.internal",
       port: 22,
       target: "root@host.docker.internal:22",
-      hint: "Cannot read the host SSH key at /var/lib/openship/ssh-keys/host_ed25519 (EACCES). Re-run `openship up` to reprovision it.",
+      hint: "Cannot read the host SSH key at /var/lib/openship/ssh-keys/host_ed25519 (EACCES). Re-run `freebuild up` to reprovision it.",
     });
     const body = await call();
     expect(body.hostChannel?.state).toBe("key_unreadable");
     expect(JSON.stringify(body)).not.toContain("ssh-keys");
     // Still actionable: the remedy for an unreadable key is the same reprovision +
     // verify pair, which names no path.
-    expect(body.hostChannel?.remedy).toContain("openship up");
-    expect(body.hostChannel?.remedy).toContain("openship doctor");
+    expect(body.hostChannel?.remedy).toContain("freebuild up");
+    expect(body.hostChannel?.remedy).toContain("freebuild doctor");
   });
 
   it("reports the explicit opt-out as its own state", async () => {
     h.hostChannelHealth.mockResolvedValue({
       ok: false,
       code: "disabled",
-      hint: "Host control is off (OPENSHIP_HOST_CONTROL=false). Re-run `openship up` without --no-host-control.",
+      hint: "Host control is off (OPENSHIP_HOST_CONTROL=false). Re-run `freebuild up` without --no-host-control.",
     });
     const body = await call();
     expect(body.hostChannel?.state).toBe("disabled");

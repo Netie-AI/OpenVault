@@ -1,3 +1,5 @@
+import { netieErrorResponse } from "@/lib/netie/providerGuards";
+import { withNetiePolicy } from "@/lib/netie/routeGuard";
 import { z } from "zod";
 
 import { isRuntimeProviderRetirementError } from "@/shared/constants/providerRetirement";
@@ -57,7 +59,7 @@ const lifecycle = (lease: Record<string, unknown>) => {
 
 export const OPTIONS = async (): Promise<Response> => handleCorsOptions();
 
-export async function POST(request: Request): Promise<Response> {
+async function upstreamPost(request: Request): Promise<Response> {
   const apiKey = extractApiKey(request);
   if (!apiKey) return error(401, "LEASE_AUTHENTICATION_REQUIRED", "Authentication required");
   if (!(await isValidApiKey(apiKey))) return error(401, "LEASE_API_KEY_INVALID", "Invalid API key");
@@ -165,6 +167,13 @@ export async function POST(request: Request): Promise<Response> {
       return error(cause.status, cause.code, cause.message);
     }
     if (cause instanceof LeaseContextError) return error(cause.status, cause.code, cause.message);
+    // FreeRoute: KeyVault 503s and policy 501s keep their named code.
+    const named = netieErrorResponse(cause);
+    if (named) return named;
     return error(503, "LEASE_SERVICE_UNAVAILABLE", "Lease service unavailable");
   }
 }
+
+// FreeRoute: named 501 for a disabled provider, named 503/501 for KeyVault
+// and key-storage errors (src/lib/netie/routeGuard.ts).
+export const POST = withNetiePolicy(upstreamPost);

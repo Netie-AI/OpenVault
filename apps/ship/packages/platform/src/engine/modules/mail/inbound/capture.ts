@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Arming and disarming inbound capture on the mail engine.
  *
@@ -182,7 +183,7 @@ export async function ensureCollectorMailbox(
     buildUpsertMailboxSql({
       username,
       passwordHash: hash,
-      name: "Openship inbound capture",
+      name: "FreeBuild inbound capture",
       domain: d,
       storagebasedirectory: layout.storagebasedirectory,
       storagenode: layout.storagenode,

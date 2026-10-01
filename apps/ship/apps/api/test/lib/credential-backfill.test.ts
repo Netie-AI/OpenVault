@@ -1,3 +1,6 @@
+// Modified by Netie AI, 2026: Cloudflare is OpenVault-managed in FreeBuild, so the
+// default build never copies a legacy token. The upstream move mechanics below are
+// still pinned with the managed set emptied, and a new block pins the FreeBuild default.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
@@ -15,12 +18,19 @@ const { dnsRepo, credRepo } = vi.hoisted(() => ({
 
 vi.mock("@repo/db", () => ({ repos: { dnsCredential: dnsRepo, credential: credRepo } }));
 
+const { managed } = vi.hoisted(() => ({ managed: new Set<string>() }));
+vi.mock("@repo/core", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@repo/core")>()),
+  OPENVAULT_MANAGED_CREDENTIAL_PROVIDERS: managed,
+}));
+
 const { decrypt } = vi.hoisted(() => ({ decrypt: vi.fn() }));
 vi.mock("@repo/platform/engine/lib/credential-encryption", () => ({
   encryptSecretField: (v: string | null | undefined) => (v ? `enc1:${v}` : null),
   decryptSecretField: decrypt,
 }));
 
+import { OPENVAULT_MANAGED_CREDENTIAL_PROVIDERS as REAL_MANAGED } from "../../../../packages/core/src/netie/keyvault";
 import { backfillDnsCredentials } from "../../src/lib/startup/credential-backfill";
 
 const legacy = (over: Record<string, unknown> = {}) => ({
@@ -38,6 +48,8 @@ const legacy = (over: Record<string, unknown> = {}) => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // The upstream mechanics run as if no provider were OpenVault-managed.
+  managed.clear();
   decrypt.mockImplementation((v: string) => String(v).replace(/^enc1:/, ""));
   dnsRepo.listAll.mockResolvedValue([]);
   credRepo.nameTaken.mockResolvedValue(false);
@@ -136,5 +148,36 @@ describe("backfillDnsCredentials", () => {
   it("never throws, so a boot cannot fail on it", async () => {
     dnsRepo.listAll.mockRejectedValue(new Error("db unreachable"));
     await expect(backfillDnsCredentials()).resolves.toEqual({ moved: 0, skipped: 0 });
+  });
+});
+
+describe("backfillDnsCredentials with Cloudflare managed by OpenVault (the FreeBuild default)", () => {
+  beforeEach(() => {
+    for (const id of REAL_MANAGED) managed.add(id);
+  });
+
+  it("ships with cloudflare in the managed set", () => {
+    expect(REAL_MANAGED.has("cloudflare")).toBe(true);
+  });
+
+  it("never decrypts, copies or deletes a legacy Cloudflare token", async () => {
+    dnsRepo.listAll.mockResolvedValue([legacy({ id: "dns_1" }), legacy({ id: "dns_2", name: "second" })]);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    await expect(backfillDnsCredentials()).resolves.toEqual({ moved: 0, skipped: 2 });
+
+    expect(decrypt).not.toHaveBeenCalled();
+    expect(credRepo.nameTaken).not.toHaveBeenCalled();
+    expect(credRepo.create).not.toHaveBeenCalled();
+    expect(dnsRepo.delete).not.toHaveBeenCalled();
+    const logged = warn.mock.calls.map((c) => String(c[0])).join("\n");
+    expect(logged).toMatch(/managed by OpenVault/);
+    expect(logged).not.toContain("cf-token");
+    warn.mockRestore();
+  });
+
+  it("does nothing when there is no legacy row", async () => {
+    await expect(backfillDnsCredentials()).resolves.toEqual({ moved: 0, skipped: 0 });
+    expect(credRepo.create).not.toHaveBeenCalled();
   });
 });

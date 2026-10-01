@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: expectations follow the FreeBuild product name.
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { Duplex } from "node:stream";
 
@@ -159,7 +160,7 @@ describe("probeDeployedReadiness", () => {
 
     expect(verdict.failure).toBeNull();
     expect(verdict.skipped).toContain("refuses port forwarding");
-    expect(verdict.skipped).toContain("openship up");
+    expect(verdict.skipped).toContain("freebuild up");
   });
 
   it("treats an unreachable dialing machine as skipped rather than a dead app", async () => {

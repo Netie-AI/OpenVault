@@ -415,7 +415,9 @@ async function ensureStandaloneRuntimePackages() {
 
 await verifyDevNativeModules();
 await fixBetterSqliteBinary();
-await fixWreqJsBinary();
+// FreeRoute: wreq-js (browser-impersonating TLS) is not shipped, so the
+// postinstall step neither copies its binding nor tells anyone to install it.
+// fixWreqJsBinary() stays for diffing against upstream; it is not called.
 await fixPlaywrightAndroid({ rootDir: ROOT });
 await ensureSwcHelpers();
 await ensureStandaloneRuntimePackages();

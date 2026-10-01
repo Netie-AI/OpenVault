@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 import type { OnboardingStep, OnboardingState } from "./types";
 import { isPrivateIp } from "./validation";
 
@@ -13,12 +14,12 @@ export const STEPS: Record<OnboardingStep, StepDef> = {
   choose: {
     id: "choose",
     title: "Get Started",
-    subtitle: "Choose how you'd like to use Openship.",
+    subtitle: "Choose how you'd like to use FreeBuild.",
   },
   "selfhost-choice": {
     id: "selfhost-choice",
-    title: "Where should Openship run?",
-    subtitle: "Pick where to install the Openship platform. Both options give you full control and data ownership.",
+    title: "Where should FreeBuild run?",
+    subtitle: "Pick where to install the FreeBuild platform. Both options give you full control and data ownership.",
   },
   ssh: {
     id: "ssh",

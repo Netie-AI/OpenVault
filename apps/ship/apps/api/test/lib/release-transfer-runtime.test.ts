@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: the import error names FreeBuild.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mkdtemp, mkdir, symlink, readFile, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -80,7 +81,7 @@ describe("source release transfer entry points (#869)", () => {
     await writeFile(input, "{}");
     const invalid = await run("api/scripts/import-instance.ts", ["--in", input]);
     expect(invalid.code).toBe(1);
-    expect(invalid.stderr).toContain("Not an Openship export file");
+    expect(invalid.stderr).toContain("Not a FreeBuild export file");
     expect(invalid.stderr).not.toMatch(/pglite.wasm|ASM_CONSTS/);
     const mode = await run("api/scripts/import-instance.ts", ["--in", input, "--mode", "typo"]);
     expect(mode.code).toBe(1);

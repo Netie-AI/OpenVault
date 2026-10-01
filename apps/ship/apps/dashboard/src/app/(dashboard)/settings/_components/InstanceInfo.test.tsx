@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: covers the upstream credit on the About surface.
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
@@ -58,5 +59,13 @@ describe("InstanceInfo release version", () => {
 
     expect(html).toContain("v0.6.9");
     expect(mocks.useDeploymentInfo).not.toHaveBeenCalled();
+  });
+
+  it("is the About surface that credits the upstream project", () => {
+    const html = renderToStaticMarkup(<InstanceInfo />);
+
+    expect(html).toContain("FreeBuild is based on");
+    expect(html).toContain('href="https://github.com/oblien/openship"');
+    expect(html).toContain("Apache-2.0");
   });
 });

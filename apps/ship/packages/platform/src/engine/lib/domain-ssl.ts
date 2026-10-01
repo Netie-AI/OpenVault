@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: the certbot DNS hook stamps the FreeBuild record marker.
 import { findActiveDeployment } from "@repo/platform/engine/lib/active-deployment";
 import type { Domain, Project } from "@repo/db";
 import type { ManualCert, Platform, SslProvider, SslResult, ProvisionCertOptions } from "@repo/adapters";
@@ -19,6 +20,7 @@ import {
   type DeploymentMeta,
 } from "./deployment-runtime";
 import { resolveDnsManager, type MatchedDnsManager } from "../modules/dns/dns-credential.service";
+import { OPENSHIP_RECORD_COMMENT } from "../modules/dns/types";
 
 /**
  * The per-domain issuance lock key. EVERY path that can open an ACME order
@@ -553,7 +555,7 @@ RECORD_NAME="_acme-challenge.\${DOMAIN}"
 RES=$(curl -s -S -X POST "https://api.cloudflare.com/client/v4/zones/${manager.zone.id}/dns_records" \\
   -H "Authorization: Bearer ${manager.credentials.apiToken}" \\
   -H "Content-Type: application/json" \\
-  --data "{\\"type\\":\\"TXT\\",\\"name\\":\\"\${RECORD_NAME}\\",\\"content\\":\\"\${CERTBOT_VALIDATION}\\",\\"ttl\\":60,\\"comment\\":\\"Managed by Openship\\"}")
+  --data "{\\"type\\":\\"TXT\\",\\"name\\":\\"\${RECORD_NAME}\\",\\"content\\":\\"\${CERTBOT_VALIDATION}\\",\\"ttl\\":60,\\"comment\\":\\"${OPENSHIP_RECORD_COMMENT}\\"}")
 if ! echo "$RES" | grep -q '"success":true'; then
   echo "Cloudflare rejected the ACME TXT record request" >&2
   echo "$RES" >&2

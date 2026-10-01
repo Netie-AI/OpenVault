@@ -4,18 +4,18 @@ import { homedir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const APP_LABEL = "com.omniroute.autostart";
+const APP_LABEL = "com.netie.freeroute.autostart";
 const WIN_REG_VALUE = "FreeRoute";
 const WIN_STARTUP_FILE = "FreeRoute.vbs";
-const LINUX_SERVICE_NAME = "omniroute.service";
-const LINUX_DESKTOP_NAME = "omniroute.desktop";
+const LINUX_SERVICE_NAME = "freeroute.service";
+const LINUX_DESKTOP_NAME = "freeroute.desktop";
 
 function resolveCliPath() {
   const candidates = [];
   if (process.argv[1]) candidates.push(process.argv[1]);
   if (process.platform !== "win32") {
     try {
-      const which = execSync("command -v omniroute 2>/dev/null", { encoding: "utf8" }).trim();
+      const which = execSync("command -v freeroute 2>/dev/null", { encoding: "utf8" }).trim();
       if (which) candidates.push(which);
     } catch {
       // command -v unavailable

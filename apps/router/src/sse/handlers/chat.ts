@@ -78,6 +78,11 @@ import {
   openVaultErrorResponse,
   type OpenVaultUnreachableError,
 } from "@/lib/netie/keyvault";
+import { netieErrorResponse } from "@/lib/netie/providerGuards";
+import {
+  classifyProviderId,
+  renderDisabled,
+} from "@omniroute/open-sse/netie/policy.ts";
 import { promoteSuccessfulComboModel } from "@/lib/combos/autoPromote";
 import {
   deleteSessionAccountAffinity,
@@ -1087,6 +1092,9 @@ async function handleChatImplementation(
       }
       if (modelInfo?.errorType === "model_not_found") return "model_not_in_catalog";
       const provider = comboCheckProvider(modelString, modelInfo, target?.providerId);
+      // FreeRoute: a subscription or browser-session target is never available
+      // to a combo (open-sse/netie/policy.ts).
+      if (classifyProviderId(provider)) return false;
       const resolvedModel = modelInfo.model || modelString;
       const githubGate = await ghComboGate(comboPreselectedCredentials, provider, resolvedModel);
       if (githubGate !== null) return githubGate;
@@ -1434,15 +1442,19 @@ async function handleChatImplementation(
 }
 
 // FreeRoute: every route that calls handleChat (chat/completions, messages,
-// responses, completions, v1beta, relay, ...) gets the named KeyVault 503 with
-// its specific code in the body, instead of a framework-generic 500.
+// responses, completions, v1beta, relay, ...) gets the named KeyVault 503 or
+// policy 501 with its specific code in the body, instead of a framework-generic
+// 500.
 async function handleChatWithKeyVaultErrors(
   ...args: Parameters<typeof handleChatImplementation>
 ): Promise<Response> {
   try {
     return await handleChatImplementation(...args);
   } catch (error) {
-    if (isOpenVaultKeyVaultError(error)) return openVaultErrorResponse(error);
+    // KeyVault 503s, policy 501s (NetieDisabledError thrown by getExecutor or a
+    // token refresh), and keys_managed_by_openvault, each with its named body.
+    const named = netieErrorResponse(error);
+    if (named) return named;
     throw error;
   }
 }
@@ -1607,6 +1619,13 @@ async function handleSingleModelChat(
     if (modelStr.startsWith(runtimeOptions.providerId + "/")) return resolvedProvider;
     return runtimeOptions.providerId;
   })();
+  // FreeRoute: policy gate per resolved target, after alias and combo
+  // resolution and before credential selection, token refresh or any upstream
+  // call. Every endpoint that reaches handleChat (/v1/chat/completions,
+  // /v1/messages, /v1/responses, /v1/completions, v1beta, relay) gets the same
+  // named 501 for a subscription or browser-session provider.
+  const disabledCode = classifyProviderId(provider) ?? classifyProviderId(resolvedProvider);
+  if (disabledCode) return renderDisabled(disabledCode);
   const forceLiveComboTest = runtimeOptions.forceLiveComboTest === true;
   const budgetRejection = rejectIfMeteredBudgetExceeded(apiKeyInfo?.id, provider, modelStr);
   if (budgetRejection) return budgetRejection;

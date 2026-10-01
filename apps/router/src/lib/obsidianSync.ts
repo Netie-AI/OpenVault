@@ -68,7 +68,7 @@ export function vaultPathOverlapsDataDir(resolvedVaultPath: string): boolean {
 }
 
 export const VAULT_OVERLAPS_DATA_DIR_ERROR =
-  "Vault path must not be the OmniRoute data directory, a directory inside it, or a directory that contains it";
+  "Vault path must not be the FreeRoute data directory, a directory inside it, or a directory that contains it";
 
 export async function enableObsidianVaultSync(
   vaultPath: string

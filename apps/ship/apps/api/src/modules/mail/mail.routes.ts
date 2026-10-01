@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026
 /**
  * Mail setup routes - mounted at /api/mail in app.ts.
  *

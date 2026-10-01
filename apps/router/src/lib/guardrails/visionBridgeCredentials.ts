@@ -5,6 +5,7 @@
  * (visionBridge.ts already imports getBestVisionModel from visionBridgeRouter.ts).
  */
 
+import { classifyConnection } from "@/lib/netie/providerGuards";
 import { resolveProviderId } from "@/shared/constants/providers";
 import { isNoAuthProviderKey } from "@/shared/utils/noAuthProviders";
 import { SYNTHETIC_NOAUTH_CONNECTION_ID } from "@omniroute/open-sse/services/autoCombo/resilienceCandidateFilter.ts";
@@ -52,6 +53,11 @@ export function isProviderConnectionUsable(connection: ProviderConnectionLike): 
   }
 
   const auth = String(connection.authType || "").toLowerCase();
+  // FreeRoute: a subscription or browser-session connection is never usable.
+  if (classifyConnection(connection as { provider?: unknown; authType?: unknown })) return false;
+  // FreeRoute: an API-key connection's key lives in OpenVault and is resolved
+  // at request time, so the empty DB column does not mean "unconfigured".
+  if (auth === "apikey") return true;
   const hasKey = hasNonEmptyString(connection.apiKey);
 
   if (KEY_ONLY_AUTH_TYPES.has(auth)) {

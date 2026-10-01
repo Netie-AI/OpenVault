@@ -27,7 +27,7 @@
     "loginEnabled": "כניסה: מופעלת (הסיסמה עודכנה)",
     "loginDisabled": "כניסה: מושבתת",
     "providerInfo": "ספק: {info}",
-    "opencode": "התקנה והגדרה של @omniroute/opencode-plugin המצורף עבור OpenCode"
+    "opencode": "התקנה והגדרה של OpenCode plugin המצורף עבור OpenCode"
   },
   "doctor": {
     "title": "אבחון FreeRoute",

@@ -27,7 +27,7 @@
     "loginEnabled": "Login: attivat (password aġġornata)",
     "loginDisabled": "Login: disattivat",
     "providerInfo": "Fornitur: {info}",
-    "opencode": "Installa u kkonfigura l-plugin inkluż @omniroute/opencode-plugin għal OpenCode"
+    "opencode": "Installa u kkonfigura l-plugin inkluż OpenCode plugin għal OpenCode"
   },
   "doctor": {
     "title": "Tabib FreeRoute",

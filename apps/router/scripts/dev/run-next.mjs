@@ -100,7 +100,9 @@ process.env.NODE_ENV = dev ? "development" : "production";
 process.env.OMNIROUTE_INTERNAL_SCHEME = "http";
 
 const { dashboardPort } = runtimePorts;
-const hostname = process.env.HOST || "0.0.0.0";
+// FreeRoute binds loopback by default. HOST or OMNIROUTE_HOSTNAME opts in to
+// another interface (DR-0018, PRODUCT_ROLES.md).
+const hostname = process.env.HOST || mergedEnv.OMNIROUTE_HOSTNAME || "127.0.0.1";
 // Publish the interface this server actually binds so in-process TypeScript
 // (src/lib/startup/nonLoopbackApiKeyGuard.ts) can warn about an exposed
 // anonymous /v1 without re-deriving it. The standalone/Docker entrypoint

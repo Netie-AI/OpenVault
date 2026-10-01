@@ -27,7 +27,7 @@
     "loginEnabled": "ਲੌਗਇਨ: ਸਮਰੱਥ (ਪਾਸਵਰਡ ਅੱਪਡੇਟ ਕੀਤਾ ਗਿਆ)",
     "loginDisabled": "ਲੌਗਇਨ: ਅਸਮਰੱਥ",
     "providerInfo": "ਪ੍ਰਦਾਤਾ: {info}",
-    "opencode": "OpenCode ਲਈ ਨਾਲ ਦਿੱਤਾ @omniroute/opencode-plugin ਇੰਸਟਾਲ ਅਤੇ ਕੌਂਫਿਗਰ ਕਰੋ"
+    "opencode": "OpenCode ਲਈ ਨਾਲ ਦਿੱਤਾ OpenCode plugin ਇੰਸਟਾਲ ਅਤੇ ਕੌਂਫਿਗਰ ਕਰੋ"
   },
   "doctor": {
     "title": "FreeRoute ਡਾਕਟਰ",

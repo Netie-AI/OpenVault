@@ -31,6 +31,7 @@ import { getProxyForLevel } from "@/lib/db/settings";
 import { resolveProxyForProvider } from "@/lib/db/proxies";
 import { runWithProxyContext } from "@omniroute/open-sse/utils/proxyFetch.ts";
 import { rejectRetiredCommonChatGptWebProvider } from "@/lib/providers/chatgptWebRetirementResponse";
+import { rejectProviderSecretsInBody } from "@/lib/netie/providerGuards";
 
 type ImportEntry = {
   provider: string;
@@ -206,6 +207,12 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
+
+  // FreeRoute: an import file carries provider keys. Keys live only in
+  // OpenVault, so any entry with one gets keys_managed_by_openvault (501), and
+  // a classified provider gets its named 501, before anything is stored.
+  const refused = rejectProviderSecretsInBody(body);
+  if (refused) return refused;
 
   const validation = validateBody(bulkImportProviderSchema, body);
   if (isValidationFailure(validation)) {

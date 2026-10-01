@@ -899,7 +899,7 @@ OPENAI_API_KEY: "{{apiKey}}"`,
       {
         step: 5,
         title: "Write the profile",
-        desc: "sudo omniroute configure 5dive --model <id> --auth-profile omniroute",
+        desc: "sudo freeroute configure 5dive --model <id> --auth-profile omniroute",
       },
     ],
     notes: [

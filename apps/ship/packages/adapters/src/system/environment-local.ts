@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * This machine, resolved synchronously.
  *
@@ -49,7 +50,7 @@ function probeLocalHost(): EnvironmentProfile {
   // provisions Linux and macOS hosts; a Windows box can drive them but cannot be one.
   if (process.platform === "win32") {
     return unmeasurable(
-      "Openship cannot provision this machine: it runs Windows, and Openship's host " +
+      "FreeBuild cannot provision this machine: it runs Windows, and FreeBuild's host " +
         "provisioning is POSIX-only. Deploying to a remote Linux server from here works.",
     );
   }
@@ -65,7 +66,7 @@ function probeLocalHost(): EnvironmentProfile {
 
   if (result.error) {
     return unmeasurable(
-      `Openship could not run a shell on this machine to detect it: ` +
+      `FreeBuild could not run a shell on this machine to detect it: ` +
         `${safeErrorMessage(result.error)}`,
     );
   }
@@ -78,7 +79,7 @@ function probeLocalHost(): EnvironmentProfile {
   // reported `opsh_begin=1` back as this machine's forced-command banner.
   if (result.signal || typeof result.status !== "number") {
     return unmeasurable(
-      `Openship could not measure this machine: the detection probe was killed` +
+      `FreeBuild could not measure this machine: the detection probe was killed` +
         `${result.signal ? ` by ${result.signal}` : ""} before it finished.`,
     );
   }

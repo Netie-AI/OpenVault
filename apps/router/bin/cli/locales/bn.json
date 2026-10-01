@@ -27,7 +27,7 @@
     "loginEnabled": "লগইন: সক্রিয় (পাসওয়ার্ড আপডেট করা হয়েছে)",
     "loginDisabled": "লগইন: নিষ্ক্রিয়",
     "providerInfo": "প্রোভাইডার: {info}",
-    "opencode": "OpenCode-এর জন্য অন্তর্ভুক্ত @omniroute/opencode-plugin ইনস্টল ও কনফিগার করুন"
+    "opencode": "OpenCode-এর জন্য অন্তর্ভুক্ত OpenCode plugin ইনস্টল ও কনফিগার করুন"
   },
   "doctor": {
     "title": "FreeRoute ডক্টর",

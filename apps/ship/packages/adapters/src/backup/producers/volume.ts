@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * VolumeCopyProducer — the universal fallback. Tars every backupable
  * volume (named + bind) into one artifact per volume.
@@ -60,7 +61,7 @@ class VolumeCopyProducerImpl implements BackupProducer {
             ? `Its live container (${service.containerId.slice(0, 12)}) reports no volume or bind ` +
               `mounts, so there is no persistent data here to capture.`
             : `No container was resolved for it, so only the service's recorded volumes could be ` +
-              `checked and it has none. If this service does hold data, redeploy it so Openship ` +
+              `checked and it has none. If this service does hold data, redeploy it so FreeBuild ` +
               `records its volumes, or point the policy at a database payload instead of a volume ` +
               `snapshot.`),
       );

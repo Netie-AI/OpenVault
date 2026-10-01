@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Public mail-port health.
  *
@@ -30,7 +31,7 @@ const SMTP_INBOUND_PORT = 25;
  * inbound reachability unverified until it is checked independently.
  */
 const SMTP_INBOUND_UNVERIFIED_DETAIL =
-  "Inbound TCP 25 could not be verified from the Openship API server. Providers " +
+  "Inbound TCP 25 could not be verified from the FreeBuild API server. Providers " +
   "such as AWS can block this server's outbound port 25 even when inbound mail " +
   "works. Submission (465/587) and IMAP (993) are reachable. Verify port 25 from " +
   "an independent host or send a test message from another mail provider before " +

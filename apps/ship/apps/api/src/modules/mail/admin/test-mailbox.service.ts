@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Per-domain test mailbox — provisions `openship@<domain>` as a real SMTP
  * identity inside `vmail.mailbox` for an additional domain (one already
@@ -185,7 +186,7 @@ async function mintAndPersist(args: MintArgs): Promise<PlatformMailboxCreds> {
     buildUpsertMailboxSql({
       username: email,
       passwordHash: hash,
-      name: "Openship Test",
+      name: "FreeBuild Test",
       domain,
       storagebasedirectory: layout.storagebasedirectory,
       storagenode: layout.storagenode,

@@ -1,6 +1,7 @@
 "use client";
 
 import { Icon as UiIcon } from "@repo/ui/icons";
+import { BRAND_LINKS } from "@repo/core";
 
 import { useState, useCallback, useRef, Suspense } from "react";
 import { useI18n } from "@/components/i18n-provider";
@@ -14,6 +15,7 @@ import { PreferencesStep } from "./_components/preferences-step";
 import { LoadingStep } from "./_components/loading-step";
 import { useTheme } from "@/components/theme-provider";
 import { ThemeIcon } from "@/components/theme-icon";
+import { Logo } from "@/components/logo";
 import { locales, isRtl, type Locale } from "@/i18n";
 import "./onboarding.css";
 
@@ -68,8 +70,8 @@ function OnboardingInner() {
       {/* Top bar */}
       <div className="ob-top-bar">
         <div className="ob-logo">
-          <div className="ob-logo-circle" aria-hidden="true" />
-          <span className="ob-logo-text">Openship</span>
+          <Logo size={30} />
+          <span className="ob-logo-text">FreeBuild</span>
         </div>
         <div className="ob-top-bar-links">
           <button
@@ -114,14 +116,14 @@ function OnboardingInner() {
               </>
             )}
           </div>
-          {/* Modified by Netie AI, 2026: dropped the upstream openship.io marketing-site
-              link — FreeBuild has no equivalent site, and linking a self-hosted product's
-              onboarding at a different, unrelated commercial product's homepage is a real
-              product-confusion risk, not just a name to swap. The github credit link below
-              stays: it points at the actual upstream project this fork is built on. */}
-          <a className="ob-top-bar-link" href="https://github.com/oblien/openship" target="_blank" rel="noopener noreferrer" title={t.onboarding.topBar.github}>
-            <UiIcon name="github" size={18} />
-          </a>
+          {/* Modified by Netie AI, 2026: the upstream marketing-site and GitHub links
+              are gone. The upstream credit is shown only on Settings > Instance. The
+              source link returns when BRAND_LINKS.github has a FreeBuild URL. */}
+          {BRAND_LINKS.github && (
+            <a className="ob-top-bar-link" href={BRAND_LINKS.github} target="_blank" rel="noopener noreferrer" title={t.onboarding.topBar.github}>
+              <UiIcon name="github" size={18} />
+            </a>
+          )}
         </div>
       </div>
 

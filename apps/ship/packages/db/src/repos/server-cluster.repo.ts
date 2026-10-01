@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 import { and, desc, eq, gt, inArray, isNull, lte, ne, or, sql, type SQL } from "drizzle-orm";
 import {
   AppError,
@@ -322,14 +323,14 @@ export function createServerClusterRepo(db: Database) {
           tx,
           exclusive ? undefined : expiredManagedLease(),
           exclusive
-            ? "OpenShip restarted before network setup finished. Resume or restore this operation to check the host recovery state; host rollback timers run independently."
+            ? "FreeBuild restarted before network setup finished. Resume or restore this operation to check the host recovery state; host rollback timers run independently."
             : "The controller stopped reporting progress. Resume or restore this operation; each host also has a local rollback deadline.",
         );
         const interrupted = await interruptVerification(
           tx,
           exclusive ? undefined : lte(clusterVerification.expiresAt, new Date()),
           exclusive
-            ? "OpenShip restarted during network verification. Run the checks again."
+            ? "FreeBuild restarted during network verification. Run the checks again."
             : "Verification was interrupted. Run it again.",
         );
         const verifications = interrupted.length

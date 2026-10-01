@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: expectations follow the FreeBuild product name.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { NotificationChannel } from "@repo/db";
 
@@ -20,8 +21,8 @@ describe("notification email delivery", () => {
     expect(mocks.sendMail).toHaveBeenCalledOnce();
     const sent = mocks.sendMail.mock.calls[0]![0];
     expect(sent.to).toBe("operator@example.com");
-    expect(sent.subject).toBe("[Openship] test");
-    expect(sent.text).toBe("Openship test notification — this channel is configured correctly.");
+    expect(sent.subject).toBe("[FreeBuild] test");
+    expect(sent.text).toBe("FreeBuild test notification — this channel is configured correctly.");
     expect(sent.html).toContain("<h2");
     expect(sent.html).toContain(sent.text);
     expect(sent.html).not.toContain("<pre");

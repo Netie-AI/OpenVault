@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 import {
   Oblien as OblienSdk, OblienError, AuthenticationError, ConflictError,
   NotFoundError, PaymentRequiredError, RateLimitError, ValidationError,
@@ -5,8 +6,8 @@ import {
 } from "oblien";
 
 const capacityErrors = new Map([
-  ["plan_limit_exceeded", "The configured Cloud limits exceed the provider account's resource capacity. Contact Openship support."],
-  ["namespace_limit_exceeded", "The Cloud provider account has reached its namespace limit. Contact Openship support."],
+  ["plan_limit_exceeded", "The configured Cloud limits exceed the provider account's resource capacity. Contact FreeBuild support."],
+  ["namespace_limit_exceeded", "The Cloud provider account has reached its namespace limit. Contact FreeBuild support."],
   ["namespace_limit_reached", "This workload exceeds your organization's Cloud resource limits. Reduce its resources or review your plan."],
 ]);
 
@@ -16,7 +17,7 @@ function providerError(status: number, body: unknown): OblienError {
   const code = typeof candidate === "string" && /^[a-z0-9_-]{1,128}$/i.test(candidate) ? candidate : "OBLIEN_REQUEST_FAILED";
   // Provider error bodies can contain account data, resource payloads or auth
   // URLs. Keep the status/code needed for retries without forwarding that body.
-  const message = `${capacityErrors.get(code.toLowerCase()) ?? "Oblien rejected the request"} (HTTP ${status}, ${code})`;
+  const message = `${capacityErrors.get(code.toLowerCase()) ?? "The cloud provider rejected the request"} (HTTP ${status}, ${code})`;
   const ErrorType = status === 401 || status === 403 ? AuthenticationError
     : status === 402 ? PaymentRequiredError : status === 404 ? NotFoundError
       : status === 409 ? ConflictError : status === 429 ? RateLimitError
@@ -32,7 +33,7 @@ export class Oblien extends OblienSdk {
     const base = new URL(options.baseUrl ?? "https://api.oblien.com");
     if (base.username || base.password || base.search || base.hash ||
         (base.protocol !== "https:" && !(base.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(base.hostname)))) {
-      throw new Error("Oblien API URL must use HTTPS (HTTP is allowed for localhost tests)");
+      throw new Error("Cloud provider API URL must use HTTPS (HTTP is allowed for localhost tests)");
     }
     super(options);
     const original = new Headers();
@@ -49,7 +50,7 @@ export class Oblien extends OblienSdk {
     this._http.request = async <T>(request: RequestOptions): Promise<T> => {
       request.signal?.throwIfAborted();
       const url = new URL(request.path, base);
-      if (url.origin !== base.origin || url.username || url.password) throw new Error("Oblien request escaped its API origin");
+      if (url.origin !== base.origin || url.username || url.password) throw new Error("Cloud provider request escaped its API origin");
       for (const [key, value] of Object.entries(request.query ?? {})) if (value !== undefined) url.searchParams.set(key, String(value));
       const headers = new Headers(request.headers);
       for (const key of ["Authorization", "X-Client-ID", "X-Client-Secret"]) headers.delete(key);
@@ -69,7 +70,7 @@ export class Oblien extends OblienSdk {
         body = response.status === 204 ? { success: true } : await response.json().catch(() => null);
       } catch {
         request.signal?.throwIfAborted();
-        throw new OblienError("Oblien is temporarily unreachable. Retry the operation.", 503, "OBLIEN_UNAVAILABLE");
+        throw new OblienError("The cloud provider is temporarily unreachable. Retry the operation.", 503, "OBLIEN_UNAVAILABLE");
       }
       request.signal?.throwIfAborted();
       if (!response.ok) throw providerError(response.status, body);

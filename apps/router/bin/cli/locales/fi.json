@@ -27,7 +27,7 @@
     "loginEnabled": "Kirjautuminen: käytössä (salasana päivitetty)",
     "loginDisabled": "Kirjautuminen: poistettu käytöstä",
     "providerInfo": "Palveluntarjoaja: {info}",
-    "opencode": "Asenna ja määritä mukana toimitettu @omniroute/opencode-plugin OpenCodea varten"
+    "opencode": "Asenna ja määritä mukana toimitettu OpenCode plugin OpenCodea varten"
   },
   "doctor": {
     "title": "FreeRoute Doctor",

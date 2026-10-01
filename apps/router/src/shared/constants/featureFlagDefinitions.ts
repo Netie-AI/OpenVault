@@ -131,18 +131,10 @@ export const FEATURE_FLAG_DEFINITIONS: FeatureFlagDefinition[] = [
     requiresRestart: false,
     warningLevel: "info",
   },
-  // ──────────────── Network (7) ────────────────
-  {
-    key: "ENABLE_TLS_FINGERPRINT",
-    label: "TLS Fingerprint",
-    description: "Enable TLS fingerprint stealth mode",
-    descriptionI18nKey: "featureFlagEnableTlsFingerprintDescription",
-    category: "network",
-    defaultValue: "false",
-    type: "boolean",
-    requiresRestart: true,
-    warningLevel: "info",
-  },
+  // ──────────────── Network (6) ────────────────
+  // FreeRoute: ENABLE_TLS_FINGERPRINT (TLS fingerprint stealth) is not shipped
+  // and not listed. PUT /api/settings/feature-flags for that key answers
+  // tls_fingerprint_stealth_disabled (501).
   {
     key: "AUDIO_REMOTE_PROVIDER_NODES",
     label: "Remote Audio Provider Nodes",

@@ -4,6 +4,7 @@
  * All domain modules import `getDbInstance` and helpers from here.
  */
 
+import { scrubLocalProviderSecrets } from "@/lib/netie/scrubLocalSecrets";
 import type { SqliteAdapter, PreparedStatement } from "./adapters/types";
 import {
   tryOpenSync,
@@ -209,7 +210,7 @@ if (!isCloud && !fs.existsSync(DATA_DIR)) {
     console.warn(
       `[DB] Cannot create data directory '${DATA_DIR}': ${msg}\n` +
         `[DB] Set the DATA_DIR environment variable to a writable path, e.g.:\n` +
-        `[DB]   DATA_DIR=/path/to/writable/dir omniroute`
+        `[DB]   DATA_DIR=/path/to/writable/dir freeroute`
     );
   }
 }
@@ -1415,6 +1416,16 @@ export function getDbInstance(): SqliteDatabase {
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     console.error(`[DB] Legacy encryption migration failed: ${message}`);
+  }
+
+  // FreeRoute: clear provider secrets that reached this file without the
+  // write guard (an uploaded or restored backup, the legacy JSON migration, an
+  // older build). See src/lib/netie/scrubLocalSecrets.ts.
+  try {
+    scrubLocalProviderSecrets(db as unknown as Parameters<typeof scrubLocalProviderSecrets>[0]);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`[DB] FreeRoute secret scrub failed: ${message}`);
   }
 
   startDbHealthCheckScheduler(db);

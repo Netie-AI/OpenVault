@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Compose `network_mode` / `pid` — the Linux namespaces a service SHARES with a
  * sibling instead of getting its own.
@@ -75,7 +76,7 @@ export function parseComposeNamespace(
       reason:
         `${field}: host is not supported. A host-namespace container bypasses the ` +
         `edge (its ports bind host interfaces directly) and can reach every ` +
-        `loopback service on the machine, including Openship's own API. Share a ` +
+        `loopback service on the machine, including FreeBuild's own API. Share a ` +
         `sibling's namespace instead (${field}: service:<name>), or run this ` +
         `workload outside the stack.`,
     };
@@ -108,7 +109,7 @@ export function parseComposeNamespace(
   return {
     ok: false,
     reason:
-      `${field}: "${value}" is not supported. Openship accepts ` +
+      `${field}: "${value}" is not supported. FreeBuild accepts ` +
       (field === "network_mode" ? `"none", ` : "") +
       `"service:<name>" (a service in this stack) and "container:<id>".`,
   };

@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * The rule that opens one port, in the syntax each firewall manager actually speaks.
  *
@@ -181,7 +182,7 @@ export function firewallManager(firewall: SystemFirewall): Answer<FirewallManage
       );
     case "unknown":
       return refused(
-        "Openship could not determine which firewall this host runs, so it will not " +
+        "FreeBuild could not determine which firewall this host runs, so it will not " +
           "guess at a rule — applying an iptables rule where firewalld is managing the " +
           "chains looks like it worked and is gone after a reload.",
       );
@@ -275,7 +276,7 @@ if action != 'down':
             raise RuntimeError('Additional nftables input/output base chains need a custom firewall adapter.')
     for rule in rules:
         if not owned(rule) and prefix in json.dumps(rule):
-            raise RuntimeError('A foreign nftables rule refers to an OpenShip-owned chain.')
+            raise RuntimeError('A foreign nftables rule refers to a FreeBuild-owned chain.')
 def clean(value):
     if isinstance(value, list): return [clean(item) for item in value]
     if isinstance(value, dict): return {key: clean(item) for key, item in value.items() if key not in ('handle', 'index', 'position', 'packets', 'bytes')}
@@ -410,7 +411,7 @@ export function managedNetworkFirewall(
   }
   if (manager !== "iptables")
     return refused(
-      `Managed networking currently supports unfiltered hosts, iptables, and nftables with inet filter input/output chains. This host uses ${manager}; its firewall needs an owned-rule adapter before OpenShip can safely manage it.`,
+      `Managed networking currently supports unfiltered hosts, iptables, and nftables with inet filter input/output chains. This host uses ${manager}; its firewall needs an owned-rule adapter before FreeBuild can safely manage it.`,
     );
   const input = `OSWG_${identity.slice(0, 16)}_I`;
   const output = `OSWG_${identity.slice(0, 16)}_O`;

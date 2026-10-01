@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: expectations follow the FreeBuild product name.
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
 /**
@@ -124,7 +125,7 @@ describe("scanServer — a dead host channel names itself", () => {
     );
     // The controller turns this into `scan failed: <message>`; what matters is that the
     // message is the channel's own remedy and not an empty, cause-less module list.
-    await expect(scanServer(server)).rejects.toThrow(/openship up/);
+    await expect(scanServer(server)).rejects.toThrow(/freebuild up/);
     expect(h.upsert).not.toHaveBeenCalled();
   });
 

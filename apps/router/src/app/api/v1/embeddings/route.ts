@@ -1,3 +1,4 @@
+import { withNetiePolicy } from "@/lib/netie/routeGuard";
 import { errorResponse } from "@omniroute/open-sse/utils/error.ts";
 import { HTTP_STATUS } from "@omniroute/open-sse/config/constants.ts";
 import * as log from "@/sse/utils/logger";
@@ -86,4 +87,6 @@ async function postHandler(request, context) {
   });
 }
 
-export const POST = withInjectionGuard(postHandler);
+// FreeRoute: named 501 for a disabled provider, named 503/501 for KeyVault
+// and key-storage errors (src/lib/netie/routeGuard.ts).
+export const POST = withNetiePolicy(withInjectionGuard(postHandler));

@@ -3,6 +3,8 @@ import { getProviderConnections, updateProviderConnection } from "@/models";
 import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
 import { cloudCredentialUpdateSchema } from "@/shared/validation/schemas";
 import { isValidationFailure, validateBody } from "@/shared/validation/helpers";
+import { classifyProviderId, renderDisabled, renderKeysManagedByOpenVault } from "@omniroute/open-sse/netie/policy.ts";
+import { netieErrorResponse } from "@/lib/netie/providerGuards";
 
 // Update provider credentials (for cloud token refresh)
 export async function PUT(request: Request) {
@@ -28,6 +30,15 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: validation.error }, { status: 400 });
     }
     const { provider, credentials } = validation.data;
+
+    // FreeRoute: this route writes access and refresh tokens into a local
+    // connection. For a subscription or browser-session provider that is the
+    // pooling feature itself; for anything else it stores a provider credential
+    // outside OpenVault. Either way it answers the named 501.
+    if (credentials.accessToken || credentials.refreshToken) {
+      const disabledCode = classifyProviderId(provider);
+      return disabledCode ? renderDisabled(disabledCode) : renderKeysManagedByOpenVault();
+    }
 
     // Find active connection for provider
     const connections = await getProviderConnections({ provider, isActive: true });
@@ -63,6 +74,8 @@ export async function PUT(request: Request) {
       message: `Credentials updated for provider: ${provider}`,
     });
   } catch (error) {
+    const named = netieErrorResponse(error);
+    if (named) return named;
     console.log("Update credentials error:", error);
     return NextResponse.json({ error: "Failed to update credentials" }, { status: 500 });
   }

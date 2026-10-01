@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Path C: expose this self-hosted instance via an Oblien edge tunnel.
  *
@@ -64,7 +65,7 @@ export class TunnelSlugInvalidError extends Error {
 export class TunnelSlugTakenError extends Error {
   readonly code = "TUNNEL_SLUG_TAKEN" as const;
   constructor(public readonly slug: string) {
-    super(`Tunnel slug "${slug}" is already taken on the Oblien edge.`);
+    super(`Tunnel slug "${slug}" is already taken on the cloud edge.`);
     this.name = "TunnelSlugTakenError";
   }
 }
@@ -72,7 +73,7 @@ export class TunnelSlugTakenError extends Error {
 export class TunnelProvisionFailedError extends Error {
   readonly code = "TUNNEL_PROVISION_FAILED" as const;
   constructor(reason: string) {
-    super(`Failed to provision Oblien edge tunnel: ${reason}`);
+    super(`Failed to provision cloud edge tunnel: ${reason}`);
     this.name = "TunnelProvisionFailedError";
   }
 }

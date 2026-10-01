@@ -10,7 +10,6 @@ import {
   MODEL_SUPPORTED_ENDPOINT_VALUES,
   normalizeModelSupportedEndpoints,
 } from "@/shared/constants/modelSupportedEndpoints";
-import { providerAllowsOptionalApiKey } from "@/shared/constants/providers";
 import { HIDEABLE_SIDEBAR_ITEM_IDS } from "@/shared/constants/sidebarVisibility";
 import {
   isForbiddenUpstreamHeaderName,
@@ -102,15 +101,9 @@ export const createProviderSchema = z
       }),
   })
   .superRefine((data, ctx) => {
-    const apiKey = typeof data.apiKey === "string" ? data.apiKey.trim() : "";
-    const apiKeyOptional = providerAllowsOptionalApiKey(data.provider);
-    if (!apiKeyOptional && apiKey.length === 0) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "API key is required",
-        path: ["apiKey"],
-      });
-    }
+    // FreeRoute: no "API key is required" check. The key for an API-key
+    // connection comes from OpenVault's KeyVault at request time, and the route
+    // answers keys_managed_by_openvault (501) when a body carries one.
 
     const cx =
       data.providerSpecificData && typeof data.providerSpecificData === "object"

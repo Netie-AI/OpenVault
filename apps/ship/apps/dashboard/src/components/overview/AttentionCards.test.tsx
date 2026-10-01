@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: expectations follow the FreeBuild product name.
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
@@ -158,7 +159,7 @@ describe("UpdatesCard", () => {
 
   it("offers the CLI command for the control plane, never an Update button", () => {
     const html = updates(ISSUE_FIXTURES.advisory!.filter((i) => i.scope === "platform"));
-    expect(html).toContain("openship update");
+    expect(html).toContain("freebuild update");
     expect(html).toContain("updates itself from the command line");
   });
 

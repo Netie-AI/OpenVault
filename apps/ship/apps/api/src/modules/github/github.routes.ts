@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * GitHub routes - all authenticated GitHub endpoints.
  *
@@ -128,13 +129,13 @@ r.get(
   { tag: "github:list", authorizationHandledByOperation: true, auditHandledByOperation: true, mcp: { description: "List the connected account's GitHub repositories." }, query: GitHubRepoListInput },
   ctrl.listRepos,
 );
-r.post("/repos", { tag: "github:write", authorizationHandledByOperation: true, auditHandledByOperation: true, mcpExcluded: "GitHub repository creation is outside deployment management. Create repositories through GitHub, then deploy with Openship." }, ctrl.createRepo);
+r.post("/repos", { tag: "github:write", authorizationHandledByOperation: true, auditHandledByOperation: true, mcpExcluded: "GitHub repository creation is outside deployment management. Create repositories through GitHub, then deploy with FreeBuild." }, ctrl.createRepo);
 r.get(
   "/repos/:owner/:repo",
   { tag: "github:read", authorizationHandledByOperation: true, auditHandledByOperation: true, mcp: { description: "Get a GitHub repository's metadata." }, query: Type.Omit(GitHubCollectionSchemas.getRepo.input, ["owner", "repo"]) },
   ctrl.getRepo,
 );
-r.delete("/repos/:owner/:repo", { tag: "github:admin", authorizationHandledByOperation: true, auditHandledByOperation: true, mcpExcluded: "Deleting the upstream GitHub repository is outside deployment management. Openship project removal does not delete source repositories." }, ctrl.deleteRepo);
+r.delete("/repos/:owner/:repo", { tag: "github:admin", authorizationHandledByOperation: true, auditHandledByOperation: true, mcpExcluded: "Deleting the upstream GitHub repository is outside deployment management. FreeBuild project removal does not delete source repositories." }, ctrl.deleteRepo);
 
 /* ─── Branches ─────────────────────────────────────────────────────────── */
 r.get(

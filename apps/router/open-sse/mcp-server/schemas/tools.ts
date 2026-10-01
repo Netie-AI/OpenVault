@@ -102,7 +102,7 @@ export const getHealthOutput = z.object({
 export const getHealthTool: McpToolDefinition<typeof getHealthInput, typeof getHealthOutput> = {
   name: "omniroute_get_health",
   description:
-    "Returns the current health status of OmniRoute including uptime, memory usage, circuit breaker states for all providers, rate limit status, and cache statistics. When adaptive virtual-lane admission is active, a curated `adaptiveAdmission` block reports per-lane queue pressure (top tenants by queued cost). If an underlying source (health/resilience/rate-limits) could not be reached, it is listed in `degraded` instead of being silently reported as empty/zero.",
+    "Returns the current health status of FreeRoute including uptime, memory usage, circuit breaker states for all providers, rate limit status, and cache statistics. When adaptive virtual-lane admission is active, a curated `adaptiveAdmission` block reports per-lane queue pressure (top tenants by queued cost). If an underlying source (health/resilience/rate-limits) could not be reached, it is listed in `degraded` instead of being silently reported as empty/zero.",
   inputSchema: getHealthInput,
   outputSchema: getHealthOutput,
   scopes: ["read:health"],
@@ -361,7 +361,7 @@ export const routeRequestTool: McpToolDefinition<
 > = {
   name: "omniroute_route_request",
   description:
-    "Sends a chat completion request through OmniRoute's intelligent routing pipeline. Supports combo selection, budget limits, and task role hints for optimal provider matching.",
+    "Sends a chat completion request through FreeRoute's intelligent routing pipeline. Supports combo selection, budget limits, and task role hints for optimal provider matching.",
   inputSchema: routeRequestInput,
   outputSchema: routeRequestOutput,
   scopes: ["execute:completions"],
@@ -509,7 +509,7 @@ export const webSearchOutput = z.object({
 export const webSearchTool: McpToolDefinition<typeof webSearchInput, typeof webSearchOutput> = {
   name: "omniroute_web_search",
   description:
-    "Performs a web search using OmniRoute's search gateway. Supports multiple providers (Serper, Brave, Perplexity, Exa, Tavily, AnySearch, Google PSE, Linkup, SearchAPI, SearXNG) with automatic failover. Returns search results with titles, URLs, snippets, and position data. Not X/Twitter — use omniroute_x_search for that.",
+    "Performs a web search using FreeRoute's search gateway. Supports multiple providers (Serper, Brave, Perplexity, Exa, Tavily, AnySearch, Google PSE, Linkup, SearchAPI, SearXNG) with automatic failover. Returns search results with titles, URLs, snippets, and position data. Not X/Twitter — use omniroute_x_search for that.",
   inputSchema: webSearchInput,
   outputSchema: webSearchOutput,
   scopes: ["execute:search"],
@@ -541,7 +541,7 @@ export const xSearchInput = z.object({
 export const xSearchTool: McpToolDefinition<typeof xSearchInput, typeof webSearchOutput> = {
   name: "omniroute_x_search",
   description:
-    "Search X (Twitter) through OmniRoute. Uses SuperGrok / xAI server-side x_search by default, or Xquik when provider is xquik-search. Requires credentials for the selected backend. This is not web search.",
+    "Search X (Twitter) through FreeRoute. Uses SuperGrok / xAI server-side x_search by default, or Xquik when provider is xquik-search. Requires credentials for the selected backend. This is not web search.",
   inputSchema: xSearchInput,
   outputSchema: webSearchOutput,
   scopes: ["execute:search"],
@@ -612,7 +612,7 @@ export const webFetchOutput = z.object({
 export const webFetchTool: McpToolDefinition<typeof webFetchInput, typeof webFetchOutput> = {
   name: "omniroute_web_fetch",
   description:
-    "Fetches and extracts content from a URL using OmniRoute's web fetch gateway. Supports multiple providers (Firecrawl, Jina Reader, Tavily, TinyFish, Context7 library docs) with automatic failover. Returns the page content as markdown, HTML, links, or screenshot, along with metadata.",
+    "Fetches and extracts content from a URL using FreeRoute's web fetch gateway. Supports multiple providers (Firecrawl, Jina Reader, Tavily, TinyFish, Context7 library docs) with automatic failover. Returns the page content as markdown, HTML, links, or screenshot, along with metadata.",
   inputSchema: webFetchInput,
   outputSchema: webFetchOutput,
   scopes: ["execute:search"],
@@ -1021,7 +1021,7 @@ export const dbHealthCheckTool: McpToolDefinition<
 > = {
   name: "omniroute_db_health_check",
   description:
-    "Diagnoses OmniRoute database drift such as orphan quota/domain rows, invalid JSON state, and broken combo references. Set autoRepair=true to repair those rows before returning the report.",
+    "Diagnoses FreeRoute database drift such as orphan quota/domain rows, invalid JSON state, and broken combo references. Set autoRepair=true to repair those rows before returning the report.",
   inputSchema: dbHealthCheckInput,
   outputSchema: dbHealthCheckOutput,
   scopes: ["read:health", "write:resilience"],
@@ -1057,7 +1057,7 @@ export const syncPricingTool: McpToolDefinition<typeof syncPricingInput, typeof 
   {
     name: "omniroute_sync_pricing",
     description:
-      "Syncs pricing data from external sources (LiteLLM) into OmniRoute. Synced pricing fills gaps not covered by hardcoded defaults without overwriting user-set prices. Use dryRun=true to preview.",
+      "Syncs pricing data from external sources (LiteLLM) into FreeRoute. Synced pricing fills gaps not covered by hardcoded defaults without overwriting user-set prices. Use dryRun=true to preview.",
     inputSchema: syncPricingInput,
     outputSchema: syncPricingOutput,
     scopes: ["pricing:write"],
@@ -1489,7 +1489,7 @@ export const agentSkillsListTool: McpToolDefinition<
 > = {
   name: "omniroute_agent_skills_list",
   description:
-    "List OmniRoute agent skills with optional filtering by category (api/cli/config) or area. Returns skill metadata including id, name, description, endpoints/commands, and URLs.",
+    "List FreeRoute agent skills with optional filtering by category (api/cli/config) or area. Returns skill metadata including id, name, description, endpoints/commands, and URLs.",
   inputSchema: agentSkillsListInput,
   outputSchema: agentSkillsListOutput,
   scopes: ["read:catalog"],

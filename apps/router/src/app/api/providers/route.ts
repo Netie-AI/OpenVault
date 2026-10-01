@@ -1,6 +1,14 @@
 import { getAllProviderLimitsCache } from "@/lib/db/providerLimits";
 import { NextResponse } from "next/server";
-import { renderKeysManagedByOpenVault } from "@omniroute/open-sse/netie/policy.ts";
+import {
+  classifyProviderId,
+  renderDisabled,
+  renderKeysManagedByOpenVault,
+} from "@omniroute/open-sse/netie/policy.ts";
+import {
+  findSecretProviderSpecificFields,
+  netieErrorResponse,
+} from "@/lib/netie/providerGuards";
 export const dynamic = "force-dynamic";
 import { getAuditRequestContext, logAuditEvent } from "@/lib/compliance/index";
 import {
@@ -197,9 +205,15 @@ export async function POST(request: Request) {
       rejectRetiredCommonChatGptWebProvider(provider);
     if (retirementResponse) return retirementResponse;
 
+    // FreeRoute: a consumer subscription or browser session provider cannot
+    // be added at all, with or without a credential (open-sse/netie/policy.ts).
+    const disabledCode = classifyProviderId(requestedProvider) ?? classifyProviderId(provider);
+    if (disabledCode) return renderDisabled(disabledCode);
+
     // FreeRoute: provider API keys live only in OpenVault's KeyVault. Refuse
-    // to persist one into this app's own store (open-sse/netie/policy.ts).
-    if (apiKey) {
+    // to persist one into this app's own store, whether it arrives as apiKey or
+    // inside providerSpecificData (extraApiKeys, consoleApiKey, a cookie, ...).
+    if (apiKey || findSecretProviderSpecificFields(incomingPsd).length > 0) {
       return renderKeysManagedByOpenVault();
     }
 
@@ -428,6 +442,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ connection: result }, { status: 201 });
   } catch (error) {
+    const named = netieErrorResponse(error);
+    if (named) return named;
     console.log("Error creating provider:", error);
     return NextResponse.json({ error: "Failed to create provider" }, { status: 500 });
   }
@@ -462,6 +478,10 @@ export async function PATCH(request: Request) {
       for (const connection of requestedConnections) {
         const retirementResponse = rejectRetiredCommonChatGptWebProvider(connection.provider);
         if (retirementResponse) return retirementResponse;
+        // FreeRoute: a classified connection (for example one restored from a
+        // backup) can be deactivated or deleted, never activated.
+        const disabledCode = classifyProviderId(String(connection.provider ?? ""));
+        if (disabledCode) return renderDisabled(disabledCode);
       }
     }
 

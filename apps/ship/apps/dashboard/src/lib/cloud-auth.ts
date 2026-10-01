@@ -1,9 +1,10 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 import { getCloudApiOrigin, getCloudDashboardUrl } from "@/lib/api/urls";
 import { sha256 } from "@noble/hashes/sha2.js";
 import { isInvitationClaimPath } from "@repo/core";
 
 export const DESKTOP_CLOUD_FLOW = "desktop-cloud";
-const DEFAULT_APP_NAME = "Openship Desktop";
+const DEFAULT_APP_NAME = "FreeBuild Desktop";
 const DEFAULT_POLL_INTERVAL_MS = 2000;
 
 type SearchParamsLike = {

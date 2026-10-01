@@ -25,6 +25,8 @@
  *    / `updateCredential` refuse those with `KeysManagedByOpenVaultError` before touching the DB,
  *    and `resolveCredentialSecrets` / `listProviderCredentials` read the live secret from
  *    OpenVault instead of the local encrypted envelope. See PRODUCT_ROLES.md / BRIEF.md section 4.
+ *    Legacy local rows for those providers (written before the fork, or restored from an
+ *    upstream export) are not listed and cannot be verified: their secret is never read.
  */
 
 import { repos, type Credential } from "@repo/db";
@@ -180,7 +182,11 @@ function writeSecrets(secrets: CredentialSecrets): string {
 
 export async function listCredentials(organizationId: string): Promise<SanitizedCredential[]> {
   const rows = await repos.credential.listByOrg(organizationId);
-  return [...rows.map(sanitizeCredential), ...(await listOpenVaultCredentials())];
+  // Modified by Netie AI, 2026: a local row for an OpenVault-managed provider is a legacy
+  // leftover that nothing reads. Listing it next to the OpenVault keys would show a token
+  // as active that FreeBuild never uses.
+  const local = rows.filter((row) => !OPENVAULT_MANAGED_CREDENTIAL_PROVIDERS.has(row.provider));
+  return [...local.map(sanitizeCredential), ...(await listOpenVaultCredentials())];
 }
 
 /**
@@ -240,10 +246,10 @@ function requireProvider(providerId: string): CredentialProvider {
   if (OPENVAULT_MANAGED_CREDENTIAL_PROVIDERS.has(provider.id)) {
     throw new KeysManagedByOpenVaultError();
   }
-  // A provider Openship cannot check must not be storable: rule 2 above would be
+  // A provider FreeBuild cannot check must not be storable: rule 2 above would be
   // unenforceable for it, and the operator would get a credential that looks fine.
   if (!hasVerifier(provider.id)) {
-    throw new ValidationError(`Openship cannot verify ${provider.label} credentials yet.`);
+    throw new ValidationError(`FreeBuild cannot verify ${provider.label} credentials yet.`);
   }
   return provider;
 }
@@ -376,6 +382,11 @@ export async function verifyCredential(
   if (!row) throw new NotFoundError("Credential", id);
   const provider = getCredentialProvider(row.provider);
   if (!provider) throw new ValidationError(`Unknown credential provider "${row.provider}".`);
+  // Modified by Netie AI, 2026: rule 3. A legacy local row for an OpenVault-managed
+  // provider is never decrypted or sent anywhere; the key to verify lives in OpenVault.
+  if (OPENVAULT_MANAGED_CREDENTIAL_PROVIDERS.has(provider.id)) {
+    throw new KeysManagedByOpenVaultError();
+  }
 
   const secrets = readSecrets(row);
   if (Object.keys(secrets).length === 0) {

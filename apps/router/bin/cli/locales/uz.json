@@ -27,7 +27,7 @@
     "loginEnabled": "Kirish: yoqilgan (parol yangilandi)",
     "loginDisabled": "Kirish: o‘chirilgan",
     "providerInfo": "Provayder: {info}",
-    "opencode": "OpenCode uchun birga taqdim etilgan @omniroute/opencode-plugin ni o‘rnatish va sozlash"
+    "opencode": "OpenCode uchun birga taqdim etilgan OpenCode plugin ni o‘rnatish va sozlash"
   },
   "doctor": {
     "title": "FreeRoute diagnostikasi",

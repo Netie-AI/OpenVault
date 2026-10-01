@@ -284,7 +284,7 @@ async function sendEmail(
   const { title, body } = renderMessage(delivery);
   const delivered = await sendMail({
     to: config.address,
-    subject: `[Openship] ${title}`,
+    subject: `[FreeBuild] ${title}`,
     text: body,
     html: renderEmailHtml(delivery),
   });
@@ -330,7 +330,7 @@ async function sendWebhook(
   // stored encrypted in channel.config — we sign the raw body.
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    "User-Agent": "Openship-Webhook/1.0",
+    "User-Agent": "FreeBuild-Webhook/1.0",
   };
   if (config.hmacSecret) {
     // The secret is encrypt()'d at storage time (see
@@ -596,7 +596,7 @@ export async function sendTestToChannel(channel: NotificationChannel): Promise<v
     category: "test",
     createdAt: new Date(),
     payload: {
-      message: "Openship test notification — this channel is configured correctly.",
+      message: "FreeBuild test notification — this channel is configured correctly.",
     },
   } as unknown as NotificationDelivery;
   try { await worker(testDelivery, channel); }

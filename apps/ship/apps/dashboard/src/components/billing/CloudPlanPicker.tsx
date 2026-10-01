@@ -1,6 +1,8 @@
 "use client";
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 
 import { Icon as UiIcon } from "@repo/ui/icons";
+import { brandSupportMailto } from "@repo/core";
 
 import { useState } from "react";
 import { PricingCards } from "@/components/billing/PricingCards";
@@ -93,7 +95,7 @@ export function CloudPlanPicker({ currentPlan, subscription, billingEnabled = fa
       {!canPurchase && (
         <p className="text-sm text-muted-foreground">
           {billingEnabled ? t.billing.plansRoute.changeViaSupport : t.billing.plansRoute.billingUnavailable}{" "}
-          <a href="mailto:support@openship.io" className="text-primary hover:underline">{t.billing.portal.supportButton}</a>
+          {brandSupportMailto() && <a href={brandSupportMailto()} className="text-primary hover:underline">{t.billing.portal.supportButton}</a>}
         </p>
       )}
     <PricingCards

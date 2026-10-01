@@ -1,3 +1,4 @@
+import { classifyConnection } from "@/lib/netie/providerGuards";
 import { AutoComboConfig } from "./engine";
 import { MODE_PACKS } from "./modePacks";
 import { DEFAULT_WEIGHTS, reliabilityFactor, ScoringWeights } from "./scoring";
@@ -334,7 +335,15 @@ function isKeylessEligibleConnection(conn: VirtualFactoryConn): boolean {
 }
 
 function hasUsableConnectionCredential(conn: VirtualFactoryConn): boolean {
-  const hasApiKey = typeof conn.apiKey === "string" && conn.apiKey.trim().length > 0;
+  // FreeRoute: subscription and browser-session connections never join an
+  // auto pool; an API-key connection's key lives in OpenVault (resolved at
+  // request time), so the empty DB column does not mean "unconfigured".
+  if (classifyConnection(conn as unknown as { provider?: unknown; authType?: unknown })) {
+    return false;
+  }
+  const hasApiKey =
+    (conn as { authType?: unknown }).authType === "apikey" ||
+    (typeof conn.apiKey === "string" && conn.apiKey.trim().length > 0);
   return (
     hasApiKey ||
     hasUsableOAuthToken(conn) ||

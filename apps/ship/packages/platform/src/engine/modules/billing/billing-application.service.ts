@@ -24,6 +24,9 @@ import { getBillingResources } from "./billing-resources.service";
  * actual prices too. Outside SaaS, read Openship's public catalog without credentials. */
 export async function listPlans(input: NonNullable<Parameters<BillingOperations["listPlans"]>[0]>) {
   if (env.CLOUD_MODE) return presentCloudPlans(input.locale);
+  // Modified by Netie AI, 2026: with no hosted cloud API configured (the
+  // FreeBuild default), use the bundled catalog instead of calling out.
+  if (!cloudRuntimeTarget.api) return presentCloudPlans(input.locale);
   const url = new URL("/api/billing/plans", cloudRuntimeTarget.api);
   if (input.locale) url.searchParams.set("locale", input.locale);
   try {

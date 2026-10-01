@@ -1,3 +1,5 @@
+// Modified by Netie AI, 2026: the native_embedding_unavailable hard-disable is
+// removed; build-native.ts now produces a worker that boots (see its header).
 /** Passive host facade. The engine is loaded only by an explicitly constructed worker. */
 import { Worker } from "node:worker_threads";
 import { randomUUID } from "node:crypto";
@@ -136,31 +138,6 @@ export async function createNativePlatform(value: NativePlatformOptions): Promis
   for (const [key, val] of Object.entries(options.environment ?? {})) {
     if (reserved.test(key) || !/^[A-Z][A-Z0-9_]*$/.test(key) || typeof val !== "string") throw new ValidationError(`Reserved or invalid native environment option: ${key}`);
   }
-  // Modified by Netie AI, 2026: native embedding is hard-disabled in this
-  // fork rather than shipped in a broken state. `packages/platform/build-native.ts`
-  // was ported from `Bun.build` to esbuild (Bun is not part of this fork's
-  // toolchain — see PRODUCT_ROLES.md); the resulting worker bundle boots far
-  // enough to reach its own top-level `await Promise.all([...dynamic
-  // imports...])` (native-worker.ts) but that await never settles — Node exits
-  // the worker with code 13 ("unsettled top-level await"), not a catchable
-  // rejection. No code in this fork's shipped API or dashboard calls
-  // createNativePlatform/createShip (grep confirms: only packages/sdk's own
-  // definition and its test do) — this is an SDK-only embedding mode for
-  // external consumers, so disabling it does not affect FreeBuild itself.
-  // Fixing the esbuild output properly (tracing which bundled/external
-  // dependency's own top-level code never resolves under Node, vs. under
-  // Bun's bundler+runtime which built and ran this worker before) is real,
-  // scoped follow-up work — not something to fake past with a passing test.
-  throw new AppError(
-    "Native embedding (createShip) is not available in this build. " +
-      "packages/platform/build-native.ts's esbuild port produces a worker " +
-      "bundle whose own top-level await never resolves under Node — run the " +
-      "API and dashboard normally (npm run build && npm start) instead, or " +
-      "see build-native.ts for the tracked follow-up.",
-    503,
-    "native_embedding_unavailable",
-  );
-  // eslint-disable-next-line no-unreachable
   const entry = runtimeEntry();
   const nativeDir = dirname(entry);
   const assets = existsSync(join(nativeDir, "pglite")) ? nativeDir : join(nativeDir, "../server");

@@ -27,7 +27,7 @@
     "loginEnabled": "Login: enabled (password updated)",
     "loginDisabled": "Login: disabled",
     "providerInfo": "Provider: {info}",
-    "opencode": "Install and configure the bundled @omniroute/opencode-plugin for OpenCode"
+    "opencode": "Install the OpenCode plugin (not included in this edition; use setup-opencode)"
   },
   "doctor": {
     "title": "FreeRoute Doctor",

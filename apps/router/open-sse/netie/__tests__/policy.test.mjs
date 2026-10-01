@@ -14,7 +14,9 @@ import {
   NetieDisabledError,
   isNetieDisabledError,
   disabledErrorBody,
+  UPSTREAM_UPDATES_DISABLED_MESSAGE,
 } from "../policy.ts";
+import { matchHardDisabledRoute } from "../../../src/lib/netie/hardDisabledRoutes.ts";
 
 test("apikey/none/optional providers stay allowed", () => {
   assert.equal(
@@ -111,4 +113,58 @@ test("NetieDisabledError carries the exact 501 shape", () => {
   assert.equal(body.error.code, DISABLED.sessionRelay);
   assert.equal(typeof body.error.message, "string");
   assert.ok(body.error.message.length > 0);
+});
+
+test("local-CLI executors that spend a human's own subscription login are disabled", () => {
+  // Their registry rows say authType "none", so they are classified by id,
+  // alias and executor before the registry lookup.
+  for (const id of ["devin-cli-agentic", "dva", "auggie", "aug", "zcode", "zc", "codex-app-server", "cxa"]) {
+    assert.equal(classifyProviderId(id), DISABLED.consumerSubscription, id);
+  }
+  assert.equal(
+    classifyProvider({ id: "auggie", authType: "none", authHeader: "none", executor: "auggie" }),
+    DISABLED.consumerSubscription
+  );
+});
+
+test("cloudflare-playground (browser-grade TLS fingerprint) is tls_fingerprint_stealth_disabled", () => {
+  assert.equal(classifyProviderId("cloudflare-playground"), DISABLED.tlsStealth);
+  assert.equal(classifyProviderId("cfp"), DISABLED.tlsStealth);
+  assert.equal(
+    classifyProvider({
+      id: "cloudflare-playground",
+      authType: "none",
+      authHeader: "none",
+      executor: "cloudflare-playground",
+    }),
+    DISABLED.tlsStealth
+  );
+});
+
+test("the upstream-updates 501 message does not name the upstream product", () => {
+  assert.doesNotMatch(UPSTREAM_UPDATES_DISABLED_MESSAGE, /omniroute|9router/i);
+});
+
+test("hard-disabled route table covers /authorize and per-connection login/refresh routes", () => {
+  const cases = [
+    ["/authorize", "consumer_subscription_pooling_disabled"],
+    ["/AUTHORIZE", "consumer_subscription_pooling_disabled"],
+    ["/api/providers/abc123/login", "consumer_session_relay_disabled"],
+    ["/api/providers/abc123/refresh-token", "consumer_session_relay_disabled"],
+    ["/api/providers/abc123/refresh", "consumer_subscription_pooling_disabled"],
+    ["/api/providers/abc123/refresh-cursor", "consumer_subscription_pooling_disabled"],
+    ["/api/providers/abc123/codex-auth/apply-local", "consumer_subscription_pooling_disabled"],
+    ["/api/providers/command-code/auth/apply", "keys_managed_by_openvault"],
+    ["/api/providers/command-code/auth/callback", "keys_managed_by_openvault"],
+    ["/api/providers/volcengine-plan/connect", "consumer_session_relay_disabled"],
+  ];
+  for (const [path, code] of cases) {
+    const match = matchHardDisabledRoute(path);
+    assert.ok(match, path);
+    assert.equal(match.status, 501, path);
+    assert.equal(match.body.error.code, code, path);
+  }
+  for (const path of ["/api/providers", "/api/providers/abc123", "/api/providers/abc123/test", "/authorized"]) {
+    assert.equal(matchHardDisabledRoute(path), null, path);
+  }
 });

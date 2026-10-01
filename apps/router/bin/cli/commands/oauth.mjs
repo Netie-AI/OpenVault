@@ -87,7 +87,7 @@ function printLoopbackRedirectWarning(providerId, redirectUri) {
   );
   if (providerId === "antigravity") {
     process.stdout.write(
-      "Tip: `omniroute login antigravity` captures the code automatically and\n" +
+      "Tip: `freeroute login antigravity` captures the code automatically and\n" +
         "avoids that error page entirely.\n"
     );
   }

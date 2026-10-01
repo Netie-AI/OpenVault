@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { defaultUserSettings } from '@zero/server/schemas';
@@ -105,12 +106,10 @@ export function MailContent({ id, html, senderEmail }: MailContentProps) {
 
     // The shadow root is style-isolated from the document - global font
     // CSS doesn't reach it for unstyled elements. Prepend a single
-    // <style> block that applies the openship sans stack (Gellix +
-    // SF Arabic fallback) to the rendered email body. `@font-face`
-    // declarations in the outer document remain accessible per spec,
-    // so we only need to set font-family inside the shadow tree.
+    // <style> block that applies the system sans stack to the rendered
+    // email body, so only font-family needs setting inside the shadow tree.
     shadowRootRef.current.innerHTML =
-      `<style>:host, :host * { font-family: 'Gellix', 'SF Arabic', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; }</style>` +
+      `<style>:host, :host * { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; }</style>` +
       processedData.html;
   }, [processedData]);
 

@@ -30,7 +30,7 @@ export function registerTray(program) {
       const { default: pidUtils } = await import("../utils/pid.mjs").catch(() => ({
         default: null,
       }));
-      process.stderr.write("Use `omniroute stop` to stop the server.\n");
+      process.stderr.write("Use `freeroute stop` to stop the server.\n");
       process.exit(0);
     });
 }

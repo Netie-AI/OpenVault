@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 import type { ProjectControlSchemas } from "@repo/contracts";
 import type { ResourceServices } from "../../../resource-operations";
 import type { ProjectDependencies } from "../../../projects";
@@ -37,7 +38,7 @@ export function createProjectLifecycleOperations(
             ok: false,
             code: "PROJECT_IS_CONTROL_PLANE",
             error:
-              "This is the Openship control plane — manage it with the CLI, not the dashboard.",
+              "This is the FreeBuild control plane — manage it with the CLI, not the dashboard.",
           },
           403,
         );

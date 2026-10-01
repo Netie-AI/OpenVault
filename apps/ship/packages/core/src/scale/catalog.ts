@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Capabilities of the Scale planner, not a list of provisioned database engines.
  * Limits are OpenShip product limits; they are not upstream database limits.
@@ -150,7 +151,7 @@ export type ClusterAddition =
 
 export const RESOURCE_CATALOG = {
   edge: {
-    title: "OpenShip Edge",
+    title: "FreeBuild Edge",
     description: "Ingress, TLS, and load balancing",
     paletteDescription: "TLS, routing and load balancing",
     connection: { protocols: ["http", "https"], defaultProtocol: "https", defaultPort: 443 },

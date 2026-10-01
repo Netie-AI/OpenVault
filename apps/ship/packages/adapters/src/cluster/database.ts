@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 import { createHash } from "node:crypto";
 import {
   AppError,
@@ -224,7 +225,7 @@ export class ClusterDatabaseAdapter {
       config.storageClass === "openship-local" &&
       (storage.provisioner !== "openship.io/local-path" || storage.reclaimPolicy !== "Retain")
     )
-      throw conflict("The OpenShip storage class configuration changed.");
+      throw conflict("The FreeBuild storage class configuration changed.");
   }
 
   manifest(): KubernetesObject {
@@ -426,7 +427,7 @@ export class ClusterDatabaseAdapter {
     });
     if (existing.data?.password !== secret.password)
       throw conflict(
-        "The database credentials changed outside OpenShip. Restore the saved credential before retrying.",
+        "The database credentials changed outside FreeBuild. Restore the saved credential before retrying.",
       );
     if (this.target.backupStorage)
       await this.archive.secret("backup-destination", this.target.backupStorage);

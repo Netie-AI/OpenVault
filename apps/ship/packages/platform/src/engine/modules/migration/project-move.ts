@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * The migration's SECOND door: move a project Openship already owns onto another
  * server, instead of adopting a stranger's containers into a new one.
@@ -140,7 +141,7 @@ export function assertProjectMovable(input: {
     // it. Moving a control plane is `openship` CLI work on the box, not a wizard.
     throw new ProjectMoveRefused(
       "control_plane",
-      "This is the Openship control plane — it can't migrate itself. Move it with the Openship CLI on the server instead.",
+      "This is the FreeBuild control plane — it can't migrate itself. Move it with the FreeBuild CLI on the server instead.",
     );
   }
 

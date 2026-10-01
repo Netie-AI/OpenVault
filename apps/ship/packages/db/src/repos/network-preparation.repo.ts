@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 import { and, desc, eq, gt, isNull, lte, ne, or, sql, type SQL } from "drizzle-orm";
 import {
   AppError,
@@ -64,7 +65,7 @@ export function createNetworkPreparationRepo(db: Database) {
       return interrupt(
         exclusive ? undefined : expiredLease(),
         exclusive
-          ? "OpenShip restarted before server preparation finished. Retry preparation to recheck each server and continue installing missing tools."
+          ? "FreeBuild restarted before server preparation finished. Retry preparation to recheck each server and continue installing missing tools."
           : "The controller stopped reporting progress. Retry preparation to recheck each server and continue installing missing tools.",
       );
     },

@@ -59,7 +59,7 @@ export default function CustomCliCard({
     selectedKeyObj?.key ||
     (!cloudEnabled
       ? "sk_omniroute"
-      : translateOrFallback("yourApiKeyPlaceholder", "sk-your-omniroute-key"));
+      : translateOrFallback("yourApiKeyPlaceholder", "sk-your-freeroute-key"));
   const baseUrlWithV1 = normalizeOpenAiBaseUrl(baseUrl || DEFAULT_DISPLAY_BASE_URL);
   const chatCompletionsEndpoint = `${baseUrlWithV1}/chat/completions`;
 

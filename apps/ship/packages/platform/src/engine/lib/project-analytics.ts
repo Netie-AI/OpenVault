@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Shared helpers for resolving a project's tracked domain, server,
  * and querying the OpenResty management API.
@@ -470,7 +471,7 @@ export function streamChunkBytes(log: LogEntry): Buffer {
 async function execMgmtStream(serverId: string, path: string) {
   const executor = await sshManager.acquire(serverId);
   const container = await resolveOurEdgeContainer(executor);
-  if (!container) throw new Error("No Openship edge container on this server");
+  if (!container) throw new Error("No FreeBuild edge container on this server");
 
   const { PassThrough } = await import("node:stream");
   const stream = new PassThrough();
@@ -528,7 +529,7 @@ async function execMgmtStream(serverId: string, path: string) {
       if (!torndown && !forwarded && !ended) {
         const detail = errParts.join("").trim() || (result?.output || "").trim();
         const reason =
-          `Couldn't reach the Openship edge's log service on this server` +
+          `Couldn't reach the FreeBuild edge's log service on this server` +
           `${detail ? `: ${detail}` : ""}. Make sure the edge is running ` +
           "(`docker ps` should show openship-edge) and redeploy the routing if it isn't.";
         stream.write(`event: error\ndata: ${JSON.stringify({ error: reason })}\n\n`);

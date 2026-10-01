@@ -445,6 +445,6 @@
     "descriptionWholeFile": "None of it was applied. The deploy will still run, using the settings FreeBuild detected.",
     "refused": "Refused",
     "unrecognized": "Not recognized",
-    "hint": "Run `openship config validate` in the repo to check the file before your next deploy."
+    "hint": "Run `freebuild config validate` in the repo to check the file before your next deploy."
   }
 }

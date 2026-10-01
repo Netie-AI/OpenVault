@@ -27,7 +27,7 @@
     "loginEnabled": "Nbanye: agbanyere (emelitela okwuntughe)",
     "loginDisabled": "Nbanye: agbanyụrụ",
     "providerInfo": "Onye na-enye ọrụ: {info}",
-    "opencode": "Wụnye ma hazie @omniroute/opencode-plugin e jikọtara ọnụ maka OpenCode"
+    "opencode": "Wụnye ma hazie OpenCode plugin e jikọtara ọnụ maka OpenCode"
   },
   "doctor": {
     "title": "Onye Nnyocha FreeRoute",

@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Service validation schemas.
  *
@@ -338,7 +339,7 @@ export const SyncServicesBody = Type.Object({
         environmentTemplates: Type.Optional(
           Type.Record(Type.String(), Type.String(), {
             description:
-              "Original Compose expressions keyed by environment name. Optional: when omitted, Openship derives them from `$` expressions in `environment` using the same parser as repository imports.",
+              "Original Compose expressions keyed by environment name. Optional: when omitted, FreeBuild derives them from `$` expressions in `environment` using the same parser as repository imports.",
           }),
         ),
         volumes: Type.Optional(Type.Array(Type.String())),

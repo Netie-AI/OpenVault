@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Run inside the deployed SaaS API environment. Uses a separate, read-verified
  * PostgreSQL connection: never opens the live API's PGlite or runs migrations.
@@ -7,7 +8,7 @@ import { userInfo } from "node:os";
 import { AppError, PLAN_IDS, type PlanTierId } from "@repo/core";
 import { createDatabase, createAdvisoryLocks, createBillingPlanGrantRepo } from "@repo/db/factory";
 
-const usage = `Complimentary Openship Cloud plans (no customer charge).
+const usage = `Complimentary FreeBuild Cloud plans (no customer charge).
 
   bun run --cwd apps/api billing:grant grant --email user@example.com --plan pro --reason "Partner account"
   bun run --cwd apps/api billing:grant grant --email user@example.com --plan pro --reason "Partner account" --dry-run

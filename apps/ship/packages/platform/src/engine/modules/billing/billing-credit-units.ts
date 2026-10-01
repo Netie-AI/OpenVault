@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Credit-unit boundary — THE single place openship's internal credit unit
  * meets Oblien's. Pure (no imports) so it's trivially unit-testable and can't
@@ -26,12 +27,12 @@ export function toOblienCredits(milli: number): number {
   const credits = milli / MILLI_PER_CREDIT;
   if (!Number.isFinite(credits) || credits <= 0) {
     throw new Error(
-      `Invalid quota: ${milli} milli-credits resolves to ${credits} Oblien credits`,
+      `Invalid quota: ${milli} milli-credits resolves to ${credits} cloud credits`,
     );
   }
   if (credits > OBLIEN_QUOTA_MAX_CREDITS) {
     throw new Error(
-      `Quota ${credits} exceeds Oblien's ${OBLIEN_QUOTA_MAX_CREDITS}-credit ceiling (from ${milli} milli-credits)`,
+      `Quota ${credits} exceeds the cloud provider's ${OBLIEN_QUOTA_MAX_CREDITS}-credit ceiling (from ${milli} milli-credits)`,
     );
   }
   return credits;

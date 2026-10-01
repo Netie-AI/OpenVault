@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 import { instanceAuthorization } from "../../lib/instance-authorization";
 import { assertCloudTenantScope } from "../../lib/cloud/scope";
 /**
@@ -683,7 +684,7 @@ export async function getCloneToken(ctx: ExecutionContext, input: NonNullable<Pa
   if (!token) {
     throw responseError({
         error:
-          "No GitHub App installation token is available for this owner. Connect the Openship GitHub App (cloud) for this account to use a clone token.",
+          "No GitHub App installation token is available for this owner. Connect the FreeBuild GitHub App (cloud) for this account to use a clone token.",
       }, 409);
   }
 

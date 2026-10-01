@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * "Did the thing we just deployed answer?" — ONE implementation, for every deploy shape.
  *
@@ -105,7 +106,7 @@ export async function probeDeployedReadiness(args: {
     return {
       failure: null,
       skipped:
-        `${result.unverifiable}. Re-run \`openship up\` to re-provision the host channel, ` +
+        `${result.unverifiable}. Re-run \`freebuild up\` to re-provision the host channel, ` +
         `then redeploy to have this checked.`,
     };
   }
@@ -117,7 +118,7 @@ export async function probeDeployedReadiness(args: {
   const viaNote =
     result.via === "exec"
       ? " (probed with `curl` on the host — this channel refuses port forwarding; " +
-        "re-run `openship up` to re-provision it)"
+        "re-run `freebuild up` to re-provision it)"
       : "";
 
   if (!result.ready) {

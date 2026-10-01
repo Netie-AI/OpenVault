@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Pure reconciliation for Docker discovery — NO IO (no SSH, no config, no
  * runtime). Merges inspected containers with declared compose services into a
@@ -691,12 +692,12 @@ export function reconcileStack(opts: {
     .filter((name) => services.some((s) => s.networks.includes(name)));
   if (customNetworks.length > 0) {
     warnings.push(
-      `Openship runs all services on one project network; custom networks (${customNetworks.join(", ")}) will be flattened. Services still reach each other by name.`,
+      `FreeBuild runs all services on one project network; custom networks (${customNetworks.join(", ")}) will be flattened. Services still reach each other by name.`,
     );
   }
   if (composeProjects.length > 0 || declared.size > 0) {
     warnings.push(
-      "Compose `configs`, `secrets`, `expose`, `depends_on` conditions, and host-level keys (`privileged`, `cap_add`, `devices`, `sysctls`) are not modeled by Openship and won't carry over. A container currently sharing another's namespace (`network_mode`/`pid`) is adopted onto the project network instead — re-declare it in the stack's compose file if it must stay shared.",
+      "Compose `configs`, `secrets`, `expose`, `depends_on` conditions, and host-level keys (`privileged`, `cap_add`, `devices`, `sysctls`) are not modeled by FreeBuild and won't carry over. A container currently sharing another's namespace (`network_mode`/`pid`) is adopted onto the project network instead — re-declare it in the stack's compose file if it must stay shared.",
     );
   }
   if (services.some((s) => Object.keys(s.env).length > 0)) {

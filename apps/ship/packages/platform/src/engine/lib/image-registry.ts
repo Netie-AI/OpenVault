@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Container-registry digest lookup — the image analog of release-dist.ts's
  * `resolveLatestVersion` (GitHub releases). Given an image ref pinned to a
@@ -96,7 +97,7 @@ async function fetchToken(challenge: string): Promise<string | null> {
     // challenge). safeFetch pins the resolved IP; CLOUD_MODE rejects internal
     // targets while self-hosted may use a LAN registry.
     const res = await safeFetch(url.toString(), {
-      headers: { "User-Agent": "openship" },
+      headers: { "User-Agent": "FreeBuild" },
       timeoutMs: 10_000,
       allowPrivate: !env.CLOUD_MODE,
       maxRedirects: 3,
@@ -123,7 +124,7 @@ async function headManifest(
       method: "HEAD",
       headers: {
         Accept: MANIFEST_ACCEPT,
-        "User-Agent": "openship",
+        "User-Agent": "FreeBuild",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       timeoutMs: 10_000,

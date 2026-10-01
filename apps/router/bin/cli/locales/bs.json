@@ -27,7 +27,7 @@
     "loginEnabled": "Prijava: omogućena (lozinka ažurirana)",
     "loginDisabled": "Prijava: onemogućeno",
     "providerInfo": "Providajder: {info}",
-    "opencode": "Instalirajte i konfigurišite priloženi @omniroute/opencode-plugin za OpenCode"
+    "opencode": "Instalirajte i konfigurišite priloženi OpenCode plugin za OpenCode"
   },
   "doctor": {
     "title": "FreeRoute Doctor",

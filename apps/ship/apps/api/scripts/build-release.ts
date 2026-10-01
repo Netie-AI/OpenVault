@@ -274,7 +274,7 @@ function buildRootPackageJson(version: string): Record<string, unknown> {
     version,
     private: true,
     description:
-      "Self-contained Openship release. Run `bun install --production --frozen-lockfile && bun run start.ts`.",
+      "Self-contained FreeBuild release. Run `bun install --production --frozen-lockfile && bun run start.ts`.",
     type: "module",
     workspaces: ["api", "packages/*"],
     scripts: {
@@ -394,9 +394,9 @@ start(
 );
 `;
 
-const README = (version: string) => `# Openship release dist (v${version})
+const README = (version: string) => `# FreeBuild release dist (v${version})
 
-Self-contained release of the Openship platform (API + dashboard).
+Self-contained release of the FreeBuild platform (API + dashboard).
 Extract on a target server for a fresh install. After starting it, use
 Settings → Data Transfer to import an existing installation.
 

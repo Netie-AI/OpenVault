@@ -3,8 +3,8 @@
   "verified": true,
   "unlisted": true,
   "id": "webmail",
-  "name": "Openship Webmail",
-  "description": "A fast, self-hosted webmail client. Point it at any IMAP/SMTP mailbox — an Openship Mail server, Gmail, Fastmail, or your company's — and read, search and send from a clean UI on your own domain. Nothing is stored outside your server.",
+  "name": "FreeBuild Webmail",
+  "description": "A fast, self-hosted webmail client. Point it at any IMAP/SMTP mailbox — a FreeBuild Mail server, Gmail, Fastmail, or your company's — and read, search and send from a clean UI on your own domain. Nothing is stored outside your server.",
   "kind": "template",
   "logo": "webmail",
   "category": "mail",
@@ -45,7 +45,7 @@
       "key": "BRANDING_ADMIN_TOKEN",
       "service": "webmail",
       "label": "Branding admin token",
-      "help": "Auto-generated. Lets Openship write this webmail's white-label login page (logo, name, colors) over its admin API. Nothing else accepts it.",
+      "help": "Auto-generated. Lets FreeBuild write this webmail's white-label login page (logo, name, colors) over its admin API. Nothing else accepts it.",
       "generate": "secret",
       "secret": true
     }
@@ -54,7 +54,7 @@
     {
       "id": "backend",
       "label": "Mail backend",
-      "description": "Which IMAP/SMTP server this webmail talks to. Leave the hosts blank and each address resolves to mail.<its own domain> at sign-in — the convention Openship Mail and iRedMail install. Set them to pin every mailbox to one server. Users can still override host and port on the sign-in screen.",
+      "description": "Which IMAP/SMTP server this webmail talks to. Leave the hosts blank and each address resolves to mail.<its own domain> at sign-in — the convention FreeBuild Mail and iRedMail install. Set them to pin every mailbox to one server. Users can still override host and port on the sign-in screen.",
       "fields": [
         {
           "key": "DEFAULT_IMAP_HOST",
@@ -115,7 +115,7 @@
           "key": "TRUSTED_ORIGINS",
           "service": "webmail",
           "label": "Trusted origins",
-          "help": "Comma-separated origins allowed to sign in — scheme + host, no path. Defaults to this app's own public URL. Set it when the app is served through a proxy Openship doesn't route, e.g. an Openship Mail server fronting mail.<domain> for a cloud deploy.",
+          "help": "Comma-separated origins allowed to sign in — scheme + host, no path. Defaults to this app's own public URL. Set it when the app is served through a proxy FreeBuild doesn't route, e.g. a FreeBuild Mail server fronting mail.<domain> for a cloud deploy.",
           "type": "text",
           "placeholder": "https://mail.example.com",
           "advanced": true,

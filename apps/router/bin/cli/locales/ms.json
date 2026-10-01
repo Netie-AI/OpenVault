@@ -27,7 +27,7 @@
     "loginEnabled": "Log masuk: didayakan (kata laluan dikemas kini)",
     "loginDisabled": "Log masuk: dilumpuhkan",
     "providerInfo": "Penyedia: {info}",
-    "opencode": "Pasang dan konfigurasikan @omniroute/opencode-plugin terbina dalam untuk OpenCode"
+    "opencode": "Pasang dan konfigurasikan OpenCode plugin terbina dalam untuk OpenCode"
   },
   "doctor": {
     "title": "Diagnostik FreeRoute",

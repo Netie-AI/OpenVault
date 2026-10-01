@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: expectations follow the FreeBuild product name.
 /**
  * `createHostExecutor` must never silently target the CONTAINER when the caller
  * asked for the HOST.
@@ -102,7 +103,7 @@ describe("createHostExecutor", () => {
     const { createHostExecutor } = await load();
     // Whoever hits this is staring at a failed migration; the message has to point
     // at the missing channel, not leave them debugging docker or rsync.
-    expect(() => createHostExecutor()).toThrow(/openship up/);
+    expect(() => createHostExecutor()).toThrow(/freebuild up/);
   });
 
   it("containerized WITH a host channel → takes the SSH path, not the container", async () => {
@@ -221,10 +222,10 @@ describe("createHostExecutor with an unusable host key", () => {
     channelWithKey(keyPath);
     const message = (await throwFrom()) as Error;
     expect(message.message).toContain(keyPath);
-    expect(message.message).toMatch(/openship up/);
+    expect(message.message).toMatch(/freebuild up/);
     // The verification half: the repair runs on the host and the fault is observed in a
     // container, so "did it work" is a separate question (@repo/core's #509 copy).
-    expect(message.message).toMatch(/openship doctor/);
+    expect(message.message).toMatch(/freebuild doctor/);
   });
 
   it("still builds the SSH executor when the key reads fine", async () => {

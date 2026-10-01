@@ -1,4 +1,7 @@
 "use client";
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
+
+import { BRAND_LINKS, brandDocsUrl } from "@repo/core";
 
 /**
  * Root global-error boundary. Next prerenders `/_global-error` at build time; its
@@ -32,7 +35,8 @@ export default function GlobalError({
                  font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
           .ge-wrap { max-width:420px; text-align:center; }
           .ge-brand { display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:28px; }
-          .ge-mark { width:22px; height:22px; border:3px solid var(--fg); border-radius:999px; }
+          .ge-mark { width:22px; height:22px; border-radius:6px; background:var(--fg); color:var(--bg);
+                     display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; }
           .ge-name { font-size:15px; font-weight:600; letter-spacing:-0.01em; }
           .ge-title { font-size:22px; font-weight:500; letter-spacing:-0.02em; margin:0 0 8px; }
           .ge-body { font-size:14px; line-height:1.6; opacity:0.65; margin:0 0 24px; }
@@ -49,15 +53,15 @@ export default function GlobalError({
       <body>
         <div className="ge-wrap">
           <div className="ge-brand">
-            <div className="ge-mark" aria-hidden="true" />
-            <span className="ge-name">Openship</span>
+            <div className="ge-mark" aria-hidden="true">FB</div>
+            <span className="ge-name">FreeBuild</span>
           </div>
 
-          <h1 className="ge-title">Openship couldn&rsquo;t start</h1>
+          <h1 className="ge-title">FreeBuild couldn&rsquo;t start</h1>
           <p className="ge-body">
             The dashboard failed to load. Your deployments and containers keep
             running — this is only the control panel. Try again, and if it
-            persists, restart Openship.
+            persists, restart FreeBuild.
           </p>
 
           <button type="button" className="ge-btn" onClick={() => reset()}>
@@ -66,19 +70,21 @@ export default function GlobalError({
 
           {error?.digest && <p className="ge-code">Ref {error.digest}</p>}
 
-          <div className="ge-links">
-            <a href="https://openship.io/docs" target="_blank" rel="noopener noreferrer">
-              Documentation
-            </a>
-            <span className="ge-dot" aria-hidden="true" />
-            <a
-              href="https://github.com/oblien/openship/issues"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Report an issue
-            </a>
-          </div>
+          {(brandDocsUrl() || BRAND_LINKS.issues) && (
+            <div className="ge-links">
+              {brandDocsUrl() && (
+                <a href={brandDocsUrl()} target="_blank" rel="noopener noreferrer">
+                  Documentation
+                </a>
+              )}
+              {brandDocsUrl() && BRAND_LINKS.issues && <span className="ge-dot" aria-hidden="true" />}
+              {BRAND_LINKS.issues && (
+                <a href={BRAND_LINKS.issues} target="_blank" rel="noopener noreferrer">
+                  Report an issue
+                </a>
+              )}
+            </div>
+          )}
         </div>
       </body>
     </html>

@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 import { spawn } from "node:child_process";
 import { access, mkdtemp, readdir, readFile, realpath, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -563,7 +564,7 @@ export function missingContextDockerfileMessage(
       ? " The source root has a Dockerfile, but it is outside this service's build context, so it is not used — set the service's build path to the directory that holds the Dockerfile you want, or add one there."
       : "") +
     (opts?.generatedRecipeRefused
-      ? " A declared build context builds from its own Dockerfile — Openship will not generate one for it, because a generated recipe copies from the source root."
+      ? " A declared build context builds from its own Dockerfile — FreeBuild will not generate one for it, because a generated recipe copies from the source root."
       : "")
   );
 }

@@ -27,7 +27,7 @@
     "loginEnabled": "لاگ اِن: فعال (پاس ورڈ اپ ڈیٹ کر دیا گیا)",
     "loginDisabled": "لاگ اِن: غیر فعال",
     "providerInfo": "پرووائیڈر: {info}",
-    "opencode": "OpenCode کے لیے شامل شدہ @omniroute/opencode-plugin انسٹال اور کنفیگر کریں"
+    "opencode": "OpenCode کے لیے شامل شدہ OpenCode plugin انسٹال اور کنفیگر کریں"
   },
   "doctor": {
     "title": "FreeRoute تشخیص",

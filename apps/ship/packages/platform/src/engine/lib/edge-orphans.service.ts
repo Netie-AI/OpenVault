@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * @module edge-orphans.service
  *
@@ -115,7 +116,7 @@ export async function scanEdgeOrphans(): Promise<EdgeOrphanScan> {
   // A foreign proxy's vhosts are not ours to call orphaned — the operator may run
   // unrelated sites on it, and the takeover/import flow is what reasons about those.
   if (!api.ours) {
-    return empty(`The edge on this machine is ${api.kind}, not Openship's — nothing to reconcile.`);
+    return empty(`The edge on this machine is ${api.kind}, not FreeBuild's — nothing to reconcile.`);
   }
 
   const comparison = await Promise.all([

@@ -687,12 +687,25 @@ async function hashKey(key: string): Promise<string> {
   return createHash("sha256").update(key).digest("hex"); // nosemgrep: insufficient-password-hash
 }
 
+// FreeRoute: always false in this edition, see createApiKey.
+const LOCAL_CLIENT_KEY_MINTING = false as boolean;
+
 export async function createApiKey(
   name: string,
   machineId: string,
   scopes: string[] = [],
   options: CreateApiKeyOptions = {}
 ) {
+  // FreeRoute: inbound client keys are minted by OpenVault (POST /api/apikeys
+  // there) and verified with verifyClientToken. Every local mint path (POST
+  // /api/keys, the Telegram bridge, cloud-sync enable, CLI tool setup, the
+  // dashboard copilot tool) ends here, so this is the one refusal point.
+  if (!LOCAL_CLIENT_KEY_MINTING) {
+    const { KeysManagedByOpenVaultError, CLIENT_KEYS_MANAGED_MESSAGE } = await import(
+      "@/lib/netie/keyvault"
+    );
+    throw new KeysManagedByOpenVaultError(["api_keys"], CLIENT_KEYS_MANAGED_MESSAGE);
+  }
   if (!machineId) {
     throw new Error("machineId is required");
   }

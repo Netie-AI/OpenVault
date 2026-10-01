@@ -1,7 +1,7 @@
 {
   "name": "@netie/freebuild",
   "version": "0.8.0",
-  "description": "FreeBuild: Netie's self-hosted deploy/host engine. Runs under OpenVault. Based on Openship (Apache-2.0).",
+  "description": "FreeBuild: Netie's self-hosted deploy/host engine. Runs under OpenVault.",
   "license": "Apache-2.0",
   "workspaces": [
     "apps/*",
@@ -38,7 +38,9 @@
     "clean:modules": "find apps packages -name node_modules -type d -prune -exec rm -rf {} + && rm -rf node_modules",
     "release": "node --import tsx scripts/release.ts",
     "docs:reference": "node scripts/generate-api-reference.mjs --write && node scripts/generate-cli-reference.mjs --write && node scripts/generate-mcp-reference.mjs --write",
-    "docs:check": "node scripts/check-docs.mjs"
+    "docs:check": "node scripts/check-docs.mjs",
+    "notice:check": "node netie/notice-check.mjs --check",
+    "notice:write": "node netie/notice-check.mjs --write"
   },
   "devDependencies": {
     "prettier": "^3.8.1",

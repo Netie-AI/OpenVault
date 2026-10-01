@@ -57,7 +57,7 @@ export async function loadSqliteRuntime() {
       return resolvedCached;
     }
   } catch (err) {
-    console.warn(`[omniroute] runtime install failed: ${err.message}`);
+    console.warn(`[freeroute] runtime install failed: ${err.message}`);
   }
 
   try {
@@ -100,7 +100,7 @@ async function tryLoadRuntimeInstalled() {
       const expected = platformBinaryLabel();
       if (!magic || (magic !== expected && magic !== "macho-le" && magic !== "macho-fat")) {
         console.warn(
-          `[omniroute] runtime sqlite binary magic mismatch (${magic} ≠ ${expected}) — skipping`
+          `[freeroute] runtime sqlite binary magic mismatch (${magic} ≠ ${expected}) — skipping`
         );
         return null;
       }

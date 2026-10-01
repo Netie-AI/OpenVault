@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Cloud SaaS controller - runs only in CLOUD_MODE.
  *
@@ -1072,7 +1073,7 @@ export async function githubInstallCallback(c: Context) {
       return c.html(
         renderCallbackHtml(
           "Installation requested",
-          "An organization admin needs to approve the install. After approval, return to Openship Settings and choose Install GitHub App again to complete the verified workspace connection.",
+          "An organization admin needs to approve the install. After approval, return to FreeBuild Settings and choose Install GitHub App again to complete the verified workspace connection.",
         ),
       );
     case "forbidden":
@@ -1116,7 +1117,7 @@ function renderCallbackHtml(
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>${escapeHtml(title)} · Openship</title>
+  <title>${escapeHtml(title)} · FreeBuild</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; max-width: 480px; margin: 80px auto; padding: 24px; color: #1a1a1a; background: #fafafa; }
     .card { background: #fff; border-radius: 12px; padding: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06); }

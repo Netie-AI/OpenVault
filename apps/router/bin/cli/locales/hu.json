@@ -27,7 +27,7 @@
     "loginEnabled": "Bejelentkezés: engedélyezve (a jelszó frissítve)",
     "loginDisabled": "Bejelentkezés: letiltva",
     "providerInfo": "Szolgáltató: {info}",
-    "opencode": "Az OpenCode csomagban található @omniroute/opencode-plugin telepítése és konfigurálása"
+    "opencode": "Az OpenCode csomagban található OpenCode plugin telepítése és konfigurálása"
   },
   "doctor": {
     "title": "FreeRoute diagnosztika",

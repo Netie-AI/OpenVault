@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 import { ForbiddenError, NotFoundError } from "@repo/core";
 import { repos } from "@repo/db";
 import type { ExecutionContext as RequestContext } from "@repo/platform";
@@ -52,8 +53,8 @@ export function assertNotControlPlane(
 ): void {
   if (isControlPlaneProject(project)) {
     throw new ForbiddenError(
-      "The Openship control plane manages its own runtime — manage it with the CLI on the host " +
-        "(`openship up`, `openship stop`, `openship update`), not from the dashboard.",
+      "The FreeBuild control plane manages its own runtime — manage it with the CLI on the host " +
+        "(`freebuild up`, `freebuild stop`, `freebuild update`), not from the dashboard.",
     );
   }
 }

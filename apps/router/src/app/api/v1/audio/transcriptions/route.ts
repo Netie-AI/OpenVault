@@ -1,5 +1,7 @@
 // Allow large audio/video file uploads — 5min for processing large files (up to 2GB)
 export const maxDuration = 300;
+import { netieErrorResponse } from "@/lib/netie/providerGuards";
+import { withNetiePolicy } from "@/lib/netie/routeGuard";
 import { handleAudioTranscription } from "@omniroute/open-sse/handlers/audioTranscription.ts";
 import {
   getProviderCredentialsWithQuotaPreflight,
@@ -219,7 +221,7 @@ async function transcribeWithModel(
  * POST /v1/audio/transcriptions — transcribe audio files
  * OpenAI Whisper API compatible (multipart/form-data)
  */
-export async function POST(request) {
+async function upstreamPost(request) {
   let formData;
   try {
     formData = await request.formData();
@@ -281,9 +283,15 @@ export async function POST(request) {
         } as any);
       }
     } catch (err) {
+      // FreeRoute: a KeyVault or policy error is not a combo lookup miss.
+      if (netieErrorResponse(err)) throw err;
       log.error("AUDIO", `Combo resolution failed for ${modelStr}: ${err}`);
     }
   }
 
   return transcribeWithModel(formData, modelStr, startTime, apiKeyId, apiKeyName);
 }
+
+// FreeRoute: named 501 for a disabled provider, named 503/501 for KeyVault
+// and key-storage errors (src/lib/netie/routeGuard.ts).
+export const POST = withNetiePolicy(upstreamPost);

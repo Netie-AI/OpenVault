@@ -27,7 +27,7 @@
     "loginEnabled": "Logáil istigh: cumasaithe (pasfhocal nuashonraithe)",
     "loginDisabled": "Logáil istigh: díchumasaithe",
     "providerInfo": "Soláthraí: {info}",
-    "opencode": "Suiteáil agus coinníollach an @omniroute/opencode-plugin comhtháite le haghaidh OpenCode"
+    "opencode": "Suiteáil agus coinníollach an OpenCode plugin comhtháite le haghaidh OpenCode"
   },
   "doctor": {
     "title": "Doiciméadóir FreeRoute",

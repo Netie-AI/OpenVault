@@ -1,3 +1,4 @@
+import { DISABLED, renderDisabled } from "@omniroute/open-sse/netie/policy.ts";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { isAuthenticated } from "@/shared/utils/apiAuth";
@@ -127,6 +128,11 @@ export async function PUT(request: NextRequest) {
   }
 
   const { key, value } = validation.data;
+
+  // FreeRoute: TLS fingerprint stealth is not shipped (open-sse/netie/policy.ts).
+  if (key === "ENABLE_TLS_FINGERPRINT") {
+    return renderDisabled(DISABLED.tlsStealth);
+  }
 
   // Validate key against known definitions
   const definition = FEATURE_FLAG_DEFINITIONS.find((d) => d.key === key);

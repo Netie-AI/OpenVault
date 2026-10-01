@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026
 /**
  * GitHub auth - handles GitHub App JWT, installation tokens, and user tokens.
  *

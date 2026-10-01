@@ -27,7 +27,7 @@
     "loginEnabled": "लगइन: सक्षम (पासवर्ड अद्यावधिक गरियो)",
     "loginDisabled": "लगइन: असक्षम",
     "providerInfo": "प्रदायक: {info}",
-    "opencode": "OpenCode का लागि समावेश गरिएको @omniroute/opencode-plugin स्थापना र कन्फिगर गर्नुहोस्"
+    "opencode": "OpenCode का लागि समावेश गरिएको OpenCode plugin स्थापना र कन्फिगर गर्नुहोस्"
   },
   "doctor": {
     "title": "FreeRoute निदान",

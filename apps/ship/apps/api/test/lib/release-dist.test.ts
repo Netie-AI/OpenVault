@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: expectations follow the FreeBuild product name.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -241,7 +242,7 @@ describe("resolveLatestVersion", () => {
     });
     expect(await resolveLatestVersion(source)).toBe("7.8.9");
     expect(safeFetchMock).toHaveBeenCalledWith("https://cdn/latest.txt", {
-      headers: { "User-Agent": "openship" },
+      headers: { "User-Agent": "FreeBuild" },
       timeoutMs: 10_000,
       maxRedirects: 5,
       maxBodyBytes: 8192,

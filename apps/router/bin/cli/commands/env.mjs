@@ -83,7 +83,7 @@ export async function runEnvShowCommand(opts = {}) {
 
 export async function runEnvGetCommand(key) {
   if (!key) {
-    console.error("Key is required. Usage: omniroute env get <key>");
+    console.error("Key is required. Usage: freeroute env get <key>");
     return 1;
   }
   console.log(process.env[key] || "");
@@ -92,7 +92,7 @@ export async function runEnvGetCommand(key) {
 
 export async function runEnvSetCommand(key, value) {
   if (!key || value === undefined) {
-    console.error("Usage: omniroute env set <key> <value>");
+    console.error("Usage: freeroute env set <key> <value>");
     return 1;
   }
   process.env[key] = String(value);

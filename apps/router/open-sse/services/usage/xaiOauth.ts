@@ -73,7 +73,7 @@ export async function getXaiOauthUsage(
       getMonthlyProviderTokensForConnection("xao", connectionId) ||
       0;
     return {
-      plan: "xAI OAuth (Grok) · OmniRoute-tracked",
+      plan: "xAI OAuth (Grok) · FreeRoute-tracked",
       message: "Live weekly quota unavailable; showing FreeRoute-routed token totals only.",
       quotas: {
         monthly: {

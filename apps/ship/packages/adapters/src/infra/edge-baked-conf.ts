@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * The edge image's `nginx.conf`, built from the same constants the bare/remote
  * edge is patched with.
@@ -65,7 +66,8 @@ export function bakedEdgeNginxConf(): string {
   const dicts = EDGE_SHARED_DICTS.map((d) => `    lua_shared_dict ${d.name} ${d.size};`).join("\n");
 
   return `\
-# Openship edge — baked, complete config for the CONTAINERIZED edge.
+# FreeBuild edge — baked, complete config for the CONTAINERIZED edge.
+# Modified by Netie AI, 2026: FreeBuild naming.
 #
 # GENERATED FILE — DO NOT EDIT. Source: packages/adapters/src/infra/edge-baked-conf.ts
 # Regenerate with \`bun run edge:conf\` in packages/adapters. A test asserts this
@@ -106,13 +108,13 @@ http {
     # \`client_max_body_size\` still wins because nginx resolves server over http.
     client_max_body_size ${EDGE_CLIENT_MAX_BODY_SIZE};
 
-    # Shared-memory zones the openship Lua depends on (analytics counters, raw-log
+    # Shared-memory zones the edge Lua depends on (analytics counters, raw-log
     # ring buffers + live-log pipe, per-route rules cache, rate-limit counters).
     # Sizes come from EDGE_SHARED_DICTS — the same list the bare edge is patched
     # with, because a zone that is 256m on one edge and 16m on the other evicts
     # under load on exactly one of them.
 ${dicts}
-    # OpenResty default lualib + the baked openship modules.
+    # OpenResty default lualib + the baked edge Lua modules.
     lua_package_path "${EDGE_LUA_PACKAGE_PATH}";
 
 ${indent(edgeRealIpConf().trimEnd(), 4)}
@@ -134,7 +136,7 @@ ${indent(edgeRealIpConf().trimEnd(), 4)}
         # issuing, LE hits :80 → here → certbot. No port-80 fight, no webroot.
 ${indent(ACME_CHALLENGE_LOCATION, 4)}
 
-        # Openship Cloud's shared edge proves this box controls a routing target by
+        # The hosted cloud's shared edge proves this box controls a routing target by
         # fetching a token from here. Serves FILES — only tokens we were actually
         # issued. An echo handler would let a third party register THIS box as
         # THEIR target and prove control with our own reply.

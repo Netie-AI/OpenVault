@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: expectations follow the FreeBuild product name.
 import { describe, expect, test } from "vitest";
 import type { CommandExecutor } from "../types";
 import type { BuildLogger } from "./build-pipeline";
@@ -378,7 +379,7 @@ describe("ensurePortAvailable — docker-published port (#628)", () => {
 
     expect(spy.calls).toHaveLength(1);
     const prompt = spy.calls[0]!;
-    expect(prompt.actions[0]!.label).toBe("Stop Openship Container & Continue");
+    expect(prompt.actions[0]!.label).toBe("Stop FreeBuild Container & Continue");
     expect(prompt.details).toMatchObject({
       stopTarget: "container",
       containerId: CID,
@@ -471,7 +472,7 @@ describe("ensurePortAvailable — docker-published port (#628)", () => {
     const spy = promptSpy("free_port");
 
     await expect(ensurePortAvailable(host.executor, 80, logger, spy.promptUser)).rejects.toThrow(
-      /Openship edge proxy/,
+      /FreeBuild edge proxy/,
     );
     expectRefusalPrompt(spy);
     expect(host.seen.some((c) => c.includes("docker stop"))).toBe(false);
@@ -557,7 +558,7 @@ describe("ensurePortAvailable — systemd occupants keep working", () => {
       ],
       ["-p 700 -o args=", "node /srv/app/server.js"],
       ["/proc/700/cgroup", `0::/system.slice/${UNIT}`],
-      ["--property=Description", "Openship deployment dep_Ab3xY9zQ"],
+      ["--property=Description", "FreeBuild deployment dep_Ab3xY9zQ"],
     ]);
     const { logger } = fakeLogger();
     const spy = promptSpy("free_port");
@@ -571,7 +572,7 @@ describe("ensurePortAvailable — systemd occupants keep working", () => {
     await expect(
       ensurePortAvailable(host.executor, PORT, logger, spy.promptUser),
     ).resolves.toBeUndefined();
-    expect(spy.calls[0]!.actions[0]!.label).toBe("Stop Openship Deployment & Continue");
+    expect(spy.calls[0]!.actions[0]!.label).toBe("Stop FreeBuild Deployment & Continue");
     expect(spy.calls[0]!.details).toMatchObject({
       stopTarget: "unit",
       isManagedDeployment: true,
@@ -800,7 +801,7 @@ describe("ensurePortAvailable — the fixes the adversarial review found", () =>
     const spy = promptSpy("free_port");
 
     await expect(ensurePortAvailable(host.executor, 4000, logger, spy.promptUser)).rejects.toThrow(
-      /Openship itself/,
+      /FreeBuild itself/,
     );
     expect(host.seen.some((c) => c.includes("docker stop"))).toBe(false);
     expect(spy.calls[0]!.details).toMatchObject({ platformContainer: true, stopTarget: "none" });
@@ -839,7 +840,7 @@ describe("ensurePortAvailable — the fixes the adversarial review found", () =>
     const spy = promptSpy("free_port");
 
     await expect(ensurePortAvailable(host.executor, 5432, logger, spy.promptUser)).rejects.toThrow(
-      /Openship itself/,
+      /FreeBuild itself/,
     );
     expect(host.seen.some((c) => c.includes("docker stop"))).toBe(false);
     expect(spy.calls[0]!.details).toMatchObject({ platformContainer: true });

@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Keep target verifications alive, and make their failure visible.
  *
@@ -101,7 +102,7 @@ export async function runEdgeVerifySweep(): Promise<EdgeVerifySweepResult> {
   if (result.notServing > 0) {
     console.warn(
       `[edge-verify-sweep] ${result.notServing} of ${result.targets} verified target(s) ` +
-        `are not serving their the hosted cloud service challenge token. Their free .opsh.io ` +
+        `are not serving their hosted cloud service challenge token. Their free cloud ` +
         `domains will stop resolving when the verification expires.`,
     );
   }
@@ -171,7 +172,7 @@ async function sweepOne(
   await repos.edgeTargetVerification.recordServeError(
     row.id,
     `${row.target} is not returning its the hosted cloud service challenge token (${probe.reason}). ` +
-      `Free .opsh.io routing to this server will stop when the verification expires` +
+      `Free cloud subdomain routing to this server will stop when the verification expires` +
       `${row.expiresAt ? ` on ${row.expiresAt.toISOString().slice(0, 10)}` : ""}.`,
   );
 }

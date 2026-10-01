@@ -174,14 +174,12 @@ export async function runServe(opts = {}) {
      Supported secure runtimes: ${nodeSupport.supportedDisplay}
      Recommended: use Node.js ${nodeSupport.recommendedVersion} or newer on the 22.x LTS line.
      Workaround:  npm rebuild better-sqlite3
-     Or run:      omniroute runtime repair  (rebuilds into a user-writable runtime; works without a C++ toolchain)\x1b[0m
+     Or run:      freeroute runtime repair  (rebuilds into a user-writable runtime; works without a C++ toolchain)\x1b[0m
 `);
   }
 
-  // GHSA-wmgv-ph3p-rv57: the default posture (all interfaces + no API key) is a
-  // deliberate local-first choice, but it must be loud at startup — an operator
-  // on an untrusted network learns the two escape hatches here, not after a
-  // surprise quota bill.
+  // GHSA-wmgv-ph3p-rv57: FreeRoute binds loopback by default. If an operator
+  // opts in to another interface with no API key, warn loudly at startup.
   const exposureWarning = resolveExposureWarning();
   if (exposureWarning) {
     console.warn(`\x1b[33m  ⚠  ${exposureWarning}\x1b[0m\n`);
@@ -194,24 +192,8 @@ export async function runServe(opts = {}) {
     console.error("\x1b[31m✖ Server not found at:\x1b[0m", serverJs);
     console.error("  The package may not have been built correctly.");
     console.error("");
-    const nodeExec = process.execPath || "";
-    const isMise = nodeExec.includes("mise") || nodeExec.includes(".local/share/mise");
-    const isNvm = nodeExec.includes(".nvm") || nodeExec.includes("nvm");
-    if (isMise) {
-      console.error(
-        "  \x1b[33m⚠ mise detected:\x1b[0m If you installed via `npm install -g omniroute`,"
-      );
-      console.error("    try: \x1b[36mnpx omniroute@latest\x1b[0m  (downloads a fresh copy)");
-      console.error("    or:  \x1b[36mmise exec -- npx omniroute\x1b[0m");
-    } else if (isNvm) {
-      console.error(
-        "  \x1b[33m⚠ nvm detected:\x1b[0m Try reinstalling after loading the correct Node version:"
-      );
-      console.error("    \x1b[36mnvm use --lts && npm install -g omniroute\x1b[0m");
-    } else {
-      console.error("  Try: \x1b[36mnpm install -g omniroute\x1b[0m  (reinstall)");
-      console.error("  Or:  \x1b[36mnpx omniroute@latest\x1b[0m");
-    }
+    // FreeRoute is not installed from npm; it ships inside OpenVault.
+    console.error("  Build it first: \x1b[36mnpm ci && npm run build\x1b[0m in OpenVault's apps/router");
     process.exit(1);
   }
 
@@ -233,7 +215,7 @@ export async function runServe(opts = {}) {
     );
     console.error(`  Run: cd ${APP_DIR} && npm rebuild better-sqlite3`);
     console.error(
-      "  Or run: \x1b[36momniroute runtime repair\x1b[0m" +
+      "  Or run: \x1b[36mfreeroute runtime repair\x1b[0m" +
         "  (rebuilds into a user-writable runtime; works without a C++ toolchain)"
     );
     if (platform() === "darwin") {
@@ -358,8 +340,8 @@ export function reportPortInUse(port, pids = []) {
     `  Another FreeRoute is most likely already serving there, so open` +
       ` ${urlScheme}://localhost:${port} before starting a second one.`
   );
-  console.error(`  To replace it:    \x1b[36momniroute stop\x1b[0m, then start again`);
-  console.error(`  To run alongside: \x1b[36momniroute serve --port <other-port>\x1b[0m\n`);
+  console.error(`  To replace it:    \x1b[36mfreeroute stop\x1b[0m, then start again`);
+  console.error(`  To run alongside: \x1b[36mfreeroute serve --port <other-port>\x1b[0m\n`);
 }
 
 function runDaemon(serverJs, env, memoryLimit, dashboardPort, apiPort) {
@@ -626,7 +608,7 @@ async function maybeStartTray(port, apiPort, supervisor) {
   } catch (err) {
     // tray is optional — do not fail the server, but surface why it failed so
     // "--tray shows nothing" is diagnosable instead of silent (#4605).
-    process.stderr.write(`[omniroute][tray] failed to start: ${err?.message ?? String(err)}\n`);
+    process.stderr.write(`[freeroute][tray] failed to start: ${err?.message ?? String(err)}\n`);
     return false;
   }
 }

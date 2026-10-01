@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Mail server setup service — orchestrates mail provisioning against a
  * `CommandExecutor`, broken into discrete resumable steps (`MAIL_SETUP_STEPS`
@@ -140,7 +141,7 @@ function amavisConf(
   if (found) return { write: found, engine: found };
   throw new Error(
     `Could not find amavis's configuration on this mail server. Looked for ` +
-      `${HOST_AMAVIS_CONF_CANDIDATES.map((c) => c.path).join(", ")}. Openship will not ` +
+      `${HOST_AMAVIS_CONF_CANDIDATES.map((c) => c.path).join(", ")}. FreeBuild will not ` +
       `write DKIM directives to a path amavis doesn't read — that signs nothing and ` +
       `reports success.`,
   );
@@ -193,9 +194,9 @@ export const DEFAULT_STEP_TIMEOUT_MS = 10 * 60_000;
 // host. What remains is either runtime-specific (firewall, DKIM/DNS, cert) or
 // per-install (domain + secrets, injected into the engine's first boot).
 export const MAIL_SETUP_STEPS: MailSetupStep[] = [
-  { id: 1, key: "ensure_components",    label: "Ensure System Components",  description: "Install Docker and bring up the openship edge" },
+  { id: 1, key: "ensure_components",    label: "Ensure System Components",  description: "Install Docker and bring up the FreeBuild edge" },
   { id: 2, key: "check_port_25",        label: "Check Port 25",             description: "Verify outbound SMTP port is open" },
-  { id: 3, key: "ensure_reverse_proxy", label: "Ensure Reverse Proxy",      description: "Confirm the openship edge owns ports 80/443" },
+  { id: 3, key: "ensure_reverse_proxy", label: "Ensure Reverse Proxy",      description: "Confirm the FreeBuild edge owns ports 80/443" },
   { id: 4, key: "open_firewall",        label: "Open Mail Firewall",        description: "Open inbound SMTP/IMAP/submission ports on the host firewall" },
   { id: 5, key: "deploy_engine",        label: "Deploy Mail Engine",        description: "Pull and run the openship-mail engine container + database sidecar" },
   { id: 6, key: "dkim_keys",            label: "Retrieve DKIM Keys",        description: "Get DKIM keys and DNS records" },
@@ -282,7 +283,7 @@ export async function stepCheckPort25(
 }
 
 /**
- * Step 1: Ensure Docker and the openship edge are on the target.
+ * Step 1: Ensure Docker and the FreeBuild edge are on the target.
  *
  *   - Docker → the mail engine + edge are container images, so it's a hard prereq
  *   - edge   → routing + TLS for this box: OpenResty, its Lua, and certbot, all
@@ -331,7 +332,7 @@ export async function stepEnsureComponents(
     log(stepId, "info", `${name} ready${r.version ? ` (${r.version})` : ""}`);
   }
 
-  log(stepId, "info", "Ensuring the openship edge (OpenResty + certbot, containerized)...");
+  log(stepId, "info", "Ensuring the FreeBuild edge (OpenResty + certbot, containerized)...");
   const edge = await ensureEdge(
     exec,
     (promptUser) => installContainerEdge(exec, sysLog, { promptUser }),
@@ -363,7 +364,7 @@ export async function stepEnsureComponents(
   return {
     stepId,
     success: true,
-    message: "Docker and the openship edge are ready",
+    message: "Docker and the FreeBuild edge are ready",
   };
 }
 
@@ -408,13 +409,13 @@ export async function stepEnsureReverseProxy(
       stepId,
       success: false,
       message:
-        "Nothing is listening on :80 / :443 - the openship edge isn't running. " +
+        "Nothing is listening on :80 / :443 - the FreeBuild edge isn't running. " +
         "Rerun from \"Ensure System Components\" to bring it up.",
     };
   }
 
-  log(stepId, "info", "The openship edge holds :80 / :443");
-  return { stepId, success: true, message: "The openship edge is the active reverse proxy" };
+  log(stepId, "info", "The FreeBuild edge holds :80 / :443");
+  return { stepId, success: true, message: "The FreeBuild edge is the active reverse proxy" };
 }
 
 /**
@@ -499,7 +500,7 @@ export async function stepOpenMailFirewall(
       stepId,
       "warn",
       `This host filters with ${profile.firewall}, whose rules live in the running ruleset ` +
-        `only — Openship won't add one that quietly disappears at the next reboot. Run these ` +
+        `only — FreeBuild won't add one that quietly disappears at the next reboot. Run these ` +
         `yourself, wherever this box restores its ruleset from:\n${script}`,
     );
     return {

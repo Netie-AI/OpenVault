@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026
 /**
  * Scoped control-plane export. Collects the selected records, lifts each secret's
  * plaintext into a portable bundle and strips source-instance ciphertext from

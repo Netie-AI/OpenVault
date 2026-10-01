@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
         status: 200,
         headers: {
           "Content-Type": "application/gzip",
-          "Content-Disposition": `attachment; filename="omniroute-full-backup-${timestamp}.tar.gz"`,
+          "Content-Disposition": `attachment; filename="freeroute-full-backup-${timestamp}.tar.gz"`,
           "Content-Length": archiveBuffer.length.toString(),
         },
       });

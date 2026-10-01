@@ -1,6 +1,8 @@
 "use client";
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 
 import { Icon as UiIcon } from "@repo/ui/icons";
+import { brandDocsUrl } from "@repo/core";
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
@@ -179,8 +181,9 @@ export default function DashboardHomeClient({ initialData }: DashboardHomeClient
                 <p className="text-sm font-medium text-foreground">{t.dashboard.home.settingsCard}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">{t.dashboard.home.settingsCardDesc}</p>
               </Link>
+              {brandDocsUrl() && (
               <a
-                href="https://openship.io/docs"
+                href={brandDocsUrl()}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="bg-card border border-border/50 rounded-xl p-4 hover:bg-muted/40 hover:border-border transition-all group"
@@ -194,6 +197,7 @@ export default function DashboardHomeClient({ initialData }: DashboardHomeClient
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">{t.dashboard.home.docsDesc}</p>
               </a>
+              )}
             </div>
           </div>
 

@@ -1,3 +1,9 @@
+import { renderDisabled } from "@omniroute/open-sse/netie/policy.ts";
+import {
+  classifyConnection,
+  netieErrorResponse,
+  withKeyVaultApiKey,
+} from "@/lib/netie/providerGuards";
 import { NextResponse } from "next/server";
 import {
   getProviderConnectionFamilyIds,
@@ -160,7 +166,7 @@ export async function GET(
       searchParams.get("chatOnly") === "true" ||
       request.headers.get("x-omniroute-model-surface")?.toLowerCase() === "chat";
 
-    const connection = await getCachedProviderConnectionById(id);
+    let connection = await getCachedProviderConnectionById(id);
     const connectionProvider =
       typeof connection?.provider === "string" && connection.provider.trim().length > 0
         ? connection.provider
@@ -199,6 +205,17 @@ export async function GET(
     // misleading "Auth failed: 401" instead of the real cause.
     const staleEncryptionResponse = buildStaleEncryptionKeyResponse(connection);
     if (staleEncryptionResponse) return staleEncryptionResponse;
+
+    // FreeRoute: no model discovery against a subscription or browser-session
+    // login, and an API-key connection lists models with its key from OpenVault.
+    // Every helper below reads `connection`, so it is replaced once here.
+    const disabledCode = classifyConnection(connection);
+    if (disabledCode) return renderDisabled(disabledCode);
+    if (connection.authType === "apikey") {
+      connection = await withKeyVaultApiKey(connection);
+    } else {
+      connection = { ...connection, apiKey: null };
+    }
 
     const provider = connectionProvider;
     if (!provider) {
@@ -2349,6 +2366,8 @@ export async function GET(
 
     return buildApiDiscoveryResponse(allModels);
   } catch (error) {
+    const named = netieErrorResponse(error);
+    if (named) return named;
     if (error instanceof SafeOutboundFetchError && error.code === "URL_GUARD_BLOCKED") {
       return NextResponse.json({ error: sanitizeErrorMessage(error.message) }, { status: 400 });
     }

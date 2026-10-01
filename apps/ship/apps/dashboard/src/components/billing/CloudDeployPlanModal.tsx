@@ -1,6 +1,8 @@
 "use client";
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 
 import { Icon as UiIcon } from "@repo/ui/icons";
+import { brandSupportMailto } from "@repo/core";
 
 import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { useI18n } from "@/components/i18n-provider";
@@ -144,7 +146,7 @@ export function CloudDeployPlanModal({ restriction, onClose }: {
               </a>
             </div>
           )}
-          {recovery === "paused" && <a href="mailto:support@openship.io" className="inline-flex text-sm font-medium text-primary hover:underline">{t.billing.portal.supportButton}</a>}
+          {recovery === "paused" && brandSupportMailto() && <a href={brandSupportMailto()} className="inline-flex text-sm font-medium text-primary hover:underline">{t.billing.portal.supportButton}</a>}
           {checkoutStarted && checked && !loading && !ready && <p role="status" className="text-sm text-muted-foreground">{copy.pending}</p>}
         </div>
       )}

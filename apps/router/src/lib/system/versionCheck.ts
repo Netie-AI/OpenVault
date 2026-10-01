@@ -22,7 +22,7 @@ function warnNoUpdateSource(): void {
   if (noSourceWarningLogged) return;
   noSourceWarningLogged = true;
   log.warn(
-    "no update source configured — FreeRoute does not check upstream OmniRoute releases"
+    "no update source configured. FreeRoute does not check upstream releases."
   );
 }
 

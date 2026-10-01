@@ -1,3 +1,5 @@
+// Modified by Netie AI, 2026: records are now stamped "Managed by FreeBuild";
+// the upstream "Managed by Openship" marker is still recognised as ours.
 /**
  * DNS provider abstraction — automated record management for custom domains.
  *
@@ -28,11 +30,15 @@ export type DnsProviderName = "cloudflare";
 export type DnsRecordType = "A" | "AAAA" | "CNAME" | "TXT" | "MX" | "NS" | "SRV";
 
 /**
- * Written into the provider's record comment so cleanup can tell "Openship put
+ * Written into the provider's record comment so cleanup can tell "FreeBuild put
  * this here" from "the operator has run their mail on this zone for six years".
- * Changing this string orphans every record written under the old one.
+ * Changing this string orphans every record written under the old one, unless
+ * the old one stays in LEGACY_RECORD_COMMENTS.
  */
-export const OPENSHIP_RECORD_COMMENT = "Managed by Openship";
+export const OPENSHIP_RECORD_COMMENT = "Managed by FreeBuild";
+
+/** Markers earlier builds wrote. Still ours: cleanup must keep finding them. */
+export const LEGACY_RECORD_COMMENTS: readonly string[] = ["Managed by Openship"];
 
 export interface DnsRecordInput {
   /** Record type: A, CNAME, TXT, etc. */
@@ -148,7 +154,9 @@ export interface DnsProvider {
 
 /** True when this record carries our ownership marker, i.e. we wrote it. */
 export function isOpenshipManaged(record: DnsRecord): boolean {
-  return record.comment?.trim() === OPENSHIP_RECORD_COMMENT;
+  const comment = record.comment?.trim();
+  if (!comment) return false;
+  return comment === OPENSHIP_RECORD_COMMENT || LEGACY_RECORD_COMMENTS.includes(comment);
 }
 
 /* ────── Typed errors ───────────────────────────────────────────── */
@@ -187,7 +195,7 @@ export class DnsRecordConflictError extends AppError {
   ) {
     super(
       `${existingCount} existing ${recordType} records already answer for "${recordName}". ` +
-        `Openship won't rewrite records it didn't create — remove or consolidate them first.`,
+        `FreeBuild won't rewrite records it didn't create. Remove or consolidate them first.`,
       409,
       "DNS_RECORD_CONFLICT",
     );

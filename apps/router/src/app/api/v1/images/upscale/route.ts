@@ -1,3 +1,5 @@
+import { netieErrorResponse } from "@/lib/netie/providerGuards";
+import { withNetiePolicy } from "@/lib/netie/routeGuard";
 import { handleImageUpscale } from "@omniroute/open-sse/handlers/imageUpscale.ts";
 import {
   getUpscaleProvider,
@@ -236,11 +238,15 @@ async function postHandler(request: Request) {
 
   const result = await (creds.connectionId
     ? runWithProxyContext((proxyInfo?.proxy as never) || null, runUpscale).catch(
-        (err: { statusCode?: number; message?: string }) => ({
-          success: false,
-          status: err.statusCode || 500,
-          error: err.message,
-        })
+        (err: { statusCode?: number; message?: string }) => {
+          // FreeRoute: KeyVault and policy errors keep their named code.
+          if (netieErrorResponse(err)) throw err;
+          return {
+            success: false,
+            status: err.statusCode || 500,
+            error: err.message,
+          };
+        }
       )
     : runUpscale());
 
@@ -271,4 +277,6 @@ async function postHandler(request: Request) {
   });
 }
 
-export const POST = withInjectionGuard(postHandler);
+// FreeRoute: named 501 for a disabled provider, named 503/501 for KeyVault
+// and key-storage errors (src/lib/netie/routeGuard.ts).
+export const POST = withNetiePolicy(withInjectionGuard(postHandler));

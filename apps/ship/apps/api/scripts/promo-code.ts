@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Promo codes — the operator CLI, run inside the API container.
  *
@@ -510,7 +511,7 @@ async function cmdRevoke({ positionals, flags }: Args): Promise<void> {
 
 function printHelp(): void {
   const restrictable = RESTRICTABLE_TIERS.map((tier) => `\n                           ${tier} → ${priceEnvFor(tier)}`).join("");
-  console.log(`Openship promo codes — Stripe coupons + promotion codes, managed from the API container.
+  console.log(`FreeBuild promo codes — Stripe coupons + promotion codes, managed from the API container.
 
 Usage
   ${INVOCATION} <command> [flags]

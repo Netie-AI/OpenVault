@@ -1,3 +1,5 @@
+// Modified by Netie AI, 2026: the platform mailbox local part is freebuild@;
+// one case covers an install whose cached state is still openship@.
 import "./_setup-env";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -63,7 +65,7 @@ import { ensureOpenshipPlatformMailbox } from "@repo/platform/engine/modules/mai
 const state = {
   domain: "example.com",
   platformMailbox: {
-    email: "openship@example.com",
+    email: "freebuild@example.com",
     password: "sealed-old-password",
     smtpHost: "mail.example.com",
     smtpPort: 465,
@@ -94,7 +96,7 @@ describe("ensureOpenshipPlatformMailbox live reconciliation", () => {
     const result = await ensureOpenshipPlatformMailbox("srv_mail");
 
     expect(result).toMatchObject({
-      email: "openship@example.com",
+      email: "freebuild@example.com",
       password: "old-plaintext",
       rotated: false,
     });
@@ -113,6 +115,22 @@ describe("ensureOpenshipPlatformMailbox live reconciliation", () => {
 
     expect(result.rotated).toBe(true);
     expect(mocks.hashPassword).toHaveBeenCalledOnce();
+    expect(mocks.transaction).toHaveBeenCalledOnce();
+    expect(mocks.mutateState).toHaveBeenCalledOnce();
+  });
+
+  it("provisions freebuild@ when the cached state is the upstream openship@ mailbox", async () => {
+    mocks.readState.mockResolvedValue({
+      ...state,
+      platformMailbox: { ...state.platformMailbox, email: "openship@example.com" },
+    });
+    mocks.queryOne.mockResolvedValue({ mailboxActive: true, forwardingActive: true });
+
+    const result = await ensureOpenshipPlatformMailbox("srv_mail");
+
+    expect(result.email).toBe("freebuild@example.com");
+    expect(result.from).toBe("FreeBuild <freebuild@example.com>");
+    expect(result.rotated).toBe(true);
     expect(mocks.transaction).toHaveBeenCalledOnce();
     expect(mocks.mutateState).toHaveBeenCalledOnce();
   });

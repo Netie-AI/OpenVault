@@ -23,7 +23,7 @@
     "updating": "Updating…",
     "updateFailed": "Update failed",
     "toastTitle": "Source",
-    "cliManaged": "This is the FreeBuild control plane — it updates itself. Run \"openship update\" on the host to upgrade it; there's nothing to change here."
+    "cliManaged": "This is the FreeBuild control plane — it updates itself. Run \"freebuild update\" on the host to upgrade it; there's nothing to change here."
   },
   "releaseImageSource": {
     "validationInvalid": "Invalid release image source.",
@@ -493,7 +493,7 @@
   "build": {
     "edit": "Edit",
     "webmail": {
-      "title": "Managed by openship",
+      "title": "Managed by FreeBuild",
       "description": "Webmail uses a fixed build and start pipeline — install, build, and run commands are not configurable. Redeploy from the mail overview to pick up upstream changes."
     },
     "services": {

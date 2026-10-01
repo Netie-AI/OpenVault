@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * The page the edge serves for a hostname it does not route (#431).
  *
@@ -130,7 +131,7 @@ const HTML_FRAGMENTS: readonly string[] = [
   `<li>The deployment may have been removed or renamed</li>`,
   `<li>A newly added domain can take a few minutes to start serving</li>`,
   `</ul>`,
-  `<footer>Served by Openship</footer>`,
+  `<footer>Served by FreeBuild</footer>`,
   `</main>`,
   `</body>`,
   `</html>`,

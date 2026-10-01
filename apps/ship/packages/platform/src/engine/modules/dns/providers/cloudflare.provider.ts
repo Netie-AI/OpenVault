@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: product name in the provider description.
 /**
  * Cloudflare DNS provider.
  *
@@ -188,7 +189,7 @@ export const cloudflareDnsProvider: DnsProvider = {
     name: "cloudflare",
     displayName: "Cloudflare",
     description:
-      "Openship writes your domain's DNS records for you, so a new custom domain verifies and gets its certificate without you leaving the page.",
+      "FreeBuild writes your domain's DNS records for you, so a new custom domain verifies and gets its certificate without you leaving the page.",
     requiredScopes: ["Zone:Zone:Read", "Zone:DNS:Edit"],
     tokenUrl: "https://dash.cloudflare.com/profile/api-tokens",
   },

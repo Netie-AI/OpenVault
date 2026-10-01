@@ -1,3 +1,7 @@
+// Modified by Netie AI, 2026: a row whose provider OpenVault manages
+// (OPENVAULT_MANAGED_CREDENTIAL_PROVIDERS, today "cloudflare") is never copied into
+// the local credential table. It is left in place, unread, and the boot log tells the
+// operator to add the token in OpenVault instead.
 /**
  * Move `dns_credential` rows into the generic `credential` store, once, at boot.
  *
@@ -19,12 +23,19 @@
 
 import { repos, type DnsCredential } from "@repo/db";
 import { registerStartupHook } from "@repo/platform/engine/lib/startup/index";
-import { safeErrorMessage } from "@repo/core";
+import { OPENVAULT_MANAGED_CREDENTIAL_PROVIDERS, safeErrorMessage } from "@repo/core";
 
 import { decryptSecretField, encryptSecretField } from "@repo/platform/engine/lib/credential-encryption";
 
 /** What the DNS provider entry calls its secret field, per CREDENTIAL_PROVIDERS. */
 const CLOUDFLARE_SECRET_FIELD = "apiToken";
+
+/** The provider every legacy `dns_credential` row is moved under. */
+const DNS_CREDENTIAL_PROVIDER = "cloudflare";
+
+/** Skip reason for a provider whose keys live only in OpenVault. Never touches the secret. */
+const MANAGED_BY_OPENVAULT =
+  "managed by OpenVault: add this token in OpenVault's KeyVault; FreeBuild does not copy it";
 
 /**
  * Copy one row. Returns why it was skipped, or null when it moved.
@@ -33,6 +44,10 @@ const CLOUDFLARE_SECRET_FIELD = "apiToken";
  * different things, and copying bytes would produce a row whose secret parses as neither.
  */
 async function moveOne(row: DnsCredential): Promise<string | null> {
+  // Checked before the decrypt: the token of an OpenVault-managed provider is not read,
+  // not re-wrapped and not written to the credential table.
+  if (OPENVAULT_MANAGED_CREDENTIAL_PROVIDERS.has(DNS_CREDENTIAL_PROVIDER)) return MANAGED_BY_OPENVAULT;
+
   let token: string | undefined;
   try {
     token = decryptSecretField(row.apiTokenEnc);
@@ -50,14 +65,14 @@ async function moveOne(row: DnsCredential): Promise<string | null> {
   // Name collisions are real: the unique index is (org, provider, COALESCE(selector,''),
   // name) and a previous partial run may already hold this label. Treat an existing row as
   // done rather than failing the boot.
-  if (await repos.credential.nameTaken(row.organizationId, "cloudflare", null, row.name)) {
+  if (await repos.credential.nameTaken(row.organizationId, DNS_CREDENTIAL_PROVIDER, null, row.name)) {
     await repos.dnsCredential.delete(row.organizationId, row.id).catch(() => {});
     return null;
   }
 
   await repos.credential.create({
     organizationId: row.organizationId,
-    provider: "cloudflare",
+    provider: DNS_CREDENTIAL_PROVIDER,
     name: row.name,
     // Org-wide: a Cloudflare token addresses every zone it can see, so there is nothing to
     // scope it to. NULL, never "" — the unique index would treat those as different rows.
@@ -126,9 +141,13 @@ export function registerCredentialBackfill(): void {
       const { skipped } = await backfillDnsCredentials();
       if (skipped > 0) {
         console.warn(
-          `[credential-backfill] ${skipped} DNS credential(s) could not be moved and were left ` +
-            `in place. Re-connect them from Settings → Credentials; the old rows are dropped in a ` +
-            `later release.`,
+          OPENVAULT_MANAGED_CREDENTIAL_PROVIDERS.has(DNS_CREDENTIAL_PROVIDER)
+            ? `[credential-backfill] ${skipped} legacy Cloudflare token(s) were left in place and ` +
+                `are not used. Add the token in OpenVault's KeyVault (provider "custom", label ` +
+                `starting with "Cloudflare"); FreeBuild reads it from there.`
+            : `[credential-backfill] ${skipped} DNS credential(s) could not be moved and were left ` +
+                `in place. Re-connect them from Settings > Credentials; the old rows are dropped in a ` +
+                `later release.`,
         );
       }
     },

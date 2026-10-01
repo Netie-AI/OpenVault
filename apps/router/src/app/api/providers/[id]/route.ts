@@ -41,6 +41,12 @@ import {
 // on a plain openai-compatible connection's rename failed with "Missing
 // tiktoken_bg.wasm" after 17-50s, never touching chatgpt-web-codex at all).
 import { rejectRetiredCommonChatGptWebProvider } from "@/lib/providers/chatgptWebRetirementResponse";
+import { renderDisabled, renderKeysManagedByOpenVault } from "@omniroute/open-sse/netie/policy.ts";
+import {
+  classifyConnection,
+  findIncomingSecrets,
+  netieErrorResponse,
+} from "@/lib/netie/providerGuards";
 
 function normalizeCodexLimitPolicy(
   incoming: unknown,
@@ -170,6 +176,23 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     }
     const retirementResponse = rejectRetiredCommonChatGptWebProvider(existing.provider);
     if (retirementResponse) return retirementResponse;
+
+    // FreeRoute: a provider key is never saved here, as apiKey or inside
+    // providerSpecificData (extraApiKeys, a cookie, ...). Values carried over
+    // unchanged from the stored row do not count. The DB layer enforces the
+    // same rule (src/lib/netie/providerGuards.ts).
+    const incomingSecrets = findIncomingSecrets(
+      {
+        ...(apiKey ? { apiKey } : {}),
+        ...(incomingPsd !== undefined ? { providerSpecificData: incomingPsd } : {}),
+      },
+      existing
+    );
+    const disabledCode = classifyConnection(existing);
+    if (disabledCode && (isActive === true || incomingSecrets.length > 0)) {
+      return renderDisabled(disabledCode);
+    }
+    if (incomingSecrets.length > 0) return renderKeysManagedByOpenVault();
 
     const updateData: Record<string, any> = {};
     if (name !== undefined) updateData.name = name;
@@ -406,6 +429,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
     return NextResponse.json({ connection: result });
   } catch (error) {
+    const named = netieErrorResponse(error);
+    if (named) return named;
     console.log("Error updating connection:", error);
     return NextResponse.json({ error: "Failed to update connection" }, { status: 500 });
   }

@@ -1,6 +1,6 @@
 // Modified by Netie AI, 2026: the browser global is __FREEBUILD_API_ORIGIN__
 // (was __OPENSHIP_API_ORIGIN__); it is visible in the page source.
-import { DASHBOARD_RUNTIME_TARGETS, DEFAULT_PORT, alignLoopbackOrigin } from "@repo/core";
+import { BRAND_LINKS, DASHBOARD_RUNTIME_TARGETS, alignLoopbackOrigin } from "@repo/core";
 
 // Re-exported for existing importers (and urls.test.ts). The implementation now
 // lives in @repo/core so the API can align the desktop-login redirect too.
@@ -200,16 +200,10 @@ export function getCloudApiOrigin(rawUrl?: string) {
 }
 
 /**
- * Origin of the public marketing site (apps/web), where docs and setup
- * guides live. In production: app.openship.io → openship.io. In dev:
- * localhost:3001/3002 → localhost:3000. SSR falls back to production.
+ * Origin of the public site where docs and setup guides live.
+ * Modified by Netie AI, 2026: FreeBuild ships no marketing site, so this is
+ * BRAND_LINKS.site, and "" (callers hide the link) until one exists.
  */
-export function getMarketingOrigin() {
-  if (typeof window === "undefined") return "https://openship.io";
-  const { protocol, hostname, port } = window.location;
-  if (hostname.startsWith("app.")) return `${protocol}//${hostname.slice(4)}`;
-  if (port === String(DEFAULT_PORT.dashboard) || port === String(DEFAULT_PORT.saasDashboard)) {
-    return `${protocol}//${hostname}:${DEFAULT_PORT.web}`;
-  }
-  return "https://openship.io";
+export function getMarketingOrigin(): string {
+  return BRAND_LINKS.site.replace(/\/+$/, "");
 }

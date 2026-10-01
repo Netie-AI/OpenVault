@@ -134,7 +134,7 @@ export async function fetchOmniRouteCatalog(
       signal: controller.signal,
     });
     if (!response.ok) {
-      throw new Error(`OmniRoute /v1/models returned ${response.status} ${response.statusText}`);
+      throw new Error(`FreeRoute /v1/models returned ${response.status} ${response.statusText}`);
     }
     const body = (await response.json()) as unknown;
     const list: unknown[] = Array.isArray(body)
@@ -494,7 +494,7 @@ export async function generateOpencodeConfig(options: GenerateOpencodeOptions): 
   }
 
   const provider: Record<string, unknown> = {
-    name: existingProvider?.name ?? "OmniRoute",
+    name: existingProvider?.name ?? "FreeRoute",
     npm: existingProvider?.npm ?? "@ai-sdk/openai-compatible",
     options: {
       baseURL,

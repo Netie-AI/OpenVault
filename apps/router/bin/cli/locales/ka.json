@@ -27,7 +27,7 @@
     "loginEnabled": "შესვლა: ჩართულია (პაროლი განახლებულია)",
     "loginDisabled": "შესვლა: გამორთულია",
     "providerInfo": "პროვაიდერი: {info}",
-    "opencode": "OpenCode-ისთვის თანდართული @omniroute/opencode-plugin-ის ინსტალაცია და კონფიგურაცია"
+    "opencode": "OpenCode-ისთვის თანდართული OpenCode plugin-ის ინსტალაცია და კონფიგურაცია"
   },
   "doctor": {
     "title": "FreeRoute Doctor",

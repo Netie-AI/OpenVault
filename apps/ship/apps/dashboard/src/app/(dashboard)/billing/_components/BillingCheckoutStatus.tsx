@@ -1,6 +1,8 @@
 "use client";
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 
 import { useEffect, useState } from "react";
+import { brandSupportMailto } from "@repo/core";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/components/i18n-provider";
 import { billingApi } from "@/lib/api/billing";
@@ -97,8 +99,8 @@ export function BillingCheckoutStatus({
           {error}
         </p>
       )}
-      {["pending", "failed", "reversed"].includes(status) && (
-        <a className="mt-2 inline-block underline" href="mailto:support@openship.io">
+      {["pending", "failed", "reversed"].includes(status) && brandSupportMailto() && (
+        <a className="mt-2 inline-block underline" href={brandSupportMailto()}>
           {t.billing.checkout.support}
         </a>
       )}

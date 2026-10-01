@@ -27,7 +27,7 @@
     "loginEnabled": "ಲಾಗಿನ್: ಸಕ್ರಿಯಗೊಳಿಸಲಾಗಿದೆ (ಪಾಸ್ವರ್ಡ್ ನವೀಕರಿಸಲಾಗಿದೆ)",
     "loginDisabled": "ಲಾಗಿನ್: ನಿಷ್ಕ್ರಿಯಗೊಳಿಸಲಾಗಿದೆ",
     "providerInfo": "ಪೂರೈಕೆದಾರ: {info}",
-    "opencode": "OpenCode ಗಾಗಿ ಜೊತೆಯಾಗಿ ಒದಗಿಸಲಾದ @omniroute/opencode-plugin ಅನ್ನು ಸ್ಥಾಪಿಸಿ ಮತ್ತು ಕಾನ್ಫಿಗರ್ ಮಾಡಿ"
+    "opencode": "OpenCode ಗಾಗಿ ಜೊತೆಯಾಗಿ ಒದಗಿಸಲಾದ OpenCode plugin ಅನ್ನು ಸ್ಥಾಪಿಸಿ ಮತ್ತು ಕಾನ್ಫಿಗರ್ ಮಾಡಿ"
   },
   "doctor": {
     "title": "FreeRoute ಡಾಕ್ಟರ್",

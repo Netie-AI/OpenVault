@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Custom (user-uploaded) apps — a per-org catalog entry from an uploaded JSON.
  *
@@ -26,7 +27,7 @@ export async function saveCustomApp(ctx: RequestContext, raw: unknown): Promise<
   if (!decision.ok) {
     throw new ValidationError(
       decision.reason === "schema-too-new"
-        ? "This app targets a newer catalog schema than this Openship version supports."
+        ? "This app targets a newer catalog schema than this FreeBuild version supports."
         : `Invalid app definition${decision.detail ? `: ${decision.detail}` : ""}.`,
     );
   }

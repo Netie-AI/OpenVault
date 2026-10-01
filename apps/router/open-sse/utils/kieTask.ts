@@ -2,7 +2,7 @@ export type JsonObject = Record<string, unknown>;
 
 export type KieTaskState = "success" | "failed" | "pending";
 
-const FALLBACK_KIE_CALLBACK_URL = "https://omniroute.local/api/kie/callback";
+const FALLBACK_KIE_CALLBACK_URL = "https://freeroute.local/api/kie/callback";
 
 export function isJsonObject(value: unknown): value is JsonObject {
   return typeof value === "object" && value !== null && !Array.isArray(value);

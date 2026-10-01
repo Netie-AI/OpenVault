@@ -27,7 +27,7 @@
     "loginEnabled": "Մուտք՝ միացված է (գաղտնաբառը թարմացված է)",
     "loginDisabled": "Մուտք՝ անջատված է",
     "providerInfo": "Մատակարար՝ {info}",
-    "opencode": "Տեղադրել և կարգավորել փաթեթում ներառված @omniroute/opencode-plugin-ը OpenCode-ի համար"
+    "opencode": "Տեղադրել և կարգավորել փաթեթում ներառված OpenCode plugin-ը OpenCode-ի համար"
   },
   "doctor": {
     "title": "FreeRoute Doctor",

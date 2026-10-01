@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Managed-edge INFRA for the self-app's custom domain: install OpenResty +
  * certbot and, when the operator consents, take over / migrate an existing
@@ -204,7 +205,7 @@ async function runEnsure(
       }
       const sitesNote = siteCount > 0 ? ` serving ${siteCount} site${siteCount === 1 ? "" : "s"}` : "";
       log(
-        `An existing proxy (${owner})${sitesNote} is using ports 80 and 443. Openship needs its own ` +
+        `An existing proxy (${owner})${sitesNote} is using ports 80 and 443. FreeBuild needs its own ` +
           `load balancer (OpenResty) there for managed HTTPS — left it running. Re-run setup and choose ` +
           `migrate or take-over to continue.`,
         "warn",

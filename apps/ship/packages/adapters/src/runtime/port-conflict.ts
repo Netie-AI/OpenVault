@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 import { DeployError, shellQuote } from "@repo/core";
 import type { CommandExecutor } from "../types";
 import type { BuildLogger } from "./build-pipeline";
@@ -629,11 +630,11 @@ function freeActionLabel(occupant: PortOccupant): string {
   switch (portStopTarget(occupant)) {
     case "container":
       return occupant.isManagedDeployment
-        ? "Stop Openship Container & Continue"
+        ? "Stop FreeBuild Container & Continue"
         : "Stop Container & Continue";
     case "unit":
       return occupant.isManagedDeployment
-        ? "Stop Openship Deployment & Continue"
+        ? "Stop FreeBuild Deployment & Continue"
         : "Stop Service & Continue";
     default:
       return "Free Port & Continue";
@@ -650,37 +651,37 @@ function refusalReason(port: number, occupant: PortOccupant, why: PortRefusal): 
     case "ambiguous":
       return (
         `Port ${port} is published by ${occupant.ambiguousOwners} containers at once (${occupant.command}), ` +
-        `so Openship can't tell which one owns it. Stop the right container yourself, or deploy on a different port.`
+        `so FreeBuild can't tell which one owns it. Stop the right container yourself, or deploy on a different port.`
       );
     case "our-edge":
       return (
-        `Port ${port} belongs to the Openship edge proxy (container ${named}), which routes every domain on this ` +
+        `Port ${port} belongs to the FreeBuild edge proxy (container ${named}), which routes every domain on this ` +
         `server. Deploy on a different host port and route it through the edge instead.`
       );
     case "platform":
       return (
-        `Port ${port} is held by Openship itself — container ${named} is part of the control plane running this ` +
-        `deploy. Stopping it would take Openship down, so deploy on a different host port.`
+        `Port ${port} is held by FreeBuild itself — container ${named} is part of the control plane running this ` +
+        `deploy. Stopping it would take FreeBuild down, so deploy on a different host port.`
       );
     case "unidentified-container":
       return (
         `Port ${port} is held by container ${occupant.containerId}, which this Docker daemon won't describe — so ` +
-        `Openship can't tell whether it is one of its own (the edge publishes nothing and is only visible this ` +
+        `FreeBuild can't tell whether it is one of its own (the edge publishes nothing and is only visible this ` +
         `way). Run \`docker inspect ${occupant.containerId}\` on the server, stop it if it is safe to, then redeploy.`
       );
     case "docker-blind":
       return (
-        `Port ${port} is published by a Docker container Openship couldn't identify — the process holding it is ` +
-        `Docker's port forwarder, not the app, so there is nothing here Openship can safely stop. ` +
+        `Port ${port} is published by a Docker container FreeBuild couldn't identify — the process holding it is ` +
+        `Docker's port forwarder, not the app, so there is nothing here FreeBuild can safely stop. ` +
         `Run \`docker ps --filter publish=${port}\` on the server, stop that container, then redeploy.`
       );
     case "protected-unit":
       return (
-        `Port ${port} is held by ${occupant.systemdUnit}, a service Openship will not stop — doing so would take ` +
+        `Port ${port} is held by ${occupant.systemdUnit}, a service FreeBuild will not stop — doing so would take ` +
         `down more than this deploy. Free the port on the server, or deploy on a different port.`
       );
     case "no-owner":
-      return `Port ${port} is occupied by ${occupant.command}, which Openship can't free automatically.`;
+      return `Port ${port} is occupied by ${occupant.command}, which FreeBuild can't free automatically.`;
   }
 }
 
@@ -751,7 +752,7 @@ export async function ensurePortAvailable(
     promptId: `port_in_use:${port}`,
     title: "Port In Use",
     message: occupant.isManagedDeployment
-      ? `Port ${port} is occupied by ${occupant.command}, which Openship deployed.`
+      ? `Port ${port} is occupied by ${occupant.command}, which FreeBuild deployed.`
       : `Port ${port} is occupied by ${occupant.command}. This may not be a previous deployment.`,
     actions: [
       { id: "free_port", label: freeActionLabel(occupant), variant: "danger" },

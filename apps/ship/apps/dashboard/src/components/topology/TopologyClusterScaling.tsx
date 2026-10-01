@@ -1,4 +1,5 @@
 "use client";
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 
 import { Icon as UiIcon } from "@repo/ui/icons";
 
@@ -438,7 +439,7 @@ function ClusterScaling({ project, disabled, resources, onDeploy, onClusterState
                       />
                     </label>
                     <p className="leading-relaxed text-muted-foreground">
-                      OpenShip builds your application once and publishes it here so every server
+                      FreeBuild builds your application once and publishes it here so every server
                       can run the same release. Private repositories use your saved registry
                       credentials.
                     </p>
@@ -495,7 +496,7 @@ function ClusterScaling({ project, disabled, resources, onDeploy, onClusterState
               <summary className="cursor-pointer text-muted-foreground">Technical details</summary>
               <div className="mt-3 space-y-3 text-muted-foreground">
                 <p>
-                  Kubernetes (K3s) manages instance placement and recovery. OpenShip Edge currently
+                  Kubernetes (K3s) manages instance placement and recovery. FreeBuild Edge currently
                   sends incoming traffic through one cluster server.
                 </p>
                 {view.internalHost && (

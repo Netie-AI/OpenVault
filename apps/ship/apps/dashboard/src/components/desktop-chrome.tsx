@@ -1,4 +1,5 @@
 "use client";
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 
 import { Icon as UiIcon } from "@repo/ui/icons";
 
@@ -124,8 +125,7 @@ export function DesktopChrome() {
       icon: <UiIcon name="wrench" className="size-4" />,
       onClick: () => void bridge()?.window?.toggleDevTools(),
     },
-    { id: "devtools-divider", divider: true },
-    ...helpActions,
+    ...(helpActions.length ? [{ id: "devtools-divider", divider: true }, ...helpActions] : []),
   ];
 
   return (

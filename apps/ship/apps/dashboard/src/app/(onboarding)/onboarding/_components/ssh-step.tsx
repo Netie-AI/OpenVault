@@ -1,6 +1,8 @@
 "use client";
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 
 import { Icon as UiIcon } from "@repo/ui/icons";
+import { brandDocsUrl } from "@repo/core";
 
 import { useEffect, useState } from "react";
 import { getApiOrigin } from "@/lib/api/urls";
@@ -352,15 +354,17 @@ export function SshStep({ state, onUpdate, onNext, onBack }: StepProps) {
           {t.onboarding.ssh.submit}
         </button>
 
+        {brandDocsUrl("/guides/custom-servers") && (
         <a
           className="ob-tutorial-link"
-          href="https://openship.io/docs/guides/custom-servers"
+          href={brandDocsUrl("/guides/custom-servers")}
           target="_blank"
           rel="noopener noreferrer"
         >
           <UiIcon name="info" size={14} />
           {t.onboarding.ssh.tutorial}
         </a>
+        )}
       </div>
     </div>
   );

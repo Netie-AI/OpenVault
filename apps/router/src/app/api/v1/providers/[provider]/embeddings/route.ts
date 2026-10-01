@@ -1,3 +1,4 @@
+import { withNetiePolicy } from "@/lib/netie/routeGuard";
 import { errorResponse, unavailableResponse } from "@omniroute/open-sse/utils/error.ts";
 import { HTTP_STATUS } from "@omniroute/open-sse/config/constants.ts";
 import { getRegistryEntry } from "@omniroute/open-sse/config/providerRegistry.ts";
@@ -28,7 +29,7 @@ export async function OPTIONS() {
 /**
  * POST /v1/providers/{provider}/embeddings
  */
-export async function POST(request, { params }) {
+async function upstreamPost(request, { params }) {
   const { provider: rawProvider } = await params;
 
   const providerEntry = getRegistryEntry(rawProvider);
@@ -106,3 +107,7 @@ export async function POST(request, { params }) {
     headers: { "Content-Type": "application/json" },
   });
 }
+
+// FreeRoute: named 501 for a disabled provider, named 503/501 for KeyVault
+// and key-storage errors (src/lib/netie/routeGuard.ts).
+export const POST = withNetiePolicy(upstreamPost);

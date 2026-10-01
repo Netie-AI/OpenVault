@@ -35,7 +35,7 @@ function toHex(bytes: Uint8Array): string {
 export function renameProcessTitle(currentTitle: string): string {
   if (!currentTitle) return currentTitle;
   if (!currentTitle.startsWith("next-server")) return currentTitle;
-  return `omniroute${currentTitle.slice("next-server".length)}`;
+  return `freeroute${currentTitle.slice("next-server".length)}`;
 }
 
 // `normalizeBootError` now lives in `@/lib/instrumentationBootError` (imported

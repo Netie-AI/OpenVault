@@ -1,3 +1,7 @@
+// Modified by Netie AI, 2026: an import never restores a provider key FreeBuild
+// leaves to OpenVault (legacy dns_credential rows, credential rows of an
+// OPENVAULT_MANAGED_CREDENTIAL_PROVIDERS provider, and their bundle secrets);
+// product name in operator-facing errors.
 /**
  * Scoped control-plane import. Validates the envelope, opens the secret bundle FIRST
  * (a wrong passphrase aborts before any DB write), restores the dump under the
@@ -22,6 +26,7 @@ import {
   type DatabaseTransaction,
 } from "@repo/db";
 
+import { OPENVAULT_MANAGED_CREDENTIAL_PROVIDERS } from "@repo/core";
 import { env } from "@repo/platform/engine/config/env";
 import { reconcileRuntimeStateAfterImport } from "../../../lib/database-runtime-state";
 import { reassertMigrationLockAfterRestore, withMigrationLock } from "../migration/migration-lock";
@@ -94,7 +99,7 @@ export function assertValidEnvelope(file: DataTransferFile): void {
     !file ||
     (file.kind !== "openship-instance-export" && file.kind !== "openship-project-export")
   ) {
-    throw new InvalidTransferFileError("Not an Openship export file.");
+    throw new InvalidTransferFileError("Not a FreeBuild export file.");
   }
   if (file.envelopeVersion !== 1 && file.envelopeVersion !== 2 && file.envelopeVersion !== 3) {
     throw new InvalidTransferFileError(
@@ -206,6 +211,48 @@ function assertValidSecretBundle(bundle: SecretBundle | null): void {
   }
 }
 
+/**
+ * Remove every provider key FreeBuild must not hold from an export before it is restored.
+ *
+ * Provider keys live only in OpenVault's KeyVault. An export from an upstream install, or
+ * from a build before this rule, can still carry them: every `dns_credential` row (always a
+ * Cloudflare token) and every `credential` row whose provider OpenVault manages. Those rows
+ * and their bundle secrets are dropped, never restored. The operator adds the token in
+ * OpenVault instead. Returns new objects; the inputs are not mutated.
+ */
+export function dropOpenVaultManagedCredentials(
+  file: DataTransferFile,
+  bundle: SecretBundle | null,
+): { file: DataTransferFile; bundle: SecretBundle | null; dropped: number } {
+  const tables = file.dump.tables;
+  const legacyDns = tables["dns_credential"] ?? [];
+  const credentials = tables["credential"] ?? [];
+  const droppedCredentialIds = new Set<string>();
+  const keptCredentials = credentials.filter((row) => {
+    const managed =
+      typeof row.provider === "string" && OPENVAULT_MANAGED_CREDENTIAL_PROVIDERS.has(row.provider);
+    if (managed) droppedCredentialIds.add(String(row.id));
+    return !managed;
+  });
+  const dropped = legacyDns.length + droppedCredentialIds.size;
+  if (dropped === 0) return { file, bundle, dropped };
+
+  const nextTables = { ...tables };
+  if ("dns_credential" in tables) nextTables["dns_credential"] = [];
+  if ("credential" in tables) nextTables["credential"] = keptCredentials;
+  const nextBundle = bundle
+    ? {
+        ...bundle,
+        entries: bundle.entries.filter(
+          (entry) =>
+            entry.table !== "dns_credential" &&
+            !(entry.table === "credential" && droppedCredentialIds.has(entry.id)),
+        ),
+      }
+    : bundle;
+  return { file: { ...file, dump: { ...file.dump, tables: nextTables } }, bundle: nextBundle, dropped };
+}
+
 export async function previewInstanceImport(opts: {
   file: DataTransferFile;
   selection?: ImportSelection;
@@ -291,6 +338,17 @@ export async function importPreparedInstance(opts: {
   assertValidEnvelope(file);
   assertValidSecretBundle(bundle);
   validateImportSelection(opts.selection);
+  {
+    const stripped = dropOpenVaultManagedCredentials(file, bundle);
+    if (stripped.dropped > 0) {
+      console.warn(
+        `[data-transfer] skipped ${stripped.dropped} provider key row(s) that OpenVault manages ` +
+          `(Cloudflare). Add those tokens in OpenVault's KeyVault.`,
+      );
+    }
+    file = stripped.file;
+    bundle = stripped.bundle;
+  }
   if (opts.selection?.includeSecrets === false) {
     file = {
       ...file,

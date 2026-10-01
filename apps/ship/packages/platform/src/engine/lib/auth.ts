@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 import { organizationOptions, isSaasDeployment } from "./organization-lifecycle";
 import { betterAuth, type User } from "better-auth";
 import { APIError } from "better-auth/api";
@@ -445,7 +446,7 @@ export const auth = betterAuth({
               message:
                 "This instance has no email transport configured, so a reset code " +
                 "cannot be sent. Configure SMTP in Settings → Email, or reset the " +
-                "password from the server with `openship reset-admin`.",
+                "password from the server with `freebuild reset-admin`.",
             });
           }
           const tmpl = resetPasswordOtpEmail(otp, { expiresMinutes: 10 });
@@ -458,7 +459,7 @@ export const auth = betterAuth({
               message:
                 "Could not send the reset code — this instance has no working email " +
                 "transport. Configure SMTP in Settings → Email, or reset the password " +
-                "from the server with `openship reset-admin`.",
+                "from the server with `freebuild reset-admin`.",
             });
           }
         }

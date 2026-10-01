@@ -50,7 +50,7 @@ async function readErrorMessage(res) {
 export async function runConnectCommand(host, opts = {}) {
   const baseUrl = normalizeBaseUrl(host, opts.port || "20128");
   if (!baseUrl) {
-    printError("A host is required, e.g. omniroute connect 192.168.0.15");
+    printError("A host is required, e.g. freeroute connect 192.168.0.15");
     return 2;
   }
   const name = opts.name || hostLabel(host);
@@ -113,7 +113,7 @@ export async function runConnectCommand(host, opts = {}) {
 
   printSuccess(`Connected to ${baseUrl} — context '${name}' (scope: ${scope})`);
   printInfo("All commands now target this server.");
-  printInfo("Switch back to local with: omniroute contexts use default");
+  printInfo("Switch back to local with: freeroute contexts use default");
   return 0;
 }
 

@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 import { mkdirSync, existsSync, readFileSync, unlinkSync } from "fs";
 import { resolve, dirname, join } from "path";
 import { fileURLToPath } from "url";
@@ -74,7 +75,7 @@ export async function createDatabase(input: DatabaseOptions): Promise<DatabaseCo
       const result = await db.execute(sql`select hash, created_at from drizzle.__drizzle_migrations order by created_at desc limit 1`);
       const last = result.rows[0] as { hash?: string; created_at?: string | number } | undefined;
       if (last?.hash !== expected.hash || Number(last?.created_at) !== expected.folderMillis)
-        throw new Error("The database schema does not match this Openship build");
+        throw new Error("The database schema does not match this FreeBuild build");
     } catch (cause) {
       throw new Error("Database schema verification failed. Use a compatible build or explicitly apply migrations with the database owner.", { cause });
     }

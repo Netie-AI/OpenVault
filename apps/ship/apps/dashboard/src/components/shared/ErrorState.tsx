@@ -1,6 +1,8 @@
 "use client";
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 
 import { Icon as UiIcon } from "@repo/ui/icons";
+import { brandDocsUrl } from "@repo/core";
 
 import { useRouter } from "next/navigation";
 import { PageContainer } from "@/components/ui/PageContainer";
@@ -142,7 +144,8 @@ export default function ErrorState({ error = {}, type = "repo-not-found" }: Erro
             </div>
           </div>
 
-          {/* ── Help card ────────────────────────────────────────── */}
+          {/* ── Help card (hidden until FreeBuild has docs to link) ── */}
+          {brandDocsUrl() && (
           <div className="bg-card rounded-2xl border border-border/50 mt-4 px-5 py-4">
             <div className="flex items-start gap-3">
               <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
@@ -155,7 +158,7 @@ export default function ErrorState({ error = {}, type = "repo-not-found" }: Erro
                 </p>
                 <div className="flex gap-4">
                   <a
-                    href="https://openship.io/docs"
+                    href={brandDocsUrl()}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-xs font-medium text-primary hover:text-primary/80 flex items-center gap-1 transition-colors"
@@ -166,6 +169,7 @@ export default function ErrorState({ error = {}, type = "repo-not-found" }: Erro
               </div>
             </div>
           </div>
+          )}
 
         </div>
     </PageContainer>

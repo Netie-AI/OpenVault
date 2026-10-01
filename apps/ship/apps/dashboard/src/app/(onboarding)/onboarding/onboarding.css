@@ -1,3 +1,4 @@
+/* Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text. */
 /* ═══════════════════════════════════════════════════════════════════════════
    Onboarding - pixel-perfect CSS ported from the Electron renderer.
    Uses existing dashboard theme tokens (--th-*) for light/dark support.
@@ -238,14 +239,6 @@
   display: inline-flex;
   align-items: center;
   gap: 10px;
-}
-
-.ob-logo-circle {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  border: 2.5px solid var(--th-text-heading);
-  flex-shrink: 0;
 }
 
 .ob-logo-text {

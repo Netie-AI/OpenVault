@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 import { getMcpTools, toClientTool, filterToolsForPrincipal, type McpPrincipal } from "./mcp-tools";
 import { dispatchTool, type DispatchOrigin } from "./mcp-dispatch";
 import type { ToolCallRecord } from "./mcp-audit";
@@ -11,7 +12,7 @@ import { listPrompts, getPrompt, workspaceInstructions } from "./mcp-prompts";
  * onto the real HTTP API; prompts are the static guided-flow catalog.
  */
 
-const SERVER_INFO = { name: "openship", version: "1.0.0" };
+const SERVER_INFO = { name: "freebuild", version: "1.0.0" };
 const DEFAULT_PROTOCOL = "2025-06-18";
 /** Versions we can speak; `initialize` negotiates down to one of these. */
 const SUPPORTED_PROTOCOLS = new Set(["2025-06-18", "2025-03-26", "2024-11-05"]);

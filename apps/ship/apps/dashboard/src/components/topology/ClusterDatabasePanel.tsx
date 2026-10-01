@@ -1,4 +1,5 @@
 "use client";
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 
 import { Icon as UiIcon } from "@repo/ui/icons";
 
@@ -351,7 +352,7 @@ export function ClusterDatabasePanel({
                   />
                 </label>
                 <p className="text-xs leading-relaxed text-muted-foreground">
-                  OpenShip prepares local disks automatically. Local disk sizes are reservations,
+                  FreeBuild prepares local disks automatically. Local disk sizes are reservations,
                   not enforced quotas; a lost server loses its local copy. Use an installed CSI
                   storage class for external durable volumes.
                 </p>

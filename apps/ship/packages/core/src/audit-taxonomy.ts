@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Audit event taxonomy — the one catalog both halves of the audit log read.
  *
@@ -318,7 +319,7 @@ export const AUDIT_EVENTS: Record<string, AuditEventDef> = {
     label: "DNS records provisioned",
     tone: "info",
     description:
-      "Openship wrote this domain's records at the connected DNS provider. The counts of applied and failed records are in the details.",
+      "FreeBuild wrote this domain's records at the connected DNS provider. The counts of applied and failed records are in the details.",
   },
   "domain.cert_uploaded": {
     category: "domains",
@@ -366,7 +367,7 @@ export const AUDIT_EVENTS: Record<string, AuditEventDef> = {
     action: "verified the credential for",
     label: "Credential verified",
     tone: "info",
-    description: "Openship asked the provider whether a stored credential still works.",
+    description: "FreeBuild asked the provider whether a stored credential still works.",
   },
   "dns_credential.connected": {
     category: "domains",
@@ -374,7 +375,7 @@ export const AUDIT_EVENTS: Record<string, AuditEventDef> = {
     label: "DNS provider connected",
     tone: "info",
     description:
-      "An API token that lets Openship write this organization's DNS records was stored. The token itself is never recorded.",
+      "An API token that lets FreeBuild write this organization's DNS records was stored. The token itself is never recorded.",
   },
   "dns_credential.disconnected": {
     category: "domains",
@@ -382,7 +383,7 @@ export const AUDIT_EVENTS: Record<string, AuditEventDef> = {
     label: "DNS provider disconnected",
     tone: "warning",
     description:
-      "Openship can no longer write DNS records for domains in that provider's zones; records already written are left in place.",
+      "FreeBuild can no longer write DNS records for domains in that provider's zones; records already written are left in place.",
   },
   "domain:write": {
     category: "domains",
@@ -436,7 +437,7 @@ export const AUDIT_EVENTS: Record<string, AuditEventDef> = {
     action: "reported unreachable",
     label: "Server unreachable",
     tone: "danger",
-    description: "Openship could not open an SSH connection to this server.",
+    description: "FreeBuild could not open an SSH connection to this server.",
   },
   "server.reachable": {
     category: "servers",
@@ -492,7 +493,7 @@ export const AUDIT_EVENTS: Record<string, AuditEventDef> = {
     action: "provisioned the identity",
     label: "Identity provisioned",
     tone: "info",
-    description: "A trusted host mapped an external identity to an Openship user.",
+    description: "A trusted host mapped an external identity to a FreeBuild user.",
   },
   "organization.created": {
     category: "members",
@@ -822,7 +823,7 @@ export const AUDIT_EVENTS: Record<string, AuditEventDef> = {
     category: "system",
     action: "applied an update",
     label: "Update applied",
-    description: "An Openship component was updated or an update scan was triggered.",
+    description: "A FreeBuild component was updated or an update scan was triggered.",
   },
   "cloud.disconnect": {
     category: "system",

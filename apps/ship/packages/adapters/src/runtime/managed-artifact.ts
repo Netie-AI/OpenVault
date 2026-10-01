@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Removing a DIRECTORY that a runtime produced — the one place an `rm -rf` of an
  * Openship-managed path is authorized, bounded and verified.
@@ -78,7 +79,7 @@ export function assertManagedArtifactPath(ref: string, ownedBase = MANAGED_ARTIF
   }
   if (target !== base && !target.startsWith(`${base}/`)) {
     throw new Error(
-      `Refusing to remove "${ref}": outside ${base}. Openship removes only ` +
+      `Refusing to remove "${ref}": outside ${base}. FreeBuild removes only ` +
         `directories it created (release dirs, static doc-roots, build dirs).`,
     );
   }

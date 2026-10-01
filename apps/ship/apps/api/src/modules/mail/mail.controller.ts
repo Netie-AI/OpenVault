@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Mail setup controller - HTTP endpoints for the iRedMail setup wizard.
  *
@@ -527,7 +528,7 @@ export async function adoptMailServer(c: Context) {
       return c.json(
         {
           error: iredmailInstalled
-            ? "A mail stack is running but no Openship state file was found — re-run setup to manage it."
+            ? "A mail stack is running but no FreeBuild state file was found — re-run setup to manage it."
             : "No mail server found on this server.",
         },
         404,

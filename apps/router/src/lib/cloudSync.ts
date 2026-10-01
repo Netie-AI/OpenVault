@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import { stripSecretProviderSpecificData } from "@/lib/netie/providerGuards";
 import { getProviderConnections, updateProviderConnection } from "@/lib/db/providers";
 import { buildConfigSyncEnvelope, toLegacyCloudSyncPayload } from "@/lib/sync/bundle";
 
@@ -223,11 +224,14 @@ async function updateLocalTokens(cloudProviders: unknown) {
       // Credentials and providerSpecificData are only overwritten when the
       // operator has explicitly opted in to remote credential sync. Default
       // OFF closes the silent-swap surface.
+      // FreeRoute: credentials never sync in, whatever the flag says. Provider
+      // keys live only in OpenVault, and OAuth tokens belong to subscription
+      // pooling, which is not shipped. Only non-secret providerSpecificData
+      // fields are taken from the cloud copy.
       if (CLOUD_SYNC_SECRETS_ENABLED) {
-        updates.accessToken = cloudProvider.accessToken;
-        updates.refreshToken = cloudProvider.refreshToken;
-        updates.providerSpecificData =
-          cloudProvider.providerSpecificData || localProvider.providerSpecificData;
+        updates.providerSpecificData = stripSecretProviderSpecificData(
+          cloudProvider.providerSpecificData || localProvider.providerSpecificData
+        );
       }
 
       await updateProviderConnection(localProviderId, updates);

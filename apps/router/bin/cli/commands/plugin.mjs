@@ -56,7 +56,7 @@ export function registerPlugin(program) {
       );
       if (plugins.length === 0) {
         process.stdout.write("No plugins installed.\n");
-        process.stdout.write(`Install: omniroute plugin install <name>\n`);
+        process.stdout.write(`Install: freeroute plugin install <name>\n`);
       }
     });
 
@@ -70,7 +70,7 @@ export function registerPlugin(program) {
 
       if (!opts.yes) {
         process.stderr.write(
-          `⚠ WARNING: Plugins run with the same privileges as omniroute CLI.\n` +
+          `⚠ WARNING: Plugins run with the same privileges as the freeroute CLI.\n` +
             `  Only install plugins from sources you trust.\n` +
             `  Installing: ${pkgName}\n` +
             `  Pass --yes to skip this prompt.\n`
@@ -214,9 +214,9 @@ export function registerPlugin(program) {
       writeFileSync(join(dir, "index.mjs"), TEMPLATE_INDEX.replace(/PLUGIN_NAME/g, safeName));
       writeFileSync(
         join(dir, "README.md"),
-        `# omniroute-cmd-${safeName}\n\nAn FreeRoute CLI plugin.\n\n## Install\n\n\`\`\`bash\nomniroute plugin install ${safeName}\n\`\`\`\n`
+        `# omniroute-cmd-${safeName}\n\nA FreeRoute CLI plugin.\n\n## Install\n\n\`\`\`bash\nfreeroute plugin install ${safeName}\n\`\`\`\n`
       );
       process.stdout.write(`✓ Scaffolded: ${dir}\n`);
-      process.stdout.write(`  Run: cd ${dir} && omniroute plugin install .\n`);
+      process.stdout.write(`  Run: cd ${dir} && freeroute plugin install .\n`);
     });
 }

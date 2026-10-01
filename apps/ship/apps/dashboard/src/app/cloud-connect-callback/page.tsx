@@ -1,4 +1,5 @@
 "use client";
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 
 import { Icon as UiIcon } from "@repo/ui/icons";
 
@@ -47,7 +48,7 @@ function CloudConnectCallbackInner() {
     if (searchParams.get("setup_error") === "pkce") {
       setStatus("error");
       setErrorMessage(
-        "Openship could not securely start the Cloud sign-in. Close this window and try again.",
+        "FreeBuild could not securely start the Cloud sign-in. Close this window and try again.",
       );
       return;
     }

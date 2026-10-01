@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Send a welcome / verification test email from the freshly-provisioned
  * mail server to the operator's personal inbox.
@@ -205,7 +206,7 @@ export async function sendTestEmail(
       };
     } catch (err) {
       throw new TestEmailError(
-        `Could not provision openship@${input.fromDomain}: ${safeErrorMessage(err)}`,
+        `Could not provision freebuild@${input.fromDomain}: ${safeErrorMessage(err)}`,
       );
     }
   } else {

@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Oblien tunnel provider — SaaS-driven.
  *
@@ -27,7 +28,7 @@ function requireOrganizationId(input: TunnelProvisionInput): string {
   if (typeof orgId !== "string" || !orgId) {
     throw new ProvisionFailedError(
       "oblien",
-      "context.organizationId is required (used to resolve the Oblien namespace).",
+      "context.organizationId is required (used to resolve the cloud namespace).",
     );
   }
   return orgId;
@@ -41,7 +42,7 @@ export const oblienProvider: TunnelProvider = {
       return {
         ok: false,
         reason:
-          "Oblien tunnels require CLOUD_MODE — this instance must be connected to the hosted cloud service first.",
+          "Cloud tunnels require CLOUD_MODE — this instance must be connected to the hosted cloud service first.",
       };
     }
     return { ok: true };

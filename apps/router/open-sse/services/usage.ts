@@ -10,6 +10,12 @@
  * implementation detail.
  */
 
+import { NetieDisabledError } from "../netie/policy.ts";
+import {
+  classifyConnection,
+  stripSecretProviderSpecificData,
+  withKeyVaultApiKey,
+} from "@/lib/netie/providerGuards";
 import {
   extractCodeAssistOnboardTierId,
   extractCodeAssistSubscriptionTier,
@@ -115,10 +121,31 @@ export type { UsageFetcherProvider } from "./usage/fetcherProviders.ts";
  * @param {Object} connection - Provider connection with accessToken
  * @returns {Promise<unknown>} Usage data with quotas
  */
+async function prepareUsageConnection(
+  connection: UsageProviderConnection
+): Promise<UsageProviderConnection> {
+  const record = connection as unknown as Record<string, unknown>;
+  const classified = classifyConnection(record);
+  if (classified) throw new NetieDisabledError(classified);
+  if (record.authType === "apikey") {
+    return (await withKeyVaultApiKey(record)) as unknown as UsageProviderConnection;
+  }
+  return {
+    ...connection,
+    apiKey: null,
+    providerSpecificData: stripSecretProviderSpecificData(record.providerSpecificData),
+  } as unknown as UsageProviderConnection;
+}
+
 export async function getUsageForProvider(
   connection: UsageProviderConnection,
   options: { forceRefresh?: boolean } = {}
 ) {
+  // FreeRoute: every quota and usage fetch goes through here. A subscription or
+  // browser-session connection gets the named 501 instead of a call to the
+  // consumer endpoint, and an API-key connection uses its key from OpenVault,
+  // never the DB column or a secret kept in providerSpecificData.
+  connection = await prepareUsageConnection(connection);
   const { id, provider, accessToken, apiKey, providerSpecificData, projectId, email } = connection;
 
   if (isKimiCodingConnection(connection)) {

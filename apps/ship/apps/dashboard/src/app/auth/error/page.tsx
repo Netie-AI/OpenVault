@@ -1,4 +1,5 @@
 "use client";
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 
 import { Icon as UiIcon } from "@repo/ui/icons";
 
@@ -31,7 +32,7 @@ function AuthErrorContent() {
       </div>
 
       <Button asChild className="mt-6 w-full">
-        <Link href="/">Return to OpenShip</Link>
+        <Link href="/">Return to FreeBuild</Link>
       </Button>
     </AuthShell>
   );

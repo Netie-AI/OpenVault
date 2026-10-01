@@ -27,7 +27,7 @@
     "loginEnabled": "การเข้าสู่ระบบ: เปิดใช้งานแล้ว (อัปเดตรหัสผ่านแล้ว)",
     "loginDisabled": "การเข้าสู่ระบบ: ปิดใช้งาน",
     "providerInfo": "ผู้ให้บริการ: {info}",
-    "opencode": "ติดตั้งและกำหนดค่า @omniroute/opencode-plugin ที่รวมมาให้สำหรับ OpenCode"
+    "opencode": "ติดตั้งและกำหนดค่า OpenCode plugin ที่รวมมาให้สำหรับ OpenCode"
   },
   "doctor": {
     "title": "FreeRoute Doctor",

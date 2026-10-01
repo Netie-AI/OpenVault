@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * The reverse-proxy READ api — one executor-bound object answering everything
  * callers need to know about whatever proxy is (or was) serving this box.
@@ -331,7 +332,7 @@ function makeApi(
   const listLoopbackUpstreamPortsStrict = (opts: { refresh?: boolean } = {}) => {
     if (!ours) {
       return Promise.reject(
-        new Error("Strict loopback upstream inventory is only available for the Openship edge"),
+        new Error("Strict loopback upstream inventory is only available for the FreeBuild edge"),
       );
     }
     if (opts.refresh || !strictLoopbackPorts) {

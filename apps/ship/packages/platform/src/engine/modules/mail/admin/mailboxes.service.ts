@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Mailbox CRUD for the mail admin panel.
  *
@@ -192,7 +193,7 @@ function annotatePlatformMailbox(
 export class PlatformMailboxProtectedError extends Error {
   constructor(public username: string) {
     super(
-      `The platform mailbox ${username} is managed by Openship. Use "Rotate platform mailbox password" to repair or rotate it.`,
+      `The platform mailbox ${username} is managed by FreeBuild. Use "Rotate platform mailbox password" to repair or rotate it.`,
     );
   }
 }

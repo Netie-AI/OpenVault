@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 import { setTimeout as delay } from "node:timers/promises";
 import type { WorkspaceHandle } from "oblien";
 
@@ -23,7 +24,7 @@ export async function deleteCloudWorkspace(
       throw error;
     }
     if (Date.now() >= deadline) {
-      throw new Error("Oblien is still deleting the workspace. Retry cleanup to confirm removal.");
+      throw new Error("The cloud provider is still deleting the workspace. Retry cleanup to confirm removal.");
     }
     await delay(Math.min(1000, Math.max(1, deadline - Date.now())));
   }

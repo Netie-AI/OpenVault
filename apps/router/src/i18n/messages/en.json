@@ -6565,7 +6565,7 @@
     "routingBlockTextHint": "Full text of the new system block. Use a literal string; the system block stores text only.",
     "routingIdempotencyKeyHint": "Optional. If set, the op skips when a block whose text starts with this key is already present. Prevents double-prepend on retries.",
     "routingBillingEntrypointHint": "Value injected as 'cc_entrypoint='. Anthropic accepts 'sdk-cli' (Agent SDK), 'cli' (Claude Code CLI), or other documented values.",
-    "routingBillingVersionFormatHint": "How the 3-char build hash after cc_version= is computed. 'ex-machina' = sha256 of CCH_SALT+chars-from-first-user-msg+version (per-message). 'omniroute-daystamp' = sha256 of YYYY-MM-DD+version (stable per-day).",
+    "routingBillingVersionFormatHint": "How the 3-char build hash after cc_version= is computed. 'ex-machina' = sha256 of CCH_SALT+chars-from-first-user-msg+version (per-message). 'daystamp' = sha256 of YYYY-MM-DD+version (stable per-day).",
     "routingBillingCchAlgoHint": "How the 5-char cch= token is computed. 'sha256-first-user' = sha256 of first user message text. 'xxhash64-body' = body-level signing fills it later. 'static-zero' = literal '00000' placeholder.",
     "routingObfuscateWordsHint": "Lowercase words to obfuscate. ZWJ insertion is applied case-insensitively, so 'opencode' also matches 'OpenCode' and 'OPENCODE'.",
     "routingObfuscateTargetsHint": "Which body regions to scan for the words: system blocks, user/assistant messages, and/or tool descriptions.",
@@ -7885,7 +7885,7 @@
     "redisLauncherRunning": "Running",
     "redisLauncherReachable": "Reachable",
     "redisLauncherError": "Error: {message}",
-    "redisLauncherHint": "Equivalent to running `freeroute redis up`. The container is named `omniroute-redis` and listens on 127.0.0.1:6379.",
+    "redisLauncherHint": "Equivalent to running `freeroute redis up`. The container is named `freeroute-redis` and listens on 127.0.0.1:6379.",
     "compressionSettingsAutoTriggerMode": "Auto trigger mode",
     "compressionSettingsMcpDescriptionCompression": "MCP description compression",
     "mcpAccessibilityTitle": "MCP accessibility output",
@@ -10059,7 +10059,7 @@
     "getStartedIn30Seconds": "Get Started in 30 Seconds",
     "getStartedDescription": "Install FreeRoute, configure your providers via web dashboard, and start routing AI requests.",
     "installOmniRoute": "Install FreeRoute",
-    "installStepDescription": "Run npx command to start the server instantly",
+    "installStepDescription": "Run npm start in the apps/router directory of your OpenVault checkout",
     "openDashboard": "Open Dashboard",
     "openDashboardStepDescription": "Configure providers and API keys via web interface",
     "routeRequests": "Route Requests",
@@ -10081,6 +10081,7 @@
     "resources": "Resources",
     "documentation": "Documentation",
     "npm": "NPM",
+    "notices": "Notices",
     "legal": "Legal",
     "mitLicense": "MIT License",
     "footerTagline": "The unified endpoint for AI generation. Connect, route, and manage your AI providers with ease.",
@@ -12579,7 +12580,7 @@
       },
       "omni-version-manager": {
         "name": "Version Manager",
-        "description": "Install, start, stop, restart, and update embedded services (9Router, CLIProxyAPI). Monitor service status, retrieve logs, and configure auto-start for local-only service endpoints."
+        "description": "Install, start, stop, restart, and update embedded services (CLIProxyAPI). Monitor service status, retrieve logs, and configure auto-start for local-only service endpoints."
       },
       "omni-inference": {
         "name": "Inference (OpenAI-compatible)",

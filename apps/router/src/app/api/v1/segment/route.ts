@@ -1,3 +1,4 @@
+import { withNetiePolicy } from "@/lib/netie/routeGuard";
 import { handleJinaFoundationProxy } from "@omniroute/open-sse/handlers/jinaFoundation.ts";
 import {
   getProviderCredentialsWithQuotaPreflight,
@@ -76,4 +77,6 @@ async function postHandler(request: Request) {
   return response;
 }
 
-export const POST = withInjectionGuard(postHandler);
+// FreeRoute: named 501 for a disabled provider, named 503/501 for KeyVault
+// and key-storage errors (src/lib/netie/routeGuard.ts).
+export const POST = withNetiePolicy(withInjectionGuard(postHandler));

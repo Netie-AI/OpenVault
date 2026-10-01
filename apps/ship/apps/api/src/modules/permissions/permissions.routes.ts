@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026
 import { Hono } from "hono";
 import { PermissionCollectionSchemas as Collection, PermissionResourceSchemas as Resource } from "@repo/contracts";
 import { secureRouter } from "../../lib/secure-router";

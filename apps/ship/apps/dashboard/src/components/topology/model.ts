@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 import { isServicesFramework, resolveWorkload, type ClusterWorkloadStatus } from "@repo/core";
 import type { Service, ServiceContainer } from "@/lib/api/services";
 import type { ProjectConnection } from "@/lib/api/connections";
@@ -408,7 +409,7 @@ export function buildProjectTopology({
       id: edgeId,
       kind: "edge",
       projectId: project.id,
-      name: "OpenShip Edge",
+      name: "FreeBuild Edge",
       tone: "edge",
       state: "configured",
       description: "Public routing",

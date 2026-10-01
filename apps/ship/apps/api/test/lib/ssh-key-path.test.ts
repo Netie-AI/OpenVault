@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: expectations follow the FreeBuild product name.
 import { afterAll, describe, expect, it } from "vitest";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
@@ -158,7 +159,7 @@ describe("sshKeyPathProblem", () => {
   });
 
   it("reports a path that does not exist on THIS host", () => {
-    expect(sshKeyPathProblem(join(dir, "nope"))).toMatch(/not readable by Openship/);
+    expect(sshKeyPathProblem(join(dir, "nope"))).toMatch(/not readable by FreeBuild/);
   });
 
   it("reports a directory rather than letting readFileSync fail later", () => {

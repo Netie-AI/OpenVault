@@ -27,7 +27,7 @@ const isDev = process.env.NODE_ENV !== "production";
 
 const baseConfig: pino.LoggerOptions = {
   level: getAppLogLevel(isDev ? "debug" : "info"),
-  base: { service: "omniroute" },
+  base: { service: "freeroute" },
   timestamp: pino.stdTimeFunctions.isoTime,
   formatters: {
     level(label: string) {

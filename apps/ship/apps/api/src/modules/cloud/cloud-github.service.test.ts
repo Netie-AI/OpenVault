@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: expectations follow the FreeBuild product name.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({
@@ -148,7 +149,7 @@ describe("cloud GitHub App installation attribution", () => {
 
     await expect(attributeGithubInstall(callbackInput)).resolves.toEqual({
       kind: "forbidden",
-      message: "You no longer have access to the Openship workspace that started this install.",
+      message: "You no longer have access to the FreeBuild workspace that started this install.",
     });
     expect(h.stateRemove).toHaveBeenCalledWith("nonce");
     expect(h.verify).not.toHaveBeenCalled();

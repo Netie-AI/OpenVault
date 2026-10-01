@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Cloud GitHub service - org-scoped policy around the SaaS-only GitHub
  * App flows (OAuth bridge, install URL, install callback attribution,
@@ -285,7 +286,7 @@ export async function attributeGithubInstall(input: {
     await repos.githubInstallState.remove(state).catch(() => {});
     return {
       kind: "forbidden",
-      message: "You no longer have access to the Openship workspace that started this install.",
+      message: "You no longer have access to the FreeBuild workspace that started this install.",
     };
   }
 

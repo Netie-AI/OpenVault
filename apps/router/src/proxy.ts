@@ -44,6 +44,9 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     "/",
+    // FreeRoute: the Trae OAuth callback at the app root (hardDisabledRoutes.ts).
+    "/:authseg([aA][uU][tT][hH][oO][rR][iI][zZ][eE])",
+    "/:authseg([aA][uU][tT][hH][oO][rR][iI][zZ][eE])/:path*",
     "/dashboard/:path*",
     "/home",
     "/home/:path*",

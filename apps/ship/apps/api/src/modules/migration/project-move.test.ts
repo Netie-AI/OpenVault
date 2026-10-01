@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026
 import { describe, expect, it } from "vitest";
 
 import { assertProjectMovable, planProjectMove, ProjectMoveRefused } from "@repo/platform/engine/modules/migration/project-move";

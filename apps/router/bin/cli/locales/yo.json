@@ -27,7 +27,7 @@
     "loginEnabled": "Ìwọlé: ti ṣiṣẹ́ (a ti ṣe àfikún ọ̀rọ̀ aṣínà)",
     "loginDisabled": "Ìwọlé: kò ṣiṣẹ́",
     "providerInfo": "Olùpèsè: {info}",
-    "opencode": "Fi @omniroute/opencode-plugin tí a kó mọ́ ọn sílẹ̀ kí o sì ṣètò rẹ̀ fún OpenCode"
+    "opencode": "Fi OpenCode plugin tí a kó mọ́ ọn sílẹ̀ kí o sì ṣètò rẹ̀ fún OpenCode"
   },
   "doctor": {
     "title": "Olùṣàyẹ̀wò FreeRoute",

@@ -138,7 +138,7 @@ export function resolveSqlJsWasmPath(): string {
       `Checked locations:\n${candidatePaths.map((p) => `  - ${p}`).join("\n")}\n\n` +
       `Remedy:\n` +
       `  * If running a global npm install without native SQLite (better-sqlite3), rebuild it:\n` +
-      `      cd $(npm root -g)/omniroute && npm rebuild better-sqlite3\n` +
+      `      cd <your FreeRoute install directory> && npm rebuild better-sqlite3\n` +
       `  * If running locally, rebuild better-sqlite3:\n` +
       `      npm rebuild better-sqlite3\n` +
       `  * Or set OMNIROUTE_SQLJS_WASM_PATH to the path of sql-wasm.wasm.\n` +

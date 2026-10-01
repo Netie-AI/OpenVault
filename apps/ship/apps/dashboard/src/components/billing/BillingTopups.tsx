@@ -1,6 +1,8 @@
 "use client";
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 
 import { Icon as UiIcon } from "@repo/ui/icons";
+import { brandSupportMailto } from "@repo/core";
 
 import { needsCloudPlan } from "@/lib/billing-presentation";
 import { randomUUID } from "@/lib/random-uuid";
@@ -263,7 +265,7 @@ const CreditPacks: React.FC<BillingTopupsProps> = ({ state }) => {
                 <UiIcon name="external-link" className="size-3.5" />
               </>
             )}
-          </button> : <a href="mailto:support@openship.io" className="text-sm font-medium text-primary hover:underline">{t.billing.portal.supportButton}</a>}
+          </button> : brandSupportMailto() ? <a href={brandSupportMailto()} className="text-sm font-medium text-primary hover:underline">{t.billing.portal.supportButton}</a> : null}
         </div>
       </div>
     </div>

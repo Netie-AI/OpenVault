@@ -27,7 +27,7 @@
     "loginEnabled": "Pieteikšanās: iespējota ( parole atjaunināta)",
     "loginDisabled": "Pieteikšanās: atspējota",
     "providerInfo": "Pakalpojumu sniedzējs: {info}",
-    "opencode": "Instalēt un konfigurēt iekļauto @omniroute/opencode-plugin OpenCode lietošanai"
+    "opencode": "Instalēt un konfigurēt iekļauto OpenCode plugin OpenCode lietošanai"
   },
   "doctor": {
     "title": "FreeRoute Diagnostika",

@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: expectations follow the FreeBuild product name.
 import { PassThrough } from "node:stream";
 import Dockerode from "dockerode";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -92,7 +93,7 @@ describe("Docker build diagnostics", () => {
       memoryLimitApplied: false,
     });
 
-    expect(hint).toContain("not under an OpenShip-enforced memory cap");
+    expect(hint).toContain("not under a FreeBuild-enforced memory cap");
     expect(hint).not.toContain("capped at 512 MB");
   });
 
@@ -689,6 +690,6 @@ describe("DockerRuntime build failure paths", () => {
       .catch((caught: Error) => caught);
 
     expect(error.message).toContain("killed by SIGKILL (exit code 137)");
-    expect(error.message).toContain("not under an OpenShip-enforced memory cap");
+    expect(error.message).toContain("not under a FreeBuild-enforced memory cap");
   });
 });

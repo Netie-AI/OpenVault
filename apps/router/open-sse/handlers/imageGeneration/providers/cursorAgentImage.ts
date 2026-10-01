@@ -384,7 +384,7 @@ export async function handleCursorAgentImageGeneration({
       status: 403,
       startTime,
       error:
-        "Cursor Agent image generation spawns a local process and is only available from localhost or the private LAN OmniRoute runs on.",
+        "Cursor Agent image generation spawns a local process and is only available from localhost or the private LAN FreeRoute runs on.",
     });
   }
 

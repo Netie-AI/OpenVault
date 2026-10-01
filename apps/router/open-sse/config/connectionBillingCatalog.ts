@@ -109,7 +109,7 @@ export const CONNECTION_BILLING_CATALOG: readonly ConnectionBillingEntry[] = [
     overage: "hard-stop",
     reason:
       "Antigravity OAuth serves built-in plan quotas that stop serving once consumed; " +
-      "OmniRoute already tracks their reset windows (see antigravityCredits.ts).",
+      "FreeRoute already tracks their reset windows (see antigravityCredits.ts).",
   },
   {
     provider: "cursor",
@@ -118,7 +118,7 @@ export const CONNECTION_BILLING_CATALOG: readonly ConnectionBillingEntry[] = [
     overage: "unknown",
     reason:
       "Cursor Pro includes a request allowance, but usage-based pricing past the plan " +
-      "can be enabled per account and OmniRoute cannot observe that setting. Recorded " +
+      "can be enabled per account and FreeRoute cannot observe that setting. Recorded " +
       "as unknown overage so the strict grouping excludes it.",
   },
   {

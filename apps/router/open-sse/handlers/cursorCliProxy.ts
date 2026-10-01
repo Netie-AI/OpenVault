@@ -179,7 +179,7 @@ async function authenticateExchange(
   return connectError(
     HTTP_STATUS.UNAUTHORIZED,
     "unauthenticated",
-    "CURSOR_API_KEY must be an OmniRoute API key when OmniRoute requires API keys"
+    "CURSOR_API_KEY must be an FreeRoute API key when FreeRoute requires API keys"
   );
 }
 
@@ -259,7 +259,7 @@ async function resolveUpstreamConnection(
     return connectError(
       HTTP_STATUS.SERVICE_UNAVAILABLE,
       "unavailable",
-      "No active Cursor API connection configured in OmniRoute"
+      "No active Cursor API connection configured in FreeRoute"
     );
   }
   let lastError: unknown = null;
@@ -441,7 +441,7 @@ async function handleForward(
     return connectError(
       HTTP_STATUS.UNAUTHORIZED,
       "unauthenticated",
-      "Missing or expired OmniRoute Cursor CLI session token"
+      "Missing or expired FreeRoute Cursor CLI session token"
     );
   }
 

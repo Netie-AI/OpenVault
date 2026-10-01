@@ -27,7 +27,7 @@
     "loginEnabled": "Início de sessão: ativado (palavra-passe atualizada)",
     "loginDisabled": "Início de sessão: desativado",
     "providerInfo": "Fornecedor: {info}",
-    "opencode": "Instalar e configurar o @omniroute/opencode-plugin incluído para o OpenCode"
+    "opencode": "Instalar e configurar o OpenCode plugin incluído para o OpenCode"
   },
   "doctor": {
     "title": "Diagnóstico do FreeRoute",

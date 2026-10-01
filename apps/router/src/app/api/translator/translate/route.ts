@@ -1,3 +1,4 @@
+import { buildKeyVaultCredentials, netieErrorResponse } from "@/lib/netie/providerGuards";
 import { NextResponse } from "next/server";
 import {
   detectFormat,
@@ -188,14 +189,11 @@ export async function POST(request) {
           );
         }
 
-        const credentials = {
-          apiKey: connection.apiKey,
-          accessToken: connection.accessToken,
-          refreshToken: connection.refreshToken,
-          copilotToken: connection.copilotToken,
-          projectId: connection.projectId,
-          providerSpecificData: connection.providerSpecificData,
-        };
+        // FreeRoute: API key from OpenVault, never the DB column; no OAuth or
+        // session tokens are sent; a classified provider gets its named 501.
+        const credentials = await buildKeyVaultCredentials(
+          connection as unknown as Record<string, unknown>
+        );
 
         // Build URL and headers
         const url = buildProviderUrl(provider, model, true, {
@@ -220,6 +218,8 @@ export async function POST(request) {
 
     return NextResponse.json({ success: true, result });
   } catch (error) {
+    const named = netieErrorResponse(error);
+    if (named) return named;
     console.error("Error translating:", error);
     return NextResponse.json(
       { success: false, error: "Failed to translate request" },

@@ -27,7 +27,7 @@
     "loginEnabled": "로그인: 활성화됨(비밀번호 업데이트됨)",
     "loginDisabled": "로그인: 비활성화됨",
     "providerInfo": "공급자: {info}",
-    "opencode": "OpenCode용 번들 @omniroute/opencode-plugin 설치 및 구성"
+    "opencode": "OpenCode용 번들 OpenCode plugin 설치 및 구성"
   },
   "doctor": {
     "title": "FreeRoute 진단",

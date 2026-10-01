@@ -66,6 +66,6 @@ export function buildGoogleLoopbackHint(
     // One forward only: the callback rides the dashboard port itself.
     tunnelCommand: buildSshLocalForward([dashboardPort], location.hostname),
     localDashboardUrl: `http://localhost:${dashboardPort}`,
-    helperCommand: LOGIN_HELPER_PROVIDERS.has(provider) ? `npx omniroute login ${provider}` : null,
+    helperCommand: LOGIN_HELPER_PROVIDERS.has(provider) ? `freeroute login ${provider}` : null,
   };
 }

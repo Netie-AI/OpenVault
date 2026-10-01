@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 import { findActiveDeployment } from "@repo/platform/engine/lib/active-deployment";
 import type { ProjectControlSchemas } from "@repo/contracts";
 import type { ResourceServices } from "../../../resource-operations";
@@ -360,7 +361,7 @@ export function createProjectGitOperations(
             {
               success: false,
               error:
-                "Set a webhook domain or expose this Openship API on a public URL to enable auto-deploy.",
+                "Set a webhook domain or expose this FreeBuild API on a public URL to enable auto-deploy.",
               webhook_strategy: "none",
             },
             400,

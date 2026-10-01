@@ -1,3 +1,4 @@
+import { DISABLED, NetieDisabledError } from "../netie/policy.ts";
 import { createHash } from "node:crypto";
 import * as nodeModule from "node:module";
 import { getTlsClientTimeoutConfig } from "@/shared/utils/runtimeTimeouts";
@@ -69,11 +70,16 @@ export class WreqTransportCapacityError extends Error {
 
 type EmulationOs = "windows" | "macos" | "linux" | "android" | "ios";
 
+// FreeRoute: always false in this edition, see getWreqRuntimeModule.
+const WREQ_STEALTH_TRANSPORT_ENABLED = false as boolean;
 let wreqRuntimeModule: Record<string, unknown> | null = null;
 let wreqRuntimeModuleError: unknown;
 let wreqRuntimeModuleResolved = false;
 
 function getWreqRuntimeModule(): Record<string, unknown> {
+  // FreeRoute: the wreq-js browser-impersonating TLS transport is never
+  // loaded. Every caller gets tls_fingerprint_stealth_disabled (501).
+  if (!WREQ_STEALTH_TRANSPORT_ENABLED) throw new NetieDisabledError(DISABLED.tlsStealth);
   if (!wreqRuntimeModuleResolved) {
     wreqRuntimeModuleResolved = true;
     try {

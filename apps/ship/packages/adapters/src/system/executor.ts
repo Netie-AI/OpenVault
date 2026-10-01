@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 import { existsSync, readFileSync } from "node:fs";
 import { networkInterfaces } from "node:os";
 
@@ -439,7 +440,7 @@ export async function hostChannelHealth(timeoutMs = 2_500): Promise<HostChannelH
     return {
       ok: false,
       code: "disabled",
-      hint: "Host control is off (OPENSHIP_HOST_CONTROL=false). Re-run `openship up` without --no-host-control.",
+      hint: "Host control is off (OPENSHIP_HOST_CONTROL=false). Re-run `freebuild up` without --no-host-control.",
     };
   }
 
@@ -572,7 +573,7 @@ export function createHostExecutor(): CommandExecutor {
     throw new HostChannelUnavailableError(
       "disabled",
       "Host control is disabled on this instance (OPENSHIP_HOST_CONTROL=false). " +
-        "Re-run `openship up` without --no-host-control to allow host operations.",
+        "Re-run `freebuild up` without --no-host-control to allow host operations.",
     );
   }
   const host = process.env.OPENSHIP_HOST_SSH_HOST?.trim();
@@ -596,7 +597,7 @@ export function createHostExecutor(): CommandExecutor {
       throw new HostChannelUnavailableError(
         "not_configured",
         "This operation targets the HOST machine, but no host channel is configured " +
-          "(OPENSHIP_HOST_SSH_HOST is unset) and Openship is running in a container — " +
+          "(OPENSHIP_HOST_SSH_HOST is unset) and FreeBuild is running in a container — " +
           "so it would have run inside the container instead, against the wrong " +
           `filesystem. ${HOST_CHANNEL_NOT_PROVISIONED}`,
       );

@@ -1,15 +1,15 @@
 "use client";
 
 import React, { createContext, useContext, useState, useCallback } from "react";
-import { CLOUD_DASHBOARD_URL, CLOUD_API_URL } from "@repo/core";
+import { CLOUD_DASHBOARD_URL, CLOUD_API_URL, SYSTEM } from "@repo/core";
 import {
   clearProductViewCookie,
   type ProductView,
   writeProductViewCookie,
 } from "@/lib/product-view";
 
-/** Default cloud domain - matches SYSTEM.DOMAINS.CLOUD_DOMAIN in @repo/core */
-const DEFAULT_CLOUD_DOMAIN = "opsh.io";
+/** Default cloud domain. Modified by Netie AI, 2026: read from SYSTEM instead of a second literal copy. */
+const DEFAULT_CLOUD_DOMAIN = SYSTEM.DOMAINS.CLOUD_DOMAIN;
 
 /* ── Types ────────────────────────────────────────────────────────── */
 

@@ -35,7 +35,7 @@ export async function getXaiUsage(connectionId: string) {
     const { getMonthlyProviderTokensForConnection } = await import("@/lib/usage/usageStats");
     const used = getMonthlyProviderTokensForConnection("xai", connectionId);
     return {
-      plan: "xAI / Grok (OmniRoute-tracked)",
+      plan: "xAI / Grok (FreeRoute-tracked)",
       quotas: {
         monthly: {
           used,

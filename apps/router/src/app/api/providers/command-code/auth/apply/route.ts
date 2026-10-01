@@ -1,4 +1,5 @@
 import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
+import { renderKeysManagedByOpenVault } from "@omniroute/open-sse/netie/policy.ts";
 import { consumeCommandCodeAuthSecret } from "@/lib/db/commandCodeAuth";
 import { createProviderConnection, updateProviderConnection } from "@/lib/db/providers";
 import { getCachedProviderConnectionById } from "@/lib/db/readCache";
@@ -26,6 +27,12 @@ function safeConnection(
 export async function POST(request: Request) {
   const authError = await requireManagementAuth(request);
   if (authError) return authError;
+
+  // FreeRoute: applying writes the received Command Code key onto a connection.
+  // Provider keys live only in OpenVault. Also matched in
+  // src/lib/netie/hardDisabledRoutes.ts before this handler runs.
+  const refused = renderKeysManagedByOpenVault();
+  if (refused) return refused;
 
   let body: unknown;
   try {

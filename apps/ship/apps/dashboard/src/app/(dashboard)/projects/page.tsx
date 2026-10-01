@@ -1,6 +1,8 @@
 "use client";
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 
 import { Icon as UiIcon } from "@repo/ui/icons";
+import { BRAND_LINKS } from "@repo/core";
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
@@ -233,9 +235,9 @@ export default function ProjectsPage() {
                         <UiIcon name="plus" className="size-3.5" />
                         {t.projects.serverCta.button}
                       </Link>
-                    ) : (
+                    ) : BRAND_LINKS.download ? (
                       <a
-                        href="https://openship.io/download"
+                        href={BRAND_LINKS.download}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-muted/50 text-foreground text-[13px] font-medium transition-colors hover:bg-muted"
@@ -243,7 +245,7 @@ export default function ProjectsPage() {
                         <UiIcon name="plus" className="size-3.5" />
                         {t.projects.serverCta.button}
                       </a>
-                    )}
+                    ) : null}
                   </div>
                 )}
               </div>

@@ -21,7 +21,7 @@ export function buildRemoteOAuthHint(hostHeader: string | null, port: number): R
   }
   return {
     remoteHost: true,
-    tunnelCommand: `ssh -L ${port}:127.0.0.1:${port} <user>@<omniroute-host>`,
+    tunnelCommand: `ssh -L ${port}:127.0.0.1:${port} <user>@<freeroute-host>`,
     message:
       `FreeRoute appears to be running on a remote host (${hostHeader}). ` +
       `The OAuth callback returns to localhost:${port} on THIS machine, not the server, ` +

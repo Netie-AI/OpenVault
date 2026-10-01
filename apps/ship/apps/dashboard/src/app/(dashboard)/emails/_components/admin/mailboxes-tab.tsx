@@ -1,4 +1,5 @@
 "use client";
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 
 import { Icon as UiIcon } from "@repo/ui/icons";
 
@@ -176,7 +177,7 @@ export function MailboxesTab({
       customContent: (
         <RotatePlatformMailboxConfirm
           serverId={serverId}
-          email={`openship@${primaryDomain}`}
+          email={`freebuild@${primaryDomain}`}
           onCancel={() => hideModal(id)}
           onRotated={() => {
             hideModal(id);

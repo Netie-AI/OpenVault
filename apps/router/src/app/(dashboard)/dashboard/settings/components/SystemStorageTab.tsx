@@ -539,7 +539,7 @@ export default function SystemStorageTab() {
     try {
       await fetchAndDownload(
         "/api/settings/export-json",
-        `omniroute-legacy-backup-${new Date().toISOString().replace(/[:.]/g, "-")}.json`,
+        `freeroute-legacy-backup-${new Date().toISOString().replace(/[:.]/g, "-")}.json`,
         t("jsonExportFailed")
       );
     } catch (err) {
@@ -606,7 +606,7 @@ export default function SystemStorageTab() {
     try {
       await fetchAndDownload(
         "/api/db-backups/export",
-        `omniroute-backup-${new Date().toISOString().replace(/[:.]/g, "-")}.sqlite`,
+        `freeroute-backup-${new Date().toISOString().replace(/[:.]/g, "-")}.sqlite`,
         t("exportFailed")
       );
     } catch (err) {
@@ -1318,7 +1318,7 @@ export default function SystemStorageTab() {
               try {
                 await fetchAndDownload(
                   "/api/db-backups/exportAll",
-                  "omniroute-full-backup.tar.gz",
+                  "freeroute-full-backup.tar.gz",
                   t("exportFailed")
                 );
               } catch (err) {

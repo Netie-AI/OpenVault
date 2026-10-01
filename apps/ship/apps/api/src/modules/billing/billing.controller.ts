@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /** HTTP codecs over the shared billing operations. Provider signatures stay at ingress. */
 import type { Context } from "hono";
 import { getPlatformKernel } from "@repo/platform/engine/lib/platform";
@@ -33,5 +34,5 @@ export async function getUsage(c: Context) { return c.json({ data: await operati
 export async function listAllowanceDetail(c: Context) { return c.json({ data: await operationData(c, getPlatformKernel().billing.listAllowanceDetail(operationContext(c))) }); }
 
 export async function stripeWebhook(c: Context) {
-  return c.json({ error: "Billing is managed by Oblien; direct Stripe webhooks are retired" }, 410);
+  return c.json({ error: "Direct Stripe webhooks are retired" }, 410);
 }

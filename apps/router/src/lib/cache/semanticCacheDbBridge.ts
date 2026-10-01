@@ -34,9 +34,11 @@ export function resolveProviderConnectionDetails(provider: string): {
         // Ignore parse error
       }
     }
-    const rawKey = decrypted.api_key || decrypted.apiKey;
-    const apiKey = typeof rawKey === "string" && rawKey.trim() ? rawKey.trim() : undefined;
-    return { baseUrl, apiKey };
+    // FreeRoute: the api_key column never holds a provider key (keys live in
+    // OpenVault), and this resolver is synchronous, so it cannot ask
+    // OpenVault. No key is returned; callers that can await use
+    // resolveConnectionApiKey (src/lib/netie/providerGuards.ts).
+    return { baseUrl, apiKey: undefined };
   } catch {
     return {};
   }

@@ -27,7 +27,7 @@
     "loginEnabled": "Shiga: an kunna (an sabunta kalmar sirri)",
     "loginDisabled": "Shiga: an kashe",
     "providerInfo": "Mai bayarwa: {info}",
-    "opencode": "Shigar da kuma saita @omniroute/opencode-plugin da aka haɗa don OpenCode"
+    "opencode": "Shigar da kuma saita OpenCode plugin da aka haɗa don OpenCode"
   },
   "doctor": {
     "title": "Mai Binciken FreeRoute",

@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Git credential relay — core. Desktop-only.
  *
@@ -97,7 +98,7 @@ export function buildHelperScript(port: number, nonce: string): string {
   return (
     [
       "#!/usr/bin/env bash",
-      "# Openship git credential relay (desktop-only). No credential is stored here.",
+      "# FreeBuild git credential relay (desktop-only). No credential is stored here.",
       'action="${1:-}"',
       'if [ "$action" != "get" ] && [ "$action" != "auth-header" ]; then exit 0; fi',
       `exec 3<>/dev/tcp/127.0.0.1/${port} || exit 1`,

@@ -139,9 +139,14 @@ beforeEach(() => {
 
 describe("credential sanitization", () => {
   it("returns a constant mask and never decrypts on a read path", async () => {
+    // Modified by Netie AI, 2026: Cloudflare entries come from OpenVault (the bridge
+    // replays listActiveByProvider); the legacy local row in listByOrg is not listed.
     credentialRepo.listByOrg.mockResolvedValue([row()]);
+    credentialRepo.listActiveByProvider.mockResolvedValue([row({ id: "key_ov_1" })]);
 
-    const [out] = await listCredentials("org_1");
+    const listed = await listCredentials("org_1");
+    expect(listed.map((c) => c.id)).toEqual(["key_ov_1"]);
+    const [out] = listed;
 
     expect(out?.tokenMasked).toBe(ENV_MASK);
     // The whole reason the mask is a constant: a read endpoint must not be a
@@ -160,8 +165,19 @@ describe("credential sanitization", () => {
       throw new Error("Unsupported state or unable to authenticate data");
     });
     credentialRepo.listByOrg.mockResolvedValue([row()]);
+    credentialRepo.listActiveByProvider.mockResolvedValue([row({ id: "key_ov_1" })]);
 
     await expect(listCredentials("org_1")).resolves.toHaveLength(1);
+  });
+
+  it("does not list a legacy local Cloudflare row next to the OpenVault keys", async () => {
+    // Modified by Netie AI, 2026: nothing reads that row, so showing it as active would
+    // tell the operator FreeBuild uses a token it never uses.
+    credentialRepo.listByOrg.mockResolvedValue([row({ id: "legacy_local" })]);
+    credentialRepo.listActiveByProvider.mockResolvedValue([]);
+
+    await expect(listCredentials("org_1")).resolves.toEqual([]);
+    expect(decrypt).not.toHaveBeenCalled();
   });
 });
 

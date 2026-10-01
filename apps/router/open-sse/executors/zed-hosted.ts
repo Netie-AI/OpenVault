@@ -526,7 +526,7 @@ export class ZedHostedExecutor extends BaseExecutor {
         headers: {
           "Content-Type": "application/json",
           Accept: "application/x-ndjson, text/event-stream, */*",
-          "User-Agent": `OmniRoute/zed-hosted`,
+          "User-Agent": `FreeRoute/zed-hosted`,
           "x-zed-version":
             (this.config as Record<string, unknown>)?.appVersion?.toString() || "0.200.0",
           [ZED_HEADERS.clientSupportsStatus]: "true",

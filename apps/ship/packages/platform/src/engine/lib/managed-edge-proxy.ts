@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 import type { Platform } from "@repo/adapters";
 import { safeErrorMessage } from "@repo/core";
 import { cloudClient } from "./cloud/client";
@@ -227,7 +228,7 @@ export async function releaseManagedHostnames(
 export function edgeUnsyncedWarning(failures: string[], retryHint: string): string {
   return (
     `Deployed, but the free domain routing didn't sync for ${failures.join(", ")}. ` +
-    `The app is live on the server; the free .opsh.io URL won't resolve until the edge route is created. ` +
+    `The app is live on the server; the free cloud URL won't resolve until the edge route is created. ` +
     `Check that the server is reachable from the hosted cloud service on port 80, then ${retryHint}.`
   );
 }

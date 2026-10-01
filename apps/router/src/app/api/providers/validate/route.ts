@@ -1,3 +1,5 @@
+import { netieErrorResponse } from "@/lib/netie/providerGuards";
+import { classifyProviderId, renderDisabled } from "@omniroute/open-sse/netie/policy.ts";
 import { NextResponse } from "next/server";
 import { sanitizeErrorMessage } from "@omniroute/open-sse/utils/errorSanitization.ts";
 import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
@@ -70,6 +72,12 @@ export async function POST(request) {
 
     const retirementResponse = rejectRetiredCommonChatGptWebProvider(provider);
     if (retirementResponse) return retirementResponse;
+
+    // FreeRoute: a subscription, browser-session or stealth-transport provider
+    // is never validated. Its validator sends the pasted cookie or token to the
+    // consumer site (some through the TLS-impersonating client).
+    const disabledCode = classifyProviderId(provider);
+    if (disabledCode) return renderDisabled(disabledCode);
 
     let providerSpecificData: any = { validationModelId };
     if (customUserAgent) {
@@ -178,6 +186,8 @@ export async function POST(request) {
       providerSpecificData: result.providerSpecificData || null,
     });
   } catch (error) {
+    const named = netieErrorResponse(error);
+    if (named) return named;
     console.log("Error validating API key:", sanitizeErrorMessage(error) || "Validation failed");
     return NextResponse.json({ error: "Validation failed" }, { status: 500 });
   }

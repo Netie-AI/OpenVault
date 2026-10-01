@@ -1,6 +1,8 @@
 "use client";
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 
 import { Icon as UiIcon } from "@repo/ui/icons";
+import { UPSTREAM_CREDIT } from "@repo/core";
 
 import { useEffect, useState } from "react";
 import { usePlatform } from "@/context/PlatformContext";
@@ -94,6 +96,20 @@ export function InstanceInfo() {
           )}
         </div>
       </div>
+
+      {/* About: the one place the upstream project is credited (Apache-2.0). */}
+      <p className="mt-3 text-xs text-muted-foreground">
+        FreeBuild is based on{" "}
+        <a
+          href={UPSTREAM_CREDIT.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-foreground underline underline-offset-4"
+        >
+          {UPSTREAM_CREDIT.name}
+        </a>{" "}
+        by {UPSTREAM_CREDIT.author}, licensed {UPSTREAM_CREDIT.license}.
+      </p>
 
       <UpgradeAuthModal
         open={upgradeOpen}

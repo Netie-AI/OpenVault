@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Client-address recovery at the edge.
  *
@@ -115,7 +116,7 @@ export function edgeRealIpConf(): string {
   const extra = edgeTrustedProxies();
 
   const lines: string[] = [
-    "# Openship — recover the real client address from a trusted front proxy.",
+    "# FreeBuild — recover the real client address from a trusted front proxy.",
     "#",
     "# GENERATED. Source: packages/adapters/src/infra/edge-real-ip.ts",
     "#",
@@ -223,7 +224,7 @@ export function isCloudFrontedHost(hostname: string): boolean {
  */
 export function cloudEdgeRealIpConf(indent = "    "): string {
   const lines: string[] = [
-    "# Openship Cloud's edge fronts this free host, so the peer is the edge and the",
+    "# FreeBuild Cloud's edge fronts this free host, so the peer is the edge and the",
     "# visitor is named in X-Real-IP (which that front OVERWRITES). The http-scope block",
     "# reads CF-Connecting-IP for Cloudflare-fronted custom domains, and there is one",
     "# real_ip_header per scope — hence this override.",
@@ -233,7 +234,7 @@ export function cloudEdgeRealIpConf(indent = "    "): string {
     "# which Cloudflare's ranges (the visitor→edge leg) do not contain — so a peer list",
     "# here silently ignores the header and every free-domain visitor stays the edge.",
     "#",
-    "# What bounds it is the server_name: this block exists only inside a <slug>.opsh.io",
+    "# What bounds it is the server_name: this block exists only inside a free cloud subdomain",
     "# vhost, a hostname whose only legitimate path is that edge. Someone who reaches this",
     "# box directly on :80 with a forged Host AND a forged X-Real-IP can choose their own",
     "# apparent address for THIS vhost — accepted, because the alternative is the address",

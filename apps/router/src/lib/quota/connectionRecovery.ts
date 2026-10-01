@@ -272,7 +272,12 @@ export async function runConnectionRecoveryTick(
           getProviderConnections({ isActive: true }) as Promise<Array<Record<string, unknown>>>,
           getProviderConnections({ isActive: false }) as Promise<Array<Record<string, unknown>>>,
         ]);
-        const rows = [...(activeRows || []), ...(inactiveRows || [])];
+        // FreeRoute: subscription and browser-session connections are never
+        // brought back into rotation (open-sse/netie/policy.ts).
+        const { classifyConnection } = await import("@/lib/netie/providerGuards");
+        const rows = [...(activeRows || []), ...(inactiveRows || [])].filter(
+          (row) => !classifyConnection(row)
+        );
         return (Array.isArray(rows) ? rows : []).map((row) => ({
           id: typeof row.id === "string" ? row.id : "",
           testStatus: typeof row.testStatus === "string" ? row.testStatus : null,

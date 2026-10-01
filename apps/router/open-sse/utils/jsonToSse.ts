@@ -87,7 +87,7 @@ export function synthesizeOpenAiSseFromJson(jsonText: string): string {
   const choices = parsed.choices;
   if (!Array.isArray(choices) || choices.length === 0) return "";
 
-  const id = typeof parsed.id === "string" && parsed.id ? parsed.id : "chatcmpl-omniroute-sse";
+  const id = typeof parsed.id === "string" && parsed.id ? parsed.id : "chatcmpl-freeroute-sse";
   const created = typeof parsed.created === "number" ? parsed.created : 0;
   const model = typeof parsed.model === "string" ? parsed.model : "";
   const base = { id, object: "chat.completion.chunk", created, model };

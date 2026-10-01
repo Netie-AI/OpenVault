@@ -4,8 +4,10 @@
 // verifier for OpenVault-issued inbound client tokens (see verifyClientToken).
 //
 // FreeRoute never stores a provider's real API key in its own DB, files, or
-// env (see src/app/api/providers/route.ts and [id]/route.ts, which return the
-// `keys_managed_by_openvault` 501 instead of persisting one). Every outgoing
+// env. The guard is in the DB layer (src/lib/db/providers.ts
+// `assertNoLocalProviderSecret`, called by createProviderConnection and
+// updateProviderConnection), and the routes that accept a key return the
+// `keys_managed_by_openvault` 501 instead of persisting one. Every outgoing
 // request instead resolves its credential here, live, from OpenVault:
 //
 //   GET  {OPENVAULT_URL}/api/keys                        -> the account's keys (no plaintext)
@@ -79,6 +81,39 @@ export function resolveAdminTokenPath(): string {
   const home = process.env.OPENVAULT_HOME?.trim();
   if (home) return join(expandHome(home), "admin_token");
   return join(homedir(), ".openvault", "admin_token");
+}
+
+/**
+ * Thrown by a write path that would store a provider key (or, with the client
+ * message, one of FreeRoute's own inbound client keys) outside OpenVault.
+ * HTTP 501 with code keys_managed_by_openvault. Lives here, not in
+ * providerGuards.ts, so src/lib/db/apiKeys.ts can throw it without loading the
+ * provider registry into the request gate.
+ */
+export class KeysManagedByOpenVaultError extends Error {
+  readonly status = 501 as const;
+  readonly code = KEYS_MANAGED_BY_OPENVAULT_CODE;
+  readonly fields: string[];
+
+  constructor(
+    fields: string[] = [],
+    message = "Provider keys are stored in OpenVault. Add them at http://127.0.0.1:3010/keys."
+  ) {
+    super(message);
+    this.name = "KeysManagedByOpenVaultError";
+    this.fields = fields;
+  }
+}
+
+export const CLIENT_KEYS_MANAGED_MESSAGE =
+  "FreeRoute's own client API keys are issued by OpenVault. Create or rotate one at " +
+  "http://127.0.0.1:3010/keys (OpenVault mints it via POST /api/apikeys).";
+
+export function isKeysManagedByOpenVaultError(error: unknown): error is KeysManagedByOpenVaultError {
+  if (error instanceof KeysManagedByOpenVaultError) return true;
+  if (!error || typeof error !== "object") return false;
+  const e = error as { status?: unknown; code?: unknown };
+  return e.status === 501 && e.code === KEYS_MANAGED_BY_OPENVAULT_CODE;
 }
 
 /** Thrown whenever OpenVault cannot be reached or answers with an error. Never swallow this into a silent fallback. */
@@ -287,7 +322,11 @@ const secretInflight = new Map<string, Promise<string>>();
 
 async function revealSecret(keyId: string): Promise<string> {
   const cached = secretCache.get(keyId);
-  if (cached && Date.now() - cached.at < CACHE_TTL_MS) return cached.secret;
+  if (cached) {
+    if (Date.now() - cached.at < CACHE_TTL_MS) return cached.secret;
+    // Expired: drop the plaintext now instead of keeping it in the heap.
+    secretCache.delete(keyId);
+  }
 
   const pending = secretInflight.get(keyId);
   if (pending) return pending;
@@ -299,6 +338,13 @@ async function revealSecret(keyId: string): Promise<string> {
   )
     .then((body) => {
       secretCache.set(keyId, { at: Date.now(), secret: body.secret });
+      // Evict on a timer so a key that is never asked for again (revoked or
+      // deleted in OpenVault) does not stay in memory for the process lifetime.
+      const evict = setTimeout(() => {
+        const entry = secretCache.get(keyId);
+        if (entry && Date.now() - entry.at >= CACHE_TTL_MS) secretCache.delete(keyId);
+      }, CACHE_TTL_MS);
+      evict.unref?.();
       return body.secret;
     })
     .finally(() => {
@@ -380,8 +426,19 @@ export function mapToOpenVaultProvider(routerProviderId: string, baseUrl?: strin
 
 // ── Best-key selection ───────────────────────────────────────────────────────
 
+/**
+ * Custody gate, same rule as OpenVault's own router (vault/fallback.py
+ * `_is_available` and store.py `pooled_ordered`): only keys OpenVault owns and
+ * may spend. A "tenant" key, or any custody value other than "pooled", is
+ * never picked. A row with no custody field predates the tag and counts as
+ * pooled, which is also OpenVault's column default.
+ */
+export function isSpendableCustody(custody: unknown): boolean {
+  return custody === undefined || custody === null || custody === "pooled";
+}
+
 function isUsable(key: OpenVaultKey): boolean {
-  return key.enabled === true && key.lifecycle === "active";
+  return key.enabled === true && key.lifecycle === "active" && isSpendableCustody(key.custody);
 }
 
 /** Highest `priority` first (numerically greater = preferred, ties broken by list order). */
@@ -415,12 +472,15 @@ export function normalizeBaseUrl(value: string | null | undefined): string | nul
  * reached, callers must propagate that as a loud 503, never a silent fallback
  * to a locally stored value.
  *
- * Selection, first match wins:
+ * Selection, first match wins. "Usable" means enabled, active, and custody
+ * "pooled" or absent (isSpendableCustody); a "tenant" key is never picked.
  *   1. a usable key whose `base_url` is the connection's base URL. This is how
  *      an OpenAI-compatible node (id `openai-compatible-*`, any host) finds
  *      the key the operator stored in OpenVault for that exact endpoint;
  *      the provider-id map below cannot name those.
  *   2. a usable key whose `provider` is the mapped OpenVault provider.
+ *   3. for an id the map cannot name, a usable key whose `provider` is that
+ *      exact router id. Never an arbitrary "custom" key.
  */
 export async function resolveProviderApiKey(
   routerProviderId: string,
@@ -437,9 +497,17 @@ export async function resolveProviderApiKey(
   }
 
   const ovProvider = mapToOpenVaultProvider(routerProviderId, opts.baseUrl);
-  const best = pickBestKey(allKeys.filter((k) => k.provider === ovProvider));
-  if (!best) return null;
-  return revealSecret(best.id);
+  if (ovProvider !== "custom") {
+    const best = pickBestKey(allKeys.filter((k) => k.provider === ovProvider));
+    return best ? revealSecret(best.id) : null;
+  }
+
+  // Unmapped provider: only a key OpenVault files under this exact router id
+  // may be used. Never fall back to "any custom key": that would send a key
+  // stored for one endpoint to a different provider.
+  const id = routerProviderId.trim().toLowerCase();
+  const exact = pickBestKey(allKeys.filter((k) => String(k.provider).toLowerCase() === id));
+  return exact ? revealSecret(exact.id) : null;
 }
 
 // ── Inbound client token verification (POST /api/apikeys/verify) ───────────

@@ -14,7 +14,7 @@ export const routewayProvider: RegistryEntry = buildOpenAiCompatibleRegistryEntr
   baseUrl: "https://api.routeway.ai/v1/chat/completions",
   modelsUrl: "https://api.routeway.ai/v1/models",
   passthroughModels: true,
-  extraHeaders: { "User-Agent": "Mozilla/5.0 OmniRoute/1.0" },
+  extraHeaders: { "User-Agent": "Mozilla/5.0 FreeRoute/1.0" },
   models: [
     { id: "llama-3.3-70b-instruct:free", name: "Llama 3.3 70B Instruct (free)", contextLength: 131072, toolCalling: true },
     { id: "nemotron-3-nano-30b-a3b:free", name: "Nemotron 3 Nano 30B (free)", contextLength: 256000, toolCalling: true },

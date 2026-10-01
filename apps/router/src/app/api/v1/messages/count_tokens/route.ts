@@ -1,3 +1,4 @@
+import { withNetiePolicy } from "@/lib/netie/routeGuard";
 import { CORS_HEADERS } from "@/shared/utils/cors";
 import { v1CountTokensSchema } from "@/shared/validation/schemas";
 import { isValidationFailure, validateBody } from "@/shared/validation/helpers";
@@ -25,7 +26,7 @@ export async function OPTIONS() {
  * POST /v1/messages/count_tokens - Hybrid token count response.
  * Uses real provider-side count when supported, falling back to estimation.
  */
-export async function POST(request) {
+async function upstreamPost(request) {
   let rawBody;
   try {
     rawBody = await request.json();
@@ -221,3 +222,7 @@ function buildEstimatedCountResponse(body, tokenizerContext: TokenizerContext = 
     }
   );
 }
+
+// FreeRoute: named 501 for a disabled provider, named 503/501 for KeyVault
+// and key-storage errors (src/lib/netie/routeGuard.ts).
+export const POST = withNetiePolicy(upstreamPost);

@@ -283,7 +283,7 @@ export async function selfRegister(c: Context) {
       const session = createSetupSession(
         [
           { name: "edge", label: "Install the edge (80/443)" },
-          { name: "route", label: "Route domain to Openship" },
+          { name: "route", label: "Route domain to FreeBuild" },
         ],
         "self",
       );
@@ -377,7 +377,7 @@ export async function selfRegister(c: Context) {
     const session = createSetupSession(
       [
         { name: "edge", label: "Install the edge" },
-        { name: "route", label: "Route domain to Openship" },
+        { name: "route", label: "Route domain to FreeBuild" },
         { name: "ssl", label: "Issue SSL certificate" },
       ],
       "self",

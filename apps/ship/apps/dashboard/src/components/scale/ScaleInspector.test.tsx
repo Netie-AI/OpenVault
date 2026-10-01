@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: expectations follow the FreeBuild product name.
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ReactFlowProvider } from "@xyflow/react";
@@ -32,9 +33,9 @@ function render(id: string, draft: ScaleDraft = createExampleDraft()) {
 }
 
 describe("scaling panels", () => {
-  it("puts load balancing, health checks, and TLS inside OpenShip Edge", () => {
+  it("puts load balancing, health checks, and TLS inside FreeBuild Edge", () => {
     const html = render("edge-us");
-    expect(html).toContain("OpenShip Edge");
+    expect(html).toContain("FreeBuild Edge");
     expect(html).toContain("TLS termination");
     expect(html).toContain("Balancing algorithm");
     expect(html).toContain("Health check path");

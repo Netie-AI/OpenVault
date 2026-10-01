@@ -27,7 +27,7 @@
     "loginEnabled": "Sisselogimine: lubatud (parool on uuendatud)",
     "loginDisabled": "Sisselogimine: keelatud",
     "providerInfo": "Pakkuja: {info}",
-    "opencode": "Installi ja seadista OpenCode'i jaoks kaasas olev @omniroute/opencode-plugin"
+    "opencode": "Installi ja seadista OpenCode'i jaoks kaasas olev OpenCode plugin"
   },
   "doctor": {
     "title": "FreeRoute'i diagnostika",

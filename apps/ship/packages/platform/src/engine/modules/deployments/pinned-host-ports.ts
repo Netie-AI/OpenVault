@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 import {
   HostPortClaimConflictError,
   HOST_PORT_QUARANTINE_OWNER,
@@ -81,7 +82,7 @@ function assertStableTarget(target: HostPortTargetIdentity): void {
   if (target.stable) return;
   throw new Error(
     "Cannot safely reserve loopback ports because this target has no stable host identity. " +
-      "Make /etc/machine-id readable or allow Openship to create /var/lib/openship/host-id.",
+      "Make /etc/machine-id readable or allow FreeBuild to create /var/lib/openship/host-id.",
   );
 }
 

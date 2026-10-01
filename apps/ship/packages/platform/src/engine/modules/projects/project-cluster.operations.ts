@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 import { repos } from "@repo/db";
 import {
   AppError,
@@ -83,7 +84,7 @@ export function createProjectClusterOperations(
           throw new AppError("This project owns databases on its current cluster. Remove or migrate those databases before changing the application's cluster.", 409, "CLUSTER_DATABASES_ATTACHED");
         if (project.appTemplateId === "openship")
           throw new AppError(
-            "The OpenShip control plane cannot be moved through workload scaling.",
+            "The FreeBuild control plane cannot be moved through workload scaling.",
             409,
             "CLUSTER_WORKLOAD_UNSUPPORTED",
           );

@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Verify signed provider events, deduplicate stable delivery IDs, and refresh
  * the organization from Oblien's current entitlement. Events never grant credits
@@ -103,7 +104,7 @@ async function notifyCreditsLow(orgId: string, usedPercent: number | null): Prom
         <p>Hi ${owner.user.name ?? "there"},</p>
         <p>Your workspace has used <strong>${pct}%</strong> of this period's credit allowance.</p>
         <p>To avoid interruption when the cap is reached, you can top up or upgrade your plan at any time from the billing page.</p>
-        <p>— Openship</p>
+        <p>— FreeBuild</p>
       `,
       text: `Your workspace has used ${pct}% of this period's credit allowance. Top up or upgrade from the billing page to avoid interruption.`,
       organizationId: orgId,
@@ -137,7 +138,7 @@ async function notifyQuotaThreshold(
           <p>Your workspace has crossed the <strong>${pctLabel}</strong> usage threshold for this period.</p>
           ${detail}
           <p>Top up or upgrade from the billing page to avoid interruption when the cap is reached.</p>
-          <p>— Openship</p>
+          <p>— FreeBuild</p>
         `,
         text: `Your workspace crossed the ${pctLabel} usage threshold this period. Top up or upgrade from the billing page to avoid interruption.`,
         organizationId: orgId,
@@ -272,7 +273,7 @@ export async function handleOblienWebhook(
   const sig = verifyOblienSignature(rawBody, signatureHeader, env.OBLIEN_WEBHOOK_SECRET);
   if (!sig.ok) return {
     status: sig.reason === "no_secret" ? 503 : 401,
-    payload: { error: sig.reason === "no_secret" ? "Oblien webhook not configured" : "invalid signature" },
+    payload: { error: sig.reason === "no_secret" ? "Cloud billing webhook not configured" : "invalid signature" },
   };
   let payload: OblienWebhookPayload;
   try { payload = JSON.parse(rawBody); }

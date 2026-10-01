@@ -8,7 +8,7 @@ import ProviderIcon from "@/shared/components/ProviderIcon";
 // our own link.omniroute.online shortener for click metrics, but that domain no
 // longer resolves (every slug 404s) after the move to omniskill.online, so the
 // CTA points straight at the destination again.
-const CHEAPER_INFERENCE_URL = "https://cheaperinference.com/?utm_source=omniroute";
+const CHEAPER_INFERENCE_URL = "https://cheaperinference.com/";
 
 // Cheaper Inference brand green (#31f889). White text on it fails contrast, so
 // the CTA pairs it with the dark ink from the provider's color token (colors.ts:

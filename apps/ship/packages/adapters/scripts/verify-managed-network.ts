@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Real WireGuard lifecycle checks in disposable Linux/systemd containers.
  * bun packages/adapters/scripts/verify-managed-network.ts <docker-context>
@@ -243,7 +244,7 @@ try {
   try {
     await assert.rejects(managedNetworkTools.inspect(executors[0]!, {
       managedId, hostIdentity: names[0]!, endpoint: endpoints[0]!, listenPort: 51820,
-    }), /without an OpenShip ownership receipt/);
+    }), /without a FreeBuild ownership receipt/);
   } finally {
     await docker(["exec", names[0]!, "ip", "link", "delete", interfaceName]);
   }

@@ -85,8 +85,10 @@ const RELAY_FETCH_TIMEOUT_MS = readRelayFetchTimeoutMs();
 // Overridable via OMNIROUTE_RETRY_BACKOFF_MS (0 = retry immediately).
 const RETRY_BACKOFF_MS = Math.max(Number(process.env.OMNIROUTE_RETRY_BACKOFF_MS) || 10, 0);
 
+// FreeRoute: TLS fingerprint stealth is not shipped. Always false, whatever
+// ENABLE_TLS_FINGERPRINT says (open-sse/netie/policy.ts, tls_fingerprint_stealth_disabled).
 function isTlsFingerprintEnabled() {
-  return process.env.ENABLE_TLS_FINGERPRINT === "true";
+  return false;
 }
 
 function tlsFingerprintProviderAllowed(

@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Setup controller - Electron → API direct push of instance config.
  *
@@ -355,7 +356,7 @@ export async function resetAdminPassword(c: Context) {
   // multi-user box the reset never lands on an arbitrary member row.
   const admin = await repos.user.findFoundingAdmin();
   if (!admin) {
-    return c.json({ error: "No admin account exists yet — run `openship` to create one." }, 409);
+    return c.json({ error: "No admin account exists yet — run `freebuild` to create one." }, 409);
   }
 
   const email =

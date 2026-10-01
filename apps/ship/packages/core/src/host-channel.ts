@@ -53,8 +53,8 @@ export const HOST_CHANNEL_SYMPTOM =
  * prose on five surfaces, and a command an operator can't paste verbatim is worth
  * nothing.
  */
-export const HOST_CHANNEL_PROVISION_COMMAND = "openship up";
-export const HOST_CHANNEL_RECHECK_COMMAND = "openship doctor";
+export const HOST_CHANNEL_PROVISION_COMMAND = "freebuild up";
+export const HOST_CHANNEL_RECHECK_COMMAND = "freebuild doctor";
 
 export const HOST_CHANNEL_RECHECK = `Re-check it any time with \`${HOST_CHANNEL_RECHECK_COMMAND}\`.`;
 
@@ -84,7 +84,7 @@ export const HOST_CHANNEL_NOT_PROVISIONED =
  * the instruction (a status row) or both (a banner, a boot log).
  */
 export const HOST_CHANNEL_UNPROVISIONED =
-  "Openship is running in a container with no host channel — OPENSHIP_HOST_SSH_HOST is " +
+  "FreeBuild is running in a container with no host channel — OPENSHIP_HOST_SSH_HOST is " +
   "unset, so there is no address to reach the host at and nothing has been dialed.";
 
 /**
@@ -135,7 +135,7 @@ export function hostChannelAccount(env: {
  * a file that was already correct — the same mistake #490 made with firewalls.
  */
 export const HOST_CHANNEL_AUTH_REJECTED =
-  "The host accepted the connection and then refused Openship's key. Either the key is " +
+  "The host accepted the connection and then refused FreeBuild's key. Either the key is " +
   "no longer in the target account's `authorized_keys`, or sshd does not permit that " +
   "account to log in at all (for a root channel, check `sshd -T | grep -i permitrootlogin`).";
 
@@ -171,7 +171,7 @@ export const HOST_CHANNEL_OPT_OUT =
   // The command sits early in the sentence on purpose: every surface wraps this to a
   // terminal width, and a line break through the middle of a command is a command an
   // operator can't copy.
-  "Not a fix, a choice: `openship up --no-host-control` turns the channel off and takes " +
+  "Not a fix, a choice: `freebuild up --no-host-control` turns the channel off and takes " +
   "its key back, for a box where the api container should never run host commands — the " +
   "items above stay unavailable.";
 
@@ -260,19 +260,19 @@ export function explainHostChannelCause(
       };
     case "unresolved":
       return {
-        headline: `"${ctx.host ?? at}" didn't resolve inside the Openship container${suffix}`,
+        headline: `"${ctx.host ?? at}" didn't resolve inside the FreeBuild container${suffix}`,
         body:
           "The host alias needs `extra_hosts: host.docker.internal:host-gateway` and Docker " +
           "20.10+; under rootless Docker the host gateway isn't provided at all. Re-run " +
-          "`openship up` to reprovision the channel.",
+          "`freebuild up` to reprovision the channel.",
         firewallShaped: false,
       };
     case "no_route":
       return {
-        headline: `${at} — no route from the Openship container${suffix}`,
+        headline: `${at} — no route from the FreeBuild container${suffix}`,
         body:
           "The address the channel was provisioned with isn't reachable on this box's " +
-          "networks. Re-run `openship up` to reprovision it, or point " +
+          "networks. Re-run `freebuild up` to reprovision it, or point " +
           "OPENSHIP_HOST_SSH_HOST at an address the container can reach.",
         firewallShaped: false,
       };

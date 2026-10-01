@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * What to RUN on one host — the only place in this package where a package manager,
  * an init system or a firewall is named inside a command string.
@@ -78,7 +79,7 @@ export type ReleaseArch = Exclude<SystemArch, "unknown">;
 function releaseArchOf(profile: EnvironmentProfile): Answer<ReleaseArch> {
   return profile.arch === "unknown"
     ? refused(
-        "This host's CPU architecture could not be determined, and Openship will not " +
+        "This host's CPU architecture could not be determined, and FreeBuild will not " +
           "default to amd64 — a release artifact for the wrong architecture installs " +
           "cleanly and then fails to execute.",
       )
@@ -232,7 +233,7 @@ const INSTALL: Readonly<Record<SystemPackageManager, PkgRule>> = {
   brew: (names) => answered([`brew install ${names}`]),
   none: (names) =>
     refused(
-      `No package manager is available to install ${names} — Openship looked for ` +
+      `No package manager is available to install ${names} — FreeBuild looked for ` +
         `apt-get, dnf, yum, apk and brew and found none.`,
     ),
 };
@@ -262,7 +263,7 @@ const AVAILABLE_VERSION: Readonly<Record<SystemPackageManager, PkgRule>> = {
   apk: (names) => answered([`apk policy ${names} 2>/dev/null`]),
   brew: (names) =>
     refused(
-      `Openship does not read Homebrew's available version for ${names} — it reports the ` +
+      `FreeBuild does not read Homebrew's available version for ${names} — it reports the ` +
         `installed version only on macOS.`,
     ),
   none: (names) =>
@@ -301,13 +302,13 @@ const SERVICE: Readonly<Record<SystemServiceManager, ServiceRules>> = {
   },
 
   launchd: noServiceManager(
-    "This host runs launchd, and Openship does not manage macOS system services — " +
+    "This host runs launchd, and FreeBuild does not manage macOS system services — " +
       "launchd jobs are addressed by label rather than by unit name, and starting or " +
       "stopping one is the operator's call.",
   ),
 
   none: noServiceManager(
-    "This host has no service manager Openship can drive (no running systemd, no " +
+    "This host has no service manager FreeBuild can drive (no running systemd, no " +
       "OpenRC, no launchd), so services cannot be started, stopped or inspected. A " +
       "container started without an init system is the usual cause.",
   ),
@@ -422,7 +423,7 @@ function withComposePlugin(profile: EnvironmentProfile, engine: readonly string[
 function dockerInstallSteps(profile: EnvironmentProfile): Op {
   if (profile.os === "darwin") {
     return refused(
-      "Openship does not install Docker on macOS — Docker Desktop (or OrbStack/Colima) " +
+      "FreeBuild does not install Docker on macOS — Docker Desktop (or OrbStack/Colima) " +
         "is a GUI application an operator installs and licenses themselves.",
     );
   }
@@ -511,7 +512,7 @@ function dockerInstallSteps(profile: EnvironmentProfile): Op {
     case "arch":
     case "unknown":
       return refused(
-        `Openship has no Docker install path for this host (os-release ID=` +
+        `FreeBuild has no Docker install path for this host (os-release ID=` +
           `${JSON.stringify(profile.distroId ?? "")}, family ${profile.distroFamily}).`,
       );
   }
@@ -697,7 +698,7 @@ export function hostRefusal(profile: EnvironmentProfile): string | null {
   // is still not allowed to be silent.
   const reason =
     profile.unsupportedReason ??
-    "Openship cannot drive this host, and the detector recorded no reason.";
+    "FreeBuild cannot drive this host, and the detector recorded no reason.";
   return `${reason} (host: ${describeProfile(profile)})`;
 }
 

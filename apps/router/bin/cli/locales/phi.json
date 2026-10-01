@@ -27,7 +27,7 @@
     "loginEnabled": "Pag-login: naka-enable (na-update ang password)",
     "loginDisabled": "Pag-login: naka-disable",
     "providerInfo": "Provider: {info}",
-    "opencode": "I-install at i-configure ang kasamang @omniroute/opencode-plugin para sa OpenCode"
+    "opencode": "I-install at i-configure ang kasamang OpenCode plugin para sa OpenCode"
   },
   "doctor": {
     "title": "FreeRoute Doctor",

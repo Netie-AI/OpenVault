@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026
 // No DOM: renderToStaticMarkup runs no effects, so this covers the FIRST paint — the
 // state an operator sees before the server list arrives, and the copy that must be on the
 // card rather than buried in the confirm modal.

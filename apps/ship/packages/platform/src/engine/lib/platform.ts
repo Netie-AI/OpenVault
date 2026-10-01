@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026
 /** Application composition shared by the HTTP process and each owned native worker. */
 import { AppError, CLOUD_UNREACHABLE_CODE } from "@repo/core";
 import { isCreateDeploymentResult, isDeployment } from "@repo/contracts";

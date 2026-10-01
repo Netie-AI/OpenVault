@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * SystemdSupervisor - process management via systemd unit files.
  *
@@ -98,7 +99,7 @@ export class SystemdSupervisor implements ProcessSupervisor {
       .join("\n");
 
     return `[Unit]
-Description=Openship deployment ${opts.deploymentId}
+Description=FreeBuild deployment ${opts.deploymentId}
 After=network.target
 
 [Service]

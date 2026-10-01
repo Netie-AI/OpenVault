@@ -27,7 +27,7 @@
     "loginEnabled": "Oturum açma: etkin (parola güncellendi)",
     "loginDisabled": "Oturum açma: devre dışı",
     "providerInfo": "Sağlayıcı: {info}",
-    "opencode": "OpenCode için paketle birlikte gelen @omniroute/opencode-plugin eklentisini yükleyip yapılandırın"
+    "opencode": "OpenCode için paketle birlikte gelen OpenCode plugin eklentisini yükleyip yapılandırın"
   },
   "doctor": {
     "title": "FreeRoute Tanılama",

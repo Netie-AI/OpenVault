@@ -27,7 +27,7 @@
     "loginEnabled": "ലോഗിൻ: പ്രവർത്തനക്ഷമമാക്കി (പാസ്വേഡ് അപ്ഡേറ്റ് ചെയ്തു)",
     "loginDisabled": "ലോഗിൻ: പ്രവർത്തനരഹിതമാക്കി",
     "providerInfo": "പ്രൊവൈഡർ: {info}",
-    "opencode": "OpenCode-നായി ഉൾപ്പെടുത്തിയിരിക്കുന്ന @omniroute/opencode-plugin ഇൻസ്റ്റാൾ ചെയ്ത് ക്രമീകരിക്കുക"
+    "opencode": "OpenCode-നായി ഉൾപ്പെടുത്തിയിരിക്കുന്ന OpenCode plugin ഇൻസ്റ്റാൾ ചെയ്ത് ക്രമീകരിക്കുക"
   },
   "doctor": {
     "title": "FreeRoute പരിശോധന",

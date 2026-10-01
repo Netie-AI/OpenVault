@@ -908,6 +908,18 @@ class ResponsesWsSession {
   }
 }
 
+// FreeRoute: always false in this edition, see handleUpgrade.
+const RESPONSES_WS_BRIDGE_ENABLED = false;
+const RESPONSES_WS_DISABLED_BODY = JSON.stringify({
+  error: {
+    code: "consumer_subscription_pooling_disabled",
+    message:
+      "Pooling a consumer subscription account (e.g. Claude Code, Codex/ChatGPT, Cursor, " +
+      "GitHub Copilot, Antigravity, Kiro, Kimi Coding, Trae, Devin) is disabled in this " +
+      "edition of FreeRoute. Connect this provider with a real API key instead.",
+  },
+});
+
 export function createResponsesWsProxy({
   baseUrl,
   bridgeSecret,
@@ -931,6 +943,16 @@ export function createResponsesWsProxy({
       const pathname = new URL(req.url || "/", baseUrl).pathname;
       if (!isResponsesWsPath(pathname)) {
         return false;
+      }
+
+      // FreeRoute: the Responses WebSocket bridge serves only pooled Codex
+      // (ChatGPT subscription) accounts. Consumer subscription pooling is not
+      // shipped, so every upgrade gets the named 501 before any auth, lease or
+      // upstream work. HTTP POST /v1/responses with an API-key provider still
+      // works.
+      if (!RESPONSES_WS_BRIDGE_ENABLED) {
+        writeHttpError(socket, 501, RESPONSES_WS_DISABLED_BODY);
+        return true;
       }
 
       if (!wsFactory) {

@@ -32,6 +32,7 @@ import { getProxyForLevel } from "@/lib/db/settings";
 import { resolveProxyForProvider } from "@/lib/db/proxies";
 import { runWithProxyContext } from "@omniroute/open-sse/utils/proxyFetch.ts";
 import { rejectRetiredCommonChatGptWebProvider } from "@/lib/providers/chatgptWebRetirementResponse";
+import { rejectProviderSecretsInBody } from "@/lib/netie/providerGuards";
 
 // POST /api/providers/bulk — create multiple API-key connections for a single provider.
 // Partial-failure semantics: each entry succeeds or fails independently; the
@@ -49,6 +50,12 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
+
+  // FreeRoute: bulk add exists to paste many provider keys. Keys live only in
+  // OpenVault, so any entry carrying one gets keys_managed_by_openvault (501),
+  // and a classified provider gets its named 501, before anything is stored.
+  const refused = rejectProviderSecretsInBody(body);
+  if (refused) return refused;
 
   const validation = validateBody(bulkCreateProviderSchema, body);
   if (isValidationFailure(validation)) {

@@ -1,3 +1,5 @@
+import { netieErrorResponse } from "@/lib/netie/providerGuards";
+import { withNetiePolicy } from "@/lib/netie/routeGuard";
 import { handleRerank } from "@omniroute/open-sse/handlers/rerank.ts";
 import {
   getProviderCredentialsWithQuotaPreflight,
@@ -292,6 +294,9 @@ async function postHandler(request, context) {
           headers,
         });
       } catch (err: any) {
+        // FreeRoute: KeyVault 503s and policy 501s keep their named code.
+        const named = netieErrorResponse(err);
+        if (named) return named;
         saveCallLog({
           method: "POST",
           path: "/v1/rerank",
@@ -316,4 +321,6 @@ async function postHandler(request, context) {
   );
 }
 
-export const POST = withInjectionGuard(postHandler);
+// FreeRoute: named 501 for a disabled provider, named 503/501 for KeyVault
+// and key-storage errors (src/lib/netie/routeGuard.ts).
+export const POST = withNetiePolicy(withInjectionGuard(postHandler));

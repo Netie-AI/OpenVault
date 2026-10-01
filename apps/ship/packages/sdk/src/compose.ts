@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 import path from "node:path";
 import { ValidationError, type TSyncServicesBody } from "@repo/contracts";
 
@@ -13,7 +14,7 @@ export function normalizeComposeServices(
   if (!services.length) throw new ValidationError("No services found in the compose file");
   if (errors.length)
     throw new ValidationError(
-      "This compose file declares options Openship cannot deploy faithfully",
+      "This compose file declares options FreeBuild cannot deploy faithfully",
       { services: errors },
     );
   return services as TSyncServicesBody["services"];

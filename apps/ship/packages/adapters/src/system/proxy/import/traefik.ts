@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Import a containerized Traefik's routes into normalized ImportedSites.
  *
@@ -276,12 +277,12 @@ export function parseTraefikLabels(containers: TraefikContainer[]): ProxyScanRes
     // was missed. Distinct wording from a real loss.
     warnings.push(
       d.redirectOnly
-        ? `traefik: ${d.hosts.join(", ")} router "${d.router}" is an http→https redirect — Openship's edge does that itself (nothing to migrate)`
+        ? `traefik: ${d.hosts.join(", ")} router "${d.router}" is an http→https redirect — FreeBuild's edge does that itself (nothing to migrate)`
         : `traefik: ${d.hosts.join(", ")} router "${d.router}" duplicates the same hostname/path — the preferred router was retained`,
     );
   }
   for (const s of defs.streamRouters) {
-    warnings.push(`traefik: ${s} can't migrate — Openship's edge routes HTTP(S), not raw TCP/UDP`);
+    warnings.push(`traefik: ${s} can't migrate — FreeBuild's edge routes HTTP(S), not raw TCP/UDP`);
   }
   if (defs.fileProvider) {
     warnings.push(

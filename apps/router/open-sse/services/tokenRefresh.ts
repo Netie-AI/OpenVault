@@ -10,6 +10,7 @@
 // reuse of that diff. Supported provider refresh exports are re-exported below so
 // importers (open-sse/index.ts, executors, src/sse/services/tokenRefresh.ts,
 // tests) keep a stable surface.
+import { assertProviderAllowed } from "../netie/policy.ts";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { PROVIDERS } from "../config/constants.ts";
 import { getCodexAuthIdentityHeaders } from "../config/codexClient.ts";
@@ -236,6 +237,8 @@ export async function refreshAccessToken(
   log,
   proxyConfig: unknown = null
 ) {
+  // FreeRoute: see getAccessToken.
+  assertProviderAllowed(provider);
   const config = PROVIDERS[provider];
 
   const refreshEndpoint = config?.refreshUrl || config?.tokenUrl;
@@ -526,6 +529,9 @@ export async function getAccessToken(
   proxyConfig: unknown = null,
   onPersist?: RefreshPersistFn
 ) {
+  // FreeRoute: no refresh of a subscription or browser-session login, from any
+  // caller (request path, health check, manual refresh, executor).
+  assertProviderAllowed(provider);
   if (!credentials || !credentials.refreshToken || typeof credentials.refreshToken !== "string") {
     log?.warn?.("TOKEN_REFRESH", `No valid refresh token available for provider: ${provider}`);
     return null;

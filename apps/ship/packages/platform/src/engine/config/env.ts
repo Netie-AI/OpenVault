@@ -295,7 +295,9 @@ const envSchema = z.object({
 
   /* ---------- GitHub App ---------- */
   GITHUB_APP_ID: z.string().optional(),
-  GITHUB_APP_SLUG: z.string().default("openship-io"),
+  // Modified by Netie AI, 2026: no default slug. "openship-io" was the
+  // upstream vendor's own GitHub App; an operator running app mode sets theirs.
+  GITHUB_APP_SLUG: z.string().default(""),
   /** PEM private key - raw multi-line string */
   GITHUB_PRIVATE_KEY: z.string().optional(),
   /** PEM private key - base64-encoded (single-line, for env vars) */
@@ -307,7 +309,8 @@ const envSchema = z.object({
   SMTP_PORT: z.coerce.number().optional(),
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
-  SMTP_FROM: z.string().default("Openship <noreply@openship.io>"),
+  // Modified by Netie AI, 2026: no upstream vendor domain in the default From.
+  SMTP_FROM: z.string().default("FreeBuild <noreply@localhost>"),
 
   /* ---------- Network (self-hosted) ---------- */
   /**

@@ -1,4 +1,5 @@
 "use client";
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 
 import { Icon as UiIcon } from "@repo/ui/icons";
 
@@ -1643,7 +1644,7 @@ const DeployTargetStep: React.FC<DeployTargetStepProps> = ({ targets, onContinue
   if (config.deployTarget === "cluster") return (
     <div className="mx-auto w-full max-w-lg space-y-5">
       <h1 className="text-2xl font-medium">Deploy to server cluster</h1>
-      <p className="text-sm leading-relaxed text-muted-foreground">This project uses the cluster and instance count saved in its Scale controls. OpenShip builds or reuses the application image, starts the instances, and checks their health before switching traffic.</p>
+      <p className="text-sm leading-relaxed text-muted-foreground">This project uses the cluster and instance count saved in its Scale controls. FreeBuild builds or reuses the application image, starts the instances, and checks their health before switching traffic.</p>
       <Button onClick={onContinue}>Continue</Button>
     </div>
   );

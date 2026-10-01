@@ -81,7 +81,7 @@ export function verifyEmailTemplate(user: { name?: string | null; email: string 
   `);
 
   return {
-    subject: "Verify your Openship email",
+    subject: "Verify your FreeBuild email",
     html,
     text: `Hi ${user.name || "there"},\n\nVerify your email: ${url}\n\nIf you didn't create an account, ignore this email.`,
   };
@@ -192,7 +192,7 @@ export function organizationInviteEmail(opts: {
     </p>
     ${ctaButton(opts.url, "Accept invitation")}
     <p style="color:#9ca3af;font-size:13px;margin:0">
-      If you don't have an Openship account yet, you'll be asked to create one with this email
+      If you don't have a FreeBuild account yet, you'll be asked to create one with this email
       (${htmlEscape(opts.invitee.email)}). The invitation expires in 7 days.
     </p>
   `);

@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: expectations follow the FreeBuild product name.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
@@ -210,11 +211,11 @@ describe("deploy_blocked — the case nothing could see before", () => {
 
     const [action] = await getProjectPendingActions(PROJECT, ORG);
 
-    expect(action.message).toContain("previous Openship deployment");
+    expect(action.message).toContain("previous FreeBuild deployment");
     // Describes the offer without quoting the button's words: the deploy prompt now
     // labels it by what it stops ("Stop Container", "Stop Service"), so a literal
     // pinned here was a copy in two places that could disagree.
-    expect(action.message).toMatch(/Openship will (free the port|stop that (container|service)) first/);
+    expect(action.message).toMatch(/FreeBuild will (free the port|stop that (container|service)) first/);
   });
 
   it("promises no Free Port button when the deploy refused to offer one", async () => {

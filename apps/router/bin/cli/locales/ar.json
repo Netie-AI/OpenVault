@@ -27,7 +27,7 @@
     "loginEnabled": "تسجيل الدخول: مفعّل (تم تحديث كلمة المرور)",
     "loginDisabled": "تسجيل الدخول: معطّل",
     "providerInfo": "المزوّد: {info}",
-    "opencode": "ثبّت وعيّن إعدادات @omniroute/opencode-plugin المضمّنة لـ OpenCode"
+    "opencode": "ثبّت وعيّن إعدادات OpenCode plugin المضمّنة لـ OpenCode"
   },
   "doctor": {
     "title": "أداة تشخيص FreeRoute",

@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 import { createHash } from "node:crypto";
 import { CLOUD_DOCKER_IMAGE, CloudWorkspaceExecutor, Oblien, cloudWorkspaceStatus, sq, waitForCloudDockerWorkspace, type ResourceConfig } from "@repo/adapters";
 import { repos, type Project } from "@repo/db";
@@ -98,7 +99,7 @@ export async function ensureCloudDockerWorkspace(input: {
       if (project.cloudWorkspaceId) throw new Error("An existing native workspace must be migrated before enabling Docker");
       input.signal?.throwIfAborted();
       const workspace = await client.workspaces.create({
-        name: `Openship Compose ${input.projectId}`,
+        name: `FreeBuild Compose ${input.projectId}`,
         slug: workspaceSlug(input.projectId),
         namespace, image: binding.image, mode: "temporary",
         wait_ready: false, idempotency_key: binding.provisionKey,
@@ -116,7 +117,7 @@ export async function ensureCloudDockerWorkspace(input: {
         }
         throw error;
       });
-      if (!workspace.id || workspace.namespace !== namespace) throw new Error("Oblien returned an unexpected workspace namespace");
+      if (!workspace.id || workspace.namespace !== namespace) throw new Error("The cloud provider returned an unexpected workspace namespace");
       workspaceId = workspace.id;
       // Complete this write even when cancellation arrived during POST. Teardown
       // and retries must know which resource exists outside our process.

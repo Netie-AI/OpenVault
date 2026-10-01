@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 import { createHash, randomBytes } from "node:crypto";
 import {
   AppError,
@@ -51,7 +52,7 @@ import { assertNetworkSetupAcceptingWork, deferNetworkSetupWork } from "./networ
 
 function infrastructureUnavailable(): string | null {
   if (isOblienConfigured())
-    return "Server clusters are managed by self-hosted OpenShip. Oblien manages Cloud infrastructure.";
+    return "Server clusters are managed by self-hosted FreeBuild.";
   // Manual adoption and bounded verification work from a local/desktop controller
   // too. Always-on reconciliation is a separate, future capability.
   return null;

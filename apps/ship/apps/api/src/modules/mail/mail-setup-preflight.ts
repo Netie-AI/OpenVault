@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * "Can this install even start?" — the check that has to happen BEFORE
  * `POST /mail/setup` becomes an SSE stream.
@@ -37,7 +38,7 @@ export async function preflightMailSetup(
   return {
     code: result.code,
     error:
-      `Can't start mail setup: ${result.message}. Openship could not run a single ` +
+      `Can't start mail setup: ${result.message}. FreeBuild could not run a single ` +
       "command on this server, so nothing was attempted — fix the server's SSH " +
       "connection and start setup again.",
   };

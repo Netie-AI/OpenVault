@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: expectations follow the FreeBuild product name.
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { ResourceMenu, ScaleToolbar } from "./ScaleToolbar";
@@ -44,7 +45,7 @@ describe("scaling toolbar", () => {
   it("lists database engines before presenting deployment choices", () => {
     const html = renderToStaticMarkup(<ResourceMenu onAdd={vi.fn()} />);
     const databaseGroup = html.slice(html.indexOf('role="group" aria-label="Databases"'));
-    expect(html).toContain("OpenShip Edge");
+    expect(html).toContain("FreeBuild Edge");
     expect(html).toContain("Application");
     expect(databaseGroup).toContain('aria-label="Choose PostgreSQL deployment"');
     expect(databaseGroup).toContain('aria-label="Choose Redis deployment"');

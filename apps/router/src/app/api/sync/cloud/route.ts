@@ -1,3 +1,4 @@
+import { netieErrorResponse } from "@/lib/netie/providerGuards";
 import { NextResponse } from "next/server";
 import { getApiKeys, createApiKey, pickApiKeyForInternalUse } from "@/lib/db/apiKeys";
 import { updateSettings } from "@/lib/db/settings";
@@ -125,6 +126,10 @@ export async function POST(request: any) {
         return NextResponse.json({ error: "Invalid action" }, { status: 400 });
     }
   } catch (error: unknown) {
+    // FreeRoute: enabling sync with no client key tries to mint one locally,
+    // which answers keys_managed_by_openvault (501). Pass that through.
+    const named = netieErrorResponse(error);
+    if (named) return named;
     console.log("Cloud sync error:", error);
     return NextResponse.json({ error: sanitizeErrorMessage(error) }, { status: 500 });
   }

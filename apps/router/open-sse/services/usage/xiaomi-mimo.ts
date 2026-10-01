@@ -40,7 +40,7 @@ export async function getXiaomiMimoUsage(connectionId: string, provider = "xiaom
       Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)
     ).toISOString();
     return {
-      plan: "Xiaomi MiMo Token Plan (OmniRoute-tracked)",
+      plan: "Xiaomi MiMo Token Plan (FreeRoute-tracked)",
       quotas: {
         monthly: createQuotaFromUsage(used, total, resetAt),
       },

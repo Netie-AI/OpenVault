@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Edge takeover with config migration.
  *
@@ -328,7 +329,7 @@ export async function runEdgeTakeover(
       // holder, an operator retries the same unprivileged takeover forever. "Stopped
       // the existing proxy" is also untrue on that arm — the stop is what was refused.
       elevationDegraded
-        ? `The ${ports} Openship could not run the stop as root on this host (see the privilege ` +
+        ? `The ${ports} FreeBuild could not run the stop as root on this host (see the privilege ` +
           "warning above), so stopping the existing proxy was almost certainly refused — retrying " +
           "as this user will fail the same way. Reconnect as root, or as a user with passwordless sudo."
         : `Stopped the existing proxy, but ${ports} Find what else is holding the port and retry.`,
@@ -415,7 +416,7 @@ export async function runEdgeTakeover(
     journal.completed = true;
     await writeJournal(executor, journal);
     await clearJournal(executor);
-    onLog(log(`Takeover complete — ${registered.length} route(s) now served by Openship.`));
+    onLog(log(`Takeover complete — ${registered.length} route(s) now served by FreeBuild.`));
     return { ok: true, rolledBack: false, registered, warnings };
   } catch (err) {
     warnings.push(safeErrorMessage(err));

@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 import {
   Bell,
   Docx,
@@ -855,7 +856,7 @@ const MailDisplay = ({ emailData, index, totalEmails, demo, threadAttachments }:
             }
 
             body {
-              font-family: 'Gellix', 'SF Arabic', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
               line-height: 1.5;
               color: #333;
               background: white;

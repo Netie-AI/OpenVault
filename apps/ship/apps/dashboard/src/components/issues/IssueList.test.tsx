@@ -176,7 +176,7 @@ describe("each row offers the fix the server attached, and only that", () => {
 
   it("offers the CLI command for the control plane's own update", () => {
     const html = render(ISSUE_FIXTURES.advisory!);
-    expect(html).toContain("openship update");
+    expect(html).toContain("freebuild update");
     expect(html).toContain("updates itself from the command line");
   });
 

@@ -1,4 +1,5 @@
 "use client";
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 
 import { Icon as UiIcon } from "@repo/ui/icons";
 
@@ -217,7 +218,7 @@ function LoginPageInner() {
             {t.auth.login.title}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Sign in with your Openship account to continue.
+            Sign in with your FreeBuild account to continue.
           </p>
         </div>
 
@@ -238,7 +239,7 @@ function LoginPageInner() {
           onClick={() => { void handleCloudSignIn(callbackUrl); }}
         >
           {loading ? <UiIcon name="spinner" className="me-2 size-4 animate-spin" /> : <UiIcon name="external-link" className="me-2 size-4" />}
-          {loading ? "Opening the hosted cloud service..." : "Sign in with Openship"}
+          {loading ? "Opening the hosted cloud service..." : "Sign in with FreeBuild"}
         </Button>
       </AuthShell>
     );

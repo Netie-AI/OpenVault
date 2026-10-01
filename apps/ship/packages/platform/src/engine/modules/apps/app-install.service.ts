@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Apps catalog + one-click installer.
  *
@@ -502,8 +503,8 @@ export async function installApp(
     const v = template.requiresUpdate.minVersion;
     throw new Error(
       v
-        ? `This app requires Openship ${v} or newer. Update your instance to install it.`
-        : `This app requires a newer version of Openship. Update your instance to install it.`,
+        ? `This app requires FreeBuild ${v} or newer. Update your instance to install it.`
+        : `This app requires a newer version of FreeBuild. Update your instance to install it.`,
     );
   }
 

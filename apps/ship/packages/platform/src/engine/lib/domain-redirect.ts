@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026
 /**
  * Canonical-redirect rules — THE gate for `domain.redirectTo` / `redirectStatus`.
  *

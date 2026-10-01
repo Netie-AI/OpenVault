@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: expectations follow the FreeBuild product name.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
@@ -65,7 +66,7 @@ beforeEach(() => {
   );
   findProject.mockImplementation(async (id: string) =>
     id === "prj_openship"
-      ? { id, name: "Openship", appTemplateId: "openship", deletedAt: null }
+      ? { id, name: "FreeBuild", appTemplateId: "openship", deletedAt: null }
       : { id, name: "dependabot", appTemplateId: null, deletedAt: null },
   );
 });
@@ -87,7 +88,7 @@ describe("excludeAlreadyManaged — the control plane is not a re-import (#584)"
     findByContainerIds.mockResolvedValue([row("c-openship-pg", "dep_openship")]);
     await expect(
       excludeAlreadyManaged([svc("postgres", "c-openship-pg")], ORG),
-    ).rejects.toThrow(/Openship manages its own runtime/);
+    ).rejects.toThrow(/FreeBuild manages its own runtime/);
   });
 });
 
@@ -177,6 +178,6 @@ describe("excludeAlreadyManaged takes no exemption", () => {
     findByContainerIds.mockResolvedValue([row("c-openship-pg", "dep_openship")]);
     await expect(
       excludeAlreadyManaged([svc("postgres", "c-openship-pg")], ORG),
-    ).rejects.toThrow(/Openship's own containers/);
+    ).rejects.toThrow(/FreeBuild's own containers/);
   });
 });

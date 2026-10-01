@@ -27,7 +27,7 @@
     "loginEnabled": "ورود: فعال (رمز عبور بهروزرسانی شد)",
     "loginDisabled": "ورود: غیرفعال",
     "providerInfo": "ارائهدهنده: {info}",
-    "opencode": "نصب و پیکربندی @omniroute/opencode-plugin همراه برای OpenCode"
+    "opencode": "نصب و پیکربندی OpenCode plugin همراه برای OpenCode"
   },
   "doctor": {
     "title": "عیبیاب FreeRoute",

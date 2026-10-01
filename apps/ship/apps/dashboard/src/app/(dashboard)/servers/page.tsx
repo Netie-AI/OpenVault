@@ -1,6 +1,8 @@
 "use client";
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 
 import { Icon as UiIcon } from "@repo/ui/icons";
+import { brandDocsUrl } from "@repo/core";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -785,8 +787,9 @@ function EmptyState({
             {t.servers.list.addThisMachine}
           </button>
         )}
+        {brandDocsUrl("/guides/custom-servers") && (
         <a
-          href="https://openship.io/docs/guides/custom-servers"
+          href={brandDocsUrl("/guides/custom-servers")}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-2 rounded-xl bg-muted/50 px-6 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
@@ -795,6 +798,7 @@ function EmptyState({
           {t.servers.list.seeDocs}
           <UiIcon name="external-link" className="size-3.5 opacity-60" />
         </a>
+        )}
       </div>
 
       <div className="max-w-2xl mx-auto">

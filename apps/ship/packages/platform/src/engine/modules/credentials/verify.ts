@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * "Does this credential actually work?" — asked before it is stored, and again on demand.
  *
@@ -159,7 +160,7 @@ const verifyDockerRegistry: Verifier = async ({ selector, publicFields, secrets 
 
   return {
     ok: false,
-    reason: `${registry} answered ${probe.status} and did not offer a login method Openship understands.`,
+    reason: `${registry} answered ${probe.status} and did not offer a login method FreeBuild understands.`,
   };
 };
 
@@ -207,7 +208,7 @@ export async function verifyCredentialValues(
 ): Promise<VerifyResult> {
   const verifier = VERIFIERS[provider.id];
   if (!verifier) {
-    return { ok: false, reason: `Openship cannot verify ${provider.label} credentials yet.` };
+    return { ok: false, reason: `FreeBuild cannot verify ${provider.label} credentials yet.` };
   }
   try {
     return await verifier(args);

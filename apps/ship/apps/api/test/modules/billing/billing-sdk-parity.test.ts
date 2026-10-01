@@ -22,7 +22,14 @@ const provider = vi.hoisted(() => ({
   checkoutStatus: vi.fn(),
   support: vi.fn(),
   limits: new Map<string, Record<string, number | null>>(),
+  cloudApi: "",
 }));
+// Modified by Netie AI, 2026: the hosted cloud API URL defaults to empty in
+// FreeBuild. Tests that cover a linked installation set provider.cloudApi.
+vi.mock("@repo/core", async original => {
+  const actual = await original<{ cloudRuntimeTarget: Record<string, unknown> }>();
+  return { ...actual, cloudRuntimeTarget: { ...actual.cloudRuntimeTarget, get api() { return provider.cloudApi; } } };
+});
 vi.mock("@repo/platform/engine/config/env", async original => {
   const actual = await original<{ env: Record<string, unknown> }>();
   return { ...actual, env: { ...actual.env, get CLOUD_MODE() { return provider.cloudMode; }, get BILLING_ENABLED() { return provider.enabled; }, get BILLING_TOPUPS_ENABLED() { return provider.topups; } } };
@@ -87,6 +94,7 @@ async function clients(actor: SeededOwner, organizationId = actor.orgId, limits:
 }
 beforeEach(() => {
   provider.cloudMode = provider.enabled = provider.topups = true;
+  provider.cloudApi = "";
   provider.subscriptions.clear();
   provider.support.mockResolvedValue(undefined);
   provider.limits.clear();
@@ -181,6 +189,7 @@ describe("billing through the same SDK and HTTP application operations", () => {
   it("loads a linked installation's prices from the SaaS without sending local credentials or using stale prices", async () => {
     const c = await clients(await seedOwner());
     provider.cloudMode = false;
+    provider.cloudApi = "https://cloud.example.test";
     const data = presentCloudPlans("de");
     data.plans.find((plan) => plan.id === "starter")!.price.monthly = 2300;
     const publicFetch = vi.fn(async (_url: RequestInfo | URL, _init?: RequestInit) =>
@@ -194,7 +203,7 @@ describe("billing through the same SDK and HTTP application operations", () => {
       expect.objectContaining({ credentials: "omit", redirect: "error" }),
     );
     expect(publicFetch.mock.calls[0]![0].toString()).toBe(
-      "https://api.openship.io/api/billing/plans?locale=de",
+      "https://cloud.example.test/api/billing/plans?locale=de",
     );
     expect(publicFetch.mock.calls[0]![1]).not.toHaveProperty("headers");
     publicFetch.mockResolvedValue(Response.json({ data: { plans: [] } }));
@@ -572,6 +581,16 @@ describe("billing through the same SDK and HTTP application operations", () => {
       await expect(client.getUsage({ from: "2000-01-01", to: "2026-01-01" })).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
     }
     expect((await (await clients(owner)).native.listAllowanceDetail()).freeSubdomains.items.map(item => item.projectId)).toEqual([project.id]);
+  });
+
+  it("uses the bundled catalog without any request when no hosted cloud API is configured", async () => {
+    const c = await clients(await seedOwner());
+    provider.cloudMode = false;
+    const publicFetch = vi.fn(async () => Response.json({ data: { plans: [] } }));
+    vi.stubGlobal("fetch", publicFetch);
+    for (const client of [c.native, c.remote])
+      expect(await client.listPlans({ locale: "de" })).toEqual(presentCloudPlans("de"));
+    expect(publicFetch).not.toHaveBeenCalled();
   });
 
   it("does not forward a fixed local tenant through an unverified owner cloud link", async () => {

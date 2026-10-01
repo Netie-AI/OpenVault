@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 import { setTimeout as delay } from "node:timers/promises";
 import type { Oblien, WorkspaceData } from "oblien";
 
@@ -30,7 +31,7 @@ export async function waitForCloudDockerWorkspace(
     assertDockerWorkspaceOwner(workspace, namespace);
     const provisioning = workspace.provisioning as { state?: string; error?: unknown } | undefined;
     if (provisioning?.state === "failed" || ["error", "failed"].includes(cloudWorkspaceStatus(workspace))) {
-      throw new Error("Oblien could not start the Docker workspace. Its existing disk has been retained. Retry the deployment; contact Openship support if it still cannot start.");
+      throw new Error("The cloud provider could not start the Docker workspace. Its existing disk has been retained. Retry the deployment; contact FreeBuild support if it still cannot start.");
     }
     if (isDockerWorkspaceRunning(workspace) &&
         (!provisioning || provisioning.state === "ready") && workspace.ready !== false) return workspace;

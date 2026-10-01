@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Component installers & uninstallers.
  *
@@ -83,7 +84,7 @@ function describeInstallFailure(label: string, code: number, output: string): st
   // The #491 host: the operator had held Docker's packages precisely so nothing
   // would upgrade them. A hold is a decision, not an obstacle — name it.
   const held = /held packages?|--allow-change-held-packages/i.test(output)
-    ? " Packages are held on this host (`apt-mark hold`) and Openship does not override a hold — unhold them first if you do want this install."
+    ? " Packages are held on this host (`apt-mark hold`) and FreeBuild does not override a hold — unhold them first if you do want this install."
     : "";
   return `${label} install failed (exit ${code})${detail ? `: ${detail}` : ""}.${held}`;
 }
@@ -207,15 +208,15 @@ export async function installDocker(
     // couldn't.
     const cannotStart =
       present.verdict === "stopped" && service && !service.supported
-        ? ` Openship could not start it for you: ${service.reason}`
+        ? ` FreeBuild could not start it for you: ${service.reason}`
         : "";
     const error =
       (present.verdict === "outdated"
-        ? `Docker ${present.version} is installed but Openship needs ${MIN_DOCKER_VERSION} or newer. ` +
+        ? `Docker ${present.version} is installed but FreeBuild needs ${MIN_DOCKER_VERSION} or newer. ` +
           "Upgrading Docker restarts the daemon and every container on this server, so it is never done " +
           "as part of another step — upgrade it on the host, or use Reinstall on the Docker component to " +
           "run the official installer."
-        : `${present.message}. Start Docker on this server and retry. Openship will not reinstall Docker ` +
+        : `${present.message}. Start Docker on this server and retry. FreeBuild will not reinstall Docker ` +
           "over a daemon that is merely unreachable: the installer would also upgrade the engine and restart " +
           "every container on this host. Use Reinstall on the Docker component if that is what you want.") +
       cannotStart;
@@ -253,7 +254,7 @@ export async function installDocker(
     } else if (service) {
       // How Alpine used to install Docker and never start it: the start table knew
       // only systemd, so "no command" and "no way to say so" were the same value.
-      onLog(log(`Docker is installed but Openship cannot start it here: ${service.reason}`, "warn"));
+      onLog(log(`Docker is installed but FreeBuild cannot start it here: ${service.reason}`, "warn"));
     }
 
     const version = await executor.exec(plan.value.verifyCommand);

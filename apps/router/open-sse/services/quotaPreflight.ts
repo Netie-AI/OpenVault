@@ -115,7 +115,32 @@ const REMAINING_PERCENT_EPSILON = 1e-9;
 const quotaFetcherRegistry = new Map<string, QuotaFetcher>();
 
 export function registerQuotaFetcher(provider: string, fetcher: QuotaFetcher): void {
-  quotaFetcherRegistry.set(provider, fetcher);
+  quotaFetcherRegistry.set(provider, withKeyVaultConnection(fetcher));
+}
+
+/**
+ * FreeRoute: every registered quota fetcher reads `connection.apiKey`. That
+ * column never holds a provider key here, so the fetcher gets a copy whose
+ * apiKey comes from OpenVault (and whose providerSpecificData has no stored
+ * secrets). A subscription or browser-session connection gets no quota call at
+ * all. A KeyVault error is thrown to the caller, which treats a failed quota
+ * fetch the same way it treats any other fetch error.
+ */
+function withKeyVaultConnection(fetcher: QuotaFetcher): QuotaFetcher {
+  return async (connectionId, connection) => {
+    const { classifyConnection, withKeyVaultApiKey } = await import(
+      "@/lib/netie/providerGuards"
+    );
+    let row = connection;
+    if (!row) {
+      const { getProviderConnectionById } = await import("@/lib/db/providers");
+      row = ((await getProviderConnectionById(connectionId)) as Record<string, unknown>) ?? undefined;
+    }
+    if (!row) return fetcher(connectionId, connection);
+    if (classifyConnection(row)) return null;
+    if (row.authType !== "apikey") return fetcher(connectionId, { ...row, apiKey: null });
+    return fetcher(connectionId, await withKeyVaultApiKey(row));
+  };
 }
 
 export function getQuotaFetcher(provider: string): QuotaFetcher | undefined {

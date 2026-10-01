@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: expectations follow the FreeBuild product name.
 import { spawnSync } from "node:child_process";
 import { describe, expect, it, vi } from "vitest";
 import { clusterRuntimeFixture } from "../../../contracts/test/cluster-runtime-fixtures";
@@ -69,7 +70,7 @@ with tempfile.TemporaryDirectory() as folder:
     try:
         ns['owner']()
         raise AssertionError('adopted another runtime')
-    except RuntimeError as error: assert 'different OpenShip runtime' in str(error)
+    except RuntimeError as error: assert 'different FreeBuild runtime' in str(error)
 `);
   });
   it("keeps API and kubelet on private addresses and leaves Edge and storage ownership separate", () => {

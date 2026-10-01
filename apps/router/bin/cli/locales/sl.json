@@ -27,7 +27,7 @@
     "loginEnabled": "Prijava: omogočena (geslo je posodobljeno)",
     "loginDisabled": "Prijava: onemogočena",
     "providerInfo": "Ponudnik: {info}",
-    "opencode": "Namesti in nastavi priloženi vtičnik @omniroute/opencode-plugin za OpenCode"
+    "opencode": "Namesti in nastavi priloženi vtičnik OpenCode plugin za OpenCode"
   },
   "doctor": {
     "title": "Diagnostika FreeRoute",

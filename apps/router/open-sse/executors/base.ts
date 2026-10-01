@@ -299,6 +299,9 @@ export type ExecutorExecuteResult =
       transformedBody?: unknown;
       transport?: string;
     };
+// FreeRoute: always false in this edition, see BaseExecutor.getPool.
+const SESSION_FINGERPRINT_POOL_ENABLED = false as boolean;
+
 export class BaseExecutor {
   provider: string;
   config: ProviderConfig;
@@ -317,6 +320,12 @@ export class BaseExecutor {
   }
 
   protected getPool(): SessionPool | null {
+    // FreeRoute: the session pool rotates browser fingerprint profiles (UA and
+    // Sec-CH-UA) so a provider cannot tie requests to one client. That is
+    // browser fingerprint stealth, which is not shipped
+    // (tls_fingerprint_stealth_disabled). No pool, so every executor sends its
+    // plain requests and no fingerprint headers.
+    if (!SESSION_FINGERPRINT_POOL_ENABLED) return null;
     if (!this.poolConfig) return null;
     if (!this._pool) {
       const pool = new SessionPool(this.provider, this.poolConfig);

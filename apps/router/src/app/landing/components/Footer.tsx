@@ -76,14 +76,12 @@ export default function Footer() {
             >
               {t("github")}
             </a>
-            <a
+            <Link
               className="text-gray-400 hover:text-[#E54D5E] text-sm transition-colors"
-              href="https://www.npmjs.com/package/omniroute"
-              target="_blank"
-              rel="noopener noreferrer"
+              href="/notices"
             >
-              {t("npm")}
-            </a>
+              {t("notices")}
+            </Link>
           </div>
 
           {/* Legal */}
@@ -114,14 +112,9 @@ export default function Footer() {
             >
               {t("github")}
             </a>
-            <a
-              className="text-gray-600 hover:text-white text-sm transition-colors"
-              href="https://www.npmjs.com/package/omniroute"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              {t("npm")}
-            </a>
+            <Link className="text-gray-600 hover:text-white text-sm transition-colors" href="/notices">
+              {t("notices")}
+            </Link>
           </div>
         </div>
       </div>

@@ -27,7 +27,7 @@
     "loginEnabled": "లాగిన్: ప్రారంభించబడింది (పాస్వర్డ్ నవీకరించబడింది)",
     "loginDisabled": "లాగిన్: నిలిపివేయబడింది",
     "providerInfo": "ప్రొవైడర్: {info}",
-    "opencode": "OpenCode కోసం బండిల్ చేసిన @omniroute/opencode-pluginను ఇన్స్టాల్ చేసి కాన్ఫిగర్ చేయండి"
+    "opencode": "OpenCode కోసం బండిల్ చేసిన OpenCode pluginను ఇన్స్టాల్ చేసి కాన్ఫిగర్ చేయండి"
   },
   "doctor": {
     "title": "FreeRoute డాక్టర్",

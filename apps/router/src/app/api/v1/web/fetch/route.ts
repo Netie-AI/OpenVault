@@ -14,6 +14,8 @@
  * performed — a rate-limited/failing explicit provider surfaces its own error.
  */
 
+import { netieErrorResponse } from "@/lib/netie/providerGuards";
+import { withNetiePolicy } from "@/lib/netie/routeGuard";
 import { errorResponse, unavailableResponse } from "@omniroute/open-sse/utils/error.ts";
 import { HTTP_STATUS } from "@omniroute/open-sse/config/constants.ts";
 import {
@@ -80,7 +82,11 @@ async function resolveCredentials(providerId: WebFetchProviderId): Promise<Crede
   try {
     const creds = await getProviderCredentialsWithQuotaPreflight(providerId);
     return (creds as CredentialsLookup) ?? null;
-  } catch {
+  } catch (error) {
+    // FreeRoute: a KeyVault or policy error surfaces as its named response
+    // (withNetiePolicy maps it). Only an ordinary lookup failure means
+    // "unconfigured, try the next provider".
+    if (netieErrorResponse(error)) throw error;
     return null;
   }
 }
@@ -263,7 +269,7 @@ async function resolveWebFetchTarget(
   return resolveAutoSelectTarget();
 }
 
-export async function POST(request: Request) {
+async function upstreamPost(request: Request) {
   let rawBody: unknown;
   try {
     rawBody = await request.json();
@@ -345,3 +351,7 @@ export async function POST(request: Request) {
     headers: { "Content-Type": "application/json", ...CORS_HEADERS },
   });
 }
+
+// FreeRoute: named 501 for a disabled provider, named 503/501 for KeyVault
+// and key-storage errors (src/lib/netie/routeGuard.ts).
+export const POST = withNetiePolicy(upstreamPost);

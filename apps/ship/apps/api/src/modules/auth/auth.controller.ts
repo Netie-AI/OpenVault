@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Auth controller — desktop-mode session bootstrap + cloud handoff.
  *
@@ -39,7 +40,7 @@ import { alignLoopbackOrigin } from "@repo/core";
 
 /** Minimal status page shown in the system browser after cloud auth. */
 function desktopResultPage(title: string, message: string, success = false): string {
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Openship</title></head>
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>FreeBuild</title></head>
 <body style="display:flex;align-items:center;justify-content:center;height:100vh;margin:0;font-family:system-ui,-apple-system,sans-serif;background:#0a0a0a;color:#fafafa">
 <div style="text-align:center;max-width:420px">
   <div style="font-size:48px;margin-bottom:16px">${success ? "✓" : "⚠"}</div>
@@ -215,7 +216,7 @@ export async function desktopLogin(c: Context) {
 export async function cloudCallback(c: Context) {
   const code = c.req.query("code");
   if (!code) {
-    return c.html(desktopResultPage("Missing authentication code", "Please return to Openship and try again."));
+    return c.html(desktopResultPage("Missing authentication code", "Please return to FreeBuild and try again."));
   }
 
   const state = c.req.query("state");
@@ -234,7 +235,7 @@ export async function cloudCallback(c: Context) {
     if (!state) {
       const data = await exchangeCodeWithCloud(code);
       if (!data) {
-        return c.html(desktopResultPage("Authentication failed", "Could not verify with the hosted cloud service. Please return to Openship and try again."));
+        return c.html(desktopResultPage("Authentication failed", "Could not verify with the hosted cloud service. Please return to FreeBuild and try again."));
       }
 
       const mirroredUserId = await mirrorCloudUser(data.user);
@@ -253,13 +254,13 @@ export async function cloudCallback(c: Context) {
 
     const validated = validateDesktopState(state);
     if (!validated) {
-      return c.html(desktopResultPage("Invalid or expired session", "The authorization request has expired. Please return to Openship and try again."));
+      return c.html(desktopResultPage("Invalid or expired session", "The authorization request has expired. Please return to FreeBuild and try again."));
     }
 
     const data = await exchangeCodeWithCloud(code, validated.codeVerifier);
     if (!data) {
       failDesktopAuth(validated.nonce);
-      return c.html(desktopResultPage("Authentication failed", "Could not verify with the hosted cloud service. Please return to Openship and try again."));
+      return c.html(desktopResultPage("Authentication failed", "Could not verify with the hosted cloud service. Please return to FreeBuild and try again."));
     }
 
     // Always mirror the cloud user for record-keeping
@@ -281,7 +282,7 @@ export async function cloudCallback(c: Context) {
     // up the session via /desktop-auth-poll.
     resolveDesktopAuth(validated.nonce, session.token, session.expiresAt);
 
-    return c.html(desktopResultPage("Signed in to Openship", "You can return to the Openship app now.", true));
+    return c.html(desktopResultPage("Signed in to FreeBuild", "You can return to the FreeBuild app now.", true));
   } catch (err) {
     // Signal failure to the polling loop so Electron doesn't hang
     try {
@@ -292,7 +293,7 @@ export async function cloudCallback(c: Context) {
       // best-effort
     }
     console.error("[cloud-callback] error:", err);
-    return c.html(desktopResultPage("Authentication failed", "Something went wrong. Please return to Openship and try again."));
+    return c.html(desktopResultPage("Authentication failed", "Something went wrong. Please return to FreeBuild and try again."));
   }
 }
 

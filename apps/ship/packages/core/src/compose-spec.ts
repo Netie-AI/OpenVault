@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Compose LONG-FORM mounts and ports, folded back into the single short-form
  * string openship stores.
@@ -74,12 +75,12 @@ export function composeBuildIssues(
     } else if (REMOTE_BUILD_CONTEXT_RE.test(resolved)) {
       block(
         "build.context",
-        "build.context uses a remote URL, which Openship cannot build as a repository-relative context.",
+        "build.context uses a remote URL, which FreeBuild cannot build as a repository-relative context.",
       );
     } else if (!options.allowAbsoluteContext && ABSOLUTE_BUILD_CONTEXT_RE.test(resolved)) {
       block(
         "build.context",
-        "build.context is absolute or home-relative; Openship requires a path inside the linked repository.",
+        "build.context is absolute or home-relative; FreeBuild requires a path inside the linked repository.",
       );
     }
   };
@@ -247,7 +248,7 @@ export function composeMountIssues(mount: Record<string, unknown>): ComposeMount
       {
         field: "volumes[].type=tmpfs",
         reason:
-          `the tmpfs mount at ${target} is not modeled. Openship mounts volumes and ` +
+          `the tmpfs mount at ${target} is not modeled. FreeBuild mounts volumes and ` +
           `host paths only, so this would be created as a persistent volume on disk ` +
           `rather than in memory — remove it or make it a named volume deliberately.`,
         blocking: true,

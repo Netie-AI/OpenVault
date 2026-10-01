@@ -1,3 +1,5 @@
+// Modified by Netie AI, 2026: Cloudflare tokens come from OpenVault, not the boot
+// backfill; product name in operator-facing text.
 /**
  * DNS credential storage + the two operations the domains module needs from it:
  * write a domain's records, and take them back down again.
@@ -147,11 +149,9 @@ export async function resolveDnsManager(
   organizationId: string,
   hostname: string,
 ): Promise<DnsManagerLookup> {
-  // The generic credential store is the single source of truth: `dns_credential` was one
-  // of three places Openship kept a third-party secret, each with its own shape and form.
-  // Rows land here via the boot backfill (see credential-backfill.ts) — SQL could not do
-  // that copy, because the old column is an `enc1:` envelope over the RAW token and the new
-  // one is over a JSON object, and the key is app-side.
+  // Cloudflare is an OpenVault-managed provider: listProviderCredentials reads the tokens
+  // live from OpenVault's KeyVault. Legacy `dns_credential` and local `credential` rows are
+  // never read here, and the boot backfill no longer copies them (credential-backfill.ts).
   //
   // listProviderCredentials, not a single lookup: zone ownership is discovered by ASKING
   // each token which zones it can see, so a second token owning a second zone needs the
@@ -410,7 +410,7 @@ export async function provisionRecords(
           outcome: "failed",
           action,
           error:
-            "Existing records here are not managed by Openship — remove or consolidate them first.",
+            "Existing records here are not managed by FreeBuild. Remove or consolidate them first.",
         });
         continue;
       }

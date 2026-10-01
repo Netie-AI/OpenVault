@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 import { openSync, writeSync, closeSync, readFileSync, unlinkSync, statSync } from "fs";
 import { dirname, basename, join } from "path";
 import { hostname } from "os";
@@ -306,7 +307,7 @@ export function createPgliteLock(options: { registerExitHook?: boolean; ownerId?
         holder.machineId !== current.id
       ) {
         throw new Error(
-          `The Openship database at ${dataDir} is locked by a process on a different machine ` +
+          `The FreeBuild database at ${dataDir} is locked by a process on a different machine ` +
             `(${holder.host}, pid ${holder.pid}). PGlite data directories cannot be shared ` +
             `across machines. If that machine no longer uses it, remove the lock file: ${lockPath}`,
         );
@@ -354,10 +355,10 @@ export function createPgliteLock(options: { registerExitHook?: boolean; ownerId?
 
       if (Date.now() >= deadline) {
         throw new Error(
-          `Another Openship instance is already using the database at ${dataDir} ` +
+          `Another FreeBuild instance is already using the database at ${dataDir} ` +
             `(pid ${holder.pid}). PGlite allows only one process per data directory; opening a ` +
             `second would corrupt it. Stop the other instance (e.g. quit the desktop app) and ` +
-            `retry. If you are certain no Openship process is running, remove: ${lockPath}`,
+            `retry. If you are certain no FreeBuild process is running, remove: ${lockPath}`,
         );
       }
 

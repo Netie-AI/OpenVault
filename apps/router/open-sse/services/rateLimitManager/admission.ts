@@ -36,7 +36,7 @@ export function checkQueueAdmission(
   const err = new Error(
     `Request rejected: the local rate-limit queue for ${identity} already holds ${queuedCount} ` +
       `queued request(s), at or above the configured admission cap maxQueueDepth (${maxQueueDepth}) ` +
-      `— this is OmniRoute's request queue (resilienceSettings.requestQueue.maxQueueDepth), not an ` +
+      `— this is FreeRoute's request queue (resilienceSettings.requestQueue.maxQueueDepth), not an ` +
       `upstream rejection. Raise it in Settings → Resilience if this is expected burst traffic.`
   );
   // The public code/status remain useful to callers, while the WeakMap brand

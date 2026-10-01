@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Migration preflight — a read-only preview of what migrating the selected
  * services from a source server onto a target server will do. Classifies each
@@ -205,7 +206,7 @@ export async function buildMigrationPreview(opts: {
         : isBuild
         ? "Built-from-source services can't be migrated yet — publish an image or link a repo first."
         : isProxy
-          ? `Reverse proxy (${s.proxyKind}) on ${(s.edgePorts ?? []).map((p) => `:${p}`).join("/")} — Openship's edge replaces it; not imported.`
+          ? `Reverse proxy (${s.proxyKind}) on ${(s.edgePorts ?? []).map((p) => `:${p}`).join("/")} — FreeBuild's edge replaces it; not imported.`
           : undefined,
       edgeProxy: isProxy || undefined,
       edgePortsReserved: !isProxy && s.edgePorts?.length ? s.edgePorts : undefined,

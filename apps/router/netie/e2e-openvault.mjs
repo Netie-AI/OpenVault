@@ -21,8 +21,11 @@
 //      FreeRoute with it, then checks the upstream saw the vault secret and
 //      OpenVault audited a secret_reveal.
 //   7. Negative cases: bogus client token, disabled providers, a key save
-//      into FreeRoute, a wrong admin token, OpenVault stopped.
-//   8. Greps FreeRoute's DATA_DIR and logs for the provider secret.
+//      into FreeRoute (POST and PUT /api/providers, bulk, import), the
+//      /authorize OAuth callback, a tenant-custody key that must never be
+//      spent, a connect to a non-loopback address, a wrong admin token,
+//      OpenVault stopped.
+//   8. Greps FreeRoute's DATA_DIR and logs for the provider and tenant secrets.
 // Every process and temp dir is removed on exit, pass or fail.
 //
 // Run: npm run test:e2e
@@ -30,6 +33,7 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createServer } from "node:http";
+import { connect as netConnect } from "node:net";
 import {
   existsSync,
   mkdirSync,
@@ -41,7 +45,7 @@ import {
   writeFileSync,
   createWriteStream,
 } from "node:fs";
-import { tmpdir } from "node:os";
+import { networkInterfaces, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { randomBytes } from "node:crypto";
 import { setTimeout as sleep } from "node:timers/promises";
@@ -50,11 +54,15 @@ const ROOT = resolve(new URL("..", import.meta.url).pathname);
 const OPENMW_DIR = resolve(process.env.OPENVAULT_OPENMW_DIR || join(ROOT, "..", "..", "OpenMW"));
 
 const PROVIDER_SECRET = `sk-e2e-vault-secret-${randomBytes(12).toString("hex")}`;
+// A tenant-custody key: stored in OpenVault, never spent by a router.
+const TENANT_SECRET = `sk-e2e-tenant-secret-${randomBytes(12).toString("hex")}`;
+const BULK_SECRET = `sk-e2e-bulk-secret-${randomBytes(12).toString("hex")}`;
 const MANAGEMENT_API_KEY = `sk-e2e-mgmt-${randomBytes(16).toString("hex")}`;
 const BOGUS_CLIENT_TOKEN = `ov_bogus_${randomBytes(16).toString("hex")}`;
 const CANNED_CONTENT = `canned-e2e-reply-${randomBytes(4).toString("hex")}`;
 const UPSTREAM_MODEL = "gpt-e2e";
 const NODE_PREFIX = "e2e";
+const TENANT_NODE_PREFIX = "e2etenant";
 
 const TMP = mkdtempSync(join(tmpdir(), "freeroute-e2e-"));
 const OPENVAULT_HOME = join(TMP, "openvault-home");
@@ -179,6 +187,8 @@ async function readJson(res) {
 // ── fake upstream ────────────────────────────────────────────────────────────
 
 const upstreamCalls = [];
+// Every Authorization header the fake upstream ever saw. Never cleared.
+const allUpstreamAuth = [];
 
 function startFakeUpstream() {
   return new Promise((resolveServer, reject) => {
@@ -188,6 +198,7 @@ function startFakeUpstream() {
       req.on("end", () => {
         const path = new URL(req.url, "http://127.0.0.1").pathname;
         upstreamCalls.push({ method: req.method, path, authorization: req.headers.authorization });
+        allUpstreamAuth.push(req.headers.authorization || "");
         res.setHeader("content-type", "application/json");
         // Like a real provider: every route needs the key. An upstream that
         // answered without one would hide a router that never sends it.
@@ -325,15 +336,17 @@ mkdirSync(DATA_DIR, { recursive: true });
 
 async function startFreeRoute(name, { adminTokenPath }) {
   const port = await getFreePort();
+  // No HOST or OMNIROUTE_HOSTNAME: the bind under test is FreeRoute's default.
+  const inherited = { ...process.env };
+  delete inherited.HOST;
+  delete inherited.OMNIROUTE_HOSTNAME;
   const child = startProcess(name, process.execPath, ["scripts/dev/run-next.mjs", "start"], {
     cwd: ROOT,
     env: {
-      ...process.env,
+      ...inherited,
       PORT: String(port),
       DASHBOARD_PORT: String(port),
       API_PORT: String(port),
-      OMNIROUTE_HOSTNAME: "127.0.0.1",
-      HOSTNAME: "127.0.0.1",
       DATA_DIR,
       OPENVAULT_URL: openVaultUrl,
       OPENVAULT_ADMIN_TOKEN_PATH: adminTokenPath,
@@ -348,7 +361,7 @@ async function startFreeRoute(name, { adminTokenPath }) {
   });
   const url = `http://127.0.0.1:${port}`;
   await waitForStatus(`${url}/healthz`, child, 120_000);
-  return { child, url };
+  return { child, url, port };
 }
 
 const mgmt = (extra = {}) => ({
@@ -369,6 +382,32 @@ async function chat(baseUrl, bearer, model, extra = {}) {
     }),
   });
   return { status: res.status, body: await readJson(res) };
+}
+
+// ── bind probe ───────────────────────────────────────────────────────────────
+
+/** First non-internal IPv4 address of this machine (what `hostname -I` lists first), or null. */
+function nonLoopbackIPv4() {
+  for (const addrs of Object.values(networkInterfaces())) {
+    for (const a of addrs || []) {
+      if (a.family === "IPv4" && !a.internal && !a.address.startsWith("127.")) return a.address;
+    }
+  }
+  return null;
+}
+
+/** Resolves "connected", or the socket error code (e.g. "ECONNREFUSED"). */
+function tcpProbe(host, port) {
+  return new Promise((resolveProbe) => {
+    const sock = netConnect({ host, port });
+    const done = (outcome) => {
+      sock.destroy();
+      resolveProbe(outcome);
+    };
+    sock.setTimeout(5_000, () => done("ETIMEDOUT"));
+    sock.once("connect", () => done("connected"));
+    sock.once("error", (error) => done(error.code || String(error)));
+  });
 }
 
 // ── secret grep ──────────────────────────────────────────────────────────────
@@ -404,6 +443,8 @@ async function main() {
 
   const upstream = await step("fake upstream starts", startFakeUpstream);
   const upstreamUrl = `http://127.0.0.1:${upstream.address().port}/v1`;
+  // A second endpoint on the same fake upstream that only a tenant key names.
+  const tenantUpstreamUrl = `http://127.0.0.1:${upstream.address().port}/tenant/v1`;
 
   await step("real OpenVault starts and answers /api/healthz", startOpenVault);
 
@@ -437,6 +478,45 @@ async function main() {
     );
     return body;
   });
+
+  // Tenant-custody keys go in before FreeRoute starts, so its first key list
+  // (cached 60s) already holds them. One shares the pooled key's endpoint and
+  // outranks it on priority; the other is the only key for its endpoint.
+  const tenantKeys = await step(
+    "tenant-custody keys stored in OpenVault (custody: tenant)",
+    async () => {
+      const created = [];
+      for (const [label, baseUrl, provider] of [
+        ["freeroute-e2e-tenant-same-endpoint", upstreamUrl, "openai"],
+        ["freeroute-e2e-tenant-only-endpoint", tenantUpstreamUrl, "custom"],
+      ]) {
+        const { status, body } = await openVaultCall("POST", "/api/keys", {
+          label,
+          provider,
+          secret: TENANT_SECRET,
+          role: "primary",
+          base_url: baseUrl,
+          priority: 1000,
+          custody: "tenant",
+        });
+        assert.equal(status, 200, JSON.stringify(body));
+        assert.equal(body.custody, "tenant", JSON.stringify(body));
+        created.push(body);
+      }
+      const listed = await openVaultCall("GET", "/api/keys");
+      for (const key of created) {
+        const row = listed.body.keys?.find((k) => k.id === key.id);
+        assert.equal(row?.custody, "tenant", `GET /api/keys row ${JSON.stringify(row)}`);
+      }
+      return created;
+    }
+  );
+
+  // Baseline before FreeRoute exists, so before it can ask OpenVault for the
+  // secret. Creating a connection starts a background model sync that reads
+  // the key, which can land before the connection test; the 60s secret cache
+  // then serves the test and the chat without a second reveal.
+  const auditBefore = readAudit().filter((e) => e.event === "secret_reveal").length;
 
   const adminTokenPath = join(OPENVAULT_HOME, "admin_token");
   let fr = await step("built FreeRoute starts against OpenVault", () =>
@@ -497,9 +577,100 @@ async function main() {
   );
   log(`node ${node.id}, connection ${connection.id}`);
 
-  // Baseline before FreeRoute first asks OpenVault for the secret. The 60s
-  // secret cache means the chat below may reuse the reveal the test made.
-  const auditBefore = readAudit().filter((e) => e.event === "secret_reveal").length;
+  const connectionCount = async (providerId) => {
+    const list = await readJson(
+      await fetch(`${fr.url}/api/providers?provider=${encodeURIComponent(providerId)}`, {
+        headers: mgmt(),
+      })
+    );
+    assert.ok(Array.isArray(list.connections), JSON.stringify(list));
+    return list.connections.filter((c) => c.provider === providerId).length;
+  };
+
+  await step(
+    "PUT /api/providers/{id} with an apiKey is refused (501 keys_managed_by_openvault)",
+    async () => {
+      const res = await fetch(`${fr.url}/api/providers/${connection.id}`, {
+        method: "PUT",
+        headers: mgmt(),
+        body: JSON.stringify({ apiKey: BULK_SECRET }),
+      });
+      const body = await readJson(res);
+      assert.equal(res.status, 501, JSON.stringify(body));
+      assert.equal(body.error?.code, "keys_managed_by_openvault", JSON.stringify(body));
+      const after = await readJson(
+        await fetch(`${fr.url}/api/providers/${connection.id}`, { headers: mgmt() })
+      );
+      const row = after.connection ?? after;
+      assert.ok(!row.apiKey, `connection gained an apiKey: ${JSON.stringify(row)}`);
+    }
+  );
+
+  await step(
+    "POST /api/providers/bulk with an apiKey is refused (501 keys_managed_by_openvault)",
+    async () => {
+      const before = await connectionCount(node.id);
+      const res = await fetch(`${fr.url}/api/providers/bulk`, {
+        method: "POST",
+        headers: mgmt(),
+        body: JSON.stringify({
+          provider: node.id,
+          entries: [{ name: "bulk-must-not-store", apiKey: BULK_SECRET }],
+        }),
+      });
+      const body = await readJson(res);
+      assert.equal(res.status, 501, JSON.stringify(body));
+      assert.equal(body.error?.code, "keys_managed_by_openvault", JSON.stringify(body));
+      assert.equal(await connectionCount(node.id), before, "bulk created a connection");
+    }
+  );
+
+  await step(
+    "POST /api/providers/import with an apiKey is refused (501 keys_managed_by_openvault)",
+    async () => {
+      const before = await connectionCount(node.id);
+      const res = await fetch(`${fr.url}/api/providers/import`, {
+        method: "POST",
+        headers: mgmt(),
+        body: JSON.stringify({
+          entries: [{ provider: node.id, name: "import-must-not-store", apiKey: BULK_SECRET }],
+        }),
+      });
+      const body = await readJson(res);
+      assert.equal(res.status, 501, JSON.stringify(body));
+      assert.equal(body.error?.code, "keys_managed_by_openvault", JSON.stringify(body));
+      assert.equal(await connectionCount(node.id), before, "import created a connection");
+    }
+  );
+
+  await step("/authorize gets 501 consumer_subscription_pooling_disabled", async () => {
+    // The Trae OAuth loopback callback stored query-string credentials with no
+    // auth, so it is probed both without and with the management bearer.
+    const query = "?code=e2e&state=e2e&access_token=e2e-must-not-store";
+    for (const headers of [{}, mgmt()]) {
+      const res = await fetch(`${fr.url}/authorize${query}`, { headers, redirect: "manual" });
+      const body = await readJson(res);
+      assert.equal(res.status, 501, JSON.stringify(body));
+      assert.equal(body.error?.code, "consumer_subscription_pooling_disabled");
+      assert.equal(typeof body.error?.message, "string");
+    }
+  });
+
+  await step("FreeRoute listens on 127.0.0.1 only (non-loopback connect refused)", async () => {
+    const ip = nonLoopbackIPv4();
+    assert.ok(ip, "this machine has no non-loopback IPv4 address to probe");
+    // Control: the probe can see a socket that IS bound on every interface.
+    const control = createServer();
+    await new Promise((r) => control.listen(0, "0.0.0.0", r));
+    const controlOutcome = await tcpProbe(ip, control.address().port);
+    await new Promise((r) => control.close(r));
+    assert.equal(controlOutcome, "connected", `control probe to ${ip} did not connect`);
+
+    assert.equal(await tcpProbe("127.0.0.1", fr.port), "connected", "loopback probe failed");
+    const outcome = await tcpProbe(ip, fr.port);
+    assert.equal(outcome, "ECONNREFUSED", `connect to ${ip}:${fr.port} gave ${outcome}`);
+    log(`bind probe: ${ip}:${fr.port} -> ${outcome}`);
+  });
 
   await step(
     "connection test passes with the OpenVault key and activates the connection",
@@ -581,6 +752,73 @@ async function main() {
     assert.equal(body.error?.code, "consumer_session_relay_disabled");
   });
 
+  await step(
+    "tenant-only endpoint: no key is spent, the connection test fails, chat is not served",
+    async () => {
+      upstreamCalls.length = 0;
+      const nodeRes = await fetch(`${fr.url}/api/provider-nodes`, {
+        method: "POST",
+        headers: mgmt(),
+        body: JSON.stringify({
+          type: "openai-compatible",
+          name: "E2E tenant-only upstream",
+          prefix: TENANT_NODE_PREFIX,
+          apiType: "chat",
+          baseUrl: tenantUpstreamUrl,
+        }),
+      });
+      const nodeBody = await readJson(nodeRes);
+      assert.equal(nodeRes.status, 201, JSON.stringify(nodeBody));
+      const connRes = await fetch(`${fr.url}/api/providers`, {
+        method: "POST",
+        headers: mgmt(),
+        body: JSON.stringify({ provider: nodeBody.node.id, name: "e2e-tenant-keyless" }),
+      });
+      const connBody = await readJson(connRes);
+      assert.ok(connRes.status === 200 || connRes.status === 201, JSON.stringify(connBody));
+      const conn = connBody.connection ?? connBody;
+
+      const testRes = await fetch(`${fr.url}/api/providers/${conn.id}/test`, {
+        method: "POST",
+        headers: mgmt(),
+        body: "{}",
+      });
+      const testBody = await readJson(testRes);
+      assert.notEqual(
+        testBody.valid,
+        true,
+        `tenant-only connection tested valid: ${JSON.stringify(testBody)}`
+      );
+
+      const { status, body } = await chat(
+        fr.url,
+        clientToken,
+        `${TENANT_NODE_PREFIX}/${UPSTREAM_MODEL}`
+      );
+      assert.notEqual(status, 200, `tenant-only chat was served: ${JSON.stringify(body)}`);
+      log(
+        `tenant-only: test valid=${testBody.valid}, chat ${status} ${JSON.stringify(body).slice(0, 200)}`
+      );
+    }
+  );
+
+  await step("a tenant-custody key is never spent or revealed", async () => {
+    const tenantSeen = allUpstreamAuth.filter((a) => a.includes(TENANT_SECRET));
+    assert.equal(tenantSeen.length, 0, "the fake upstream received the tenant secret");
+    assert.ok(
+      allUpstreamAuth.includes(`Bearer ${PROVIDER_SECRET}`),
+      "self-check: the pooled secret did reach the upstream"
+    );
+    const tenantIds = new Set(tenantKeys.map((k) => k.id));
+    const reveals = readAudit().filter((e) => e.event === "secret_reveal");
+    const tenantReveals = reveals.filter((e) => tenantIds.has(e.key_id));
+    assert.deepEqual(tenantReveals, [], "OpenVault audited a reveal of a tenant key");
+    assert.ok(
+      reveals.some((e) => e.key_id === vaultKey.id),
+      "self-check: the pooled key reveal is in the audit"
+    );
+  });
+
   await stopProcess(fr.child);
 
   // A wrong admin token: a fresh FreeRoute (empty 60s caches) reading a
@@ -621,19 +859,24 @@ async function main() {
   });
   await stopProcess(fr.child);
 
-  await step("FreeRoute DATA_DIR and logs do not contain the provider secret", async () => {
-    const dataFiles = filesUnder(DATA_DIR);
-    assert.ok(
-      dataFiles.some((p) => /\.(sqlite|db)$/.test(p)),
-      `no sqlite file in ${DATA_DIR}`
-    );
-    const freeRouteLogs = filesUnder(LOG_DIR).filter((p) => /freeroute-/.test(p));
-    const hits = filesContaining([...dataFiles, ...freeRouteLogs], PROVIDER_SECRET);
-    assert.deepEqual(hits, [], `secret found in: ${hits.join(", ")}`);
-    // Sanity: the grep can find what it looks for. The connection id is in the DB.
-    assert.ok(filesContaining(dataFiles, connection.id).length > 0, "grep self-check failed");
-    log(`grepped ${dataFiles.length} data files and ${freeRouteLogs.length} log files`);
-  });
+  await step(
+    "FreeRoute DATA_DIR and logs contain none of the provider, tenant or bulk secrets",
+    async () => {
+      const dataFiles = filesUnder(DATA_DIR);
+      assert.ok(
+        dataFiles.some((p) => /\.(sqlite|db)$/.test(p)),
+        `no sqlite file in ${DATA_DIR}`
+      );
+      const freeRouteLogs = filesUnder(LOG_DIR).filter((p) => /freeroute-/.test(p));
+      for (const secret of [PROVIDER_SECRET, TENANT_SECRET, BULK_SECRET]) {
+        const hits = filesContaining([...dataFiles, ...freeRouteLogs], secret);
+        assert.deepEqual(hits, [], `secret found in: ${hits.join(", ")}`);
+      }
+      // Sanity: the grep can find what it looks for. The connection id is in the DB.
+      assert.ok(filesContaining(dataFiles, connection.id).length > 0, "grep self-check failed");
+      log(`grepped ${dataFiles.length} data files and ${freeRouteLogs.length} log files`);
+    }
+  );
 
   await step(
     "the call-log artifact worker did not fail (its files were in the grep above)",

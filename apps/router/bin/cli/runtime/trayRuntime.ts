@@ -63,7 +63,7 @@ export async function loadSystray(): Promise<(new (...args: unknown[]) => unknow
     } catch (err) {
       // Surface failures to stderr instead of staying silent — anyone hitting
       // a tray problem otherwise has zero diagnostic. (PR #1080)
-      console.warn(`[omniroute] tray runtime install failed: ${(err as Error).message}`);
+      console.warn(`[freeroute] tray runtime install failed: ${(err as Error).message}`);
       return null;
     }
   }
@@ -74,7 +74,7 @@ export async function loadSystray(): Promise<(new (...args: unknown[]) => unknow
     const mod = await import(systrayModuleSpecifier(RUNTIME_DIR));
     return (mod.default ?? mod.SysTray ?? mod) as (new (...args: unknown[]) => unknown) | null;
   } catch (err) {
-    console.warn(`[omniroute] tray runtime import failed: ${(err as Error).message}`);
+    console.warn(`[freeroute] tray runtime import failed: ${(err as Error).message}`);
     return null;
   }
 }

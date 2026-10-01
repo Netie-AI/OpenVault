@@ -1,10 +1,12 @@
 "use client";
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 
 import { Icon as UiIcon } from "@repo/ui/icons";
+import { brandDocsUrl } from "@repo/core";
 
 import { useI18n } from "@/components/i18n-provider";
 
-const DOCS_URL = "https://openship.io/docs";
+const DOCS_URL = brandDocsUrl();
 
 /**
  * Empty state for the custom-jobs section — same illustration language + theme
@@ -91,6 +93,7 @@ export function JobsEmptyState({ onCreate }: { onCreate: () => void }) {
           <UiIcon name="plus" className="size-4" />
           {e.cta}
         </button>
+        {DOCS_URL && (
         <a
           href={DOCS_URL}
           target="_blank"
@@ -101,6 +104,7 @@ export function JobsEmptyState({ onCreate }: { onCreate: () => void }) {
           {e.docs}
           <UiIcon name="external-link" className="size-3.5 opacity-60" />
         </a>
+        )}
       </div>
     </div>
   );

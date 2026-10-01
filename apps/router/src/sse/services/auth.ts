@@ -23,6 +23,8 @@ import { getDbInstance } from "@/lib/db/core";
 import { getRecentEgressIpForConnection, EGRESS_IP_LOOKUP_WINDOW_MS } from "@/lib/db/proxyLogs";
 import { validateApiKey } from "@/lib/db/apiKeys";
 import { resolveProviderApiKey } from "@/lib/netie/keyvault";
+import { stripSecretProviderSpecificData } from "@/lib/netie/providerGuards";
+import { assertProviderAllowed } from "@omniroute/open-sse/netie/policy.ts";
 import { getRegistryEntry } from "@omniroute/open-sse/config/providerRegistry.ts";
 import {
   getActiveExclusiveConnectionLease,
@@ -1073,7 +1075,13 @@ async function materializeConnection(
     requestedModel?: string | null;
   } = {}
 ) {
-  const providerSpecificData = await hydrateConnectionProviderSpecificData(connection);
+  // FreeRoute: drop secret providerSpecificData fields (extraApiKeys,
+  // consoleApiKey, cookies, ...) so no executor can rotate onto or send a key
+  // that was stored outside OpenVault (open-sse/executors/base.ts
+  // resolveEffectiveKey round-robins extraApiKeys).
+  const providerSpecificData = stripSecretProviderSpecificData(
+    await hydrateConnectionProviderSpecificData(connection)
+  );
   const apiKeyHealth = providerSpecificData.apiKeyHealth as Record<string, KeyHealth> | undefined;
   if (apiKeyHealth) syncHealthFromDB(connection.id, apiKeyHealth);
   const releaseOAuthSession =
@@ -1093,7 +1101,7 @@ async function materializeConnection(
             getRegistryEntry(connection.provider)?.baseUrl ||
             null,
         })
-      : connection.apiKey;
+      : null;
   return {
     apiKey: resolvedApiKey,
     accessToken: connection.accessToken,
@@ -1186,6 +1194,11 @@ export async function getProviderCredentials(
   requestedModel: string | null = null,
   options: CredentialSelectionOptions = {}
 ) {
+  // FreeRoute: the shared credential choke point for chat, media, embeddings,
+  // rerank, search and every other route. A subscription or browser-session
+  // provider throws NetieDisabledError (named 501) before any connection is
+  // selected or materialized. See open-sse/netie/policy.ts.
+  assertProviderAllowed(provider);
   if (isMicrosoftDesignerWebRetiredProviderId(provider)) {
     invalidateManagedLease(options, "AUTHORIZATION_CHANGED");
     log.warn("AUTH", "Retired provider credential selection denied");

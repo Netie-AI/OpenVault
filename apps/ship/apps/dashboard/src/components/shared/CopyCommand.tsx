@@ -1,4 +1,5 @@
 "use client";
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 
 import { Icon as UiIcon } from "@repo/ui/icons";
 
@@ -13,7 +14,7 @@ import { useI18n } from "@/components/i18n-provider";
  * images; on a bare install it restarts the service. One string, so every
  * surface that can't offer a working button points at the same command.
  */
-export const SELF_UPDATE_COMMAND = "openship update";
+export const SELF_UPDATE_COMMAND = "freebuild update";
 
 /**
  * A command the operator has to run themselves, as a click-to-copy chip.

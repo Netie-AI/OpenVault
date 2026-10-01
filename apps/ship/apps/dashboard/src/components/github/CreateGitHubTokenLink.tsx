@@ -1,4 +1,5 @@
 "use client";
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 
 import { Icon } from "@repo/ui/icons";
 import { cn } from "@/lib/utils";
@@ -13,7 +14,7 @@ export function CreateGitHubTokenLink({
 }) {
   return (
     <a
-      href="https://github.com/settings/tokens/new?scopes=repo,read:org&description=Openship"
+      href="https://github.com/settings/tokens/new?scopes=repo,read:org&description=FreeBuild"
       target="_blank"
       rel="noopener noreferrer"
       className={cn(

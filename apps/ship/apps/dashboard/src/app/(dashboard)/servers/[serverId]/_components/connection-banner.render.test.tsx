@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: expectations follow the FreeBuild product name.
 // No DOM needed: renderToStaticMarkup runs no effects, and the banner is pure.
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -111,7 +112,7 @@ describe("ConnectionBanner unprovisioned host channel", () => {
   it("offers the provisioning command, never a firewall rule", () => {
     const out = text(render({ diagnosis: { hint: UNPROVISIONED_HINT } }));
     expect(out).toContain("provision the channel");
-    expect(out).toContain("openship up");
+    expect(out).toContain("freebuild up");
     expect(out).not.toContain("ufw");
   });
 
@@ -159,7 +160,7 @@ describe("ConnectionBanner unprovisioned host channel", () => {
     );
     expect(out).toContain("Nothing answered there");
     expect(out).toContain(RULE);
-    expect(out).not.toContain("openship up");
+    expect(out).not.toContain("freebuild up");
   });
 });
 

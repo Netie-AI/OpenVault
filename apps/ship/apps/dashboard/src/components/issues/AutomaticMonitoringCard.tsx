@@ -1,4 +1,5 @@
 "use client";
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 
 import { Icon as UiIcon } from "@repo/ui/icons";
 
@@ -60,7 +61,7 @@ export function AutomaticMonitoringCard({
                   ? "Every minute"
                   : "Custom schedule"}
                 {" · "}
-                {watcher.runsWhileAppOpen ? "Keep Openship running" : "Runs in the background"}
+                {watcher.runsWhileAppOpen ? "Keep FreeBuild running" : "Runs in the background"}
               </p>
             )}
           </div>

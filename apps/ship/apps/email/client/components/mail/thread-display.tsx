@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 import {
   Archive,
   ArchiveX,
@@ -307,7 +308,7 @@ export function ThreadDisplay() {
             }
 
             body {
-              font-family: 'Gellix', 'SF Arabic', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
               line-height: 1.5;
               color: #333;
               background: white;

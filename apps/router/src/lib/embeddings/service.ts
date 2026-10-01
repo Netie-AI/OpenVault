@@ -1,3 +1,4 @@
+import { netieErrorResponse } from "@/lib/netie/providerGuards";
 import { handleEmbedding } from "@omniroute/open-sse/handlers/embeddings.ts";
 import {
   parseEmbeddingModel,
@@ -131,6 +132,8 @@ export async function createEmbeddingResponse(
         });
       }
     } catch (err) {
+      // FreeRoute: a KeyVault or policy error is not a combo lookup miss.
+      if (netieErrorResponse(err)) throw err;
       log.error("EMBED", `Combo resolution failed for ${modelStr}: ${err}`);
     }
   }

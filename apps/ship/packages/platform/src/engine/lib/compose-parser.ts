@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Docker Compose parser - extracts services, ports, volumes, depends_on,
  * and environment from a docker-compose.yml / compose.yml file.
@@ -700,7 +701,7 @@ const UNSUPPORTED_SERVICE_KEYS: Record<string, string> = {
   // `entrypoint` is modeled (#575) — see parseAdvanced.
   user: "user is not modeled — the container runs as the image's user.",
   working_dir: "working_dir is not modeled — the image's WORKDIR is used.",
-  hostname: "hostname is not modeled — Openship sets the hostname to the service name.",
+  hostname: "hostname is not modeled — FreeBuild sets the hostname to the service name.",
   domainname: "domainname is not modeled.",
   mac_address: "mac_address is not modeled.",
   platform: "platform is not modeled — the image is pulled for the host's architecture.",
@@ -720,7 +721,7 @@ const UNSUPPORTED_SERVICE_KEYS: Record<string, string> = {
   secrets: "secrets is not modeled — use environment variables instead.",
   volumes_from: "volumes_from is legacy and not modeled — declare the volume on both services.",
   profiles: "profiles is not modeled — every service in the file is imported.",
-  labels: "labels is not modeled — Openship sets its own container labels.",
+  labels: "labels is not modeled — FreeBuild sets its own container labels.",
   logging: "logging is not modeled — the daemon's default log driver is used.",
 };
 
@@ -764,7 +765,7 @@ function collectUnsupported(
         service: serviceName,
         field: "deploy",
         reason:
-          `deploy.${rest.join("/")} is not modeled — Openship runs one container per ` +
+          `deploy.${rest.join("/")} is not modeled — FreeBuild runs one container per ` +
           `service (only deploy.resources.limits is honored).`,
       });
     }

@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Edge-ownership consent gate — decides how to make ports 80/443 ours to bind
  * without ever blind-killing a foreign proxy. Lives with the rest of the edge
@@ -84,7 +85,7 @@ export async function ensureEdgeClear(
         // operator retries the same unprivileged takeover forever — and "stopped the
         // existing proxy" is untrue on this arm, since the stop is what was refused.
         freed.privilegeDegraded
-          ? `The ${ports} — and Openship could not run the stop as root on this host (see the ` +
+          ? `The ${ports} — and FreeBuild could not run the stop as root on this host (see the ` +
             "privilege warning above), so stopping the existing proxy was almost certainly " +
             "refused. Retrying as this user will fail the same way: reconnect as root, or as a " +
             "user with passwordless sudo."
@@ -115,13 +116,13 @@ export async function ensureEdgeClear(
     // balancer to us, and "migrate" imports the existing sites first so nothing
     // they're serving goes dark.
     const message = migratable
-      ? `Openship runs its own load balancer (OpenResty) on ports 80 and 443, but ${owner} is ` +
+      ? `FreeBuild runs its own load balancer (OpenResty) on ports 80 and 443, but ${owner} is ` +
         `already serving them (${scan.sites.length} site${scan.sites.length === 1 ? "" : "s"}). ` +
-        `Migrate those sites into Openship and take over, just stop it and take over, or cancel?`
+        `Migrate those sites into FreeBuild and take over, just stop it and take over, or cancel?`
       : known
-        ? `Openship runs its own load balancer (OpenResty) on ports 80 and 443, but ${owner} is ` +
+        ? `FreeBuild runs its own load balancer (OpenResty) on ports 80 and 443, but ${owner} is ` +
           `already serving them. Stop it and take over, or cancel and leave it running?`
-        : `Openship runs its own load balancer (OpenResty) on ports 80 and 443, but ${owner} is ` +
+        : `FreeBuild runs its own load balancer (OpenResty) on ports 80 and 443, but ${owner} is ` +
           `already using them and we can't identify it. Stop it and take over, or cancel and leave it running?`;
 
     const details: EdgeConflictDetails = {

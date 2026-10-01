@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Atomic project teardown.
  *
@@ -234,7 +235,7 @@ async function teardownProjectLocked(
     push({
       step: "guard_control_plane",
       status: "failed",
-      error: "The Openship control plane can't be torn down via the API — manage it with the CLI.",
+      error: "The FreeBuild control plane can't be torn down via the API — manage it with the CLI.",
     });
     return finalize(steps, false, "control_plane");
   }

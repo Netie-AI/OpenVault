@@ -27,7 +27,7 @@
     "loginEnabled": "Accesso: abilitato (password aggiornata)",
     "loginDisabled": "Accesso: disabilitato",
     "providerInfo": "Provider: {info}",
-    "opencode": "Installa e configura il pacchetto @omniroute/opencode-plugin incluso per OpenCode"
+    "opencode": "Installa e configura il pacchetto OpenCode plugin incluso per OpenCode"
   },
   "doctor": {
     "title": "Diagnostica di FreeRoute",

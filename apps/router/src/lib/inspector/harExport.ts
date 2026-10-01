@@ -15,7 +15,7 @@ import { maskSecret } from "@/mitm/maskSecrets";
 import type { InterceptedRequest } from "@/mitm/inspector/types";
 
 const HAR_VERSION = "1.2";
-const CREATOR_NAME = "OmniRoute Traffic Inspector";
+const CREATOR_NAME = "FreeRoute Traffic Inspector";
 const CREATOR_VERSION = "3.8.6";
 
 interface HarNameValue {

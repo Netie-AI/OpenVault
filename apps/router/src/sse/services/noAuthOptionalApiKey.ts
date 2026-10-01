@@ -8,6 +8,7 @@
  * (`anonymousApiKey` and/or FREE_APIKEY), prefer an active connection that
  * actually has a key, then fall back to the synthetic anonymous path.
  */
+import { resolveConnectionApiKey } from "@/lib/netie/providerGuards";
 import { REGISTRY } from "@omniroute/open-sse/config/providerRegistry.ts";
 import { isAccountUnavailable } from "@omniroute/open-sse/services/accountFallback.ts";
 import { createLazyConnectionView } from "@/lib/db/providers/lazyConnectionView";
@@ -88,8 +89,7 @@ export async function loadOptionalNoAuthApiKeyCredentials(
       (conn) =>
         conn.id.length > 0 &&
         !excludedConnectionIds.has(conn.id) &&
-        conn.isActive !== false &&
-        hasUsableApiKey(conn.apiKey)
+        conn.isActive !== false
     )
     .sort((a, b) => (a.priority || 999) - (b.priority || 999));
 
@@ -97,7 +97,14 @@ export async function loadOptionalNoAuthApiKeyCredentials(
   // handing one back regardless of health. If every candidate is unhealthy,
   // fall through to the caller's anonymous/synthetic no-auth fallback.
   const connection = connections.find(isConnectionHealthy);
-  if (!connection || !hasUsableApiKey(connection.apiKey)) return null;
+  if (!connection) return null;
+  // FreeRoute: the optional key comes from OpenVault, never the DB column. No
+  // key in OpenVault means the anonymous path, as before. A KeyVault error is
+  // thrown (named 503), not turned into a silent anonymous request.
+  const vaultApiKey = await resolveConnectionApiKey(
+    connection as unknown as Record<string, unknown>
+  );
+  if (!hasUsableApiKey(vaultApiKey)) return null;
 
   const providerSpecificData =
     connection.providerSpecificData && typeof connection.providerSpecificData === "object"
@@ -105,7 +112,7 @@ export async function loadOptionalNoAuthApiKeyCredentials(
       : {};
 
   return {
-    apiKey: connection.apiKey.trim(),
+    apiKey: vaultApiKey.trim(),
     accessToken: null,
     refreshToken: null,
     expiresAt: null,

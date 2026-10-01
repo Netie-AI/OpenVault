@@ -95,10 +95,9 @@ function resolveOpenCodeDirs() {
 function resolveBundledPlugin() {
   if (!existsSync(BUNDLED_PLUGIN_DIR)) {
     throw new Error(
-      `Bundled @omniroute/opencode-plugin not found at ${BUNDLED_PLUGIN_DIR}.\n` +
-        `This usually means omniroute was installed from a source tree that does not ` +
-        `include the workspace package. Try reinstalling omniroute (npm install -g omniroute) ` +
-        `or run \`cd @omniroute/opencode-plugin && npm install && npm run build\` from the source repo.`
+      `The OpenCode plugin is not included in this edition of FreeRoute ` +
+        `(looked in ${BUNDLED_PLUGIN_DIR}). Run \`freeroute setup-opencode\` instead: it ` +
+        `registers FreeRoute as an OpenAI-compatible provider in your OpenCode config.`
     );
   }
 
@@ -406,7 +405,7 @@ export function registerSetupOpenCode(setupCommand) {
     .command("opencode")
     .description(
       t("setup.opencode") ||
-        "Install and register the bundled @omniroute/opencode-plugin with a local OpenCode install"
+        "Install and register the OpenCode plugin (not included in this edition; use setup-opencode)"
     )
     .option(
       "--provider-id <id>",

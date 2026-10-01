@@ -18,7 +18,7 @@ export const navyProvider: RegistryEntry = buildOpenAiCompatibleRegistryEntry({
   baseUrl: "https://api.navy/v1/chat/completions",
   modelsUrl: "https://api.navy/v1/models",
   passthroughModels: true,
-  extraHeaders: { "User-Agent": "OmniRoute/1.0" },
+  extraHeaders: { "User-Agent": "FreeRoute/1.0" },
   models: [
     { id: "llama-3.3-70b-instruct", name: "Llama 3.3 70B Instruct", contextLength: 131072, toolCalling: true },
     { id: "gemma-4-31b-it", name: "Gemma 4 31B IT", contextLength: 262144, toolCalling: true, supportsVision: true, supportsReasoning: true },

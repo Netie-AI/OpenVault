@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Pre-deploy checks - validate prerequisites before the build pipeline starts.
  *
@@ -233,7 +234,7 @@ async function checkGitHubAppInstallation(
     status: "fail",
     code: PREFLIGHT_ERROR_CODES.GITHUB_APP_INSTALLATION_REQUIRED,
     message:
-      `The Openship GitHub App is not installed on "${owner}". ` +
+      `The FreeBuild GitHub App is not installed on "${owner}". ` +
       `Deploys need it to mint a scoped token for cloning the repo. ` +
       `Install it at ${install.url} and deploy again.`,
   };
@@ -323,7 +324,7 @@ async function checkRemoteBuildTokenLeak(
       code: PREFLIGHT_ERROR_CODES.GITHUB_CLI_REMOTE_BUILD_REJECTED,
       message:
         `gh CLI auth only works for local builds. ` +
-        `Connect the Openship App in Settings → GitHub, or set a per-project ` +
+        `Connect the FreeBuild App in Settings → GitHub, or set a per-project ` +
         `clone token, then deploy again.`,
     };
   }
@@ -402,7 +403,7 @@ async function checkRemoteCloneToken(
     code: PREFLIGHT_ERROR_CODES.GITHUB_REMOTE_TOKEN_REQUIRED,
     message:
       `No GitHub credential available to clone "${owner}" onto the build worker. ` +
-      `Install the Openship App on this owner, add a per-project clone token, ` +
+      `Install the FreeBuild App on this owner, add a per-project clone token, ` +
       `or switch to "Build on this machine" so the credential stays on the API host.`,
   };
 }
@@ -461,12 +462,12 @@ async function checkCloneOnServerCredential(
     ...baseCheck,
     status: "warn",
     message:
-      `"Clone on the server" is selected, but Openship holds no GitHub credential for the build host. ` +
+      `"Clone on the server" is selected, but FreeBuild holds no GitHub credential for the build host. ` +
       `The deploy will check whether the server already reaches this repo with its own git credentials ` +
       `(a \`gh\` login, a credential helper, or its ssh key) and clone there if it does — otherwise it ` +
       `falls back to cloning on the API host and transferring the context. To make the on-server clone ` +
       `deterministic, connect the server under Servers → GitHub (a read-only per-repo deploy key is the ` +
-      `narrowest option), install the Openship App on "${owner}", or add a per-project clone token.`,
+      `narrowest option), install the FreeBuild App on "${owner}", or add a per-project clone token.`,
   };
 }
 
@@ -1187,7 +1188,7 @@ function checkCustomDomainCloudVerified(
     status: "warn",
     message:
       cloud.message ??
-      `${customDomain} isn't DNS-verified yet — deploy continues on the free .opsh.io domain; verify the custom domain from the Domains tab to attach it.`,
+      `${customDomain} isn't DNS-verified yet — deploy continues on the free cloud subdomain; verify the custom domain from the Domains tab to attach it.`,
   };
 }
 
@@ -1218,7 +1219,7 @@ async function checkCustomDomainSelfHosted(
       id: "domain",
       label: "Domain DNS",
       status: "warn",
-      message: `No DNS records found yet for ${customDomain}. Point it at your server's IP; the deploy continues on the free .opsh.io domain — TLS issuance for ${customDomain} retries after Verify.`,
+      message: `No DNS records found yet for ${customDomain}. Point it at your server's IP; the deploy continues on the free cloud subdomain — TLS issuance for ${customDomain} retries after Verify.`,
     };
   }
 
@@ -1277,7 +1278,7 @@ async function checkCustomDomainCloudCname(customDomain: string): Promise<Prefli
       id: "domain",
       label: "Domain DNS",
       status: "warn",
-      message: `No CNAME record found for ${customDomain} yet. Add a CNAME pointing to ${CLOUD_EDGE_CNAME}, then click Verify on the Domains tab. Deploy continues on the free .opsh.io domain.`,
+      message: `No CNAME record found for ${customDomain} yet. Add a CNAME pointing to ${CLOUD_EDGE_CNAME}, then click Verify on the Domains tab. Deploy continues on the free cloud subdomain.`,
     };
   }
   if (records.some((record) => record.toLowerCase() === CLOUD_EDGE_CNAME)) {
@@ -1287,7 +1288,7 @@ async function checkCustomDomainCloudCname(customDomain: string): Promise<Prefli
     id: "domain",
     label: "Domain DNS",
     status: "warn",
-    message: `CNAME for ${customDomain} doesn't point to ${CLOUD_EDGE_CNAME} yet (current: ${records.join(", ")}). Deploy continues on the free .opsh.io domain; fix DNS and verify from the Domains tab to attach the custom domain.`,
+    message: `CNAME for ${customDomain} doesn't point to ${CLOUD_EDGE_CNAME} yet (current: ${records.join(", ")}). Deploy continues on the free cloud subdomain; fix DNS and verify from the Domains tab to attach the custom domain.`,
   };
 }
 
@@ -1708,7 +1709,7 @@ export async function runPreflightChecks(
       label: "Public URL",
       status: "warn",
       message:
-        "This deploy has no public domain attached. It will build and start but nothing will route to it. Add a custom domain on the Domains tab or connect the hosted cloud service to get a free .opsh.io subdomain.",
+        "This deploy has no public domain attached. It will build and start but nothing will route to it. Add a custom domain on the Domains tab or connect the hosted cloud service to get a free cloud subdomain.",
     });
   }
 

@@ -27,7 +27,7 @@
     "loginEnabled": "Inloggen: ingeschakeld (wachtwoord bijgewerkt)",
     "loginDisabled": "Inloggen: uitgeschakeld",
     "providerInfo": "Provider: {info}",
-    "opencode": "Installeer en configureer de meegeleverde @omniroute/opencode-plugin voor OpenCode"
+    "opencode": "Installeer en configureer de meegeleverde OpenCode plugin voor OpenCode"
   },
   "doctor": {
     "title": "FreeRoute-diagnose",

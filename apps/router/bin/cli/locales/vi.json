@@ -27,7 +27,7 @@
     "loginEnabled": "Đăng nhập: đã bật (đã cập nhật mật khẩu)",
     "loginDisabled": "Đăng nhập: đã tắt",
     "providerInfo": "Nhà cung cấp: {info}",
-    "opencode": "Cài đặt và cấu hình @omniroute/opencode-plugin đi kèm cho OpenCode"
+    "opencode": "Cài đặt và cấu hình OpenCode plugin đi kèm cho OpenCode"
   },
   "doctor": {
     "title": "Chẩn đoán FreeRoute",

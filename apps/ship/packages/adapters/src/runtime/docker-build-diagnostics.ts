@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Docker-build failure diagnostics and inactivity handling shared by the
  * Engine-API and SSH/CLI build paths.
@@ -42,7 +43,7 @@ function memoryGuidance(context: DockerBuildDiagnosticContext): string {
   if (context.memoryLimitApplied && memoryMb && memoryMb > 0) {
     return `The classic Docker builder was capped at ${memoryMb} MB RAM; raise Build Memory in Project Settings → Resources if this build needs more.`;
   }
-  return "This build path was not under an OpenShip-enforced memory cap; check available RAM/swap and the host or Docker daemon OOM logs.";
+  return "This build path was not under a FreeBuild-enforced memory cap; check available RAM/swap and the host or Docker daemon OOM logs.";
 }
 
 function findNonZeroExitCode(output: string): number | null {

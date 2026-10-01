@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Resolve `catalog:` deps in Zero's vendored package.json files.
  *
@@ -102,7 +103,7 @@ async function rewriteCatalogRefs(packageJsonPath: string): Promise<void> {
 async function main(): Promise<void> {
   const here = new URL(".", import.meta.url).pathname;
   const emailDir = resolve(here, "..");
-  console.log("Resolving Zero catalog references against the openship catalog map:");
+  console.log("Resolving Zero catalog references against the FreeBuild catalog map:");
   await rewriteCatalogRefs(resolve(emailDir, "server", "package.json"));
   await rewriteCatalogRefs(resolve(emailDir, "client", "package.json"));
   console.log("\nNext step: `cd server && bun install`  (then same for client)\n");

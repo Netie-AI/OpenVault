@@ -1,3 +1,4 @@
+import { DISABLED, renderDisabled } from "@omniroute/open-sse/netie/policy.ts";
 import { NextResponse } from "next/server";
 import { getCachedProviderConnectionById } from "@/lib/db/readCache";
 import { updateProviderConnection } from "@/lib/db/providers";
@@ -24,6 +25,10 @@ type RefreshResult = {
  * T12 — Manual Token Refresh UI
  */
 export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  // FreeRoute: refreshing a pooled subscription login is not shipped. Also
+  // matched in src/lib/netie/hardDisabledRoutes.ts before this handler runs.
+  const disabled = renderDisabled(DISABLED.consumerSubscription);
+  if (disabled) return disabled;
   try {
     const { id } = await params;
 

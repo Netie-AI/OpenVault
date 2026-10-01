@@ -1,3 +1,4 @@
+import { classifyConnection, resolveConnectionApiKey } from "@/lib/netie/providerGuards";
 import { NextRequest, NextResponse } from "next/server";
 import { isAuthenticated } from "@/shared/utils/apiAuth";
 import { getProviderConnections } from "@/lib/db/providers";
@@ -29,8 +30,10 @@ export async function GET(request: NextRequest) {
       activeConnections
         .filter(
           (connection) =>
-            (typeof connection.apiKey === "string" && connection.apiKey.trim().length > 0) ||
-            connection.authType === "oauth" ||
+            // FreeRoute: an API-key connection's key lives in OpenVault, so an
+            // active apikey row counts as configured. Subscription and
+            // browser-session rows never do.
+            (!classifyConnection(connection) && connection.authType === "apikey") ||
             // Local/self-hosted providers (ollama-local, lm-studio, etc.) and other
             // no-key-required providers connect with no apiKey and authType "apikey"
             // (see src/app/api/providers/route.ts) — they are still "configured" the
@@ -52,12 +55,13 @@ export async function GET(request: NextRequest) {
 
     // Add OpenRouter account models that explicitly support embeddings.
     try {
-      const apiKey = activeConnections
-        .filter((connection) => connection.provider === "openrouter")
-        .find(
-          (connection) =>
-            typeof connection.apiKey === "string" && connection.apiKey.trim().length > 0
-        )?.apiKey as string | undefined;
+      // FreeRoute: the OpenRouter key comes from OpenVault, never the DB column.
+      const openrouterConnection = activeConnections.find(
+        (connection) => connection.provider === "openrouter" && connection.authType === "apikey"
+      );
+      const apiKey = openrouterConnection
+        ? ((await resolveConnectionApiKey(openrouterConnection)) ?? undefined)
+        : undefined;
 
       if (apiKey) {
         const controller = new AbortController();

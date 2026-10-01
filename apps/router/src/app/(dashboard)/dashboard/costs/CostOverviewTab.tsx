@@ -531,7 +531,7 @@ export default function CostOverviewTab() {
                   onClick={() => {
                     const csv = generateCSV(analytics, locale);
                     const dateStr = new Date().toISOString().slice(0, 10);
-                    downloadFile(csv, `omniroute-costs-${range}-${dateStr}.csv`, "text/csv");
+                    downloadFile(csv, `freeroute-costs-${range}-${dateStr}.csv`, "text/csv");
                   }}
                   className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-text-muted hover:text-text-main hover:bg-surface/50 rounded-lg border border-border/30 transition-colors"
                   title={t("exportCSV")}
@@ -545,7 +545,7 @@ export default function CostOverviewTab() {
                     const dateStr = new Date().toISOString().slice(0, 10);
                     downloadFile(
                       json,
-                      `omniroute-costs-${range}-${dateStr}.json`,
+                      `freeroute-costs-${range}-${dateStr}.json`,
                       "application/json"
                     );
                   }}

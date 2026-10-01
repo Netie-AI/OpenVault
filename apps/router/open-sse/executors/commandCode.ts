@@ -199,7 +199,7 @@ const COMMAND_CODE_RESERVED_TOOL_NAMES = new Set(["tool_search"]);
 
 function wireToolName(clientName: string, toolNameMap: Map<string, string>): string {
   if (COMMAND_CODE_RESERVED_TOOL_NAMES.has(clientName)) {
-    const wire = `omniroute_${clientName}`;
+    const wire = `freeroute_${clientName}`;
     toolNameMap.set(wire, clientName);
     return wire;
   }

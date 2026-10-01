@@ -1,6 +1,7 @@
 "use client";
 
 import { Icon as UiIcon, type IconName } from "@repo/ui/icons";
+import { SYSTEM } from "@repo/core";
 
 /**
  * Team-mode migration wizard. Promotes a single_user instance into a
@@ -327,7 +328,9 @@ function ServerForm({
   const [servers, setServers] = useState<ServerInfo[]>([]);
   const [loadingServers, setLoadingServers] = useState(true);
   const [serverId, setServerId] = useState("");
-  const [domainKind, setDomainKind] = useState<"custom" | "free">("free");
+  // Modified by Netie AI, 2026: the free subdomain lives on the hosted cloud
+  // edge, which FreeBuild does not ship, so only a custom domain is offered.
+  const [domainKind, setDomainKind] = useState<"custom" | "free">("custom");
   const [customHost, setCustomHost] = useState("");
   const [freeSlug, setFreeSlug] = useState("");
   const [preflight, setPreflight] = useState<PreflightResult | null>(null);
@@ -453,18 +456,7 @@ function ServerForm({
       {/* Domain choice */}
       <div className="space-y-2">
         <label className="text-sm font-medium text-foreground block">{t.settings.migrate.server.domain}</label>
-        <div className="grid grid-cols-2 gap-2">
-          <ToggleButton
-            selected={domainKind === "free"}
-            disabled={submitting}
-            onClick={() => {
-              setDomainKind("free");
-              setPreflight(null);
-            }}
-          >
-            <span className="text-sm font-medium">{t.settings.migrate.server.freeSubdomain}</span>
-            <span className="text-[11px] text-muted-foreground">{t.settings.migrate.server.freeSubdomainHint}</span>
-          </ToggleButton>
+        <div className="grid grid-cols-1 gap-2">
           <ToggleButton
             selected={domainKind === "custom"}
             disabled={submitting}
@@ -490,7 +482,7 @@ function ServerForm({
               className="w-full ps-3 pe-24 py-2 bg-muted/30 border border-border/50 rounded-xl text-sm text-foreground font-mono"
             />
             <span className="absolute end-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-mono">
-              .opsh.io
+              .{SYSTEM.DOMAINS.CLOUD_DOMAIN}
             </span>
           </div>
         ) : (
@@ -746,7 +738,7 @@ function TunnelForm({
             className="w-full ps-3 pe-32 py-2 bg-muted/30 border border-border/50 rounded-xl text-sm text-foreground font-mono"
           />
           <span className="absolute end-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-mono">
-            .preview.oblien.com
+            {t.settings.migrate.tunnel.slugSuffix}
           </span>
         </div>
         <p className="text-[11px] text-muted-foreground">

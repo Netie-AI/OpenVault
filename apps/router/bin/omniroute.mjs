@@ -331,7 +331,7 @@ process.on("exit", () => {
       isGlobal: true,
       message:
         `Update available: ${_notifier.update.current} → ${_notifier.update.latest}\n` +
-        "Run `npm install -g omniroute` or `omniroute update --apply`",
+        "Update FreeRoute by updating OpenVault.",
     });
   }
 });

@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /** Retained server diagnostics and component installers behind shared authorization. */
 import { OperationError, type CreateServerInput, type ServerOperations } from "@repo/contracts";
 import type { ExecutionContext } from "../../../context";
@@ -79,7 +80,7 @@ async function checkServerComponents(serverId: string, names: string[]) {
         );
       }
       const docker = components.find((component) => component.name === "docker")!;
-      docker.message += " Restart Openship to apply the updated user group membership.";
+      docker.message += " Restart FreeBuild to apply the updated user group membership.";
     }
     return withCapabilities(executor, components);
   });

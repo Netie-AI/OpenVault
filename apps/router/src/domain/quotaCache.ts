@@ -18,6 +18,7 @@
 
 import { getUsageForProvider } from "@omniroute/open-sse/services/usage.ts";
 import { getCachedProviderConnectionById } from "@/lib/db/readCache";
+import { classifyConnection } from "@/lib/netie/providerGuards";
 import { resolveProxyForConnection } from "@/lib/db/settings";
 import { runWithProxyContext } from "@omniroute/open-sse/utils/proxyFetch.ts";
 import { safePercentage } from "@/shared/utils/formatting";
@@ -841,7 +842,14 @@ async function refreshEntry(entry: QuotaCacheEntry) {
 
   try {
     const connection = await getCachedProviderConnectionById(entry.connectionId);
-    if (!connection || connection.authType !== "oauth" || !connection.isActive) {
+    // FreeRoute: never poll a consumer endpoint for a subscription or
+    // browser-session connection (open-sse/netie/policy.ts).
+    if (
+      !connection ||
+      connection.authType !== "oauth" ||
+      !connection.isActive ||
+      classifyConnection(connection)
+    ) {
       cache.delete(entry.connectionId);
       return;
     }

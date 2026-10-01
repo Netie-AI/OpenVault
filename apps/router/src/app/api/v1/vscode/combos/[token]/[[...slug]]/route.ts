@@ -108,7 +108,7 @@ function toOllamaTagCombo(combo: ComboCatalogEntry) {
 		model: actualModelId,
 		modified_at: "2026-01-01T00:00:00Z",
 		size: 0,
-		digest: `omniroute:combo:${actualModelId}`,
+		digest: `freeroute:combo:${actualModelId}`,
 		...(reasoningEffortValues
 			? {
 				supports_reasoning_effort: reasoningEffortValues,
@@ -122,7 +122,7 @@ function toOllamaTagCombo(combo: ComboCatalogEntry) {
 			}
 			: {}),
 		details: {
-			format: "omniroute-combo",
+			format: "freeroute-combo",
 			family,
 			parameter_size: contextLength > 0 ? `${contextLength} ctx` : "unknown",
 			quantization_level: "dynamic",
@@ -193,7 +193,7 @@ function buildComboShowPayload(combo: ComboCatalogEntry) {
 		template: "",
 		details: {
 			parent_model: combo.root || actualModelId,
-			format: "omniroute-combo",
+			format: "freeroute-combo",
 			family,
 			families: [family],
 			parameter_size:

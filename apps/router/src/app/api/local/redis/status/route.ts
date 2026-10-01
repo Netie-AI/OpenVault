@@ -6,7 +6,7 @@ import { isLocalRequestAllowed } from "@/lib/security/localEndpoints";
 
 const execFileAsync = promisify(execFile);
 
-const CONTAINER_NAME = process.env.OMNIROUTE_REDIS_CONTAINER_NAME || "omniroute-redis";
+const CONTAINER_NAME = process.env.OMNIROUTE_REDIS_CONTAINER_NAME || "freeroute-redis";
 const HOST_PORT = process.env.OMNIROUTE_REDIS_HOST_PORT || "6379";
 
 const RUNTIME_PREFERENCE = ["podman", "docker"];

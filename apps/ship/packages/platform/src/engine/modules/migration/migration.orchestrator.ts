@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * MigrationOrchestrator — drives a full Docker migration:
  *
@@ -691,7 +692,7 @@ class MigrationOrchestratorImpl {
     let chosen = selected.filter((s) => !s.proxyKind);
     if (chosen.length === 0) {
       throw new Error(
-        "Only a reverse proxy was selected. Openship installs its own edge on 80/443 — pick the app services to migrate instead.",
+        "Only a reverse proxy was selected. FreeBuild installs its own edge on 80/443 — pick the app services to migrate instead.",
       );
     }
     // The SAME gate adoptServerStack applies, applied HERE too — this set is not

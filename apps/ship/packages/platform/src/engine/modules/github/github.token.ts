@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * @module github.token
  *
@@ -509,7 +510,7 @@ export async function requireTokenFor(
 
   const hint =
     purpose === "remote"
-      ? "Install the Openship GitHub App on this owner, or set a per-project clone token in Settings."
+      ? "Install the FreeBuild GitHub App on this owner, or set a per-project clone token in Settings."
       : "Run `gh auth login`, connect the hosted cloud service, or set a per-project clone token in Settings.";
 
   throw new AppError(

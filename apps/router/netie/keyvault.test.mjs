@@ -20,9 +20,17 @@ import {
   resolveProviderApiKey,
   verifyClientToken,
   resolveAdminTokenPath,
+  isSpendableCustody,
   OpenVaultUnreachableError,
   __resetKeyVaultCacheForTest,
 } from "../src/lib/netie/keyvault.ts";
+import {
+  assertConnectionWriteAllowed,
+  findSecretProviderSpecificFields,
+  netieErrorResponse,
+  rejectProviderSecretsInBody,
+  KeysManagedByOpenVaultError,
+} from "../src/lib/netie/providerGuards.ts";
 
 const ADMIN_TOKEN = `adm_${randomBytes(24).toString("hex")}`;
 const KEY_ID = "key_unit_test";
@@ -31,6 +39,19 @@ const ENDPOINT_KEY_ID = "key_unit_endpoint";
 const ENDPOINT_SECRET = "sk-unit-endpoint-not-real";
 const ENDPOINT_BASE_URL = "http://127.0.0.1:9/v1";
 const VALID_CLIENT_TOKEN = `ovtok_unit_${randomBytes(8).toString("hex")}`;
+// Custody fixtures. OpenVault's own router spends only custody "pooled" keys
+// (OpenMW/openmw/openvault/vault/fallback.py _is_available, store.py
+// pooled_ordered); a row with no custody field predates the tag.
+const TENANT_KEY_ID = "key_unit_tenant";
+const TENANT_SECRET = "sk-unit-tenant-must-never-be-spent";
+const POOLED_ANTHROPIC_KEY_ID = "key_unit_anthropic_pooled";
+const POOLED_ANTHROPIC_SECRET = "sk-unit-anthropic-pooled";
+const MISTRAL_TENANT_ONLY_ID = "key_unit_mistral_tenant";
+const COHERE_UNKNOWN_CUSTODY_ID = "key_unit_cohere_unknown";
+const CUSTOM_OTHER_ENDPOINT_ID = "key_unit_custom_other";
+const CUSTOM_OTHER_ENDPOINT_SECRET = "sk-unit-custom-other-endpoint";
+const EXACT_ID_KEY_ID = "key_unit_llm7_exact";
+const EXACT_ID_SECRET = "sk-unit-llm7-exact";
 
 let tmpDir;
 let tokenPath;
@@ -73,6 +94,56 @@ function startStub() {
                 priority: 5,
                 lifecycle: "active",
               },
+              // Higher priority than the pooled anthropic key, but a tenant's.
+              {
+                id: TENANT_KEY_ID,
+                provider: "anthropic",
+                enabled: true,
+                priority: 100,
+                lifecycle: "active",
+                custody: "tenant",
+              },
+              {
+                id: POOLED_ANTHROPIC_KEY_ID,
+                provider: "anthropic",
+                enabled: true,
+                priority: 1,
+                lifecycle: "active",
+                custody: "pooled",
+              },
+              {
+                id: MISTRAL_TENANT_ONLY_ID,
+                provider: "mistral",
+                enabled: true,
+                priority: 10,
+                lifecycle: "active",
+                custody: "tenant",
+              },
+              {
+                id: COHERE_UNKNOWN_CUSTODY_ID,
+                provider: "cohere",
+                enabled: true,
+                priority: 10,
+                lifecycle: "active",
+                custody: "borrowed",
+              },
+              {
+                id: CUSTOM_OTHER_ENDPOINT_ID,
+                provider: "custom",
+                base_url: "http://127.0.0.1:11/v1",
+                enabled: true,
+                priority: 50,
+                lifecycle: "active",
+                custody: "pooled",
+              },
+              {
+                id: EXACT_ID_KEY_ID,
+                provider: "llm7",
+                enabled: true,
+                priority: 1,
+                lifecycle: "active",
+                custody: "pooled",
+              },
             ],
           })
         );
@@ -80,7 +151,16 @@ function startStub() {
       }
 
       const secretMatch = /^\/api\/keys\/([^/]+)\/secret$/.exec(url.pathname);
-      const secrets = { [KEY_ID]: SECRET, [ENDPOINT_KEY_ID]: ENDPOINT_SECRET };
+      const secrets = {
+        [KEY_ID]: SECRET,
+        [ENDPOINT_KEY_ID]: ENDPOINT_SECRET,
+        [TENANT_KEY_ID]: TENANT_SECRET,
+        [POOLED_ANTHROPIC_KEY_ID]: POOLED_ANTHROPIC_SECRET,
+        [MISTRAL_TENANT_ONLY_ID]: TENANT_SECRET,
+        [COHERE_UNKNOWN_CUSTODY_ID]: TENANT_SECRET,
+        [CUSTOM_OTHER_ENDPOINT_ID]: CUSTOM_OTHER_ENDPOINT_SECRET,
+        [EXACT_ID_KEY_ID]: EXACT_ID_SECRET,
+      };
       if (secretMatch && secretMatch[1] in secrets && req.method === "GET") {
         if (req.headers["x-openvault-reveal"] !== "intentional") {
           res.writeHead(400);
@@ -225,6 +305,154 @@ test("no base URL match: falls back to the provider-id map, else null", async ()
     }),
     null
   );
+});
+
+test("custody: only pooled or untagged keys are spendable", () => {
+  assert.equal(isSpendableCustody(undefined), true);
+  assert.equal(isSpendableCustody(null), true);
+  assert.equal(isSpendableCustody("pooled"), true);
+  assert.equal(isSpendableCustody("tenant"), false);
+  assert.equal(isSpendableCustody("borrowed"), false);
+  assert.equal(isSpendableCustody(""), false);
+});
+
+test("custody: a tenant key is never picked, even at a higher priority", async () => {
+  assert.equal(await resolveProviderApiKey("anthropic"), POOLED_ANTHROPIC_SECRET);
+});
+
+test("custody: a provider with only a tenant key resolves to null", async () => {
+  assert.equal(await resolveProviderApiKey("mistral"), null);
+});
+
+test("custody: an unknown custody value is not spendable", async () => {
+  assert.equal(await resolveProviderApiKey("cohere"), null);
+});
+
+test("an unmapped provider never borrows another endpoint's custom key", async () => {
+  // Before: an unmapped id fell back to "any custom key", here the one stored
+  // for http://127.0.0.1:11/v1, and sent it to a different provider.
+  assert.equal(await resolveProviderApiKey("some-unmapped-provider"), null);
+  assert.equal(
+    await resolveProviderApiKey("openai-compatible-chat-xyz", { baseUrl: "http://127.0.0.1:12/v1" }),
+    null
+  );
+  // A key filed under the exact router id is still found.
+  assert.equal(await resolveProviderApiKey("llm7"), EXACT_ID_SECRET);
+  // And the endpoint's own connection still finds its key by base URL.
+  assert.equal(
+    await resolveProviderApiKey("openai-compatible-chat-xyz", { baseUrl: "http://127.0.0.1:11/v1" }),
+    CUSTOM_OTHER_ENDPOINT_SECRET
+  );
+});
+
+// ── providerGuards: the DB-layer write guard and the route-level checks ─────
+
+test("write guard: a provider apiKey is refused with keys_managed_by_openvault", () => {
+  assert.throws(
+    () => assertConnectionWriteAllowed({ provider: "openai", authType: "apikey", apiKey: "sk-x" }),
+    (error) => error instanceof KeysManagedByOpenVaultError && error.status === 501
+  );
+  // No key: allowed.
+  assertConnectionWriteAllowed({ provider: "openai", authType: "apikey", name: "n" });
+  assertConnectionWriteAllowed({ provider: "openai", authType: "apikey", apiKey: "" });
+});
+
+test("write guard: extraApiKeys and other secret providerSpecificData fields are refused", () => {
+  for (const psd of [
+    { extraApiKeys: ["sk-extra"] },
+    { consoleApiKey: "ck" },
+    { cookie: "a=b" },
+    { awsSessionToken: "t" },
+    { pat: "p" },
+  ]) {
+    assert.throws(
+      () =>
+        assertConnectionWriteAllowed({
+          provider: "openai",
+          authType: "apikey",
+          providerSpecificData: psd,
+        }),
+      KeysManagedByOpenVaultError,
+      JSON.stringify(psd)
+    );
+  }
+  // Metadata that only looks secret-adjacent stays allowed.
+  assert.deepEqual(
+    findSecretProviderSpecificFields({
+      baseUrl: "https://x",
+      apiKeyHealth: { a: 1 },
+      tokenExpiresAt: "2026",
+      accessKeyId: "AKIA",
+      tokenEndpoint: "https://t",
+      extraApiKeys: [],
+    }),
+    []
+  );
+});
+
+test("write guard: a value carried over unchanged is not a new write", () => {
+  const existing = {
+    provider: "openai",
+    authType: "apikey",
+    apiKey: "sk-legacy",
+    providerSpecificData: { extraApiKeys: ["sk-old"] },
+  };
+  assertConnectionWriteAllowed({ ...existing, testStatus: "active" }, existing);
+  assert.throws(
+    () =>
+      assertConnectionWriteAllowed(
+        { providerSpecificData: { extraApiKeys: ["sk-new"] } },
+        existing
+      ),
+    KeysManagedByOpenVaultError
+  );
+});
+
+test("write guard: classified providers cannot be created, or get new credentials", () => {
+  assert.throws(
+    () => assertConnectionWriteAllowed({ provider: "trae", authType: "oauth", accessToken: "t" }),
+    (error) => error.status === 501 && error.code === "consumer_subscription_pooling_disabled"
+  );
+  assert.throws(
+    () => assertConnectionWriteAllowed({ provider: "copilot-web", authType: "apikey", name: "x" }),
+    (error) => error.code === "consumer_session_relay_disabled"
+  );
+  const restored = { provider: "codex", authType: "oauth", accessToken: "old" };
+  // Status writes on a restored row stay allowed so it can be deactivated.
+  assertConnectionWriteAllowed({ isActive: false }, restored);
+  assert.throws(
+    () => assertConnectionWriteAllowed({ accessToken: "refreshed" }, restored),
+    (error) => error.code === "consumer_subscription_pooling_disabled"
+  );
+});
+
+test("bulk/import body check: named 501 for keys and for classified providers", async () => {
+  const keyed = rejectProviderSecretsInBody({
+    provider: "openai",
+    entries: [{ name: "a", apiKey: "sk-a" }],
+  });
+  assert.equal(keyed.status, 501);
+  assert.equal((await keyed.json()).error.code, "keys_managed_by_openvault");
+
+  const classified = rejectProviderSecretsInBody({
+    entries: [{ provider: "claude-web", name: "a", apiKey: "cookie" }],
+  });
+  assert.equal(classified.status, 501);
+  assert.equal((await classified.json()).error.code, "consumer_session_relay_disabled");
+
+  assert.equal(rejectProviderSecretsInBody({ provider: "openai", entries: [{ name: "a" }] }), null);
+});
+
+test("netieErrorResponse keeps the named code for KeyVault and key-storage errors", async () => {
+  const vault = netieErrorResponse(
+    new OpenVaultUnreachableError("down", "openvault_admin_token_rejected")
+  );
+  assert.equal(vault.status, 503);
+  assert.equal((await vault.json()).error.code, "openvault_admin_token_rejected");
+  const keys = netieErrorResponse(new KeysManagedByOpenVaultError(["apiKey"]));
+  assert.equal(keys.status, 501);
+  assert.equal((await keys.json()).error.code, "keys_managed_by_openvault");
+  assert.equal(netieErrorResponse(new Error("other")), null);
 });
 
 test("missing token file: openvault_admin_token_unavailable naming the path", async () => {

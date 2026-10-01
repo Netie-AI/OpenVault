@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 import { and, eq, gt, inArray, isNull, lte, ne, or, sql, type SQL } from "drizzle-orm";
 import {
   AppError,
@@ -42,7 +43,7 @@ export function createClusterRuntimeRepo(db: Database) {
   async function expire(org: string) {
     await interrupt(
       and(eq(table.organizationId, org), expired()),
-      "OpenShip stopped reporting setup progress. Retry to inspect the saved installation and continue.",
+      "FreeBuild stopped reporting setup progress. Retry to inspect the saved installation and continue.",
     );
   }
   async function get(org: string, clusterId: string) {
@@ -260,7 +261,7 @@ export function createClusterRuntimeRepo(db: Database) {
     recoverInterrupted: (exclusive: boolean) =>
       interrupt(
         exclusive ? undefined : expired(),
-        "OpenShip restarted before cluster setup finished. Retry to inspect the saved installation and continue.",
+        "FreeBuild restarted before cluster setup finished. Retry to inspect the saved installation and continue.",
       ),
   };
 }

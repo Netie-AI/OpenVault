@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 import { getMcpTools } from "./mcp-tools";
 import { env } from "@repo/platform/engine/config/index";
 
@@ -39,7 +40,7 @@ function toolRef(method: string, path: string): string {
 /** Shared by initialize and every guided flow, before any creation steps. */
 export function workspaceInstructions(workspace?: { organizationId: string | null; boundOrganizationId: string | null }): string {
   return [
-    "Openship workspaces and workgroups are organizations in the API. Their workspace ID is organizationId. An Oblien runtime workspace and a project's groupId are different resources.",
+    "FreeBuild workspaces and workgroups are organizations in the API. Their workspace ID is organizationId. A runtime workspace and a project's groupId are different resources.",
     ...(workspace?.organizationId ? [`Current organizationId: ${workspace.organizationId}.`] : []),
     ...(workspace?.boundOrganizationId ? [`This credential is bound to organizationId ${workspace.boundOrganizationId}.`] : []),
     `Before installing an app, creating a project, or deploying Compose, call ${toolRef("GET", "/api/permissions/workspaces")} with no arguments. It lists permitted workspace names and organizationId values, including empty workspaces, and reports the current workspace and credential restrictions.`,
@@ -56,17 +57,26 @@ export function workspaceInstructions(workspace?: { organizationId: string | nul
  * the issue tracker rather than silently working around it.
  */
 const BUG_REPORT =
-  "If an Openship tool fails unexpectedly, report the tool name, error code and a redacted reproduction at https://github.com/oblien/openship/issues. Remove tokens, passwords, environment values and other secrets from arguments and logs before sharing them.";
+  "If a FreeBuild tool fails unexpectedly, report the tool name, error code and a redacted reproduction to the operator of this FreeBuild instance. Remove tokens, passwords, environment values and other secrets from arguments and logs before sharing them.";
+
+/**
+ * Prompt names are wire identifiers clients pass to prompts/get. The upstream
+ * name stays callable as a hidden alias so saved client configs keep working;
+ * prompts/list only shows the FreeBuild name.
+ */
+const PROMPT_ALIASES: Record<string, string> = {
+  "openship-overview": "freebuild-overview",
+};
 
 const PROMPTS: PromptDef[] = [
   {
-    name: "openship-overview",
+    name: "freebuild-overview",
     title: "FreeBuild: how to drive it via MCP",
     description:
       "Orientation: the main tool groups, the entry points for each flow, and how permission scoping (incl. per-repo GitHub grants) affects what you can see and do.",
     build: (_args, ref) =>
       [
-        "You are driving Openship (deploy/host platform) through its MCP tools. Everything you call re-runs the real API's auth + permission checks, so you can only do what this token allows — `tools/list` already hides what you can't use.",
+        "You are driving FreeBuild (deploy/host platform) through its MCP tools. Everything you call re-runs the real API's auth + permission checks, so you can only do what this token allows — `tools/list` already hides what you can't use.",
         "",
         "Main tool groups:",
         `- Projects — ${ref("GET", "/api/projects")} (list), ${ref("GET", "/api/projects/:id")} (detail), config/env/resources/branch setters.`,
@@ -144,11 +154,11 @@ const PROMPTS: PromptDef[] = [
     build: (args, ref) => {
       const app = args.app ? ` Target app: ${args.app}.` : "";
       return [
-        `Install an app from the Openship catalog.${app}`,
+        `Install an app from the FreeBuild catalog.${app}`,
         "",
         `1. Browse the catalog: ${ref("GET", "/api/apps/catalog")}. For one app's full template (services, config, endpoints): ${ref("GET", "/api/apps/catalog/:id")}.`,
         `2. Install it: ${ref("POST", "/api/apps")} with the app id and any required settings from the template.`,
-        "3. Read the response: a normal app installs as a project (you'll get a project id — watch it like any deployment). A 'flow' / wizard app instead returns { kind: 'flow', flowHref } — that multi-step wizard (e.g. mail provisioning) is finished in the Openship UI at flowHref, not through MCP.",
+        "3. Read the response: a normal app installs as a project (you'll get a project id — watch it like any deployment). A 'flow' / wizard app instead returns { kind: 'flow', flowHref } — that multi-step wizard (e.g. mail provisioning) is finished in the FreeBuild UI at flowHref, not through MCP.",
         `4. For an installed app, its resolved connection details and curated settings are available via the project's app-settings/connection tools once it's running.`,
       ].join("\n");
     },
@@ -159,7 +169,7 @@ const PROMPTS: PromptDef[] = [
     description: "Private networking, automated k3s setup, registry-backed deployment, guarded replica changes, recovery and dependency-ordered cleanup. Self-hosted only.",
     localOnly: true,
     build: (_args, ref) => [
-      "This workflow runs on the Openship controller and its registered servers, not the MCP client. Use tools/list inputSchema for exact fields. Manual replicas (1–100) are supported; metric-driven autoscaling, adding/draining live workers and Compose application scaling are not implemented.",
+      "This workflow runs on the FreeBuild controller and its registered servers, not the MCP client. Use tools/list inputSchema for exact fields. Manual replicas (1–100) are supported; metric-driven autoscaling, adding/draining live workers and Compose application scaling are not implemented.",
       `1. Discover infrastructure with ${ref("GET", "/api/system/networks/capabilities")}, ${ref("GET", "/api/system/servers")}, ${ref("GET", "/api/system/networks")} and ${ref("GET", "/api/system/compute-clusters")}. Reuse suitable resources. Network and runtime mutations require fleet administration and access to every selected server.`,
       `2. For existing native private networking, inspect each host with ${ref("POST", "/api/system/servers/:id/network/inspect")}, register its actual addresses with ${ref("POST", "/api/system/networks")}, then ${ref("POST", "/api/system/networks/:id/verify")} using the saved revision. Poll ${ref("GET", "/api/system/networks/:id")} and inspect the dated peer report. Registration does not create provider networks or open provider firewalls.`,
       `3. Alternatively, start managed WireGuard preparation with ${ref("POST", "/api/system/networks/preparations")}. Persist requestId and reuse it after a lost response. Poll ${ref("GET", "/api/system/networks/preparations/:preparationId")}; follow operationId to ${ref("GET", "/api/system/networks/operations/:operationId")}. Review host changes and firewall requirements, then apply the exact planHash with ${ref("POST", "/api/system/networks/operations/:operationId/apply")}. Poll the same operation to completion. Full bidirectional member access is required for k3s. Failed operations offer explicit resume/rollback; do not create competing plans.`,
@@ -204,7 +214,7 @@ const PROMPTS: PromptDef[] = [
     build: (_args, ref) => [
       `1. Discover servers, then ${ref("POST", "/api/migration/scan")} on the source. Select container IDs from that scan to distinguish services with the same name in different Compose groups. Secrets are masked; the server rediscovers real source values. Never submit masked values as replacement secrets.`,
       `2. Inspect repository Compose configuration with ${ref("POST", "/api/migration/repo-compose")} if linking a repo. Review service mapping, environment overrides, volumes and routes, then ${ref("POST", "/api/migration/preview")} with the same selected services and destination.`,
-      `3. Start ${ref("POST", "/api/migration/migrate")} and keep migrationId and confirmationToken. Leave killOriginals:false to pause for explicit cutover; true authorizes automatic destruction of original containers after verification. Existing Openship projects use ${ref("POST", "/api/migration/project")} for move/copy instead. These tools move Docker workloads, not live k3s databases.`,
+      `3. Start ${ref("POST", "/api/migration/migrate")} and keep migrationId and confirmationToken. Leave killOriginals:false to pause for explicit cutover; true authorizes automatic destruction of original containers after verification. Existing FreeBuild projects use ${ref("POST", "/api/migration/project")} for move/copy instead. These tools move Docker workloads, not live k3s databases.`,
       `4. Poll ${ref("GET", "/api/migration/migrations/:id")}. Respond only to the returned pendingPrompt using ${ref("POST", "/api/migration/migrations/:id/respond")} and its prompt/action IDs. Partial transfers use ${ref("POST", "/api/migration/migrations/:id/resume")} after reviewing failed paths; skipping a path excludes its data.`,
       `5. At awaiting_cutover, verify target deployment, saved environment, volumes, routes and health. Confirm with ${ref("POST", "/api/migration/migrations/:id/cutover")} and the confirmationToken; kill:false retains originals stopped, while kill:true deletes them. Re-read status to confirm completion.`,
       `6. Before cutover, ${ref("POST", "/api/migration/migrations/:id/cancel")} requests rollback. For a failed migration, ${ref("POST", "/api/migration/migrations/:id/cleanup-target")} removes copied target data; inspect ownership and failure state first. Deleting a terminal migration record removes history only.`,
@@ -230,7 +240,8 @@ export function getPrompt(
   name: string,
   args: Record<string, string>,
 ): { description: string; messages: unknown[] } | null {
-  const prompt = PROMPTS.find((p) => p.name === name);
+  const resolved = PROMPT_ALIASES[name] ?? name;
+  const prompt = PROMPTS.find((p) => p.name === resolved);
   if (!prompt || (prompt.localOnly && env.CLOUD_MODE)) return null;
   const text = `${workspaceInstructions()}\n\n${prompt.build(args ?? {}, toolRef)}\n\n${BUG_REPORT}`;
   return {

@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /** SaaS provider clients. Keep construction separate from billing and provisioning. */
 import { Oblien } from "@repo/adapters";
 import { env } from "../config/env";
@@ -17,7 +18,7 @@ export function getOblienClient(): Oblien {
   // minting), so this stays in lockstep with the rest of the boundary.
   if (!env.CLOUD_MODE) {
     throw new Error(
-      "Oblien master client is only available in CLOUD_MODE — refusing to instantiate on self-hosted",
+      "Cloud provider master client is only available in CLOUD_MODE — refusing to instantiate on self-hosted",
     );
   }
 
@@ -25,7 +26,7 @@ export function getOblienClient(): Oblien {
   const clientSecret = env.OBLIEN_CLIENT_SECRET;
 
   if (!clientId || !clientSecret) {
-    throw new Error("Oblien credentials not configured (OBLIEN_CLIENT_ID / OBLIEN_CLIENT_SECRET)");
+    throw new Error("Cloud provider credentials not configured (OBLIEN_CLIENT_ID / OBLIEN_CLIENT_SECRET)");
   }
 
   _client = new Oblien({ clientId, clientSecret, baseUrl: env.OBLIEN_API_URL });

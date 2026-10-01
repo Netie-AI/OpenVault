@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Project cleanup orchestrator - resource manifest + bounded-concurrency teardown.
  *
@@ -796,7 +797,7 @@ export async function collectProjectManifest(
       );
       if (linkUserId === null) {
         console.warn(
-          `[cleanup] cloud workspace ${project.cloudWorkspaceId} skipped — org ${project.organizationId} has no the hosted cloud service link (${safeErrorMessage(err)}); workspace may remain on Oblien. Re-link to clean it up.`,
+          `[cleanup] cloud workspace ${project.cloudWorkspaceId} skipped — org ${project.organizationId} has no hosted cloud service link (${safeErrorMessage(err)}); workspace may remain on Oblien. Re-link to clean it up.`,
         );
       } else {
         resources.push({

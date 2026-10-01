@@ -11,6 +11,7 @@
  * here, so this function never touches authentication configuration.
  */
 
+import { sanitizeImportedConnections } from "@/lib/netie/scrubLocalSecrets";
 import type { SqliteAdapter } from "./adapters/types";
 import { normalizeRoutingStrategy } from "@/shared/constants/routingStrategies";
 import { normalizeComboRecord } from "@/lib/combos/steps";
@@ -64,6 +65,9 @@ export function runJsonMigration(
   domainCostHistory: number;
   domainBudgets: number;
 } {
+  // FreeRoute: provider keys, OAuth tokens of disabled providers and local
+  // client keys are dropped before anything is written. Keys live in OpenVault.
+  data = sanitizeImportedConnections(data);
   const insertConn = db.prepare(`
     INSERT OR REPLACE INTO provider_connections (
       id, provider, auth_type, name, email, priority, is_active,

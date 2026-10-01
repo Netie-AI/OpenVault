@@ -1,6 +1,8 @@
 "use client";
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 
 import { Icon as UiIcon } from "@repo/ui/icons";
+import { brandDocsUrl, brandSupportMailto } from "@repo/core";
 
 import React from "react";
 import { useProjectSettings } from "@/context/ProjectSettingsContext";
@@ -53,26 +55,32 @@ export const ProjectNotFound: React.FC = () => {
           </div>
         </div>
 
+        {(brandDocsUrl() || brandSupportMailto()) && (
         <div className="mt-5 w-full border-t border-border pt-4 text-center">
           <p className="mb-2 text-xs text-muted-foreground">{nf.needHelp}</p>
           <div className="flex justify-center gap-2 text-xs">
+            {brandDocsUrl() && (
             <a
-              href="https://docs.oblien.com"
+              href={brandDocsUrl()}
               target="_blank"
               rel="noopener noreferrer"
               className="font-semibold text-foreground transition-colors hover:text-primary"
             >
               {nf.documentation}
             </a>
-            <span className="text-muted-foreground/70">·</span>
+            )}
+            {brandDocsUrl() && brandSupportMailto() && <span className="text-muted-foreground/70">·</span>}
+            {brandSupportMailto() && (
             <a
-              href="mailto:support@oblien.com"
+              href={brandSupportMailto()}
               className="font-semibold text-foreground transition-colors hover:text-primary"
             >
               {nf.support}
             </a>
+            )}
           </div>
         </div>
+        )}
       </ResourceNotFound>
     </div>
   );

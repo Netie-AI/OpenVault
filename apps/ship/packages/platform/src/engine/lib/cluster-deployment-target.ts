@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 import net from "node:net";
 import { parse } from "yaml";
 import {
@@ -29,7 +30,7 @@ export async function requireClusterDeploymentTarget(
 ) {
   if (env.CLOUD_MODE)
     throw new AppError(
-      "Server clusters are available on self-hosted OpenShip.",
+      "Server clusters are available on self-hosted FreeBuild.",
       404,
       "CAPABILITY_UNAVAILABLE",
     );

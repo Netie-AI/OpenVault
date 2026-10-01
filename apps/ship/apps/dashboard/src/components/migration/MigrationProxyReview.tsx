@@ -1,4 +1,5 @@
 "use client";
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 
 import { Icon as UiIcon } from "@repo/ui/icons";
 
@@ -20,7 +21,7 @@ export function MigrationProxyReview({ stack }: { stack: DiscoveredStack }) {
           <div className="space-y-1">
             <p className="font-medium text-foreground">
               {interpolate(copy.detected, {
-                proxy: stack.proxy.ours ? "Openship" : stack.proxy.kind,
+                proxy: stack.proxy.ours ? "FreeBuild" : stack.proxy.kind,
               })}
             </p>
             <p className="text-muted-foreground leading-relaxed">{copy.handoff}</p>

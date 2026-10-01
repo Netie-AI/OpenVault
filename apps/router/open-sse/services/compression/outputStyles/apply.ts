@@ -80,7 +80,7 @@ export function resolveOutputStyleLanguage(
 }
 
 /** Single idempotency marker guarding the unified injection (D-A: one marker for all styles). */
-export const OUTPUT_STYLE_MARKER = "[OmniRoute Output Styles]";
+export const OUTPUT_STYLE_MARKER = "[FreeRoute Output Styles]";
 
 /**
  * Resolve the selection into the ordered, locale-gated, known styles in catalog order.

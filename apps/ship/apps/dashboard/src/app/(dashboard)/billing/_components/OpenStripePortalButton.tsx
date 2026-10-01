@@ -1,6 +1,8 @@
 "use client";
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 
 import { Icon as UiIcon } from "@repo/ui/icons";
+import { brandSupportMailto } from "@repo/core";
 
 import { useState } from "react";
 import { api } from "@/lib/api/client";
@@ -12,11 +14,11 @@ export function OpenStripePortalButton({ label, enabled = false }: { label?: str
   const [error, setError] = useState<string | null>(null);
   const buttonLabel = label ?? t.billing.portal.openButton;
 
-  if (!enabled) return (
-    <a href="mailto:support@openship.io" className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline">
+  if (!enabled) return brandSupportMailto() ? (
+    <a href={brandSupportMailto()} className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline">
       {t.billing.portal.supportButton}<UiIcon name="arrow-up-right" className="size-3.5" />
     </a>
-  );
+  ) : null;
 
   async function openPortal() {
     setPending(true);

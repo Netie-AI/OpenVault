@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 import { z } from "zod";
 import { AppError } from "@repo/core";
 import { OperationError } from "@repo/contracts";
@@ -175,7 +176,7 @@ export class OblienBillingApi {
     const url = new URL(options.baseUrl ?? "https://api.oblien.com");
     if (url.username || url.password || url.search || url.hash ||
       (url.protocol !== "https:" && !(url.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)))) {
-      throw new Error("Oblien API URL must use HTTPS (HTTP is allowed for localhost tests)");
+      throw new Error("Cloud provider API URL must use HTTPS (HTTP is allowed for localhost tests)");
     }
     this.baseUrl = url.toString().replace(/\/+$/, "");
     this.fetcher = options.fetch ?? fetch;
@@ -242,16 +243,16 @@ export class OblienBillingApi {
         subscription_ended: "This subscription has ended. Start a new checkout to subscribe again.",
         billing_customer_conflict: "This organization's billing needs to be separated from a legacy account. Contact support.",
         billing_identity_conflict: "This organization's billing identity needs to be verified. Contact support.",
-        billing_redirect_not_allowed: "Cloud billing return links are not configured. Contact Openship support.",
-        billing_idempotency_conflict: "This checkout attempt no longer matches the original request. Contact Openship support before starting another payment.",
-        billing_checkout_reconciliation_required: "An earlier checkout needs to be reviewed. Contact Openship support before starting another payment.",
-        invalid_offer: "This Cloud offer is not configured correctly. Contact Openship support.",
-        reseller_enterprise_required: "Cloud payments require an account configuration update by Openship. Contact Openship support.",
-        billing_provider_configuration_error: "Cloud payments are not configured correctly. Contact Openship support.",
-        billing_database_collation_error: "Cloud billing is unavailable. Contact Openship support.",
+        billing_redirect_not_allowed: "Cloud billing return links are not configured. Contact FreeBuild support.",
+        billing_idempotency_conflict: "This checkout attempt no longer matches the original request. Contact FreeBuild support before starting another payment.",
+        billing_checkout_reconciliation_required: "An earlier checkout needs to be reviewed. Contact FreeBuild support before starting another payment.",
+        invalid_offer: "This Cloud offer is not configured correctly. Contact FreeBuild support.",
+        reseller_enterprise_required: "Cloud payments require an account configuration update by FreeBuild. Contact FreeBuild support.",
+        billing_provider_configuration_error: "Cloud payments are not configured correctly. Contact FreeBuild support.",
+        billing_database_collation_error: "Cloud billing is unavailable. Contact FreeBuild support.",
         billing_storage_unavailable: "Cloud billing is temporarily unavailable. Please try again later.",
         billing_provider_unavailable: "Cloud checkout is temporarily unavailable. Please try again later.",
-        billing_provider_rejected: "Cloud checkout could not be completed. Contact Openship support.",
+        billing_provider_rejected: "Cloud checkout could not be completed. Contact FreeBuild support.",
       };
       const checkoutUnavailable = path === "/billing/checkout" && providerFailure;
       const message = Object.hasOwn(known, code) ? known[code]

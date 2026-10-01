@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Oblien Mode B owns charges, grants, renewals, quotas and suspension.
  * Openship mirrors that authority. Explicit complimentary plans use Mode A.
@@ -36,7 +37,7 @@ export async function ensureOblienDefaultQuota(): Promise<void> {
   const defaults = await getOblienBillingApi().getDefaults();
   if (!defaults.autoApply || defaults.quotaLimit !== 0 || defaults.overdraft !== 0 || defaults.suspendThreshold !== 0 ||
       defaults.onOverdraftAction !== "stop_workspaces") {
-    throw new AppError("Cloud onboarding requires an automatically applied zero-credit Oblien policy with no overdraft", 503, "OBLIEN_DEFAULT_POLICY_REQUIRED");
+    throw new AppError("Cloud onboarding requires an automatically applied zero-credit cloud provider policy with no overdraft", 503, "OBLIEN_DEFAULT_POLICY_REQUIRED");
   }
 }
 
@@ -165,7 +166,7 @@ export async function assertCloudCanSpend(orgId: string): Promise<void> {
 // Retired entry points fail closed while old queued Stripe jobs drain. They must
 // never write /credits or /billing/policy in an Oblien-managed installation.
 function managedBillingOnly(): never {
-  throw new AppError("Credit grants and renewals are managed by Oblien", 409, "OBLIEN_MANAGED_BILLING");
+  throw new AppError("Credit grants and renewals are managed by the cloud provider", 409, "OBLIEN_MANAGED_BILLING");
 }
 export async function setQuotaForTier(_orgId: string, _tier: PlanTierId): Promise<void> { managedBillingOnly(); }
 export async function addQuota(_orgId: string, _credits: number): Promise<void> { managedBillingOnly(); }

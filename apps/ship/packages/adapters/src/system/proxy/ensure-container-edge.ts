@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Bring up OUR edge as a CONTAINER on any box — the single installed edge path.
  *
@@ -478,7 +479,7 @@ export async function ensureContainerEdge(
       checked ??
       (await rootOrDegrade(executor, {
         purpose: "Resolving the edge's bind-mount sources",
-        consequence: "Docker may mount a different host directory than Openship writes.",
+        consequence: "Docker may mount a different host directory than FreeBuild writes.",
         report: (message) => onLog(log(message, "warn")),
       }));
     resolvedMounts = await resolveEdgeContainerMounts(host);

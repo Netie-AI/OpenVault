@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: expectations follow the FreeBuild product name.
 import { describe, expect, it, vi } from "vitest";
 import { collectProxyCerts, edgeProxyFor } from "./api";
 import { makeTestCert } from "./test-certs";
@@ -213,7 +214,7 @@ describe("edgeProxyFor", () => {
     const api = edgeProxyFor(emptyHost, "openresty", { ours: true });
 
     await expect(api.listLoopbackUpstreamPortsStrict()).rejects.toThrow(
-      "no running Openship edge or bare OpenResty inventory",
+      "no running FreeBuild edge or bare OpenResty inventory",
     );
     expect(
       (emptyHost.exec as ReturnType<typeof vi.fn>).mock.calls.some(([cmd]) =>
@@ -233,7 +234,7 @@ describe("edgeProxyFor", () => {
     const api = edgeProxyFor(staleFiles, "openresty", { ours: true });
 
     await expect(api.listLoopbackUpstreamPortsStrict()).rejects.toThrow(
-      "no running Openship edge or bare OpenResty inventory",
+      "no running FreeBuild edge or bare OpenResty inventory",
     );
   });
 

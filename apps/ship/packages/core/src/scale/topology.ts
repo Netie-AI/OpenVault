@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 import { isClusterTopology, type ClusterTopology } from "./clusterTopology";
 import {
   ALGORITHMS,
@@ -224,7 +225,7 @@ function pairError(draft: ScaleDraft, sourceId: string, targetId: string): strin
   if (sourceId === targetId) return "A resource cannot connect to itself.";
   const allowed = CONNECTION_TARGETS[source.kind].includes(target.kind);
   if (!allowed)
-    return "Connect OpenShip Edge to gateways or application instances, and applications to data stores.";
+    return "Connect FreeBuild Edge to gateways or application instances, and applications to data stores.";
   if (draft.edges.some((edge) => edge.source === sourceId && edge.target === targetId))
     return "These resources are already connected.";
   const pending = [targetId];
@@ -454,7 +455,7 @@ export function reviewDraft(draft: ScaleDraft): PlanIssue[] {
   if (!draft.nodes.length)
     return [
       {
-        message: "Add OpenShip Edge or an application to start the topology.",
+        message: "Add FreeBuild Edge or an application to start the topology.",
         severity: "warning",
       },
     ];
@@ -476,7 +477,7 @@ export function reviewDraft(draft: ScaleDraft): PlanIssue[] {
     if (node.kind !== "edge" && !reachable.has(node.id))
       issues.push({
         nodeId: node.id,
-        message: `${node.name} has no route from OpenShip Edge.`,
+        message: `${node.name} has no route from FreeBuild Edge.`,
         severity: "warning",
       });
     if (node.kind === "edge" && !connections.some((edge) => edge.source === node.id))
@@ -501,7 +502,7 @@ export function reviewDraft(draft: ScaleDraft): PlanIssue[] {
   if (draft.nodes.filter((node) => node.kind === "edge").length === 1)
     issues.push({
       message:
-        "One OpenShip Edge gateway is a single point of failure. Add a second gateway for redundancy.",
+        "One FreeBuild Edge gateway is a single point of failure. Add a second gateway for redundancy.",
       severity: "info",
     });
   return issues;

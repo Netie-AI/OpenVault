@@ -1,6 +1,8 @@
 "use client";
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 
 import { Icon as UiIcon } from "@repo/ui/icons";
+import { brandDocsUrl } from "@repo/core";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -137,19 +139,19 @@ export function AppCatalog() {
           {/* The shared help menu, with this page's own guide link on top —
               so Support / Report issue / Docs read identically everywhere. */}
           <HelpMenu
-            extraActions={[
-              {
-                id: "guide",
-                label: "How to add an app",
-                icon: <UiIcon name="book" className="size-4" />,
-                onClick: () =>
-                  window.open(
-                    "https://github.com/oblien/openship/tree/main/packages/core/src/apps",
-                    "_blank",
-                    "noopener,noreferrer",
-                  ),
-              },
-            ]}
+            extraActions={
+              brandDocsUrl("/guides/add-an-app")
+                ? [
+                    {
+                      id: "guide",
+                      label: "How to add an app",
+                      icon: <UiIcon name="book" className="size-4" />,
+                      onClick: () =>
+                        window.open(brandDocsUrl("/guides/add-an-app"), "_blank", "noopener,noreferrer"),
+                    },
+                  ]
+                : undefined
+            }
           />
         </div>
       </div>
@@ -246,7 +248,7 @@ export function AppCatalog() {
                     </div>
                     <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
                       {needsUpdate
-                        ? "Update your Openship instance to install this app."
+                        ? "Update your FreeBuild instance to install this app."
                         : app.description}
                     </p>
                   </div>

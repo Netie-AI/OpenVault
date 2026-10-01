@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 // Copyright (c) 2026 Netie AI. Licensed under Apache-2.0.
 //
 // FreeBuild end-to-end test against a REAL OpenVault. Run with `npm run test:e2e`
@@ -22,6 +23,10 @@
 //      a stopped OpenVault is 503 openvault_keyvault_unreachable.
 //   4. The secret never lands in FreeBuild's data dir or logs.
 //   5. The dashboard home page says FreeBuild and never the upstream names.
+//   6. A Cloudflare key OpenVault holds with custody "tenant" is never listed,
+//      revealed or sent to Cloudflare, even with a better priority.
+//   7. The dashboard binds to 127.0.0.1 when FREEBUILD_DASHBOARD_HOST is unset,
+//      and its onboarding and 404 pages carry no upstream names.
 //
 // The one stand-in: api.cloudflare.com. FreeBuild's API process is started
 // with a small preload that sends requests for that host to a local stub, so
@@ -33,7 +38,7 @@ import { createServer } from "node:http";
 import { randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, openSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { networkInterfaces, tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
@@ -47,6 +52,8 @@ const OPENMW_DIR = join(OPENVAULT_REPO, "OpenMW");
 
 const KEY_LABEL = "Cloudflare API token";
 const SECRET = `e2e-cloudflare-token-${randomBytes(12).toString("hex")}`;
+const TENANT_LABEL = "Cloudflare tenant token";
+const TENANT_SECRET = `e2e-tenant-cloudflare-token-${randomBytes(12).toString("hex")}`;
 const ZONE = { id: "e2e-zone-id", name: "e2e-zone.test", status: "active" };
 const CF_HOST = "https://api.cloudflare.com";
 
@@ -280,6 +287,27 @@ async function main() {
     pass(`added "${KEY_LABEL}" to OpenVault as ${keyId} (provider custom, masked ${body.masked_secret})`);
   }
 
+  // A tenant's Cloudflare key: same provider and label prefix, better priority.
+  // OpenVault's own router never spends it (fallback.py _is_available,
+  // store.py pooled_ordered); FreeBuild must not either.
+  let tenantKeyId;
+  {
+    const res = await fetch(`${ovUrl}/api/keys`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "X-OpenVault-Admin": adminToken },
+      body: JSON.stringify({ label: TENANT_LABEL, provider: "custom", secret: TENANT_SECRET, priority: 1, custody: "tenant" }),
+    });
+    const { text, body } = await json(res);
+    assert.equal(res.status, 200, `POST /api/keys (tenant): ${text}`);
+    assert.ok(body?.id, "OpenVault returned the tenant key id");
+    tenantKeyId = body.id;
+    const list = await fetch(`${ovUrl}/api/keys`, { headers: { "X-OpenVault-Admin": adminToken } });
+    const listed = await json(list);
+    const row = (listed.body?.keys ?? []).find((k) => k.id === tenantKeyId);
+    assert.equal(row?.custody, "tenant", `OpenVault lists ${tenantKeyId} with custody tenant: ${listed.text}`);
+    pass(`added "${TENANT_LABEL}" to OpenVault as ${tenantKeyId} (custody tenant, priority 1)`);
+  }
+
   // FreeBuild reads its own copy of the token so the wrong-token case can
   // change it without touching OpenVault's file.
   const fbTokenPath = join(tmpRoot, "freebuild-admin-token");
@@ -328,6 +356,9 @@ async function main() {
     assert.deepEqual(Object.keys(row.secretsMasked), ["apiToken"]);
     assert.ok(!text.includes(SECRET), "the listing must not carry the secret");
     pass(`GET /api/credentials lists ${keyId} as cloudflare "${KEY_LABEL}", secret masked`);
+    assert.ok(!body.data.some((c) => c.id === tenantKeyId), `GET /api/credentials must not list the tenant key: ${text}`);
+    assert.ok(!text.includes(TENANT_LABEL), "the listing must not name the tenant key");
+    pass(`GET /api/credentials does not list the tenant-custody key ${tenantKeyId}`);
   }
   {
     const res = await fetch(`${apiUrl}/api/dns/credentials`);
@@ -336,6 +367,8 @@ async function main() {
     assert.ok(body.data.some((c) => c.id === keyId && c.provider === "cloudflare"), `DNS listing has ${keyId}: ${text}`);
     assert.ok(!text.includes(SECRET), "the DNS listing must not carry the secret");
     pass(`GET /api/dns/credentials lists ${keyId}, secret masked`);
+    assert.ok(!body.data.some((c) => c.id === tenantKeyId), `DNS listing must not have the tenant key: ${text}`);
+    pass(`GET /api/dns/credentials does not list the tenant-custody key ${tenantKeyId}`);
   }
   {
     const auditPath = join(ovHome, "secret_audit.jsonl");
@@ -360,6 +393,12 @@ async function main() {
     assert.ok(reveals.length > revealsBefore, `OpenVault audited a secret_reveal for ${keyId}`);
     assert.ok(!readFileSync(auditPath, "utf8").includes(SECRET), "the audit log must not hold the secret");
     pass(`OpenVault logged secret_reveal for ${keyId} (client ${reveals.at(-1).client}); audit holds no secret`);
+
+    assert.ok(cfSeen.length > 0, "the Cloudflare stub saw requests");
+    assert.ok(!cfSeen.some((s) => s.authorization.includes(TENANT_SECRET)), "the tenant secret was sent to Cloudflare");
+    const tenantReveals = audit.filter((e) => e.event === "secret_reveal" && e.key_id === tenantKeyId);
+    assert.deepEqual(tenantReveals, [], `FreeBuild revealed the tenant key ${tenantKeyId}`);
+    pass(`tenant-custody key ${tenantKeyId} never revealed by OpenVault nor sent to Cloudflare (${cfSeen.length} stub calls)`);
   }
 
   // ── e. Negative cases ──
@@ -436,6 +475,8 @@ async function main() {
     assert.deepEqual(dataHits, [], `secret found in FreeBuild data: ${dataHits.join(", ")}`);
     const logHits = filesContaining(join(tmpRoot, "logs"), SECRET).filter((p) => !p.endsWith("openvault.log"));
     assert.deepEqual(logHits, [], `secret found in FreeBuild logs: ${logHits.join(", ")}`);
+    const tenantHits = [...filesContaining(fbData, TENANT_SECRET), ...filesContaining(join(tmpRoot, "logs"), TENANT_SECRET)];
+    assert.deepEqual(tenantHits, [], `tenant secret found in FreeBuild files: ${tenantHits.join(", ")}`);
     const fileCount = countFiles(fbData);
     assert.ok(fileCount > 0, "the PGlite data dir was written");
     // Control: the scan does see plain strings inside PGlite's files. The
@@ -449,29 +490,123 @@ async function main() {
 async function checkDashboard(apiUrl) {
   const dashPort = await freePort();
   const dashUrl = `http://127.0.0.1:${dashPort}`;
-  const dashboard = startProcess("freebuild-dashboard", "npm", ["run", "start"], {
-    cwd: DASHBOARD_DIR,
-    env: {
-      ...process.env,
-      PORT: String(dashPort),
-      HOSTNAME: "127.0.0.1",
-      NODE_ENV: "production",
-      OPENSHIP_LOCAL_API_URL: apiUrl,
-    },
-  });
-  log(`starting FreeBuild dashboard on ${dashUrl}`);
+  // No FREEBUILD_DASHBOARD_HOST: the run proves the default bind, not ours.
+  const dashEnv = {
+    ...process.env,
+    PORT: String(dashPort),
+    NODE_ENV: "production",
+    OPENSHIP_LOCAL_API_URL: apiUrl,
+  };
+  delete dashEnv.FREEBUILD_DASHBOARD_HOST;
+  const dashboard = startProcess("freebuild-dashboard", "npm", ["run", "start"], { cwd: DASHBOARD_DIR, env: dashEnv });
+  log(`starting FreeBuild dashboard on ${dashUrl} (FREEBUILD_DASHBOARD_HOST unset)`);
   await waitFor(`${dashUrl}/`, { child: dashboard, timeoutMs: 90_000, ok: (res) => res.status < 500 });
   {
     const res = await fetch(`${dashUrl}/`);
     const html = await res.text();
     assert.equal(res.status, 200, `GET / (after redirects, ${res.url}) answered ${res.status}`);
     assert.match(html, /FreeBuild/, "the dashboard HTML names FreeBuild");
-    const upstream = html.match(/openship|oblien/i);
-    assert.ok(!upstream, `the dashboard HTML contains "${upstream?.[0]}" near: ${upstream ? html.slice(Math.max(0, upstream.index - 80), upstream.index + 80) : ""}`);
+    assertNoUpstreamNames(html, "the dashboard HTML");
     const title = html.match(/<title>([^<]*)<\/title>/)?.[1];
     pass(`dashboard ${res.url} -> 200, title "${title}", says FreeBuild, no Openship/OpenShip/Oblien`);
   }
+  await checkDashboardBind(dashPort);
+  {
+    const res = await fetch(`${dashUrl}/onboarding`);
+    const html = await res.text();
+    assert.ok(res.status < 500, `GET /onboarding (after redirects, ${res.url}) answered ${res.status}`);
+    assertNoUpstreamNames(html, `the /onboarding HTML (${res.url})`);
+    const title = html.match(/<title>([^<]*)<\/title>/)?.[1];
+    pass(`dashboard /onboarding -> ${res.status} at ${res.url}, title "${title}", no Openship/OpenShip/Oblien`);
+  }
+  // Without a session cookie the proxy sends unknown pages to /login, so the
+  // 404 page is fetched the two ways a visitor reaches it: with a session
+  // cookie (any value; the proxy checks only its presence), and on a dotted
+  // path the proxy matcher skips.
+  for (const [what, path, headers] of [
+    ["unknown path, session cookie", `/e2e-no-such-page-${randomBytes(4).toString("hex")}`, { cookie: "e2e.session_token=x" }],
+    ["unknown dotted path, no cookie", `/e2e-no-such-file-${randomBytes(4).toString("hex")}.txt`, {}],
+  ]) {
+    const res = await fetch(`${dashUrl}${path}`, { headers, redirect: "manual" });
+    const html = await res.text();
+    assert.equal(res.status, 404, `${what}: ${path} answered ${res.status} (${res.headers.get("location") ?? ""})`);
+    assertNoUpstreamNames(html, `the dashboard 404 HTML (${what})`);
+    const title = html.match(/<title>([^<]*)<\/title>/)?.[1];
+    pass(`dashboard ${what} -> 404, title "${title}", no Openship/OpenShip/Oblien`);
+  }
   await stopProcess("freebuild-dashboard");
+}
+
+/** Local addresses of LISTEN sockets on `port`, from /proc/net/tcp and tcp6. Null off Linux. */
+function listeningAddresses(port) {
+  const out = [];
+  let readAny = false;
+  for (const file of ["/proc/net/tcp", "/proc/net/tcp6"]) {
+    let text;
+    try {
+      text = readFileSync(file, "utf8");
+      readAny = true;
+    } catch {
+      continue;
+    }
+    for (const line of text.split("\n").slice(1)) {
+      const cols = line.trim().split(/\s+/);
+      if (cols.length < 4 || cols[3] !== "0A") continue; // 0A = TCP_LISTEN
+      const [hexAddr, hexPort] = cols[1].split(":");
+      if (parseInt(hexPort, 16) !== port) continue;
+      out.push(decodeProcAddr(hexAddr));
+    }
+  }
+  return readAny ? out : null;
+}
+
+/** /proc/net addresses are 32-bit words in host (little-endian) byte order. */
+function decodeProcAddr(hex) {
+  const words = hex.match(/.{8}/g).map((w) => w.match(/../g).reverse().join(""));
+  if (words.length === 1) return words[0].match(/../g).map((b) => parseInt(b, 16)).join(".");
+  const v6 = words.join("");
+  if (/^0{20}ffff/.test(v6)) return v6.slice(24).match(/../g).map((b) => parseInt(b, 16)).join(".");
+  if (/^0+$/.test(v6)) return "::";
+  if (/^0{31}1$/.test(v6)) return "::1";
+  return v6.match(/.{4}/g).join(":");
+}
+
+function assertNoUpstreamNames(html, what) {
+  const upstream = html.match(/openship|oblien/i);
+  assert.ok(
+    !upstream,
+    `${what} contains "${upstream?.[0]}" near: ${upstream ? html.slice(Math.max(0, upstream.index - 80), upstream.index + 80) : ""}`,
+  );
+}
+
+/** The dashboard listens on loopback only when no host is configured. */
+async function checkDashboardBind(port) {
+  // What the kernel reports for the listening socket (Linux /proc/net).
+  const locals = listeningAddresses(port);
+  if (locals === null) {
+    log("/proc/net/tcp not readable; checking by connecting only");
+  } else {
+    assert.ok(locals.length > 0, `no listener on :${port} in /proc/net/tcp{,6}`);
+    assert.deepEqual([...new Set(locals)], ["127.0.0.1"], `dashboard listens on: ${locals.join(", ")}`);
+    pass(`dashboard listens on 127.0.0.1:${port} only (/proc/net/tcp and tcp6), FREEBUILD_DASHBOARD_HOST unset`);
+  }
+  // And from the outside: a non-loopback address of this host must refuse.
+  const external = Object.values(networkInterfaces())
+    .flat()
+    .find((a) => a && a.family === "IPv4" && !a.internal);
+  if (!external) {
+    log("no non-loopback IPv4 address on this host; skipping the connect check");
+    return;
+  }
+  let outcome;
+  try {
+    const res = await fetch(`http://${external.address}:${port}/`, { redirect: "manual", signal: AbortSignal.timeout(5_000) });
+    outcome = `HTTP ${res.status}`;
+  } catch (err) {
+    outcome = String(err?.cause?.code ?? err?.name ?? err);
+  }
+  assert.ok(!outcome.startsWith("HTTP"), `dashboard answered on ${external.address}:${port} (${outcome})`);
+  pass(`dashboard refuses ${external.address}:${port} (${outcome})`);
 }
 
 function readAudit(path) {

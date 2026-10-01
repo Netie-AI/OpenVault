@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * GitHub service - business logic for repositories, branches, files, and webhooks.
  *
@@ -355,7 +356,7 @@ export async function createRepository(
     owner: opts.owner,
     params: {
       name,
-      description: opts.description ?? `Repository created by Openship`,
+      description: opts.description ?? `Repository created by FreeBuild`,
       private: opts.private ?? false,
     },
   });

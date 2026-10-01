@@ -27,7 +27,7 @@
     "loginEnabled": "መግቢያ፦ ነቅቷል (የይለፍ ቃሉ ዘምኗል)",
     "loginDisabled": "መግቢያ፦ ቦዝኗል",
     "providerInfo": "አቅራቢ፦ {info}",
-    "opencode": "ከOpenCode ጋር የተካተተውን @omniroute/opencode-plugin ጫን እና አዋቅር"
+    "opencode": "ከOpenCode ጋር የተካተተውን OpenCode plugin ጫን እና አዋቅር"
   },
   "doctor": {
     "title": "FreeRoute ዶክተር",

@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026
 import { describe, expect, it } from "vitest";
 import { ValidationError } from "@repo/core";
 import {

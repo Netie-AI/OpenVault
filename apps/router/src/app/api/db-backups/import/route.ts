@@ -1,3 +1,4 @@
+import { scrubLocalProviderSecrets } from "@/lib/netie/scrubLocalSecrets";
 import { NextResponse } from "next/server";
 import path from "path";
 import fs from "fs";
@@ -157,6 +158,22 @@ export async function POST(request: Request) {
         { error: `Invalid database file: ${sanitizeErrorMessage(e)}` },
         { status: 400 }
       );
+    }
+
+    // FreeRoute: clear provider keys, the credentials of disabled subscription
+    // and browser-session connections, and local client keys in the uploaded
+    // copy before it replaces the live file. src/lib/db/core.ts runs the same
+    // provider scrub again when the database reopens.
+    {
+      const scrubDb = await openDatabaseAsync(tmpPath);
+      try {
+        scrubLocalProviderSecrets(
+          scrubDb as unknown as Parameters<typeof scrubLocalProviderSecrets>[0],
+          { dropClientKeys: true }
+        );
+      } finally {
+        scrubDb.close();
+      }
     }
 
     // Create pre-import backup

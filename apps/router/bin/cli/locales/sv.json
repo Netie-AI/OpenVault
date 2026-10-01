@@ -27,7 +27,7 @@
     "loginEnabled": "Inloggning: aktiverad (lösenordet har uppdaterats)",
     "loginDisabled": "Inloggning: inaktiverad",
     "providerInfo": "Leverantör: {info}",
-    "opencode": "Installera och konfigurera det medföljande @omniroute/opencode-plugin för OpenCode"
+    "opencode": "Installera och konfigurera det medföljande OpenCode plugin för OpenCode"
   },
   "doctor": {
     "title": "FreeRoute-diagnostik",

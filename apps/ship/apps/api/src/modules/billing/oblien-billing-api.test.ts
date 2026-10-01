@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: expectations follow the FreeBuild product name.
 import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
 import { OblienBillingApi } from "@repo/platform/engine/lib/oblien-billing-api";
 
@@ -186,7 +187,7 @@ describe("Oblien 2.4 billing SDK and transport contract", () => {
       successUrl: "https://app.openship.io", cancelUrl: "https://app.openship.io", idempotencyKey: "attempt",
     }).catch(error => error);
     expect(error).toMatchObject({ statusCode: 503, code: "OBLIEN_CHECKOUT_UNAVAILABLE",
-      message: "Cloud payments require an account configuration update by Openship. Contact Openship support.",
+      message: "Cloud payments require an account configuration update by FreeBuild. Contact FreeBuild support.",
       details: { providerCode: "reseller_enterprise_required" },
     });
     expect(JSON.stringify(error)).not.toMatch(/private|accountTier/);
@@ -251,7 +252,7 @@ describe("Oblien 2.4 billing SDK and transport contract", () => {
       })
       .catch((error) => error);
     expect(error).toMatchObject({ statusCode: 503, code: "OBLIEN_CHECKOUT_UNAVAILABLE",
-      message: "Cloud billing is unavailable. Contact Openship support. Reference: billing-support-123.",
+      message: "Cloud billing is unavailable. Contact FreeBuild support. Reference: billing-support-123.",
       details: { providerCode: "billing_database_collation_error", details: { reference: "billing-support-123", retryable: false } },
     });
     expect(console.warn).toHaveBeenCalledExactlyOnceWith("[oblien:billing] Provider request failed", {

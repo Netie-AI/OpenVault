@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * The catalogue of third-party credentials Openship can hold, and the rules that make
  * ONE table and ONE settings screen serve all of them.
@@ -125,7 +126,7 @@ export const CREDENTIAL_PROVIDERS = [
     label: "Cloudflare",
     capability: "dns",
     icon: "cloudflare",
-    summary: "Let Openship write the DNS records a custom domain needs, instead of printing them to paste.",
+    summary: "Let FreeBuild write the DNS records a custom domain needs, instead of printing them to paste.",
     // Org-wide: the token addresses every zone it can see, so there is nothing to scope
     // it to. See CredentialSelector.
     selector: null,
@@ -135,7 +136,7 @@ export const CREDENTIAL_PROVIDERS = [
         label: "API token",
         type: "secret",
         required: true,
-        help: "A token with Zone:Read and DNS:Edit on the zones you want Openship to manage.",
+        help: "A token with Zone:Read and DNS:Edit on the zones you want FreeBuild to manage.",
       },
     ],
   },

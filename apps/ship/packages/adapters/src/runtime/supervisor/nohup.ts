@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * NohupSupervisor - process management via nohup + PID files.
  *
@@ -266,7 +267,7 @@ export class NohupSupervisor implements ProcessSupervisor {
         timestamp: new Date().toISOString(),
         message:
           "No supervisor log for this deployment — the process is supervised elsewhere " +
-          "(container logs, or `openship logs` on the host). Streaming anyway in case it starts writing.\r\n",
+          "(container logs, or `freebuild logs` on the host). Streaming anyway in case it starts writing.\r\n",
         level: "info",
       });
     }

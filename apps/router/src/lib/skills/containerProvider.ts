@@ -61,7 +61,7 @@ export interface ContainerProvider {
 //  Helpers
 // ----------------------------------------------------------------
 
-const SANDBOX_NAME = (sandboxId: string) => `omniroute-${sandboxId}`;
+const SANDBOX_NAME = (sandboxId: string) => `freeroute-${sandboxId}`;
 
 /**
  * Probe whether a CLI binary exists on PATH.

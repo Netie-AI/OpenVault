@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * GitHub webhook installation events — installation.created / deleted /
  * suspend / unsuspend.
@@ -69,7 +70,7 @@ export async function handleInstallation(
   // where the operator owns the App and its webhook legitimately points here.
   if (!scope.includeLegacy && scope.sourceIds.size === 0) {
     console.log(
-      `[GitHub Webhook] Ignoring installation.${payload.action} on self-hosted instance — SaaS (api.openship.io) is the authoritative source for GitHub App installations.`,
+      `[GitHub Webhook] Ignoring installation.${payload.action} on self-hosted instance — the hosted SaaS is the authoritative source for GitHub App installations.`,
     );
     return {
       success: true,

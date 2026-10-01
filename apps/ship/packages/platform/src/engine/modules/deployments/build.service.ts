@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Build service — build session LIFECYCLE + config/snapshot helpers.
  *
@@ -2282,7 +2283,7 @@ export async function redeployBuildSession(
   // and fakes success while the running control plane is untouched.
   if (project.appTemplateId === "openship") {
     throw new ForbiddenError(
-      "The Openship control plane updates itself — run `openship update` on the host, not a redeploy.",
+      "The FreeBuild control plane updates itself — run `freebuild update` on the host, not a redeploy.",
     );
   }
   // GitHub access gate (default-deny): a member can redeploy a
@@ -2606,7 +2607,7 @@ export async function triggerDeployment(
   // the git/localPath 403 below would NOT catch it; guard it explicitly.
   if (project.appTemplateId === "openship") {
     throw new ForbiddenError(
-      "The Openship control plane updates itself — run `openship update` on the host, not a redeploy.",
+      "The FreeBuild control plane updates itself — run `freebuild update` on the host, not a redeploy.",
     );
   }
   // Org-membership verified at the route boundary. No userId equality

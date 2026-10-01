@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 import { AppError, CLOUD_CAPABILITIES, type CloudCapability } from "@repo/core";
 import { platform } from "../platform-config";
 import { isCloudConnectedForOrg } from "./session";
@@ -17,9 +18,9 @@ const CAPABILITY_MESSAGE: Record<CloudCapability, string> = {
   "cloud-deploy-target":
     "Connect the hosted cloud service to deploy there, or pick one of your servers.",
   "managed-project-domain":
-    "Connect the hosted cloud service to use a free subdomain — free *.opsh.io domains route through the hosted cloud service edge. Add a custom domain instead, or connect Cloud in Settings.",
+    "Connect the hosted cloud service to use a free subdomain — free cloud subdomains route through the hosted cloud service edge. Add a custom domain instead, or connect Cloud in Settings.",
   "managed-compose-domains":
-    "Connect the hosted cloud service to expose services on free *.opsh.io subdomains — they route through the hosted cloud service edge. Use custom domains instead, or connect Cloud in Settings.",
+    "Connect the hosted cloud service to expose services on free cloud subdomains — they route through the hosted cloud service edge. Use custom domains instead, or connect Cloud in Settings.",
   "cloud-services-catalog": "Connect the hosted cloud service to add cloud-managed services.",
   billing: "Connect the hosted cloud service to manage billing and usage.",
   "migrate-to-cloud": "Connect the hosted cloud service to migrate this project to the cloud.",

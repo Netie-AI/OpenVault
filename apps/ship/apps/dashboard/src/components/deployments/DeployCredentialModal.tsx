@@ -1,4 +1,5 @@
 "use client";
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 
 import { Icon as UiIcon } from "@repo/ui/icons";
 
@@ -281,7 +282,7 @@ export function DeployCredentialModal({
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-semibold text-foreground">
-                    Install the Openship GitHub App on {owner}
+                    Install the FreeBuild GitHub App on {owner}
                   </p>
                   <span className="text-[10px] font-semibold uppercase tracking-wider text-primary">
                     Recommended
@@ -351,7 +352,7 @@ export function DeployCredentialModal({
                 <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
                   {hasGlobalToken
                     ? "Use the global PAT you've already saved — scoped narrower than your GitHub session."
-                    : "Paste a fine-grained PAT scoped to this repo. You control the scope and expiry — Openship just uses it for clones."}
+                    : "Paste a fine-grained PAT scoped to this repo. You control the scope and expiry — FreeBuild just uses it for clones."}
                 </p>
               </div>
             </div>

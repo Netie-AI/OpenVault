@@ -27,7 +27,7 @@
     "loginEnabled": "လော့ဂ်အင်: ဖွင့်ထားသည် (စကားဝှက်ကို အပ်ဒိတ်လုပ်ပြီး)",
     "loginDisabled": "လော့ဂ်အင်: ပိတ်ထားသည်",
     "providerInfo": "ပံ့ပိုးသူ: {info}",
-    "opencode": "OpenCode အတွက် တွဲဖက်ပါရှိသော @omniroute/opencode-plugin ကို ထည့်သွင်းပြီး စီစဉ်သတ်မှတ်ရန်"
+    "opencode": "OpenCode အတွက် တွဲဖက်ပါရှိသော OpenCode plugin ကို ထည့်သွင်းပြီး စီစဉ်သတ်မှတ်ရန်"
   },
   "doctor": {
     "title": "FreeRoute စနစ်စစ်ဆေးခြင်း",

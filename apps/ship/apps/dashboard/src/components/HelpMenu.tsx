@@ -28,39 +28,48 @@ const open = (url: string) => window.open(url, "_blank", "noopener,noreferrer");
 /** The actions themselves — exported so a page can append its own items. */
 export function useHelpMenuActions(): MenuAction[] {
   const { t } = useI18n();
-  return [
+  // Modified by Netie AI, 2026: a link whose BRAND_LINKS URL is empty is
+  // hidden instead of opening a blank tab.
+  const links: Array<MenuAction & { url: string }> = [
     {
       id: "support",
       label: t.projects.help.contactSupport,
       icon: <UiIcon name="help-circle" className="size-4" />,
-      onClick: () => open(SUPPORT_URL),
+      url: SUPPORT_URL,
     },
     {
       id: "report-issue",
       label: t.projects.help.reportIssue,
       icon: <UiIcon name="bug" className="size-4" />,
-      onClick: () => open(ISSUE_URL),
+      url: ISSUE_URL,
     },
     {
       id: "feedback",
       label: t.projects.help.sendFeedback,
       icon: <UiIcon name="message" className="size-4" />,
-      onClick: () => open(FEEDBACK_URL),
+      url: FEEDBACK_URL,
     },
-    { id: "divider", divider: true },
+    { id: "divider", divider: true, url: "-" },
     {
       id: "documentation",
       label: t.projects.help.documentation,
       icon: <UiIcon name="book" className="size-4" />,
-      onClick: () => open(DOCS_URL),
+      url: DOCS_URL,
     },
     {
       id: "community",
       label: t.projects.help.joinCommunity,
       icon: <UiIcon name="external-link" className="size-4" />,
-      onClick: () => open(COMMUNITY_URL),
+      url: COMMUNITY_URL,
     },
   ];
+  const actions: MenuAction[] = links
+    .filter((l) => l.url)
+    .map(({ url, ...action }) => (action.divider ? action : { ...action, onClick: () => open(url) }));
+  // Drop dividers that no longer separate two groups of links.
+  return actions.filter(
+    (a, i) => !a.divider || (i > 0 && i < actions.length - 1 && !actions[i - 1]?.divider),
+  );
 }
 
 export function HelpMenu({
@@ -73,8 +82,11 @@ export function HelpMenu({
 }) {
   const help = useHelpMenuActions();
   const actions = extraActions?.length
-    ? [...extraActions, { id: "extra-divider", divider: true }, ...help]
+    ? help.length
+      ? [...extraActions, { id: "extra-divider", divider: true }, ...help]
+      : extraActions
     : help;
+  if (actions.length === 0) return null;
   return (
     <DropdownMenu
       actions={actions}

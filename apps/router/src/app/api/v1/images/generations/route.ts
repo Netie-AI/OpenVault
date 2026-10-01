@@ -1,3 +1,5 @@
+import { netieErrorResponse } from "@/lib/netie/providerGuards";
+import { withNetiePolicy } from "@/lib/netie/routeGuard";
 import { handleImageGeneration } from "@omniroute/open-sse/handlers/imageGeneration.ts";
 import { withInjectionGuard } from "@/middleware/promptInjectionGuard";
 import {
@@ -350,11 +352,15 @@ async function postHandler(request, context) {
         );
 
       return attemptCredentials?.connectionId
-        ? runWithProxyContext(proxyInfo?.proxy || null, generateImage).catch((err: any) => ({
-            success: false,
-            status: err.statusCode || 500,
-            error: err.message,
-          }))
+        ? runWithProxyContext(proxyInfo?.proxy || null, generateImage).catch((err: any) => {
+            // FreeRoute: KeyVault and policy errors keep their named code.
+            if (netieErrorResponse(err)) throw err;
+            return {
+              success: false,
+              status: err.statusCode || 500,
+              error: err.message,
+            };
+          })
         : generateImage();
     },
   });
@@ -395,4 +401,6 @@ async function postHandler(request, context) {
   return errorResponse((result as any).status, message);
 }
 
-export const POST = withInjectionGuard(postHandler);
+// FreeRoute: named 501 for a disabled provider, named 503/501 for KeyVault
+// and key-storage errors (src/lib/netie/routeGuard.ts).
+export const POST = withNetiePolicy(withInjectionGuard(postHandler));

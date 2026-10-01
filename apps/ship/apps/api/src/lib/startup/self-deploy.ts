@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Deploy the control plane ITSELF as a real, deploy-only app.
  *
@@ -212,7 +213,7 @@ async function foreignProxyBlocksEdge(
     // Returned as well as logged so the caller's structured failure carries the SAME
     // sentence the live log shows — not a second wording of it.
     const detail =
-      `Not issuing TLS: ${owner} still owns ports 80/443, so Openship isn't the reverse proxy yet — ` +
+      `Not issuing TLS: ${owner} still owns ports 80/443, so FreeBuild isn't the reverse proxy yet — ` +
       `an ACME challenge would hit it, not us. Re-run setup (or Domains → migrate) to take over.`;
     log?.(detail, "error");
     return { blocked: true, owner, detail };

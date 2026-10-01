@@ -27,7 +27,7 @@
     "loginEnabled": "ការចូល៖ បានបើក (បានធ្វើបច្ចុប្បន្នភាពពាក្យសម្ងាត់)",
     "loginDisabled": "ការចូល៖ បានបិទ",
     "providerInfo": "អ្នកផ្ដល់សេវា៖ {info}",
-    "opencode": "ដំឡើង និងកំណត់រចនាសម្ព័ន្ធ @omniroute/opencode-plugin ដែលបានភ្ជាប់មកជាមួយ សម្រាប់ OpenCode"
+    "opencode": "ដំឡើង និងកំណត់រចនាសម្ព័ន្ធ OpenCode plugin ដែលបានភ្ជាប់មកជាមួយ សម្រាប់ OpenCode"
   },
   "doctor": {
     "title": "ការវិនិច្ឆ័យ FreeRoute",

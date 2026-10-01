@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * The page the edge serves for a hostname it DOES route, whose upstream did not answer
  * (#556) — the sibling of {@link ./edge-not-found.ts} and built the same way.
@@ -119,7 +120,7 @@ const HTML_FRAGMENTS: readonly string[] = [
   `<li>The application may have stopped or crashed</li>`,
   `<li>Trying again in a moment may work</li>`,
   `</ul>`,
-  `<footer>Served by Openship</footer>`,
+  `<footer>Served by FreeBuild</footer>`,
   `</main>`,
   `</body>`,
   `</html>`,

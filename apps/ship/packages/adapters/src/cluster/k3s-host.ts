@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /** Host actions are fenced by ownership and a local flock. No credentials in command arguments. */
 export const K3S_HOST = String.raw`
 import fcntl, hashlib, ipaddress, json, os, pathlib, re, shutil, socket, subprocess, sys, tempfile, time, urllib.parse, urllib.request
@@ -47,7 +48,7 @@ def owner():
     if ROOT.is_symlink() or OWNER.is_symlink(): raise RuntimeError('The runtime ownership directory is not a regular directory.')
     if not OWNER.exists(): return None
     value = json.loads(OWNER.read_text())
-    if value.get('id') != C['id']: raise RuntimeError('This host belongs to a different OpenShip runtime. Its installation was left untouched.')
+    if value.get('id') != C['id']: raise RuntimeError('This host belongs to a different FreeBuild runtime. Its installation was left untouched.')
     return value
 
 def guard(value):
@@ -58,7 +59,7 @@ def guard(value):
 def foreign():
     # The upstream uninstaller owns global CNI/Kubernetes paths. Never adopt those implicitly.
     for path in [str(BIN), '/usr/bin/k3s', str(CONFIG.parent), str(DATA), '/usr/local/bin/k3s-uninstall.sh', '/usr/local/bin/k3s-agent-uninstall.sh', '/usr/local/bin/k3s-killall.sh', '/etc/kubernetes', '/var/lib/kubelet', '/var/lib/cni', '/etc/cni/net.d', '/etc/rancher/rke2', '/var/lib/rancher/rke2', '/var/lib/k0s', '/var/snap/microk8s']:
-        if os.path.lexists(path): raise RuntimeError('An existing Kubernetes or CNI installation uses ' + path + '. OpenShip will not replace it.')
+        if os.path.lexists(path): raise RuntimeError('An existing Kubernetes or CNI installation uses ' + path + '. FreeBuild will not replace it.')
     for unit in pathlib.Path('/etc/systemd/system').glob('k3s*.service'):
         raise RuntimeError('An existing K3s service is installed: ' + unit.name)
     for chain in ['OSHIP-K3S-IN', 'OSHIP-K3S-OUT']:
@@ -89,7 +90,7 @@ def inspect():
     else: foreign()
     if not pathlib.Path('/run/systemd/system').is_dir(): raise RuntimeError('K3s setup requires systemd on the host.')
     if len(pathlib.Path('/proc/swaps').read_text().strip().splitlines()) > 1:
-        raise RuntimeError('Swap is enabled. Disable swap on this server before setting up Kubernetes; OpenShip will not change memory settings used by existing workloads.')
+        raise RuntimeError('Swap is enabled. Disable swap on this server before setting up Kubernetes; FreeBuild will not change memory settings used by existing workloads.')
     memory = int(re.search(r'MemTotal:\s+(\d+)', pathlib.Path('/proc/meminfo').read_text()).group(1)) * 1024
     required = 1800 * 1024**2 if C['host']['role'] == 'server' else 900 * 1024**2
     if memory < required or (os.cpu_count() or 0) < (2 if C['host']['role'] == 'server' else 1):

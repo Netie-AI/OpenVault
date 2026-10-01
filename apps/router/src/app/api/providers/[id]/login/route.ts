@@ -12,6 +12,8 @@ import { updateProviderConnection } from "@/lib/db/providers";
 import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
 import { clampLoginTimeoutMs } from "@/lib/api/loginTimeout";
 import { sanitizeErrorMessage } from "@omniroute/open-sse/utils/error.ts";
+import { DISABLED, renderDisabled } from "@omniroute/open-sse/netie/policy.ts";
+import { classifyConnection } from "@/lib/netie/providerGuards";
 
 const ADOBE_FIREFLY_SLUGS = new Set(["adobe-firefly", "firefly"]);
 
@@ -289,7 +291,7 @@ async function loginMaxaiEmail(
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-): Promise<NextResponse> {
+): Promise<Response> {
   const auth = await requireManagementAuth(req);
   if (auth) return auth;
 
@@ -298,6 +300,10 @@ export async function POST(
   if (!provider) {
     return NextResponse.json({ success: false, error: "Provider not found" }, { status: 404 });
   }
+  // FreeRoute: browser login capture is session relay, never shipped. Also
+  // matched in src/lib/netie/hardDisabledRoutes.ts before this handler runs.
+  const disabled = renderDisabled(classifyConnection(provider) ?? DISABLED.sessionRelay);
+  if (disabled) return disabled;
 
   const body = (await req.json().catch(() => ({}))) as {
     timeout?: unknown;

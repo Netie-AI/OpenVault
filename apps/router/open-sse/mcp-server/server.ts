@@ -744,7 +744,7 @@ export function createMcpServer(options?: CreateMcpServerOptions): McpServer {
   const dynamicWebSearchInput = buildWebSearchInputSchema(blockedProviders);
 
   const server = new McpServer({
-    name: "omniroute",
+    name: "freeroute",
     version: process.env.npm_package_version || "1.8.1",
   });
   const mcpDescriptionCompressionEnabled = readMcpDescriptionCompressionEnabled();
@@ -818,7 +818,7 @@ export function createMcpServer(options?: CreateMcpServerOptions): McpServer {
     "omniroute_get_health",
     {
       description:
-        "Returns OmniRoute health status including uptime, memory, circuit breakers, rate limits, and cache stats",
+        "Returns FreeRoute health status including uptime, memory, circuit breakers, rate limits, and cache stats",
       inputSchema: getHealthInput,
     },
     withScopeEnforcement("omniroute_get_health", async (args) => {
@@ -886,7 +886,7 @@ export function createMcpServer(options?: CreateMcpServerOptions): McpServer {
   server.registerTool(
     "omniroute_route_request",
     {
-      description: "Sends a chat completion request through OmniRoute intelligent routing",
+      description: "Sends a chat completion request through FreeRoute intelligent routing",
       inputSchema: routeRequestInput,
     },
     withScopeEnforcement("omniroute_route_request", (args) =>
@@ -1041,7 +1041,7 @@ export function createMcpServer(options?: CreateMcpServerOptions): McpServer {
     "omniroute_db_health_check",
     {
       description:
-        "Diagnoses or repairs OmniRoute database drift, including broken combo references and orphan quota/domain rows",
+        "Diagnoses or repairs FreeRoute database drift, including broken combo references and orphan quota/domain rows",
       inputSchema: dbHealthCheckInput,
     },
     withScopeEnforcement("omniroute_db_health_check", (args) =>
@@ -1053,7 +1053,7 @@ export function createMcpServer(options?: CreateMcpServerOptions): McpServer {
     "omniroute_sync_pricing",
     {
       description:
-        "Syncs pricing data from external sources (LiteLLM) into OmniRoute without overwriting user-set prices",
+        "Syncs pricing data from external sources (LiteLLM) into FreeRoute without overwriting user-set prices",
       inputSchema: syncPricingInput,
     },
     withScopeEnforcement("omniroute_sync_pricing", (args) =>
@@ -1065,7 +1065,7 @@ export function createMcpServer(options?: CreateMcpServerOptions): McpServer {
     "omniroute_web_search",
     {
       description:
-        "Performs a web search using OmniRoute's search gateway. Supports multiple providers (Serper, Brave, Perplexity, Exa, Tavily) with automatic failover. Returns search results with titles, URLs, snippets, and position data.",
+        "Performs a web search using FreeRoute's search gateway. Supports multiple providers (Serper, Brave, Perplexity, Exa, Tavily) with automatic failover. Returns search results with titles, URLs, snippets, and position data.",
       inputSchema: dynamicWebSearchInput,
     },
     withScopeEnforcement("omniroute_web_search", (args) =>
@@ -1081,7 +1081,7 @@ export function createMcpServer(options?: CreateMcpServerOptions): McpServer {
     "omniroute_x_search",
     {
       description:
-        "Search X (Twitter) through OmniRoute using SuperGrok / xAI server-side x_search. Requires xai-oauth or an xAI API key. Not web search.",
+        "Search X (Twitter) through FreeRoute using SuperGrok / xAI server-side x_search. Requires xai-oauth or an xAI API key. Not web search.",
       inputSchema: xSearchInput,
     },
     withScopeEnforcement("omniroute_x_search", (args) => handleXSearch(xSearchInput.parse(args)))
@@ -1091,7 +1091,7 @@ export function createMcpServer(options?: CreateMcpServerOptions): McpServer {
     "omniroute_web_fetch",
     {
       description:
-        "Fetches and extracts content from a URL using OmniRoute's web fetch gateway. Supports multiple providers (Firecrawl, Jina Reader, Tavily) with automatic failover. Returns the page content as markdown, HTML, links, or screenshot, along with metadata.",
+        "Fetches and extracts content from a URL using FreeRoute's web fetch gateway. Supports multiple providers (Firecrawl, Jina Reader, Tavily) with automatic failover. Returns the page content as markdown, HTML, links, or screenshot, along with metadata.",
       inputSchema: webFetchInput,
     },
     withScopeEnforcement("omniroute_web_fetch", (args) => handleWebFetch(webFetchInput.parse(args)))

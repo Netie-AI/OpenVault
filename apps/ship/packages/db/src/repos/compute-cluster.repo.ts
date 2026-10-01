@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 import { and, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import { AppError, NotFoundError, type ComputeClusterConfig } from "@repo/core";
 import type { Database, DatabaseTransaction } from "../client";
@@ -330,7 +331,7 @@ export function createComputeClusterRepo(db: Database) {
           .where(eq(clusterRuntime.clusterId, id));
         if (runtime && runtime.status !== "removed")
           throw new AppError(
-            "Remove the cluster runtime first so OpenShip can clean up its installation on every server.",
+            "Remove the cluster runtime first so FreeBuild can clean up its installation on every server.",
             409,
             "CLUSTER_RUNTIME_IN_USE",
           );

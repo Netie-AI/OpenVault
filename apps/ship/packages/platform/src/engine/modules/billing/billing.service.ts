@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026
 /** Customer billing delegates to Oblien Mode B; no Stripe SDK or credit writes. */
 import { createHash } from "node:crypto";
 import { AppError, PRICING, type PlanTierId } from "@repo/core";

@@ -82,7 +82,7 @@ export function buildCloudflareWorkerScript(relayAuth: string): string {
   // relayAuth is generated server-side via randomBytes(24).toString("hex") — no
   // user-controlled input ever reaches this template, so direct interpolation
   // into the worker source string is safe.
-  return `// OmniRoute Cloudflare Worker proxy relay — generated at deploy time.
+  return `// FreeRoute Cloudflare Worker proxy relay — generated at deploy time.
 const resolveRelayTarget = ${resolveRelayTarget.toString()};
 
 const isPrivateHostname = ${isPrivateRelayHostname.toString()};

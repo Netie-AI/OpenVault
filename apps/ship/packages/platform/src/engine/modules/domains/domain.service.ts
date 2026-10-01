@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Domain service - custom domains, DNS verification, SSL certificates.
  *
@@ -684,9 +685,9 @@ async function edgeHostUnreachable(ctx: RequestContext, project: Project): Promi
 }
 
 const HOST_CHANNEL_HINT =
-  "This server runs a bare-metal edge, but Openship's API is in a container that can't reach the host's " +
+  "This server runs a bare-metal edge, but FreeBuild's API is in a container that can't reach the host's " +
   "OpenResty or /etc/letsencrypt to manage TLS. Provision the host SSH channel (OPENSHIP_HOST_SSH_*, e.g. " +
-  "via `openship up`), or bind-mount the host's /etc/letsencrypt + OpenResty sites into the API container.";
+  "via `freebuild up`), or bind-mount the host's /etc/letsencrypt + OpenResty sites into the API container.";
 
 /** Guard a hostname before it's interpolated into a filesystem path (defence in
  *  depth — the row is already validated at creation). */

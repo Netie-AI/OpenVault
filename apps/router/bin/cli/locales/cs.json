@@ -27,7 +27,7 @@
     "loginEnabled": "Přihlášení: povoleno (heslo aktualizováno)",
     "loginDisabled": "Přihlášení: zakázáno",
     "providerInfo": "Poskytovatel: {info}",
-    "opencode": "Nainstalovat a nakonfigurovat přibalený modul @omniroute/opencode-plugin pro OpenCode"
+    "opencode": "Nainstalovat a nakonfigurovat přibalený modul OpenCode plugin pro OpenCode"
   },
   "doctor": {
     "title": "Diagnostika FreeRoute",

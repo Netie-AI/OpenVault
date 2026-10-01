@@ -26,7 +26,9 @@ import {
 } from "@/lib/oauth/gitlab";
 import { providerAllowsOptionalApiKey } from "@/shared/constants/providers";
 import { getRegistryEntry } from "@omniroute/open-sse/config/providerRegistry.ts";
-import { isOpenVaultKeyVaultError, resolveProviderApiKey } from "@/lib/netie/keyvault";
+import { isOpenVaultKeyVaultError } from "@/lib/netie/keyvault";
+import { classifyConnection, withKeyVaultApiKey } from "@/lib/netie/providerGuards";
+import { renderDisabled } from "@omniroute/open-sse/netie/policy.ts";
 import { shouldUseApiKeyConnectionTest } from "./webSessionTestDispatch";
 import { testCodexAppServerConnection, makeDiagnosis } from "./codexAppServerHealth";
 import { recoverKeyHealth } from "@omniroute/open-sse/services/apiKeyRotator.ts";
@@ -888,17 +890,12 @@ async function testApiKeyConnection(rawConnection: any) {
   // does. Test with the same key a real request would use (see
   // materializeConnection in src/sse/services/auth.ts). Without this every
   // key-requiring connection failed its test and stayed inactive forever.
+  // A key left in the row by an import or an older build is ignored: the test
+  // must pass or fail exactly as real traffic would.
   let connection = rawConnection;
-  if (rawConnection?.authType === "apikey" && !rawConnection.apiKey) {
-    const psd = (rawConnection.providerSpecificData as Record<string, unknown> | null) || {};
+  if (rawConnection?.authType === "apikey") {
     try {
-      const vaultKey = await resolveProviderApiKey(rawConnection.provider, {
-        baseUrl:
-          (typeof psd.baseUrl === "string" && psd.baseUrl) ||
-          getRegistryEntry(rawConnection.provider)?.baseUrl ||
-          null,
-      });
-      if (vaultKey) connection = { ...rawConnection, apiKey: vaultKey };
+      connection = await withKeyVaultApiKey(rawConnection);
     } catch (error) {
       if (!isOpenVaultKeyVaultError(error)) throw error;
       return {
@@ -984,6 +981,21 @@ export async function testSingleConnection(connectionId: string, validationModel
     };
   }
   retirement.assertProviderAvailable(provider);
+
+  // FreeRoute: a subscription or browser-session connection (for example one
+  // restored from a backup) is never tested against the consumer endpoint.
+  // Returned, not thrown, so batch tests and the health scheduler keep going.
+  const disabledCode = classifyConnection(connection);
+  if (disabledCode) {
+    const error = `${disabledCode}: this provider is disabled in this edition of FreeRoute`;
+    return {
+      valid: false,
+      error,
+      disabledCode,
+      diagnosis: makeDiagnosis("validation_error", "local", error, disabledCode),
+      latencyMs: 0,
+    };
+  }
 
   let proxyInfo: any = null;
   try {
@@ -1246,6 +1258,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
     if (data.error === "Connection not found") {
       return NextResponse.json({ error: "Connection not found" }, { status: 404 });
+    }
+    if ("disabledCode" in data && data.disabledCode) {
+      return renderDisabled(data.disabledCode);
     }
 
     return NextResponse.json(data);

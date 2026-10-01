@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /** Build → deploy execution engine. Extracted from build.service.ts — private pipeline: kickoffBuild fires executeBuildAndDeploy, which runs the build, deploy phases, and post-deploy sync. */
 
 import { findActiveDeployment } from "@repo/platform/engine/lib/active-deployment";
@@ -990,7 +991,7 @@ async function executeBuildAndDeploy(
           "the server has no GitHub identity of its own, no App/PAT token is available, and no git " +
           "identity could be forwarded. Falling back to cloning on the API host and transferring the " +
           "build context. To clone directly on the server, connect it under Servers → GitHub " +
-          "(a read-only per-repo deploy key is the narrowest option), or install the Openship App / " +
+          "(a read-only per-repo deploy key is the narrowest option), or install the FreeBuild App / " +
           "add a per-project clone token.",
         "warn",
       );
@@ -2158,7 +2159,7 @@ async function executeServerDeploy(phase: DeployPhaseInputs, deployConfig: Deplo
               logger.log(
                 `Couldn't read live port occupancy on the target, so ${pinnedHostPort} avoids only ` +
                   `database-pinned ports. If publishing it fails as "already allocated", ` +
-                  `check that Openship can reach this host (Servers → this box).\n`,
+                  `check that FreeBuild can reach this host (Servers → this box).\n`,
                 "warn",
               );
             }

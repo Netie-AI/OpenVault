@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026
 /**
  * GATE 3 (source-side) for migrate-control-plane → server.
  *

@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: catalog brand is FreeBuild.
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -74,12 +75,13 @@ describe("mail has exactly one entry point in the catalog", () => {
    */
   const listed = APP_TEMPLATES.filter((t) => !t.unlisted);
 
-  it("puts Openship Mail first", () => {
+  it("puts FreeBuild Mail first", () => {
     expect(listed[0]?.id).toBe("mail");
   });
 
-  it("lists no second Openship-branded mail card", () => {
-    const own = listed.filter((t) => t.category === "mail" && /^Openship /.test(t.name));
+  it("lists no second FreeBuild-branded mail card", () => {
+    // Modified by Netie AI, 2026: the catalog names carry the FreeBuild brand.
+    const own = listed.filter((t) => t.category === "mail" && /^FreeBuild /.test(t.name));
     expect(own.map((t) => t.id)).toEqual(["mail"]);
   });
 

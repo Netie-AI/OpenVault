@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: expectations follow the FreeBuild product name.
 import type { ExecutionContext, PermissionInput } from "@repo/platform";
 import type { Context } from "hono";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -208,7 +209,7 @@ describe("remote server prerequisite checks", () => {
     await checkServer(c);
     expect(sent.body).toMatchObject({
       ready: false,
-      components: [expect.objectContaining({ message: expect.stringContaining("Restart Openship") })],
+      components: [expect.objectContaining({ message: expect.stringContaining("Restart FreeBuild") })],
     });
     expect(h.checkComponents).toHaveBeenCalledTimes(1);
   });

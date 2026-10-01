@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026
 import { resolveProjectAuthority, type ProjectSource } from "@repo/platform/engine/lib/cloud/project-authority";
 export { resolveProjectAuthority, type ProjectSource } from "@repo/platform/engine/lib/cloud/project-authority";
 /**

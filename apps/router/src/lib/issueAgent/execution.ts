@@ -51,7 +51,7 @@ function buildMessages(run: RecordedTriageRun) {
     {
       role: "system",
       content:
-        "You are the OmniRoute Issue Agent. Analyze only the recorded GitHub context and produce a concise, actionable triage response. Do not claim to have accessed external state.",
+        "You are the FreeRoute Issue Agent. Analyze only the recorded GitHub context and produce a concise, actionable triage response. Do not claim to have accessed external state.",
     },
     {
       role: "user",

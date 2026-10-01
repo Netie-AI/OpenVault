@@ -204,7 +204,7 @@ export function npmInstallRuntime(pkgs, opts = {}) {
   }
 
   if (!opts.silent) {
-    process.stdout.write(`[omniroute][runtime] ${displayCmd}\n`);
+    process.stdout.write(`[freeroute][runtime] ${displayCmd}\n`);
   }
   // #14355: `stdio: "ignore"` in silent mode was swallowing npm's own error
   // output on failure too, leaving only a generic "install failed" message
@@ -232,18 +232,18 @@ export function ensureBetterSqliteRuntime({ silent = false, force = false } = {}
   ensureRuntimeDir();
   const valid = hasModule("better-sqlite3") && isBetterSqliteBinaryValid();
   if (valid && !force) {
-    if (!silent) process.stdout.write("[omniroute][runtime] better-sqlite3 OK\n");
+    if (!silent) process.stdout.write("[freeroute][runtime] better-sqlite3 OK\n");
     return { betterSqlite: true };
   }
   if (!silent) {
     process.stdout.write(
-      `[omniroute][runtime] Installing better-sqlite3@${BETTER_SQLITE3_VERSION} into runtime...\n`
+      `[freeroute][runtime] Installing better-sqlite3@${BETTER_SQLITE3_VERSION} into runtime...\n`
     );
   }
   const ok = npmInstallRuntime([`better-sqlite3@${BETTER_SQLITE3_VERSION}`], { silent });
   if (!ok && !silent) {
     process.stderr.write(
-      "[omniroute][runtime] better-sqlite3 install failed.\n" +
+      "[freeroute][runtime] better-sqlite3 install failed.\n" +
         "  This usually means npm install scripts are blocked.\n" +
         "  Try: npm install-scripts approve better-sqlite3\n"
     );

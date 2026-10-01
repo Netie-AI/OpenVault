@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 import { hostChannelHealth, type HostChannelHealth } from "@repo/adapters";
 import {
   HOST_CHANNEL_BLOCKED,
@@ -83,7 +84,7 @@ export async function reportHostChannelAtBoot(
       deps.log(
         `[host-channel] ${health.target ?? "the host channel"} refuses TCP forwarding, so ` +
           `deploy health checks fall back to \`curl\` on the host (and are skipped if it ` +
-          `has none). Re-run \`openship up\` to re-provision the channel with forwarding.`,
+          `has none). Re-run \`freebuild up\` to re-provision the channel with forwarding.`,
       );
     }
     return health.code;

@@ -27,7 +27,7 @@
     "loginEnabled": "Connexion : activée (mot de passe mis à jour)",
     "loginDisabled": "Connexion : désactivée",
     "providerInfo": "Fournisseur : {info}",
-    "opencode": "Installer et configurer le module @omniroute/opencode-plugin inclus pour OpenCode"
+    "opencode": "Installer et configurer le module OpenCode plugin inclus pour OpenCode"
   },
   "doctor": {
     "title": "Diagnostic FreeRoute",

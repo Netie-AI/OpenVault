@@ -1,6 +1,8 @@
 "use client";
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 
 import { Icon as UiIcon } from "@repo/ui/icons";
+import { BRAND_LINKS } from "@repo/core";
 
 import { useState } from "react";
 import { cloudApi } from "@/lib/api";
@@ -156,8 +158,9 @@ export function CloudConnection() {
                 </>
               )}
             </button>
+            {BRAND_LINKS.pricing && (
             <a
-              href="https://openship.io/pricing"
+              href={BRAND_LINKS.pricing}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-muted/50 px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted sm:flex-none"
@@ -165,6 +168,7 @@ export function CloudConnection() {
               {pitch.viewPricing}
               <UiIcon name="arrow-up-right" className="size-3.5" />
             </a>
+            )}
           </div>
 
           <p className="mt-3.5 text-xs text-muted-foreground/70">{pitch.noLockIn}</p>

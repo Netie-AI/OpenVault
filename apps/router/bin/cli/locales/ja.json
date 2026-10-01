@@ -27,7 +27,7 @@
     "loginEnabled": "ログイン: 有効（パスワード更新済み）",
     "loginDisabled": "ログイン: 無効",
     "providerInfo": "プロバイダー: {info}",
-    "opencode": "OpenCode 用の同梱 @omniroute/opencode-plugin をインストールして設定"
+    "opencode": "OpenCode 用の同梱 OpenCode plugin をインストールして設定"
   },
   "doctor": {
     "title": "FreeRoute 診断",

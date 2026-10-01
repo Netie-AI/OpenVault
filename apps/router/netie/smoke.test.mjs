@@ -25,9 +25,10 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { createServer } from "node:http";
+import { createServer, request as httpRequest } from "node:http";
+import { connect as netConnect } from "node:net";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { networkInterfaces, tmpdir } from "node:os";
 import { join } from "node:path";
 import { randomBytes } from "node:crypto";
 import { setTimeout as sleep } from "node:timers/promises";
@@ -99,7 +100,9 @@ function startOpenVaultStub() {
                 precheck_status: "ok",
                 account_id: "smoke",
                 lifecycle: "active",
-                custody: "openvault",
+                // Real OpenVault custody values are "pooled" and "tenant"; the
+                // router spends only pooled (or untagged) keys.
+                custody: "pooled",
               },
             ],
           })
@@ -186,15 +189,21 @@ before(async () => {
   const adminTokenPath = join(adminTokenDir, "admin_token");
   writeFileSync(adminTokenPath, `${OPENVAULT_ADMIN_TOKEN}\n`, { mode: 0o600 });
 
+  // Start with no bind override so the default bind address is what gets
+  // tested. HOSTNAME is set to a non-loopback value to prove the shell's
+  // HOSTNAME variable does not move the bind.
+  const parentEnv = { ...process.env };
+  delete parentEnv.HOST;
+  delete parentEnv.OMNIROUTE_HOSTNAME;
+  delete parentEnv.OMNIROUTE_SERVER_HOST;
   serverProcess = spawn(process.execPath, ["scripts/dev/run-next.mjs", "start"], {
     cwd: ROOT,
     env: {
-      ...process.env,
+      ...parentEnv,
       PORT: String(appPort),
       DASHBOARD_PORT: String(appPort),
       API_PORT: String(appPort),
-      OMNIROUTE_HOSTNAME: "127.0.0.1",
-      HOSTNAME: "127.0.0.1",
+      HOSTNAME: "0.0.0.0",
       DATA_DIR: dataDir,
       OPENVAULT_URL: `http://127.0.0.1:${stubPort}`,
       OPENVAULT_ADMIN_TOKEN_PATH: adminTokenPath,
@@ -252,6 +261,32 @@ async function readJson(res) {
     return { __rawBody: text };
   }
 }
+
+test("the server binds 127.0.0.1 by default", async () => {
+  const logs = serverLogs.join("");
+  assert.match(logs, new RegExp(`listening on http://127\\.0\\.0\\.1:${appPort}\\b`));
+  assert.doesNotMatch(logs, /listening on http:\/\/0\.0\.0\.0:/);
+
+  // A non-loopback address of this machine must refuse the connection.
+  const external = Object.values(networkInterfaces())
+    .flat()
+    .find((iface) => iface && iface.family === "IPv4" && !iface.internal);
+  if (!external) return; // no non-loopback interface on this host; the log check above still ran
+  const outcome = await new Promise((resolve) => {
+    const socket = netConnect({ host: external.address, port: appPort });
+    socket.setTimeout(3000);
+    socket.once("connect", () => {
+      socket.destroy();
+      resolve("connected");
+    });
+    socket.once("timeout", () => {
+      socket.destroy();
+      resolve("timeout");
+    });
+    socket.once("error", (err) => resolve(err.code || "error"));
+  });
+  assert.notEqual(outcome, "connected", `server accepted a connection on ${external.address}`);
+});
 
 test("health endpoint responds 200", async () => {
   const res = await fetch(`${baseUrl()}/healthz`);
@@ -349,3 +384,228 @@ test("the 9router embedded-service integration is hard-disabled (upstream_servic
   assert.equal(body.error?.code, "upstream_service_not_included");
   assert.equal(typeof body.error?.message, "string");
 });
+
+// ── FreeRoute security regressions (fix-router-security) ────────────────────
+// Each case below was reachable before; each must now answer its named 501.
+
+async function expectNamed(res, status, code) {
+  const body = await readJson(res);
+  assert.equal(res.status, status, `expected ${status} ${code}, got ${res.status}: ${JSON.stringify(body)}`);
+  assert.equal(body.error?.code, code);
+  assert.equal(typeof body.error?.message, "string");
+  return body;
+}
+
+function postJson(path, body, headers = {}) {
+  return fetch(`${baseUrl()}${path}`, {
+    method: "POST",
+    headers: managementHeaders({ "content-type": "application/json", ...headers }),
+    body: JSON.stringify(body),
+  });
+}
+
+test("GET /authorize (Trae OAuth callback, no auth) does not store a connection", async () => {
+  const url = new URL(`${baseUrl()}/authorize`);
+  url.searchParams.set("userJwt", JSON.stringify({ Token: "trae-fake-token", RefreshToken: "trae-rt" }));
+  url.searchParams.set("userInfo", JSON.stringify({ UserID: "u1" }));
+  await expectNamed(await fetch(url), 501, "consumer_subscription_pooling_disabled");
+});
+
+test("a browser-session provider cannot be created, even without a key", async () => {
+  await expectNamed(
+    await postJson("/api/providers", { provider: "copilot-web", name: "smoke-copilot-web" }),
+    501,
+    "consumer_session_relay_disabled"
+  );
+});
+
+test("browser login capture and manual OAuth refresh are hard-disabled per connection", async () => {
+  await expectNamed(
+    await postJson("/api/providers/any-connection-id/login", { timeout: 3000 }),
+    501,
+    "consumer_session_relay_disabled"
+  );
+  await expectNamed(
+    await postJson("/api/providers/any-connection-id/refresh", {}),
+    501,
+    "consumer_subscription_pooling_disabled"
+  );
+  await expectNamed(
+    await postJson("/api/providers/any-connection-id/refresh-cursor", {}),
+    501,
+    "consumer_subscription_pooling_disabled"
+  );
+});
+
+test("bulk add and file import refuse provider keys", async () => {
+  await expectNamed(
+    await postJson("/api/providers/bulk", {
+      provider: "openai",
+      entries: [{ name: "smoke-bulk", apiKey: "sk-should-never-be-stored" }],
+    }),
+    501,
+    "keys_managed_by_openvault"
+  );
+  await expectNamed(
+    await postJson("/api/providers/import", {
+      entries: [{ provider: "openai", name: "smoke-import", apiKey: "sk-should-never-be-stored" }],
+    }),
+    501,
+    "keys_managed_by_openvault"
+  );
+  await expectNamed(
+    await postJson("/api/providers/command-code/auth/apply", { state: "x" }),
+    501,
+    "keys_managed_by_openvault"
+  );
+});
+
+test("an API-key connection is created without a key, and PUT/PATCH refuse one", async () => {
+  const created = await postJson("/api/providers", { provider: "openai", name: "smoke-keyless" });
+  const createdBody = await readJson(created);
+  assert.equal(created.status, 201, JSON.stringify(createdBody));
+  const id = createdBody.connection?.id;
+  assert.ok(id, "created connection id");
+
+  for (const method of ["PUT", "PATCH"]) {
+    const res = await fetch(`${baseUrl()}/api/providers/${id}`, {
+      method,
+      headers: managementHeaders({ "content-type": "application/json" }),
+      body: JSON.stringify({ apiKey: "sk-should-never-be-stored" }),
+    });
+    await expectNamed(res, 501, "keys_managed_by_openvault");
+  }
+  const extra = await fetch(`${baseUrl()}/api/providers/${id}`, {
+    method: "PUT",
+    headers: managementHeaders({ "content-type": "application/json" }),
+    body: JSON.stringify({ providerSpecificData: { extraApiKeys: ["sk-should-never-be-stored"] } }),
+  });
+  await expectNamed(extra, 501, "keys_managed_by_openvault");
+
+  // A plain rename still works.
+  const rename = await fetch(`${baseUrl()}/api/providers/${id}`, {
+    method: "PUT",
+    headers: managementHeaders({ "content-type": "application/json" }),
+    body: JSON.stringify({ name: "smoke-keyless-renamed" }),
+  });
+  assert.equal(rename.status, 200);
+});
+
+test("cookie validation for a browser-session provider is refused", async () => {
+  await expectNamed(
+    await postJson("/api/providers/validate", { provider: "grok-web", apiKey: "sso=abc" }),
+    501,
+    "consumer_session_relay_disabled"
+  );
+});
+
+test("TLS fingerprint stealth cannot be switched on", async () => {
+  const res = await fetch(`${baseUrl()}/api/settings/feature-flags`, {
+    method: "PUT",
+    headers: managementHeaders({ "content-type": "application/json" }),
+    body: JSON.stringify({ key: "ENABLE_TLS_FINGERPRINT", value: "true" }),
+  });
+  await expectNamed(res, 501, "tls_fingerprint_stealth_disabled");
+});
+
+test("cloud credential sync cannot write tokens into a local connection", async () => {
+  const res = await fetch(`${baseUrl()}/api/cloud/credentials/update`, {
+    method: "PUT",
+    headers: managementHeaders({ "content-type": "application/json" }),
+    body: JSON.stringify({ provider: "openai", credentials: { accessToken: "at-should-never-be-stored" } }),
+  });
+  await expectNamed(res, 501, "keys_managed_by_openvault");
+});
+
+test("/v1/messages, /v1/responses and /v1/completions return the named 501 for subscription models", async () => {
+  await expectNamed(
+    await postJson("/api/v1/messages", {
+      model: "claude/claude-sonnet-4-5",
+      max_tokens: 5,
+      messages: [{ role: "user", content: "hi" }],
+    }),
+    501,
+    "consumer_subscription_pooling_disabled"
+  );
+  await expectNamed(
+    await postJson("/api/v1/responses", { model: "codex/gpt-5.5", input: "hi" }),
+    501,
+    "consumer_subscription_pooling_disabled"
+  );
+  await expectNamed(
+    await postJson("/api/v1/completions", { model: "cursor/auto", prompt: "hi" }),
+    501,
+    "consumer_subscription_pooling_disabled"
+  );
+});
+
+test("local-CLI subscription executors and the browser-fingerprint provider are refused", async () => {
+  for (const model of ["dva/x", "aug/x", "zc/x", "cxa/gpt-5.5"]) {
+    await expectNamed(
+      await postJson("/api/v1/chat/completions", { model, messages: [{ role: "user", content: "hi" }] }),
+      501,
+      "consumer_subscription_pooling_disabled"
+    );
+  }
+  await expectNamed(
+    await postJson("/api/v1/chat/completions", { model: "cfp/x", messages: [{ role: "user", content: "hi" }] }),
+    501,
+    "tls_fingerprint_stealth_disabled"
+  );
+});
+
+test("media routes refuse session-relay and subscription providers", async () => {
+  await expectNamed(
+    await postJson("/api/v1/images/generations", { model: "uc/flux", prompt: "x" }),
+    501,
+    "consumer_session_relay_disabled"
+  );
+  await expectNamed(
+    await postJson("/api/v1/images/generations", { model: "codex/gpt-image-1", prompt: "x" }),
+    501,
+    "consumer_subscription_pooling_disabled"
+  );
+  await expectNamed(
+    await postJson("/api/v1/videos/generations", { model: "veoaifree-web/veo", prompt: "x" }),
+    501,
+    "consumer_session_relay_disabled"
+  );
+  await expectNamed(
+    await postJson("/api/v1/music/generations", { model: "udio/udio", prompt: "x" }),
+    501,
+    "consumer_session_relay_disabled"
+  );
+  await expectNamed(
+    await postJson("/api/v1/audio/speech", { model: "uc/tts-1", input: "hi" }),
+    501,
+    "consumer_session_relay_disabled"
+  );
+});
+
+test("the Responses WebSocket upgrade answers the named 501", async () => {
+  const { status, body } = await new Promise((resolve, reject) => {
+    const req = httpRequest({
+      host: "127.0.0.1",
+      port: appPort,
+      path: "/v1/responses",
+      headers: {
+        Connection: "Upgrade",
+        Upgrade: "websocket",
+        "Sec-WebSocket-Version": "13",
+        "Sec-WebSocket-Key": randomBytes(16).toString("base64"),
+        authorization: `Bearer ${MANAGEMENT_API_KEY}`,
+      },
+    });
+    req.on("response", (res) => {
+      let text = "";
+      res.on("data", (chunk) => (text += chunk));
+      res.on("end", () => resolve({ status: res.statusCode, body: text }));
+    });
+    req.on("upgrade", () => reject(new Error("WebSocket upgrade must not succeed")));
+    req.on("error", reject);
+    req.end();
+  });
+  assert.equal(status, 501, body);
+  assert.equal(JSON.parse(body).error?.code, "consumer_subscription_pooling_disabled");
+});
+

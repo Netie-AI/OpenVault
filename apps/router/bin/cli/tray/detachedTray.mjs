@@ -124,7 +124,7 @@ export async function startDetachedTray(
 ) {
   const token = randomBytes(32).toString("hex");
   const readiness = await createTrayReadinessServer(token);
-  const label = `com.omniroute.tray.${process.pid}.${Date.now()}`;
+  const label = `com.netie.freeroute.tray.${process.pid}.${Date.now()}`;
   const workerArgs = buildTrayWorkerArgs({
     port,
     maxRestarts,

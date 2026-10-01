@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Build the routing + DNS plan for one mail server.
  *
@@ -132,7 +133,7 @@ function buildRoutes(input: MailServerRouteInput): MailRoute[] {
       hostname: autodiscoverHost!,
       targetUrl: input.openshipApiOrigin,
       tls: true,
-      description: "Outlook / Thunderbird autodiscover XML - served by openship's API controller.",
+      description: "Outlook / Thunderbird autodiscover XML - served by FreeBuild's API controller.",
     },
     // Intentionally no public "email-admin" route - mailbox / domain / alias
     // management runs inside openship's API, which writes to the mail-server
@@ -185,7 +186,7 @@ function buildDnsRecords(input: MailServerRouteInput): MailDnsRecord[] {
       // Filled in after iRedMail finishes installing - Amavisd generates the
       // DKIM keypair during setup. The dashboard surfaces the actual key
       // once the install completes.
-      value: "<DKIM public key - generated during mail server install; copy from openship dashboard once provisioning completes>",
+      value: "<DKIM public key - generated during mail server install; copy from the FreeBuild dashboard once provisioning completes>",
       description: `DKIM signs outgoing mail with a private key the mail server holds; recipients verify against this public key. Critical for deliverability to Gmail/Outlook.`,
       required: false,
     },
@@ -216,7 +217,7 @@ function buildDnsRecords(input: MailServerRouteInput): MailDnsRecord[] {
       type: "CNAME",
       name: mailHostname(d),
       value: hostnameFromUrl(input.zeroClientOrigin),
-      description: `Routes ${mailHostname(d)} (the webmail UI) to openship's app-deploy ingress where the Zero client is hosted.`,
+      description: `Routes ${mailHostname(d)} (the webmail UI) to FreeBuild's app-deploy ingress where the Zero client is hosted.`,
       required: true,
     },
     {
@@ -224,7 +225,7 @@ function buildDnsRecords(input: MailServerRouteInput): MailDnsRecord[] {
       type: "CNAME",
       name: apiMailHostname(d),
       value: hostnameFromUrl(input.zeroServerOrigin),
-      description: `Routes ${apiMailHostname(d)} (the Zero server's tRPC API) to the mail VPS via openship's routing layer.`,
+      description: `Routes ${apiMailHostname(d)} (the Zero server's tRPC API) to the mail VPS via FreeBuild's routing layer.`,
       required: true,
     },
     // No email-admin CNAME - admin operations run inside openship's own API
@@ -235,7 +236,7 @@ function buildDnsRecords(input: MailServerRouteInput): MailDnsRecord[] {
       type: "CNAME",
       name: `autodiscover.${d}`,
       value: hostnameFromUrl(input.openshipApiOrigin),
-      description: `Routes autodiscover.${d} to openship's API, which serves the XML mail clients use to auto-configure (Outlook, Thunderbird).`,
+      description: `Routes autodiscover.${d} to FreeBuild's API, which serves the XML mail clients use to auto-configure (Outlook, Thunderbird).`,
       required: false,
     },
   ];

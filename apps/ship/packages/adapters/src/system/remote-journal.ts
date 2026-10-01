@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Remote command journaling — the exactly-once mechanism.
  *
@@ -59,7 +60,7 @@ export const REMOTE_ENV_PREFIX =
  * in this template literal — only `$VAR`, `$(...)`, `$((...))` are used.
  */
 const OPSH_RUN_SCRIPT = `#!/bin/sh
-# opsh-run — openship reliable command journal. Managed file; do not edit.
+# opsh-run — FreeBuild reliable command journal. Managed file; do not edit.
 VERSION=${OPSH_RUN_VERSION}
 
 BASE="$OPSH_BASE"

@@ -17,6 +17,7 @@ import {
   updateProviderConnection,
 } from "@/lib/db/providers";
 import { getCachedProviderConnectionById } from "@/lib/db/readCache";
+import { classifyConnection } from "@/lib/netie/providerGuards";
 import { getSettings } from "@/lib/db/settings";
 import { resolveGuardedProxyConfig } from "@/lib/tokenHealthCheckProxyGuard";
 import {
@@ -535,7 +536,9 @@ export async function sweep(): Promise<number> {
       // #11488: web-cookie rows (auth_type 'cookie') were never swept — a dead
       // cookie stayed "active" until a live request failed against it.
       ...(await getProviderConnections({ authType: "cookie" })),
-    ];
+      // FreeRoute: subscription and browser-session rows (for example from a
+      // restored backup) are never refreshed against consumer endpoints.
+    ].filter((conn) => !classifyConnection(conn));
 
     if (!connections || connections.length === 0) return 0;
 
@@ -592,6 +595,8 @@ export async function sweep(): Promise<number> {
  */
 export async function checkConnection(conn) {
   if (!conn?.id) return;
+  // FreeRoute: same rule as sweep(), for direct callers.
+  if (classifyConnection(conn)) return;
 
   const latestConnection = (await getCachedProviderConnectionById(conn.id)) || conn;
   conn = latestConnection;

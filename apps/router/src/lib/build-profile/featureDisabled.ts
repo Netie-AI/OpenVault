@@ -11,7 +11,7 @@ export class FeatureDisabledError extends Error {
   constructor(featureName: string) {
     super(
       `Feature "${featureName}" is disabled in this build (OMNIROUTE_BUILD_PROFILE=minimal). ` +
-        `Install the full omniroute artifact instead of omniroute-secure if you need this feature.`
+        `Use the full FreeRoute build instead of the minimal one if you need this feature.`
     );
     this.name = "FeatureDisabledError";
     this.featureName = featureName;

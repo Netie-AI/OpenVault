@@ -29,9 +29,11 @@ const envUrl = (key: string): string | undefined => {
   const v = typeof process !== "undefined" ? process.env?.[key] : undefined;
   return v && v.trim() ? v.trim() : undefined;
 };
-export const CLOUD_DASHBOARD_URL =
-  envUrl("OPENSHIP_CLOUD_DASHBOARD_URL") ?? "https://app.openship.io";
-export const CLOUD_API_URL = envUrl("OPENSHIP_CLOUD_API_URL") ?? "https://api.openship.io";
+// Modified by Netie AI, 2026: hosted cloud is disabled in FreeBuild, so the
+// cloud endpoints default to empty instead of the upstream vendor's hosts.
+// The env overrides still work for local cloud-flow testing.
+export const CLOUD_DASHBOARD_URL = envUrl("OPENSHIP_CLOUD_DASHBOARD_URL") ?? "";
+export const CLOUD_API_URL = envUrl("OPENSHIP_CLOUD_API_URL") ?? "";
 
 /**
  * THE runtime-target table. Keyed by id — the id IS the key, no
@@ -113,9 +115,9 @@ export const cloudRuntimeTargetId: DashboardRuntimeTargetId =
 export const cloudRuntimeTarget = DASHBOARD_RUNTIME_TARGETS[cloudRuntimeTargetId];
 
 // Every dashboard + api origin from the table — used for CORS allowlists.
-export const dashboardRuntimeOrigins = Object.values(DASHBOARD_RUNTIME_TARGETS).flatMap(
-  ({ dashboard, api }) => [dashboard, api],
-);
+export const dashboardRuntimeOrigins = Object.values(DASHBOARD_RUNTIME_TARGETS)
+  .flatMap(({ dashboard, api }) => [dashboard, api])
+  .filter((origin): origin is string => origin.length > 0);
 
 export const LOOPBACK_HOSTNAMES = new Set(["localhost", "127.0.0.1", "[::1]"]);
 

@@ -4,6 +4,13 @@
 // in this fork (mail hosting is in scope — see PRODUCT_ROLES.md), so that
 // branch is not expected to run, but is kept rather than made unconditional
 // again in case a stripped-down checkout ever omits it.
+// Modified by Netie AI, 2026: the worker is code-split (splitting: true). Without
+// it esbuild wraps every lazily loaded module in an `__esm` initializer, and every
+// module that reaches the top-level await in packages/db/src/client.ts gets an
+// ASYNC initializer. Two async initializers in an import cycle await each other's
+// promise, nothing else keeps the loop alive, and the worker exits 0 before it is
+// ready. Split chunks are real ES modules, so Node's loader runs the cycle and the
+// top-level await in spec order. The entry stays dist/native/engine-worker.mjs.
 /** Build-time assembly of the shared engine for an owned Node worker. */
 import { build as esbuild } from "esbuild";
 import { cpSync, existsSync, mkdirSync, rmSync } from "node:fs";
@@ -20,8 +27,11 @@ mkdirSync(out, { recursive: true });
 // there is no "env: disable" escape hatch to reach for here — runtime
 // configuration already belongs to the owning instance by default.
 await esbuild({
-  entryPoints: [join(packageDir, "src/native-worker.ts")],
-  outfile: join(out, "engine-worker.mjs"),
+  entryPoints: { "engine-worker": join(packageDir, "src/native-worker.ts") },
+  outdir: out,
+  outExtension: { ".js": ".mjs" },
+  chunkNames: "chunks/[name]-[hash]",
+  splitting: true,
   bundle: true,
   platform: "node",
   format: "esm",

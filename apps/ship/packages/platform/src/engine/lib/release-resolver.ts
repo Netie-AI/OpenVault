@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * ONE resolver for a prebuilt release/dist directory, generalizing the two
  * near-identical copies that used to live in migration/openship-dist.ts and the
@@ -228,7 +229,7 @@ export async function fetchLatestRelease(repo: string): Promise<GithubReleasePay
     const ctl = new AbortController();
     const timer = setTimeout(() => ctl.abort(), 10_000);
     const res = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, {
-      headers: { Accept: "application/vnd.github+json", "User-Agent": "openship" },
+      headers: { Accept: "application/vnd.github+json", "User-Agent": "FreeBuild" },
       signal: ctl.signal,
     }).finally(() => clearTimeout(timer));
     if (!res.ok) return null;
@@ -298,7 +299,7 @@ async function fetchVersionFromUrl(url: string): Promise<ResolvedReleaseVersion 
     // callers cannot use the control plane to read private network services,
     // including on self-hosted instances.
     const res = await safeFetch(url, {
-      headers: { "User-Agent": "openship" },
+      headers: { "User-Agent": "FreeBuild" },
       timeoutMs: 10_000,
       maxRedirects: 5,
       maxBodyBytes: 8192,

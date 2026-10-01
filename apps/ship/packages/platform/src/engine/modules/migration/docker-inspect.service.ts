@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Docker discovery for the "migrate an existing deployment" flow — the IO shell.
  *
@@ -215,7 +216,7 @@ export async function discoverServerStack(
         const self = await repos.server.get(serverId).catch(() => undefined);
         const ownIds =
           self?.isLocal === true ? new Set(findOwnStack(containers).map((c) => c.id)) : new Set<string>();
-        if (ownIds.size > 0) step(`Excluding Openship's own ${ownIds.size} container(s)…`);
+        if (ownIds.size > 0) step(`Excluding FreeBuild's own ${ownIds.size} container(s)…`);
         const adoptable = ownIds.size > 0 ? containers.filter((c) => !ownIds.has(c.id)) : containers;
 
         // Split by ownership. GENERIC candidates (no openship.* label) feed the
@@ -339,7 +340,7 @@ export async function discoverServerStack(
         }
 
         if (projectIds.length > 0) {
-          step("Recovering Openship projects…");
+          step("Recovering FreeBuild projects…");
           // One SSH session: read the manifest AND check which projects have a full
           // recovery snapshot (cheap `test -f`, no read — the dump is read only at
           // re-import time, for one project).

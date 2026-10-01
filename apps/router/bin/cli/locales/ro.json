@@ -27,7 +27,7 @@
     "loginEnabled": "Autentificare: activată (parolă actualizată)",
     "loginDisabled": "Autentificare: dezactivată",
     "providerInfo": "Furnizor: {info}",
-    "opencode": "Instalați și configurați pachetul @omniroute/opencode-plugin inclus pentru OpenCode"
+    "opencode": "Instalați și configurați pachetul OpenCode plugin inclus pentru OpenCode"
   },
   "doctor": {
     "title": "Diagnosticare FreeRoute",

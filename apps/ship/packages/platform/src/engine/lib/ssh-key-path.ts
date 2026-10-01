@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Shared safety check for `server.sshKeyPath` values.
  *
@@ -175,7 +176,7 @@ export function sshKeyPathProblem(raw: string): string | null {
   try {
     accessSync(resolved, constants.R_OK);
   } catch {
-    return `sshKeyPath is not readable by Openship — no such file, or no permission: ${resolved}`;
+    return `sshKeyPath is not readable by FreeBuild — no such file, or no permission: ${resolved}`;
   }
 
   // A directory passes the readability probe but blows up in readFileSync later,

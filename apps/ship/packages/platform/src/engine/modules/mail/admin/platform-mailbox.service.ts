@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Platform mailbox — the single SMTP identity the openship API authenticates
  * as for transactional mail (welcome emails, alerts, future user-invite
@@ -59,7 +60,9 @@ import {
 import { recountDomain } from "./domains.service";
 
 export const DOMAIN_RE = /^[a-z0-9][a-z0-9-]*(\.[a-z0-9][a-z0-9-]*)+$/i;
-export const PLATFORM_LOCAL_PART = "openship";
+// Was "openship" upstream. Existing installs get a new freebuild@<domain>
+// mailbox on the next ensure; the old openship@ mailbox is left in place.
+export const PLATFORM_LOCAL_PART = "freebuild";
 
 export class PlatformMailboxError extends Error {}
 
@@ -236,7 +239,7 @@ async function mintAndPersist(args: MintArgs): Promise<PlatformMailboxCreds> {
     buildUpsertMailboxSql({
       username: email,
       passwordHash: hash,
-      name: "Openship Platform",
+      name: "FreeBuild Platform",
       domain,
       storagebasedirectory: layout.storagebasedirectory,
       storagenode: layout.storagenode,
@@ -327,7 +330,7 @@ export function buildCreds(args: {
     smtpHost: args.smtpHost,
     smtpPort: 465,
     secure: true,
-    from: `Openship <${args.email}>`,
+    from: `FreeBuild <${args.email}>`,
     rotated: args.rotated,
   };
 }

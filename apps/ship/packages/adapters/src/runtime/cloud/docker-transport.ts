@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 import { createServer, type Server, type Socket } from "node:net";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -139,8 +140,8 @@ export function createCloudDockerTransport(open: () => Promise<Duplex>): DockerT
   const sockets = new Set<Duplex>();
   return {
     kind: "cloud",
-    description: "Docker inside an Oblien workspace",
-    unreachableHint: "Check that the project's Oblien Docker workspace is running and reachable.",
+    description: "Docker inside a cloud workspace",
+    unreachableHint: "Check that the project's cloud Docker workspace is running and reachable.",
     async establish() {
       if (closed) throw new Error("Cloud Docker transport is closed");
       directory = await mkdtemp(join(tmpdir(), "openship-cloud-docker-"));

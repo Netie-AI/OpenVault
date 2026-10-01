@@ -142,7 +142,7 @@ export function formatAndroidInstrumentationFailureHint(cacheDir) {
     `    \x1b[36m${dir}\x1b[0m\n` +
     `  Manual workaround (survives reinstalls — do NOT patch dist/server.js):\n` +
     `    \x1b[36mmkdir -p ~/.cache\x1b[0m\n` +
-    `    then restart: \x1b[36momniroute serve\x1b[0m\n` +
+    `    then restart: \x1b[36mfreeroute serve\x1b[0m\n` +
     `  See: docs/guides/TERMUX_GUIDE.md → Troubleshooting → Unsupported platform: android\n`
   );
 }

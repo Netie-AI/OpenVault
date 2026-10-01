@@ -13,5 +13,5 @@
 /** Header Nimble uses to attribute a request to the calling product. */
 export const NIMBLE_CLIENT_SOURCE_HEADER = "X-Client-Source";
 
-/** The value OmniRoute sends. Do not vary it per surface or per request. */
-export const NIMBLE_CLIENT_SOURCE = "omniroute";
+/** The value FreeRoute sends. Do not vary it per surface or per request. */
+export const NIMBLE_CLIENT_SOURCE = "freeroute";

@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 import { lookup as dnsLookup } from "node:dns/promises";
 import nodemailer, { type Transporter } from "nodemailer";
 import { env } from "../config/env";
@@ -340,9 +341,9 @@ export async function sendInstanceTestEmail(to: string): Promise<void> {
   await active.transport.sendMail({
     from: active.from,
     to,
-    subject: "Openship SMTP test",
+    subject: "FreeBuild SMTP test",
     text:
-      "This is a test message from your Openship instance SMTP configuration. " +
+      "This is a test message from your FreeBuild instance SMTP configuration. " +
       "If you received it, outbound email (password resets, invites, notifications) works.",
   });
 }

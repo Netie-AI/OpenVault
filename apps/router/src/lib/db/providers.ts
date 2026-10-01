@@ -41,6 +41,11 @@ import { isMicrosoftDesignerWebRetiredProviderId } from "@/shared/constants/desi
 import { reconcileCodexUsageHistory } from "./providers/usageIdentityReconciliation";
 import { isRuntimeRetiredProviderId } from "@/shared/constants/providerRetirement";
 import { applyCodexChildCooldownClearOnUpdate } from "./providers/codexAccountState";
+import {
+  assertConnectionWriteAllowed,
+  classifyConnection,
+  stripSecretProviderSpecificData,
+} from "@/lib/netie/providerGuards";
 
 /**
  * normalizeProviderSpecificData + the Codex fingerprint-seed invariant: Codex
@@ -471,6 +476,9 @@ function findExistingCookieConnection(
 }
 
 export async function createProviderConnection(data: JsonRecord) {
+  // FreeRoute: refuse classified providers and any provider secret before the
+  // row exists. Provider keys live only in OpenVault (src/lib/netie/providerGuards.ts).
+  assertConnectionWriteAllowed(data);
   await assertApiKeyIsNotManagementPassword(data.apiKey);
   const db = getDbInstance() as unknown as DbLike;
   const now = new Date().toISOString();
@@ -981,11 +989,22 @@ export async function updateProviderConnection(id: string, data: JsonRecord) {
   await assertApiKeyIsNotManagementPassword(data.apiKey);
 
   const existingCamel = toRecord(rowToCamel(existing));
+  // FreeRoute: refuse a new secret, and credentials on a classified row. The
+  // guard compares against the decrypted stored values so a caller that spreads
+  // the whole connection back into an update is not mistaken for a new write.
+  assertConnectionWriteAllowed(data, decryptConnectionFields({ ...existingCamel }) as JsonRecord);
   const merged: JsonRecord = {
     ...existingCamel,
     ...data,
     updatedAt: new Date().toISOString(),
   };
+  if (!classifyConnection(merged)) {
+    // Scrub a key left in the row by an import or an older build. It is never
+    // read (materializeConnection resolves keys from OpenVault) and must not
+    // stay on disk.
+    merged.apiKey = null;
+    merged.providerSpecificData = stripSecretProviderSpecificData(merged.providerSpecificData);
+  }
   merged.providerSpecificData = applyCodexChildCooldownClearOnUpdate(
     data,
     normalizeConnectionProviderSpecificData(

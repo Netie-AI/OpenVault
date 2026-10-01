@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Organization-scoped custom GitHub Apps: lifecycle, secret storage and
  * source-specific runtime credential resolution.
@@ -214,7 +215,7 @@ export async function getGitHubSourceConfiguration(): Promise<GitHubSourceConfig
 async function assertPublicGitHubCallback(): Promise<void> {
   if ((await getGitHubSourceConfiguration()).publicReady) return;
   throw new ValidationError(
-    "Configure a public HTTPS URL for this Openship instance before creating a GitHub App. GitHub must be able to reach its setup callback and webhook.",
+    "Configure a public HTTPS URL for this FreeBuild instance before creating a GitHub App. GitHub must be able to reach its setup callback and webhook.",
   );
 }
 
@@ -367,7 +368,7 @@ function manifestAppName(sourceName: string): string {
     // Keep the stable fallback; URL validation happens elsewhere at startup.
   }
   const suffix = randomBytes(3).toString("hex");
-  const stem = `OpenShip ${sourceName} ${host}`.replace(/\s+/g, " ").trim();
+  const stem = `FreeBuild ${sourceName} ${host}`.replace(/\s+/g, " ").trim();
   return `${stem.slice(0, Math.max(1, 33 - suffix.length)).trim()}-${suffix}`;
 }
 

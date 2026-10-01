@@ -27,7 +27,7 @@
     "loginEnabled": "登入：已啟用（密碼已更新）",
     "loginDisabled": "登入：已停用",
     "providerInfo": "提供者：{info}",
-    "opencode": "安裝並配置隨附的 @omniroute/opencode-plugin 以用於 OpenCode"
+    "opencode": "安裝並配置隨附的 OpenCode plugin 以用於 OpenCode"
   },
   "doctor": {
     "title": "FreeRoute 診斷",

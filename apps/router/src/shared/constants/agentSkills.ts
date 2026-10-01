@@ -233,7 +233,7 @@ export const CURATED_SKILLS: CuratedSkillEntry[] = [
     id: "omni-version-manager",
     name: "Version Manager",
     description:
-      "Install, start, stop, restart, and update embedded services (9Router, CLIProxyAPI). Monitor service status, retrieve logs, and configure auto-start for local-only service endpoints.",
+      "Install, start, stop, restart, and update embedded services (CLIProxyAPI). Monitor service status, retrieve logs, and configure auto-start for local-only service endpoints.",
     category: "api",
     area: "version-manager",
     icon: "manage_history",

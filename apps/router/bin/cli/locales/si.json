@@ -27,7 +27,7 @@
     "loginEnabled": "පිවිසුම: සක්රීයයි (මුරපදය යාවත්කාලීන කරන ලදී)",
     "loginDisabled": "පිවිසුම: අක්රීයයි",
     "providerInfo": "සැපයුම්කරු: {info}",
-    "opencode": "OpenCode සඳහා ඇතුළත් කර ඇති @omniroute/opencode-plugin ස්ථාපනය කර වින්යාස කරන්න"
+    "opencode": "OpenCode සඳහා ඇතුළත් කර ඇති OpenCode plugin ස්ථාපනය කර වින්යාස කරන්න"
   },
   "doctor": {
     "title": "FreeRoute පද්ධති පරීක්ෂාව",

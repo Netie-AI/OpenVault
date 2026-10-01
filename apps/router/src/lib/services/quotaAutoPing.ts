@@ -20,6 +20,7 @@
  * no real timers, no real DB, no real network.
  */
 
+import { assertProviderAllowed, classifyProviderId } from "@omniroute/open-sse/netie/policy.ts";
 import { logger } from "@omniroute/open-sse/utils/logger.ts";
 import { sanitizeErrorMessage } from "@omniroute/open-sse/utils/error.ts";
 import type { BaseExecutor } from "@omniroute/open-sse/executors/base";
@@ -103,6 +104,9 @@ export function createQuotaAutoPingState(): QuotaAutoPingState {
 let codexExecutorPromise: Promise<BaseExecutor> | null = null;
 
 async function loadQuotaAutoPingExecutor(provider: string): Promise<BaseExecutor> {
+  // FreeRoute: auto-ping drives pooled Codex (ChatGPT subscription) accounts.
+  // Not shipped: throws NetieDisabledError (consumer_subscription_pooling_disabled).
+  assertProviderAllowed(provider);
   if (provider !== "codex") {
     throw new Error(`Quota auto-ping does not support provider "${provider}"`);
   }
@@ -493,7 +497,11 @@ async function pingProviderConnections(
 ): Promise<void> {
   const connections = await deps.getProviderConnections({ provider, isActive: true });
   const targets = connections.filter(
-    (conn) => conn.authType === "oauth" && enabledMap[conn.id] === true
+    (conn) =>
+      conn.authType === "oauth" &&
+      enabledMap[conn.id] === true &&
+      // FreeRoute: subscription connections are never pinged.
+      !classifyProviderId(provider)
   );
   for (const connection of targets) {
     try {
@@ -550,6 +558,12 @@ const schedulerState = createQuotaAutoPingState();
 /** Start the in-process scheduler. Idempotent — a second call is a no-op. */
 export function startQuotaAutoPing(): void {
   if (schedulerInterval) return;
+  // FreeRoute: the only provider this scheduler serves is Codex OAuth, which is
+  // consumer subscription pooling. It never starts in this edition.
+  if (classifyProviderId("codex")) {
+    log.info("scheduler not started: consumer subscription pooling is disabled");
+    return;
+  }
   log.info("scheduler started");
   runQuotaAutoPingTick(createDefaultQuotaAutoPingDeps(), schedulerState).catch(() => undefined);
   schedulerInterval = setInterval(() => {

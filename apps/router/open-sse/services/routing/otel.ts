@@ -75,7 +75,7 @@ export class OtlpHttpsEventSink {
   constructor(private readonly config: OtlpHttpsExporterConfig) {
     this.endpoint = config.endpoint.replace(/\/+$/, "") + "/v1/traces";
     this.maxBatchSize = config.maxBatchSize ?? 64;
-    this.serviceName = config.serviceName ?? "omniroute";
+    this.serviceName = config.serviceName ?? "freeroute";
     this.start();
   }
 
@@ -164,7 +164,7 @@ export function buildOtlpTracesPayload(events: RoutingEventLike[], serviceName: 
       resource: {
         attributes: [
           { key: "service.name", value: { stringValue: serviceName } },
-          { key: "telemetry.sdk.name", value: { stringValue: "omniroute-routing" } },
+          { key: "telemetry.sdk.name", value: { stringValue: "freeroute-routing" } },
         ],
       },
       scopeSpans: [

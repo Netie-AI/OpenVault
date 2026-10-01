@@ -1,4 +1,5 @@
 "use client";
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 
 import { Icon as UiIcon } from "@repo/ui/icons";
 
@@ -38,7 +39,7 @@ export function DataTransferTab() {
   return (
     <div className="space-y-6">
       <div className="rounded-lg border border-warning-border bg-warning-bg px-3 py-2.5 text-xs leading-relaxed text-warning">
-        These tools move the Openship database and credentials. Persistent Docker volume contents
+        These tools move the FreeBuild database and credentials. Persistent Docker volume contents
         are not included; move service data with project/server migration or restore it from a
         backup.
       </div>
@@ -144,7 +145,7 @@ export function DirectTransferCard({ onToast }: { onToast: Toast }) {
     <SettingsSection
       icon={"arrows-left-right"}
       title="Move directly to another instance"
-      description="Transfer the Openship database and credentials securely without downloading a file or managing an encryption password."
+      description="Transfer the FreeBuild database and credentials securely without downloading a file or managing an encryption password."
       iconBg="bg-primary/10"
       iconColor="text-primary"
     >

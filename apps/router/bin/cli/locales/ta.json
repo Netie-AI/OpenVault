@@ -27,7 +27,7 @@
     "loginEnabled": "உள்நுழைவு: இயக்கப்பட்டது (கடவுச்சொல் புதுப்பிக்கப்பட்டது)",
     "loginDisabled": "உள்நுழைவு: முடக்கப்பட்டது",
     "providerInfo": "Provider: {info}",
-    "opencode": "OpenCode-க்கான தொகுக்கப்பட்ட @omniroute/opencode-plugin-ஐ நிறுவி உள்ளமைக்கவும்"
+    "opencode": "OpenCode-க்கான தொகுக்கப்பட்ட OpenCode plugin-ஐ நிறுவி உள்ளமைக்கவும்"
   },
   "doctor": {
     "title": "FreeRoute பரிசோதனை",

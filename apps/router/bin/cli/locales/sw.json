@@ -27,7 +27,7 @@
     "loginEnabled": "Kuingia: kumewashwa (nenosiri limesasishwa)",
     "loginDisabled": "Kuingia: kumezimwa",
     "providerInfo": "Mtoa huduma: {info}",
-    "opencode": "Sakinisha na usanidi @omniroute/opencode-plugin iliyojumuishwa kwa OpenCode"
+    "opencode": "Sakinisha na usanidi OpenCode plugin iliyojumuishwa kwa OpenCode"
   },
   "doctor": {
     "title": "Uchunguzi wa FreeRoute",

@@ -1,3 +1,4 @@
+import { DISABLED, renderDisabled } from "@omniroute/open-sse/netie/policy.ts";
 import { NextResponse } from "next/server";
 import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
@@ -775,11 +776,11 @@ export async function POST(request: Request) {
   }
 
   const action = typeof body.action === "string" ? body.action : "";
-  if (action === "authenticate") {
-    return authenticate(body);
-  }
-  if (action === "prepare") {
-    return prepare(body);
+  // FreeRoute: authenticate and prepare resolve and lease pooled Codex
+  // (ChatGPT subscription) accounts. Not shipped: both answer the named 501.
+  // scripts/dev/responses-ws-proxy.mjs also refuses the WebSocket upgrade.
+  if (action === "authenticate" || action === "prepare") {
+    return renderDisabled(DISABLED.consumerSubscription);
   }
   if (action === "release") {
     return NextResponse.json({

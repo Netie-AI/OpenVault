@@ -13,7 +13,7 @@ const HOSTS = ["api.anthropic.com"];
 const ENDPOINTS = ["/v1/messages"];
 const INSTRUCTIONS = [
   "1. Install FreeRoute's root certificate (Dashboard → AgentBridge → Cert)",
-  "2. Start the MITM proxy: `omniroute mitm start --target kiro`",
+  "2. Start the MITM proxy: `freeroute mitm start --target kiro`",
   "3. Set your system HTTP proxy to 127.0.0.1:20130 (or use transparent MITM via DNS override)",
   "4. Open Kiro IDE — API calls will be automatically routed through FreeRoute.",
   "5. Verify: check the Proxy Logs in FreeRoute dashboard and look for provider=anthropic source=mitm",

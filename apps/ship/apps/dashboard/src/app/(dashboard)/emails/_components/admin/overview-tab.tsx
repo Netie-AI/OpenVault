@@ -1,4 +1,5 @@
 "use client";
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 
 import { Icon as UiIcon, type IconName } from "@repo/ui/icons";
 
@@ -64,7 +65,7 @@ export function OverviewTab({ status, serverId }: OverviewTabProps) {
           serverId={serverId}
           webmail={status.webmail}
         />
-        <SetupGuidesBanner />
+        {getMarketingOrigin() && <SetupGuidesBanner />}
       </div>
 
       <div className="space-y-4 lg:sticky lg:top-6 lg:self-start">

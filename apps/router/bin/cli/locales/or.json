@@ -27,7 +27,7 @@
     "loginEnabled": "ଲଗ୍‌ଇନ୍: ସକ୍ଷମ (ପାସ୍‌ୱାର୍ଡ ଅଦ୍ୟତନ ହୋଇଛି)",
     "loginDisabled": "ଲଗ୍‌ଇନ୍: ଅକ୍ଷମ",
     "providerInfo": "ପ୍ରଦାତା: {info}",
-    "opencode": "OpenCode ପାଇଁ ବଣ୍ଡଲ୍ କରାଯାଇଥିବା @omniroute/opencode-plugin ଇନ୍‌ଷ୍ଟଲ୍ ଏବଂ ବିନ୍ୟାସ କରନ୍ତୁ"
+    "opencode": "OpenCode ପାଇଁ ବଣ୍ଡଲ୍ କରାଯାଇଥିବା OpenCode plugin ଇନ୍‌ଷ୍ଟଲ୍ ଏବଂ ବିନ୍ୟାସ କରନ୍ତୁ"
   },
   "doctor": {
     "title": "FreeRoute ଡାକ୍ତର",

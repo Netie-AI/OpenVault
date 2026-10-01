@@ -18,7 +18,7 @@
     "continue": "Continue",
     "cancel": "Cancel",
     "retry": "Retry",
-    "selfHostedOnly": "Server clusters are available on a self-hosted FreeBuild instance. Oblien manages Cloud infrastructure.",
+    "selfHostedOnly": "Server clusters are available on a self-hosted FreeBuild instance.",
     "managePermissionRequired": "You need permission to manage all servers in this workspace to configure clusters.",
     "notChecked": "Not verified yet",
     "networkStatus": "Network verification",
@@ -679,7 +679,7 @@
     "failed": "Failed",
     "noPeerChecks": "Run verification to see connections between servers.",
     "projectScope": "Connect servers and manage private connectivity independently of server clusters.",
-    "selfHostedOnly": "Private networks are available on a self-hosted FreeBuild instance. Oblien manages Cloud infrastructure.",
+    "selfHostedOnly": "Private networks are available on a self-hosted FreeBuild instance.",
     "managePermissionRequired": "You need permission to manage all servers in this workspace to configure networks.",
     "editWhileVerifying": "Wait for network verification to finish before editing this network.",
     "status": {

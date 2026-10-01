@@ -27,7 +27,7 @@
     "loginEnabled": "Σύνδεση: ενεργοποιημένη (ο κωδικός ενημερώθηκε)",
     "loginDisabled": "Σύνδεση: απενεργοποιημένη",
     "providerInfo": "Πάροχος: {info}",
-    "opencode": "Εγκατάσταση και ρύθμιση του ενσωματωμένου @omniroute/opencode-plugin για το OpenCode"
+    "opencode": "Εγκατάσταση και ρύθμιση του ενσωματωμένου OpenCode plugin για το OpenCode"
   },
   "doctor": {
     "title": "FreeRoute Doctor",

@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026
 /**
  * The cloud client facade — the single typed surface the rest of the app uses
  * to talk to api.openship.io. Construction takes the scope (userId or

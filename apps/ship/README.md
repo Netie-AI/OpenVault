@@ -1,3 +1,4 @@
+<!-- Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text. -->
 # FreeBuild
 
 FreeBuild is Netie's self-hosted deploy and host engine. Point it at a git
@@ -44,7 +45,9 @@ npm start
 
 The API listens on `127.0.0.1:3030` by default; the dashboard on
 `127.0.0.1:3031`. Both bind to loopback only unless you set
-`OPENSHIP_API_HOST` / the dashboard's `HOSTNAME` to something else. See
+`OPENSHIP_API_HOST` / `FREEBUILD_DASHBOARD_HOST` to something else. The
+dashboard ignores the generic `HOSTNAME` variable, which Docker sets to the
+container id. See
 `.env.example` for the full list of environment variables — names kept from
 upstream (`OPENSHIP_*`, `CLOUD_MODE`, ...) are documented there; `CLOUD_MODE`
 and `DEPLOY_MODE=cloud` are accepted but always forced off in this edition.
@@ -65,7 +68,8 @@ Deployment environment variables for *your own* deployed apps, your login
 session, a registry username paired with its password, SSH host keys needed
 on disk, and outbound SMTP relay credentials all stay exactly where upstream
 put them — moving those into a keys vault meant for provider API tokens would
-not be a clean fit. See the fork report for the file-by-file list.
+not be a clean fit. See "Stores not moved" under FreeBuild in
+[DR-0018](../../docs/decisions/DR-0018-fork-router-and-ship.md) for the list.
 
 ## Tests
 

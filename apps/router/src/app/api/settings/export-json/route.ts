@@ -105,7 +105,7 @@ export async function GET(request: Request) {
       status: 200,
       headers: {
         "Content-Type": "application/json",
-        "Content-Disposition": `attachment; filename="omniroute-legacy-backup-${new Date().toISOString().replace(/[:.]/g, "-")}.json"`,
+        "Content-Disposition": `attachment; filename="freeroute-legacy-backup-${new Date().toISOString().replace(/[:.]/g, "-")}.json"`,
       },
     });
   } catch (error) {

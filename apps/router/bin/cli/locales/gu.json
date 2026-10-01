@@ -27,7 +27,7 @@
     "loginEnabled": "લૉગિન: સક્ષમ (પાસવર્ડ અપડેટ થયો)",
     "loginDisabled": "લૉગિન: અક્ષમ",
     "providerInfo": "પ્રદાતા: {info}",
-    "opencode": "OpenCode માટે બંડલ કરેલ @omniroute/opencode-plugin ઇન્સ્ટૉલ અને ગોઠવો"
+    "opencode": "OpenCode માટે બંડલ કરેલ OpenCode plugin ઇન્સ્ટૉલ અને ગોઠવો"
   },
   "doctor": {
     "title": "FreeRoute નિદાન",

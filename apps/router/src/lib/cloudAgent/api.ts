@@ -1,3 +1,4 @@
+import { classifyConnection, resolveConnectionApiKey } from "@/lib/netie/providerGuards";
 import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
 import { getProviderConnections } from "@/lib/db/providers";
 import { resolveAllowedOrigin, getCorsStatus } from "@/server/cors/origins";
@@ -99,7 +100,11 @@ export async function getCloudAgentCredentials(
   })) as JsonRecord[];
 
   for (const connection of connections) {
-    const token = getConnectionToken(connection);
+    // FreeRoute: subscription logins are never used, and an API key comes from
+    // OpenVault, never the DB column.
+    if (classifyConnection(connection)) continue;
+    if (connection.authType !== "apikey") continue;
+    const token = getConnectionToken({ apiKey: await resolveConnectionApiKey(connection) });
     if (token) return { apiKey: token };
   }
 

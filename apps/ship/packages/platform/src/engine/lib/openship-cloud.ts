@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * One organization owns one immutable Oblien namespace. All customer workspace
  * operations use short-lived namespace tokens, including operations on the SaaS.
@@ -33,7 +34,7 @@ export async function ensureOblienWebhook(): Promise<void> {
   if (existing) {
     await client.webhooks.update(existing.id, { events, secret, active: true, namespace: null });
   } else {
-    await client.webhooks.create({ url, events, secret, description: "Openship cloud billing and entitlements" });
+    await client.webhooks.create({ url, events, secret, description: "FreeBuild cloud billing and entitlements" });
   }
 }
 
@@ -62,7 +63,7 @@ export async function ensureNamespace(organizationId: string): Promise<string> {
     await ensureOblienDefaultQuota();
     const slug = namespaceSlugForOrg(organizationId);
     const ensured = await getOblienClient().namespaces.ensure({
-      name: `Openship ${organizationId}`, slug,
+      name: `FreeBuild ${organizationId}`, slug,
       resource_limits: await initialCloudNamespaceLimits(),
     });
     if (ensured.data.slug !== slug) {

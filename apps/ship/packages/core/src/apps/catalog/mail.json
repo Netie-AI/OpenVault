@@ -2,7 +2,7 @@
   "available": true,
   "verified": true,
   "id": "mail",
-  "name": "Openship Mail",
+  "name": "FreeBuild Mail",
   "description": "Your own mail on your own domain — SMTP/IMAP, mailboxes and webmail on one server. Or keep the mailboxes you already have and just run the webmail.",
   "kind": "flow",
   "logo": "mail",

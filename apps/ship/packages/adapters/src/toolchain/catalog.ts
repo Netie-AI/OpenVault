@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Toolchain catalog — how to detect each language tool, and how to install it here.
  *
@@ -296,7 +297,7 @@ const COMPOSER_INSTALL =
   "curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer";
 
 const NO_EPEL =
-  "and Openship does not enable third-party repositories (EPEL) on a host it did not " +
+  "and FreeBuild does not enable third-party repositories (EPEL) on a host it did not " +
   "provision. Install it yourself, or build in a container.";
 
 const NO_GRADLE_RPM =
@@ -391,7 +392,7 @@ const RECIPES: Record<InstallableTool, ToolRecipe> = {
       if (ops.profile.libc === "musl") {
         return refused(
           "Bun's official installer is a bash script and this host is musl-based (Alpine), " +
-            "which ships busybox ash and no bash. Openship will not add a shell to a host " +
+            "which ships busybox ash and no bash. FreeBuild will not add a shell to a host " +
             "to satisfy an installer. Use Node for this project, or build in a container.",
         );
       }
@@ -609,7 +610,7 @@ const RECIPES: Record<InstallableTool, ToolRecipe> = {
       if (ops.profile.libc === "musl") {
         return refused(
           "Composer needs PHP's phar and openssl extensions, and on musl hosts (Alpine) " +
-            "those ship as separate packages that Openship does not install. Add " +
+            "those ship as separate packages that FreeBuild does not install. Add " +
             "php-phar and php-openssl for your PHP version yourself, or build in a " +
             "container.",
         );
@@ -635,7 +636,7 @@ const RECIPES: Record<InstallableTool, ToolRecipe> = {
           // the silent wrong answer, so name the release as the problem instead.
           yum: refused(
             "This host's release carries no OpenJDK 21 package — the newest it has is Java " +
-              "8/11, and Openship will not install a JDK older than the toolchain asks for. " +
+              "8/11, and FreeBuild will not install a JDK older than the toolchain asks for. " +
               "Use a newer OS release, or build in a container.",
           ),
           apk: answered(["openjdk21-jdk"]),
@@ -672,7 +673,7 @@ const RECIPES: Record<InstallableTool, ToolRecipe> = {
       if (ops.profile.packageManager === "brew") return asRoot(ops.pkgInstall(["dotnet"]));
       if (ops.profile.os !== "linux") {
         return refused(
-          `Openship installs the .NET SDK on Linux, and on macOS through Homebrew. This ` +
+          `FreeBuild installs the .NET SDK on Linux, and on macOS through Homebrew. This ` +
             `host reports os=${ops.profile.os}.`,
         );
       }

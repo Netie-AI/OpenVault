@@ -24,7 +24,7 @@ export interface WebmailTargetOption {
 /**
  * Build the list of places the webmail can be deployed to. The mail
  * server itself is always option #1; every other openship-managed
- * server follows. Opshcloud is listed as a coming-soon placeholder.
+ * server follows.
  */
 export async function listWebmailTargets(
   mailServerId: string,
@@ -62,12 +62,7 @@ export async function listWebmailTargets(
     });
   }
 
-  options.push({
-    kind: "opshcloud",
-    serverId: "",
-    label: "Opshcloud (managed)",
-    description: "Managed hosting · we provision the VM, route the domain, and run the cert",
-  });
-
+  // Modified by Netie AI, 2026: the upstream managed-hosting option is not
+  // offered. Hosted cloud is disabled in FreeBuild.
   return options;
 }

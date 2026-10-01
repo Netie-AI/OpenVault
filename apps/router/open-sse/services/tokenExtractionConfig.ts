@@ -372,7 +372,7 @@ const RAW_CONFIGS: TokenExtractionConfig[] = [
     "https://chat.z.ai/",
     "https://chat.z.ai",
     [{ type: "localStorage", key: "token" }],
-    'Log in to Z.ai at chat.z.ai. OmniRoute extracts the Local Storage value named "token"; chat CAPTCHA is handled by the browser transport.'
+    'Log in to Z.ai at chat.z.ai. FreeRoute extracts the Local Storage value named "token"; chat CAPTCHA is handled by the browser transport.'
   ),
 ];
 

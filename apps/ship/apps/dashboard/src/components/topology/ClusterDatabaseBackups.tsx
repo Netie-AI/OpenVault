@@ -1,4 +1,5 @@
 "use client";
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 
 import { Icon as UiIcon } from "@repo/ui/icons";
 
@@ -48,7 +49,7 @@ export function ClusterDatabaseBackupSettings({
       <div className="mt-3 space-y-3">
         <p className="text-xs leading-relaxed text-muted-foreground">
           Save PostgreSQL data and recovery logs to an existing S3 destination. The database cluster
-          runs the schedule even when OpenShip is offline.
+          runs the schedule even when FreeBuild is offline.
         </p>
         {error && (
           <p role="alert" className="text-xs text-danger">

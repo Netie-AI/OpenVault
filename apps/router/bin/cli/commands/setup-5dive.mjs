@@ -292,7 +292,7 @@ export function registerSetup5dive(program) {
       "Point a 5dive agent fleet's claude seats at FreeRoute (writes a 5dive auth profile)"
     )
     .option("--port <port>", "Local FreeRoute port (ignored when --remote is set)", "20128")
-    .option("--remote <url>", "Remote FreeRoute URL, e.g. https://omniroute.example.com")
+    .option("--remote <url>", "Remote FreeRoute URL, e.g. https://freeroute.example.com")
     .option("--context <name>", "Named local/remote context")
     .option("--api-key <key>", "FreeRoute API key (defaults to the active context/env)")
     .option("--model <id>", "FreeRoute model or combo id the agents should use")

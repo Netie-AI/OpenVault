@@ -19,20 +19,23 @@ export function resolveServerHost(
   machineHostname = hostname()
 ) {
   if (env.OMNIROUTE_SERVER_HOST) return env.OMNIROUTE_SERVER_HOST;
+  if (env.HOST) return env.HOST;
+  if (env.OMNIROUTE_HOSTNAME) return env.OMNIROUTE_HOSTNAME;
   if (runtimePlatform === "win32" && env.HOSTNAME && env.HOSTNAME !== machineHostname) {
     return env.HOSTNAME;
   }
-  return "0.0.0.0";
+  // FreeRoute binds loopback by default (DR-0018). Set HOST, OMNIROUTE_HOSTNAME
+  // or OMNIROUTE_SERVER_HOST to listen on another interface.
+  return "127.0.0.1";
 }
 
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "::1", "[::1]"]);
 
 /**
- * Boot-time exposure warning (GHSA-wmgv-ph3p-rv57): the shipped default binds
- * all interfaces while the inference plane requires no credentials, so any
- * LAN peer can spend the operator's quota. That local-first posture is a
- * deliberate, documented default — but it must be LOUD at startup so an
- * operator who never read the docs still learns the two escape hatches.
+ * Boot-time exposure warning (GHSA-wmgv-ph3p-rv57): when an operator binds a
+ * non-loopback interface while the inference plane requires no credentials,
+ * any LAN peer can spend the operator's quota. The warning must be loud at
+ * startup so the operator learns the two escape hatches.
  *
  * Returns the warning text when the server will listen on a non-loopback
  * interface with no API-key requirement, or null when the exposure is closed.
@@ -48,10 +51,10 @@ export function resolveExposureWarning(env = process.env, host = resolveServerHo
     .toLowerCase();
   if (requireKey === "true" || requireKey === "1" || requireKey === "yes") return null;
   return (
-    `SECURITY: listening on ${host} with NO API-key requirement — the inference ` +
+    `SECURITY: listening on ${host} with NO API-key requirement. The inference ` +
     `plane (/v1/*) is reachable by ANY device that can route to this host, and ` +
-    `requests are billed to your configured providers. This local-first default ` +
-    `is intentional, but on an untrusted network either set REQUIRE_API_KEY=true ` +
-    `or bind loopback with OMNIROUTE_SERVER_HOST=127.0.0.1.`
+    `requests are billed to your configured providers. Either set ` +
+    `REQUIRE_API_KEY=true or bind loopback by unsetting HOST, OMNIROUTE_HOSTNAME ` +
+    `and OMNIROUTE_SERVER_HOST.`
   );
 }

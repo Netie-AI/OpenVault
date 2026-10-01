@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Compose deploy service - deploys multi-service projects.
  *
@@ -2112,7 +2113,7 @@ async function deployComposeServicesUnlocked(
             logger.log(
               `Couldn't read live port occupancy on the target, so ${allocation.port} for ` +
                 `${service.name} avoids database-pinned ports and ports this deploy already took. ` +
-                `If publishing it fails as "already allocated", check that Openship can reach ` +
+                `If publishing it fails as "already allocated", check that FreeBuild can reach ` +
                 `this host (Servers → this box).\n`,
               "warn",
             );

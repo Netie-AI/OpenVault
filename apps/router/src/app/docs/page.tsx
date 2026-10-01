@@ -12,7 +12,7 @@ export async function generateMetadata(): Promise<Metadata> {
       title: t("homeTitle"),
       description: t("homeMetadataDescription"),
       type: "website",
-      url: "https://omniroute.online/docs",
+      url: "/docs",
     },
     twitter: {
       card: "summary_large_image",

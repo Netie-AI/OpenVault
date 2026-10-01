@@ -1,3 +1,4 @@
+import { withKeyVaultApiKey } from "@/lib/netie/providerGuards";
 import { randomBytes } from "node:crypto";
 
 import {
@@ -186,13 +187,15 @@ async function loadGlmConnection(connectionId: string): Promise<GlmConnectionLik
     );
   }
 
-  const connection = (await getProviderConnectionById(
-    connectionId
-  )) as unknown as GlmConnectionLike | null;
+  const storedConnection = (await getProviderConnectionById(connectionId)) as unknown as
+    | (GlmConnectionLike & Record<string, unknown>)
+    | null;
 
-  if (!connection) {
+  if (!storedConnection) {
     throw new GlmResetCardError(404, "connection_not_found", "Connection not found.");
   }
+  // FreeRoute: the GLM key comes from OpenVault, never the DB column.
+  const connection = (await withKeyVaultApiKey(storedConnection)) as unknown as GlmConnectionLike;
   if (!isGlmResetCardProvider(connection.provider)) {
     throw new GlmResetCardError(
       400,

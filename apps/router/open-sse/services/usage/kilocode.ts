@@ -21,7 +21,7 @@ const BALANCE_PATH = "/api/profile/balance";
 const BALANCE_URL = `${KILO_API_BASE}${BALANCE_PATH}`;
 const PASS_PATH = "/api/trpc/kiloPass.getState";
 
-const KILO_EDITOR_NAME = "OmniRoute";
+const KILO_EDITOR_NAME = "FreeRoute";
 const FETCH_TIMEOUT_MS = 8_000;
 
 /** Fallback token for Kilo's anonymous freetier (registry anonymousApiKey).

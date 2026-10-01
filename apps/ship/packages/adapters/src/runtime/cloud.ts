@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * Cloud runtime - delegates build/deploy to Oblien cloud infrastructure.
  *
@@ -598,7 +599,7 @@ export class CloudRuntime implements MultiServiceRuntimeAdapter {
     if (this.allowHostBuild) return;
     throw new HostBuildForbiddenError(
       `This deployment asked to ${what}, which is not permitted on this instance. ` +
-        `Cloud builds run inside your Oblien workspace. If this project was moved here ` +
+        `Cloud builds run inside your cloud workspace. If this project was moved here ` +
         `from a self-hosted install, redeploy it so its build settings are re-resolved ` +
         `for the cloud (its stored settings still say "build locally").`,
     );
@@ -1045,7 +1046,7 @@ export class CloudRuntime implements MultiServiceRuntimeAdapter {
     let source: DockerfileBuildSource | undefined;
 
     try {
-      log.log("Build strategy: Dockerfile plan (build in Oblien workspaces)\n");
+      log.log("Build strategy: Dockerfile plan (build in cloud workspaces)\n");
       source = await this.resolveDockerfileBuildSource(config, log);
       const plan = compileCloudDockerfilePlan(source.dockerfile, config);
 
@@ -1817,7 +1818,7 @@ export class CloudRuntime implements MultiServiceRuntimeAdapter {
     const log: LogCallback = onLog ?? (() => {});
 
     if (config.volumes?.length) {
-      throw new Error("Persistent volume mounts are not supported on Openship Cloud. Choose a server for this workload.");
+      throw new Error("Persistent volume mounts are not supported on FreeBuild Cloud. Choose a server for this workload.");
     }
 
     try {
@@ -2188,7 +2189,7 @@ fi`;
         } catch (err) {
           if (isOutputPathError(err)) throw outputDirError();
           throw new Error(
-            `Failed to create static page for slug "${pageSlug}" (${pageSlug}.opsh.io): ${safeErrorMessage(err)}`,
+            `Failed to create static page for slug "${pageSlug}" (${pageSlug}.${SYSTEM.DOMAINS.CLOUD_DOMAIN}): ${safeErrorMessage(err)}`,
           );
         }
       }

@@ -419,7 +419,7 @@ export async function runRestoreCommand(backupId, opts = {}) {
       return 1;
     }
 
-    if (!backupId) console.log("\nUsage: omniroute restore <backup-id>");
+    if (!backupId) console.log("\nUsage: freeroute restore <backup-id>");
     return 0;
   }
 

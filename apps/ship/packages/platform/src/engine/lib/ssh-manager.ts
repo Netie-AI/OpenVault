@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names and links removed from shipped text.
 /**
  * SSH Connection Manager - per-server cached executors with idle-TTL.
  *
@@ -634,7 +635,7 @@ export class SshConnectionManager {
     // firewall rule reaches the dashboard banner and never the deploy log, which is
     // exactly where an operator is standing when a host op dies.
     const hint =
-      health.hint ?? `Openship can't reach the host channel at ${health.target ?? "this machine"}.`;
+      health.hint ?? `FreeBuild can't reach the host channel at ${health.target ?? "this machine"}.`;
     throw new HostChannelUnavailableError(
       "unreachable",
       health.rule ? `${hint}\n${health.rule}` : hint,

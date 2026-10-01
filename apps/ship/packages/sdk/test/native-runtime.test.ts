@@ -1,5 +1,12 @@
-import { beforeAll, describe, expect, it } from "vitest";
+// Modified by Netie AI, 2026: build the worker with npm; native embedding is
+// enabled again (the esbuild worker is code-split so Node's own ESM loader runs
+// the top-level await in @repo/db, see packages/platform/build-native.ts); a
+// loopback stub stands in for OpenVault's KeyVault and for the hosted plan
+// catalog, so the run needs neither OpenVault nor outbound network.
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { execFile } from "node:child_process";
+import { createServer, type Server } from "node:http";
+import { randomBytes } from "node:crypto";
 import { mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -8,6 +15,48 @@ import { createShip, OperationError, type OwnedShip, type VerifiedIdentity } fro
 
 const execute = promisify(execFile);
 const key = "native-integration-test-persistent-key-32-bytes";
+
+// FreeBuild reads provider keys only from OpenVault (packages/core/src/netie/keyvault.ts),
+// so the worker's credential and DNS reads need an OpenVault to ask. This stub holds no
+// keys and enforces the admin token like the real one. It also serves the public plan
+// catalog the worker fetches for billing.listPlans, echoing the requested locale.
+const adminToken = randomBytes(32).toString("hex");
+let stub: Server | undefined;
+let stubDirectory = "";
+const stubEnvironment: Record<string, string> = {};
+const keyRequests: string[] = [];
+beforeAll(async () => {
+  stubDirectory = await mkdtemp(join(tmpdir(), "freebuild-native-openvault-"));
+  const tokenPath = join(stubDirectory, "admin_token");
+  await writeFile(tokenPath, adminToken, { mode: 0o600 });
+  stub = createServer((req, res) => {
+    const url = new URL(req.url ?? "/", "http://127.0.0.1");
+    const json = (status: number, body: unknown) => {
+      res.writeHead(status, { "content-type": "application/json" });
+      res.end(JSON.stringify(body));
+    };
+    if (url.pathname === "/api/keys" || url.pathname.startsWith("/api/keys/")) {
+      keyRequests.push(url.pathname);
+      if (req.headers["x-openvault-admin"] !== adminToken) return json(401, { error: { type: "openvault_unauthenticated" } });
+      if (url.pathname === "/api/keys") return json(200, { keys: [] });
+      return json(404, { error: "unknown key" });
+    }
+    if (req.method === "GET" && url.pathname === "/api/billing/plans") {
+      return json(200, { data: { locale: url.searchParams.get("locale") ?? "en", annual: { enabled: false, monthsFree: 0 }, ui: {}, plans: [] } });
+    }
+    json(404, { error: "not found" });
+  });
+  await new Promise<void>(done => stub!.listen(0, "127.0.0.1", done));
+  const address = stub.address();
+  const origin = `http://127.0.0.1:${typeof address === "object" && address ? address.port : 0}`;
+  Object.assign(stubEnvironment, { OPENVAULT_URL: origin, OPENVAULT_ADMIN_TOKEN_PATH: tokenPath, OPENSHIP_CLOUD_API_URL: origin });
+});
+afterAll(async () => {
+  stub?.closeAllConnections();
+  await new Promise<void>(done => (stub ? stub.close(() => done()) : done()));
+  if (stubDirectory) await rm(stubDirectory, { recursive: true, force: true });
+});
+
 beforeAll(async () => {
   // Exercise the same Node worker shipped in the npm artifact, with real PGlite.
   // Modified by Netie AI, 2026: run the npm script instead of `bun run` — this
@@ -15,59 +64,40 @@ beforeAll(async () => {
   await execute("npm", ["run", "build:native"], { cwd: resolve(import.meta.dirname, "../../platform"), maxBuffer: 2 * 1024 * 1024 });
 }, 60_000);
 
-/**
- * Modified by Netie AI, 2026: native embedding is hard-disabled — see the
- * `native_embedding_unavailable` throw at the top of
- * `packages/platform/src/native-host.ts`'s `createNativePlatform`. Root
- * cause, traced past the original "unsettled top-level await" symptom (a
- * genuine fix attempt, not a guess): porting `packages/platform/build-native.ts`
- * off `Bun.build` (Bun is not part of this fork's toolchain) to esbuild
- * produces a worker bundle that hangs inside `./engine/lib/platform`'s own
- * dependency graph. Isolated with the actual esbuild output run standalone
- * (outside any worker, outside this file): every one of native-worker.ts's 5
- * raced imports resolves fine on its own, unbundled — the hang is specific to
- * bundling `engine/modules/deployments/build.service.ts` together with
- * `build-pipeline.ts`, which import each other (the type-only half erases;
- * the value-level half doesn't). Bundled, esbuild sequences each side's
- * lazy initializer as `await init_build_service2()` / `await
- * init_build_pipeline2()`; one of those two promises never settles, and nothing
- * else keeps the process alive. Moving native-worker.ts's own top-level
- * `await Promise.all([...])` into a plain async function (removing the
- * separate, real "Node kills the worker with exit code 13" symptom that
- * masked this) did not fix the deeper hang — it was never the same bug. The
- * actual fix is breaking the build.service/build-pipeline import cycle,
- * which is a deployments-module change out of scope for this file; the 16
- * real behavioral tests below are restored (uncommented) rather than left
- * skipped, and fail loudly against the still-disabled worker below. No code
- * in this fork's shipped API or dashboard calls createNativePlatform/
- * createShip — only this test and packages/sdk's own definition do — so this
- * does not affect FreeBuild itself; `npm run build && npm start` is
- * unaffected (see the smoke test).
- */
 describe("owned native platform on Node", () => {
-  it("is hard-disabled: createShip rejects with native_embedding_unavailable", async () => {
-    await expect(
-      createShip({
-        instanceId: "disabled-check",
-        stateDirectory: await mkdtemp(join(tmpdir(), "freebuild-native-disabled-")),
+  // Modified by Netie AI, 2026: this case asserted the native_embedding_unavailable
+  // hard-disable. The embedding works again, so it now asserts the opposite: the
+  // worker boots and closes cleanly.
+  it("is enabled: createShip boots a real worker instead of rejecting with native_embedding_unavailable", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "freebuild-native-enabled-"));
+    let ship: OwnedShip<string> | undefined;
+    try {
+      ship = await createShip({
+        instanceId: "enabled-check",
+        stateDirectory: directory,
         storage: { driver: "pglite", dataDir: "memory://" },
         encryptionKey: key,
         runtime: "bare",
         routing: "none",
         administration: true,
         identity: { resolve: async () => null },
-      }),
-    ).rejects.toMatchObject({ code: "native_embedding_unavailable", statusCode: 503 });
-  });
+      });
+      expect(ship.operator).toBeDefined();
+      await ship.start();
+    } finally {
+      await ship?.close();
+      await rm(directory, { recursive: true, force: true });
+    }
+  }, 60_000);
 });
 
-describe("owned native platform on Node — real behavior, blocked on the esbuild circular-import issue above", () => {
+describe("owned native platform on Node, real behavior", () => {
   it("persists operator notices while ordinary scopes only read public announcements", async () => {
     const directory = await mkdtemp(join(tmpdir(), "openship-native-notices-"));
     let identity: VerifiedIdentity | null = null;
     let ship: OwnedShip<string> | undefined;
     const options = {
-      instanceId: "notices", stateDirectory: directory,
+      instanceId: "notices", stateDirectory: directory, environment: stubEnvironment,
       storage: { driver: "pglite" as const, dataDir: join(directory, "database") },
       encryptionKey: key, runtime: "bare" as const, routing: "none" as const,
       administration: true, identity: { resolve: async () => identity },
@@ -475,7 +505,7 @@ describe("owned native platform on Node — real behavior, blocked on the esbuil
     try {
       const instances = await Promise.all(["first", "second"].map(async instanceId => {
         const identities = new Map<string, VerifiedIdentity>();
-        const ship = await createShip({ instanceId, stateDirectory: directory, storage: { driver: "pglite", dataDir: "memory://" },
+        const ship = await createShip({ instanceId, stateDirectory: directory, environment: stubEnvironment, storage: { driver: "pglite", dataDir: "memory://" },
           encryptionKey: key, runtime: "bare", routing: "none", administration: true,
           identity: { resolve: async (assertion: string) => identities.get(assertion) ?? null },
         });
@@ -610,6 +640,8 @@ describe("owned native platform on Node — real behavior, blocked on the esbuil
       expect(await first!.scope.dns.listCredentials()).toEqual([]);
       expect((await first!.scope.credentials.listProviders()).map(provider => provider.id)).toContain("docker-registry");
       expect(await first!.scope.credentials.list()).toEqual([]);
+      // Those listings came from OpenVault, with the admin token, not from a local table.
+      expect(keyRequests).toContain("/api/keys");
       await expect(first!.scope.credentials.get("foreign-credential")).rejects.toMatchObject({ code: "NOT_FOUND" });
       const servers = first!.scope.servers;
       const server = await servers.create({ sshHost: "203.0.113.40", name: "Remote test", sshAuthMethod: "key", sshPrivateKey: "explicit-native-private-key" });

@@ -1,10 +1,10 @@
-# OmniRoute MCP Server
+# FreeRoute MCP Server
 
-> **Model Context Protocol server** that exposes OmniRoute's gateway intelligence as **110 tools** for AI agents.
+> **Model Context Protocol server** that exposes FreeRoute's gateway intelligence as **110 tools** for AI agents.
 >
 > **Source of truth for the full tool catalog and REST surface:** [`docs/frameworks/MCP-SERVER.md`](../../docs/frameworks/MCP-SERVER.md). This README focuses on architecture, configuration, and integration examples; the catalog below is a summary subset.
 
-The MCP Server allows any AI agent (Claude Desktop, Cursor, VS Code Copilot, custom agents) to **monitor, control, and optimize** the OmniRoute AI gateway programmatically.
+The MCP Server allows any AI agent (Claude Desktop, Cursor, VS Code Copilot, custom agents) to **monitor, control, and optimize** the FreeRoute AI gateway programmatically.
 
 ---
 
@@ -18,7 +18,7 @@ The MCP Server allows any AI agent (Claude Desktop, Cursor, VS Code Copilot, cus
                        │  MCP Protocol (stdio or HTTP)
                        ▼
 ┌──────────────────────────────────────────────────────────────────┐
-│                      OmniRoute MCP Server                        │
+│                      FreeRoute MCP Server                        │
 │  ┌──────────────┐  ┌─────────────────┐  ┌────────────────────┐  │
 │  │ Scope        │  │ 107 MCP Tools   │  │   Audit Logger     │  │
 │  │ Enforcement  │──│ (core + memory  │──│   (SHA-256/SQLite) │  │
@@ -28,7 +28,7 @@ The MCP Server allows any AI agent (Claude Desktop, Cursor, VS Code Copilot, cus
                               │  HTTP (internal)
                               ▼
 ┌──────────────────────────────────────────────────────────────────┐
-│                    OmniRoute Gateway (port 20128)                 │
+│                    FreeRoute Gateway (port 20128)                 │
 │        /v1/chat/completions  /api/combos  /api/usage  ...        │
 └──────────────────────────────────────────────────────────────────┘
 ```
@@ -40,7 +40,7 @@ The MCP Server allows any AI agent (Claude Desktop, Cursor, VS Code Copilot, cus
 ### 1. Environment Variables
 
 ```bash
-# Required: OmniRoute base URL
+# Required: FreeRoute base URL
 export OMNIROUTE_BASE_URL="http://localhost:20128"
 
 # Optional: API key for authenticated access
@@ -60,9 +60,9 @@ Add to your MCP client configuration:
 ```json
 {
   "mcpServers": {
-    "omniroute": {
+    "freeroute": {
       "command": "node",
-      "args": ["path/to/omniroute/open-sse/mcp-server/server.ts"],
+      "args": ["path/to/freeroute/open-sse/mcp-server/server.ts"],
       "env": {
         "OMNIROUTE_BASE_URL": "http://localhost:20128",
         "OMNIROUTE_API_KEY": "your-key"
@@ -77,7 +77,7 @@ Add to your MCP client configuration:
 ```json
 {
   "mcpServers": {
-    "omniroute": {
+    "freeroute": {
       "command": "npx",
       "args": ["tsx", "open-sse/mcp-server/server.ts"],
       "env": {
@@ -94,7 +94,7 @@ Add to your MCP client configuration:
 {
   "mcp": {
     "servers": {
-      "omniroute": {
+      "freeroute": {
         "command": "npx",
         "args": ["tsx", "open-sse/mcp-server/server.ts"],
         "env": {
@@ -112,8 +112,8 @@ Add to your MCP client configuration:
 # Direct start (stdio)
 npx tsx open-sse/mcp-server/server.ts
 
-# Or via OmniRoute CLI
-omniroute --mcp
+# Or via FreeRoute CLI
+freeroute --mcp
 ```
 
 ---
@@ -249,7 +249,7 @@ discovery), so newly added capabilities stay discoverable at runtime.
 
 ```python
 """
-OmniRoute MCP Client — Python example using the mcp SDK.
+FreeRoute MCP Client — Python example using the mcp SDK.
 Install: pip install mcp
 """
 import asyncio
@@ -385,11 +385,11 @@ import (
     "net/http"
 )
 
-// Simplified direct-API approach (bypass MCP, hit OmniRoute APIs directly)
+// Simplified direct-API approach (bypass MCP, hit FreeRoute APIs directly)
 // Useful if you don't need MCP protocol framing.
 
 func callTool(baseURL, tool string, args map[string]any) (string, error) {
-    // MCP tools map to OmniRoute APIs:
+    // MCP tools map to FreeRoute APIs:
     endpoints := map[string]string{
         "health": "/api/monitoring/health",
         "combos": "/api/combos",
@@ -447,7 +447,7 @@ func main() {
 
 ### 🔄 Use Case 1: Auto-Healing Agent
 
-An agent that monitors OmniRoute health and auto-switches combos when providers degrade.
+An agent that monitors FreeRoute health and auto-switches combos when providers degrade.
 
 ```python
 async def auto_healing_loop(session):
@@ -686,4 +686,4 @@ mcp-server/
 
 ## License
 
-Part of [OmniRoute](https://github.com/diegosouzapw/OmniRoute) — MIT License.
+Part of FreeRoute (MIT). Upstream credit is on the /notices page.
