@@ -1,7 +1,8 @@
-"""Provider circuit breaker — CLOSED → DEGRADED → OPEN → HALF_OPEN.
+"""Named circuit breaker — CLOSED → DEGRADED → OPEN → HALF_OPEN.
 
-Ports OmniRoute ``circuitBreaker.ts``. Only HTTP 408/500/502/503/504 trip the
-breaker; connection-scoped 429 rate limits stay outside this layer.
+The chat proxy registers one breaker per vault key. A local hop, which has
+no vault key, keeps the provider name. Only HTTP 408/500/502/503/504 trip
+the breaker; connection-scoped 429 rate limits stay outside this layer.
 """
 
 from __future__ import annotations
