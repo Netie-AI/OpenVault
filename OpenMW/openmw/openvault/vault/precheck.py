@@ -137,7 +137,8 @@ async def probe_key(
             latency = (time.perf_counter() - started) * 1000.0
             code = int(resp.status_code)
             if code < 200 or code >= 300:
-                return PrecheckResult(record.id, "failed", latency, f"HTTP {code}")
+                status = classify_http_error(resp.status_code, resp.text[:200])
+                return PrecheckResult(record.id, status, latency, f"HTTP {code}")
             try:
                 remaining, free_tier = openrouter_probe_facts(resp.json())
             except Exception:

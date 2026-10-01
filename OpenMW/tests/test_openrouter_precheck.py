@@ -12,6 +12,7 @@ import pytest
 from cryptography.fernet import Fernet
 
 from openmw.openvault.vault.crypto import Seal
+from openmw.openvault.vault.fallback import FallbackManager
 from openmw.openvault.vault.key_quota import quota_snapshot
 from openmw.openvault.vault.precheck import OPENROUTER_KEY_URL, precheck_one
 from openmw.openvault.vault.store import KeyVault
@@ -138,7 +139,32 @@ def test_openrouter_precheck_2xx_records_two_fields_without_network(vault: KeyVa
     assert "12.5" in view
 
 
-def test_openrouter_precheck_non_2xx_is_failed_without_network(vault: KeyVault) -> None:
+def _history(db: Path, key_id: str) -> list[tuple[str, str]]:
+    with sqlite3.connect(str(db)) as conn:
+        rows = conn.execute(
+            "SELECT status, error FROM precheck_history WHERE key_id = ?",
+            (key_id,),
+        ).fetchall()
+    return [(str(status), "" if error is None else str(error)) for status, error in rows]
+
+
+def _assert_body_and_key_unstored(vault: KeyVault, key_id: str, blob: str, view: str) -> None:
+    stored = vault.get(key_id)
+    assert stored is not None
+    assert _FAKE_OR not in (stored.last_error or "")
+    assert _MARKER not in (stored.last_error or "")
+    assert _FAKE_OR not in blob
+    assert _MARKER not in blob
+    assert _FAKE_OR not in view
+    assert _MARKER not in view
+    for status, error in _history(vault.db_path, key_id):
+        assert _FAKE_OR not in status
+        assert _MARKER not in status
+        assert _FAKE_OR not in error
+        assert _MARKER not in error
+
+
+def test_openrouter_precheck_401_is_auth_fail_and_leaves_rotation(vault: KeyVault) -> None:
     record, client, result = _run(
         vault,
         provider="openrouter",
@@ -148,21 +174,54 @@ def test_openrouter_precheck_non_2xx_is_failed_without_network(vault: KeyVault) 
     )
     assert client.urls == [OPENROUTER_KEY_URL]
     assert client.resp.json_reads == 0
-    assert client.resp.text_reads == 0
-    assert result.status == "failed"
+    assert client.resp.text_reads == 1
+    assert result.status == "auth_fail"
     assert result.error == "HTTP 401"
     stored = vault.get(record.id)
     assert stored is not None
-    assert stored.precheck_status == "failed"
+    assert stored.precheck_status == "auth_fail"
     assert stored.last_error == "HTTP 401"
     blob = _probe_blob(vault.db_path)
-    assert _FAKE_OR not in blob
-    assert _MARKER not in blob
     assert blob == "[]"
     view = repr(quota_snapshot(vault))
-    assert _FAKE_OR not in view
-    assert _MARKER not in view
-    assert "failed" in view
+    _assert_body_and_key_unstored(vault, record.id, blob, view)
+    assert "auth_fail" in view
+    assert _history(vault.db_path, record.id) == [("auth_fail", "HTTP 401")]
+    keep = vault.create(
+        label="groq-keep",
+        provider="groq",
+        secret=_FAKE_GROQ,
+        role="free",
+        priority=1,
+        base_url=_GROQ,
+    )
+    picked = [row.id for row in FallbackManager(vault).ordered_candidates()]
+    assert record.id not in picked
+    assert keep.id in picked
+
+
+def test_openrouter_precheck_429_is_rate_limit_and_writes_history(vault: KeyVault) -> None:
+    record, client, result = _run(
+        vault,
+        provider="openrouter",
+        secret=_FAKE_OR,
+        base_url=_OPENROUTER,
+        resp=_Resp(429, {"error": {"message": _MARKER, "key": _FAKE_OR}}),
+    )
+    assert client.urls == [OPENROUTER_KEY_URL]
+    assert client.resp.json_reads == 0
+    assert client.resp.text_reads == 1
+    assert result.status == "rate_limit"
+    assert result.error == "HTTP 429"
+    stored = vault.get(record.id)
+    assert stored is not None
+    assert stored.precheck_status == "rate_limit"
+    assert stored.last_error == "HTTP 429"
+    blob = _probe_blob(vault.db_path)
+    assert blob == "[]"
+    view = repr(quota_snapshot(vault))
+    _assert_body_and_key_unstored(vault, record.id, blob, view)
+    assert _history(vault.db_path, record.id) == [("rate_limit", "HTTP 429")]
 
 
 def test_groq_precheck_still_uses_models(vault: KeyVault) -> None:
