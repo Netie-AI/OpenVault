@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import re
 import sqlite3
 import time
@@ -74,7 +75,7 @@ class AccountStore:
         return conn
 
     def _init_schema(self) -> None:
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS accounts (
@@ -130,7 +131,7 @@ class AccountStore:
         if allocate_relay:
             relay = f"{uuid.uuid4().hex[:12]}@{_RELAY_DOMAIN}"
 
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             conn.execute(
                 """
                 INSERT INTO accounts (
@@ -155,14 +156,14 @@ class AccountStore:
         return record
 
     def get(self, account_id: str) -> AccountRecord | None:
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             row = conn.execute("SELECT * FROM accounts WHERE id = ?", (account_id,)).fetchone()
         if row is None:
             return None
         return self._row(row)
 
     def get_by_email(self, email: str) -> AccountRecord | None:
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             row = conn.execute(
                 "SELECT * FROM accounts WHERE email = ?", (_validate_email(email),)
             ).fetchone()
@@ -171,7 +172,7 @@ class AccountStore:
         return self._row(row)
 
     def list_accounts(self) -> list[AccountRecord]:
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             rows = conn.execute("SELECT * FROM accounts ORDER BY created_at DESC").fetchall()
         return [self._row(r) for r in rows]
 
@@ -180,7 +181,7 @@ class AccountStore:
         if current is None:
             return None
         relay = f"{uuid.uuid4().hex[:12]}@{_RELAY_DOMAIN}"
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             conn.execute(
                 """
                 UPDATE accounts
@@ -203,7 +204,7 @@ class AccountStore:
         if current is None:
             return None
         notes = current.operator_notes if operator_notes is None else operator_notes
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             conn.execute(
                 """
                 UPDATE accounts

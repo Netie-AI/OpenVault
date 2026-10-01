@@ -283,7 +283,7 @@ class SecretStore:
         return conn
 
     def _init_schema(self) -> None:
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS secrets (
@@ -368,14 +368,14 @@ class SecretStore:
             clauses.append("account_id = ?")
             values.append(account_id)
         where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             rows = conn.execute(
                 f"SELECT * FROM secrets {where} ORDER BY kind ASC, created_at ASC", values
             ).fetchall()
         return [self._row_to_record(r) for r in rows]
 
     def get(self, secret_id: str) -> SecretRecord | None:
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             row = conn.execute("SELECT * FROM secrets WHERE id = ?", (secret_id,)).fetchone()
         return None if row is None else self._row_to_record(row)
 
@@ -387,7 +387,7 @@ class SecretStore:
         ``last_revealed_at`` is stamped here so a reveal is visible in the
         record itself even if the audit file is lost.
         """
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             row = conn.execute(
                 "SELECT secret_blob, kind FROM secrets WHERE id = ?", (secret_id,)
             ).fetchone()
@@ -423,7 +423,7 @@ class SecretStore:
             raise SecretValidationError("password must not be empty")
         secret_id = uuid.uuid4().hex
         now = time.time()
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             conn.execute(
                 """
                 INSERT INTO secrets (
@@ -472,7 +472,7 @@ class SecretStore:
         total = len(normalized)
         secret_id = uuid.uuid4().hex
         now = time.time()
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             conn.execute(
                 """
                 INSERT INTO secrets (
@@ -579,7 +579,7 @@ class SecretStore:
         normalized = normalize_identity_number(number)
         secret_id = uuid.uuid4().hex
         now = time.time()
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             conn.execute(
                 """
                 INSERT INTO secrets (
@@ -626,7 +626,7 @@ class SecretStore:
         last4 = pan[-4:]
         secret_id = uuid.uuid4().hex
         now = time.time()
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             conn.execute(
                 """
                 INSERT INTO secrets (
@@ -699,13 +699,13 @@ class SecretStore:
         fields.append("updated_at = ?")
         values.append(time.time())
         values.append(secret_id)
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             conn.execute(f"UPDATE secrets SET {', '.join(fields)} WHERE id = ?", values)
             conn.commit()
         return self.get(secret_id)
 
     def delete(self, secret_id: str) -> bool:
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             cur = conn.execute("DELETE FROM secrets WHERE id = ?", (secret_id,))
             conn.commit()
             return cur.rowcount > 0
@@ -719,7 +719,7 @@ class SecretStore:
         """
         if self.get(secret_id) is None:
             return None
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             conn.execute(
                 "UPDATE secrets SET lifecycle = 'revoked', updated_at = ? WHERE id = ?",
                 (time.time(), secret_id),
@@ -768,7 +768,7 @@ class SecretStore:
                 account_id=current.account_id,
             )
 
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             conn.execute(
                 """
                 UPDATE secrets SET lifecycle = 'rotated', replaced_by = ?, updated_at = ?

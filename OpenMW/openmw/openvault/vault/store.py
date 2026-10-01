@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import contextlib
 import secrets
 import sqlite3
 import time
@@ -101,7 +102,7 @@ class KeyVault:
         return conn
 
     def _init_schema(self) -> None:
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS keys (
@@ -207,7 +208,7 @@ class KeyVault:
         )
 
     def list_keys(self, *, account_id: str | None = None) -> list[KeyRecord]:
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             if account_id is None:
                 rows = conn.execute(
                     "SELECT * FROM keys ORDER BY priority ASC, created_at ASC"
@@ -224,14 +225,14 @@ class KeyVault:
         return [self._row_to_record(r) for r in rows]
 
     def get(self, key_id: str) -> KeyRecord | None:
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             row = conn.execute("SELECT * FROM keys WHERE id = ?", (key_id,)).fetchone()
         if row is None:
             return None
         return self._row_to_record(row)
 
     def get_secret(self, key_id: str) -> str | None:
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             row = conn.execute("SELECT secret_blob FROM keys WHERE id = ?", (key_id,)).fetchone()
         if row is None:
             return None
@@ -243,7 +244,7 @@ class KeyVault:
         Held by the vault so a provider-key fingerprint is not a bare hash.
         """
         name = "key_fp_hmac"
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             row = conn.execute(
                 "SELECT secret_blob FROM vault_meta WHERE name = ?",
                 (name,),
@@ -261,7 +262,7 @@ class KeyVault:
 
     def get_fingerprint(self, key_id: str) -> str | None:
         """HMAC fingerprint stored beside the key, or None when unset."""
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             row = conn.execute("SELECT key_fp FROM keys WHERE id = ?", (key_id,)).fetchone()
         if row is None:
             return None
@@ -274,7 +275,7 @@ class KeyVault:
         """First key row with this fingerprint, oldest first."""
         if not key_fp:
             return None
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             row = conn.execute(
                 """
                 SELECT * FROM keys
@@ -307,7 +308,7 @@ class KeyVault:
         now = time.time()
         blob = self._seal.encrypt(secret)
         masked = mask_secret(secret)
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             conn.execute(
                 """
                 INSERT INTO keys (
@@ -387,13 +388,13 @@ class KeyVault:
         fields.append("updated_at = ?")
         values.append(time.time())
         values.append(key_id)
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             conn.execute(f"UPDATE keys SET {', '.join(fields)} WHERE id = ?", values)
             conn.commit()
         return self.get(key_id)
 
     def delete(self, key_id: str) -> bool:
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             cur = conn.execute("DELETE FROM keys WHERE id = ?", (key_id,))
             conn.commit()
             return cur.rowcount > 0
@@ -403,7 +404,7 @@ class KeyVault:
         current = self.get(key_id)
         if current is None:
             return None
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             conn.execute(
                 """
                 UPDATE keys
@@ -437,7 +438,7 @@ class KeyVault:
             account_id=current.account_id,
             custody=current.custody,
         )
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             conn.execute(
                 """
                 UPDATE keys
@@ -470,7 +471,7 @@ class KeyVault:
         for key in keys:
             if key.lifecycle in ("revoked", "compromised"):
                 continue
-            with self._connect() as conn:
+            with contextlib.closing(self._connect()) as conn, conn:
                 conn.execute(
                     """
                     UPDATE keys
@@ -517,7 +518,7 @@ class KeyVault:
         latency_ms: float | None,
         error: str | None,
     ) -> None:
-        with self._connect() as conn:
+        with contextlib.closing(self._connect()) as conn, conn:
             conn.execute(
                 """
                 UPDATE keys
