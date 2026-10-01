@@ -560,10 +560,13 @@ _PIN_CIRCUIT = "circuit_open"
 _PIN_NO_HOP = "no_hop"
 _PIN_NOT_IN_CATALOG = "not_in_catalog"
 _PIN_PARK_REASONS = frozenset({_PIN_PARKED, _PIN_QUOTA})
-# Pin-site provider bind. The DMS pin is groq even when another catalog row
-# lists the same id (together also has openai/gpt-oss-120b).
+# Pin-site provider bind. A strict id is served only by its bound provider,
+# even when another catalog row lists the same id (together also has
+# openai/gpt-oss-120b).
 _STRICT_PIN_PROVIDER: dict[str, str] = {
     "openai/gpt-oss-120b": "groq",
+    "gemini-3.5-flash": "google",
+    "google/gemma-4-31b-it:free": "openrouter",
 }
 
 

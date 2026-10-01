@@ -2,6 +2,14 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-01 - Strict pins for gemini-3.5-flash and gemma-4 free (OpenVault #109)
+
+- Strict mode for `gemini-3.5-flash` binds to google. Strict mode for
+  `google/gemma-4-31b-it:free` binds to openrouter. Another provider that
+  lists the same catalog id is not a hop for that pin.
+- No hop on the bound provider returns 503 `pin_unavailable` with `no_hop`.
+  The groq pin for `openai/gpt-oss-120b` is unchanged.
+
 ## 2026-10-01 - STATUS HT gates and chat-probe cadence
 
 - Only HT1 is lifted. HT2, HT3, HT4, and HT5 remain HUMAN_STOP. HT3 also needs the human passphrase. Public `:5000` stays HUMAN_STOP.
