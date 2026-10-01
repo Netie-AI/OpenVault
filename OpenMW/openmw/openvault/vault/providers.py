@@ -266,12 +266,86 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
         health_path="/models",
         free_notes="build.nvidia.com / NIM OpenAI-compatible; keys typically nvapi-…",
         needed_by=("airgpt", "cortex"),
-        # First id was on https://integrate.api.nvidia.com/v1/models at
-        # 2026-10-01T07:57:06Z. meta/llama-3.1-8b-instruct and
-        # meta/llama-3.1-70b-instruct were absent, so they are not the first hop.
-        # mistralai/mistral-nemotron was also absent from that list.
-        chat_models=("nvidia/llama-3.1-nemotron-70b-instruct",),
-        reasoning_models=("nvidia/llama-3.1-nemotron-70b-instruct",),
+        # Refreshed 2026-10-01 from public GET
+        # https://integrate.api.nvidia.com/v1/models (no key).
+        # meta/llama-3.1-405b-instruct was not listed.
+        # Ids containing "deepseek" on that list are omitted.
+        # nvidia/llama-3.1-nemotron-70b-instruct is still listed and kept.
+        # Main large chat models only, not the full list.
+        # nemotron-3-super reasoning_effort defaults to high:
+        # https://docs.api.nvidia.com/nim/reference/nvidia-nemotron-3-super-120b-a12b-infer
+        chat_models=(
+            "nvidia/nemotron-3-ultra-550b-a55b",
+            "nvidia/nemotron-4-340b-instruct",
+            "nvidia/llama-3.1-nemotron-ultra-253b-v1",
+            "nvidia/nemotron-3-super-120b-a12b",
+            "writer/palmyra-creative-122b",
+            "meta/llama-3.2-90b-vision-instruct",
+            "nvidia/llama-3.1-nemotron-70b-instruct",
+            "mistralai/mistral-large-2-instruct",
+            "moonshotai/kimi-k3",
+            "openai/gpt-oss-20b",
+            "google/gemma-4-31b-it",
+            "z-ai/glm-5.3",
+        ),
+        vision_models=("meta/llama-3.2-90b-vision-instruct",),
+        reasoning_models=(
+            "nvidia/nemotron-3-super-120b-a12b",
+            "nvidia/llama-3.1-nemotron-70b-instruct",
+            "openai/gpt-oss-20b",
+        ),
+    ),
+    ProviderSpec(
+        id="sambanova",
+        name="SambaNova Cloud",
+        base_url="https://api.sambanova.ai/v1",
+        default_role="free",
+        tier="freemium",
+        # Keys: https://docs.sambanova.ai/docs/en/get-started/api-keys-urls
+        register_url="https://cloud.sambanova.ai/apis",
+        docs_url="https://docs.sambanova.ai/docs/en/models/sambacloud-models",
+        health_path="/models",
+        free_notes="Free tier with no payment method: 20 RPM, 20 RPD, 200K TPD",
+        needed_by=("cortex", "airgpt"),
+        # Live GET https://api.sambanova.ai/v1/models on 2026-10-01 (no key).
+        # Same ids as https://docs.sambanova.ai/docs/en/models/sambacloud-models
+        # Free tier table: https://docs.sambanova.ai/docs/en/models/rate-limits
+        # DeepSeek-V3.1 and DeepSeek-V3.2 were listed and are omitted.
+        # Meta-Llama-3.1-405B-Instruct left SambaCloud on 2025-06-25 and was
+        # not in the live list.
+        # gemma-4-31B-it accepts image input (models page).
+        chat_models=(
+            "gpt-oss-120b",
+            "MiniMax-M2.7",
+            "Meta-Llama-3.3-70B-Instruct",
+            "MiniMax-M3",
+            "gemma-4-31B-it",
+        ),
+        vision_models=("gemma-4-31B-it",),
+        reasoning_models=("gpt-oss-120b",),
+    ),
+    ProviderSpec(
+        id="sea_lion",
+        name="AI Singapore SEA-LION",
+        base_url="https://api.sea-lion.ai/v1",
+        default_role="free",
+        tier="freemium",
+        register_url="https://playground.sea-lion.ai/key-manager",
+        docs_url="https://docs.sea-lion.ai/guides/inferencing/api",
+        health_path="/models",
+        free_notes="Trial API key; 10 requests per minute (docs, 04 Jun 2026)",
+        needed_by=("cortex", "airgpt"),
+        # Chat ids from https://docs.sea-lion.ai/guides/inferencing/api
+        # and https://docs.sea-lion.ai/guides/tool_calling
+        # aisingapore/SEA-Guard classifies safe/unsafe and is not a chat hop.
+        # aisingapore/SEA-LION-ModernBERT-Embedding-600M is POST /v1/embeddings.
+        # Llama-SEA-LION-v3.5-70B-R defaults to thinking_mode on.
+        chat_models=(
+            "aisingapore/Llama-SEA-LION-v3.5-70B-R",
+            "aisingapore/Qwen-SEA-LION-v4.5-27B-IT",
+            "aisingapore/Gemma-SEA-LION-v4-27B-IT",
+        ),
+        reasoning_models=("aisingapore/Llama-SEA-LION-v3.5-70B-R",),
     ),
     ProviderSpec(
         id="deepseek",
