@@ -122,6 +122,7 @@ from openmw.openvault.vault.app_grants import (
 )
 from openmw.openvault.vault.auth import AuthRefusedError, resolve_caller
 from openmw.openvault.vault.budget import configured_ceiling
+from openmw.openvault.vault.chat_probe import ChatProbeLoop, chat_probe_interval_s
 from openmw.openvault.vault.cortex_key import tenant_key_payload
 from openmw.openvault.vault.crypto import Seal, VaultCryptoError, VaultSealedError
 from openmw.openvault.vault.env_ingest import ingest_environment, scan_environment
@@ -1108,6 +1109,8 @@ def create_app(
     cortex = CortexClient(cortex_url)
     loop_holder: dict[str, PrecheckLoop | None] = {"loop": None}
     task_holder: dict[str, asyncio.Task[None] | None] = {"task": None}
+    chat_holder: dict[str, ChatProbeLoop | None] = {"loop": None}
+    chat_task_holder: dict[str, asyncio.Task[None] | None] = {"task": None}
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
@@ -1121,6 +1124,15 @@ def create_app(
             loop_holder["loop"] = pre_loop
             task_holder["task"] = asyncio.create_task(pre_loop.run_forever())
             log.info("openvault_precheck_loop_started", interval_s=precheck_interval_s)
+            # Own task and interval. Not a step inside the models-list probe.
+            chat_loop = ChatProbeLoop(
+                state_vault,
+                fallback,
+                interval_s=chat_probe_interval_s(),
+            )
+            chat_holder["loop"] = chat_loop
+            chat_task_holder["task"] = asyncio.create_task(chat_loop.run_forever())
+            log.info("openvault_chat_probe_loop_started", interval_s=chat_loop.interval_s)
         log.info(
             "openvault_local_mesh_ready",
             cortex_url=cortex_url,
@@ -1129,11 +1141,18 @@ def create_app(
         yield
         if loop_holder["loop"] is not None:
             loop_holder["loop"].stop()
+        if chat_holder["loop"] is not None:
+            chat_holder["loop"].stop()
         task = task_holder["task"]
         if task is not None:
             task.cancel()
             with suppress(asyncio.CancelledError):
                 await task
+        chat_task = chat_task_holder["task"]
+        if chat_task is not None:
+            chat_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await chat_task
 
     docs_on = dev_docs_enabled()
     app = FastAPI(

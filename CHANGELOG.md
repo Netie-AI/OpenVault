@@ -2,6 +2,17 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-01 - Chat health probe per key (OpenVault #92)
+
+- A chat probe POSTs "Reply with OK" on its own 300s loop, separate from the
+  60s models probe. The model is the provider's first catalog chat id.
+  `max_tokens` is 16, or 512 when that id is a reasoning model.
+- HTTP 402, a 429 whose request-limit header is 0, or a 429 with an account
+  or plan error code, marks that key unusable. `usable_provider_count` skips
+  it. A transient 429 parks the key and does not mark it unusable.
+- The probe writes no `usage_events` rows. Stored error text is scrubbed and
+  capped at 200 characters. Request and response bodies are not stored.
+
 ## 2026-10-01 - Per-key quota, OpenRouter precheck, hop attempts (OpenVault #93)
 
 - `GET /api/keys/quota` is admin-only (`http_guard` and `X-OpenVault-Admin`).
