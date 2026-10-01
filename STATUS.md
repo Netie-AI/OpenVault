@@ -64,6 +64,7 @@ shell at HTTP 200 is refused and named "compiling", not "unreachable".
 | #90 web CI | apps/web npm test runs in CI on ubuntu-latest with Node 20. |
 | #93 T3 slice 2 | Admin GET /api/keys/quota, OpenRouter key precheck, hop_attempts ledger. |
 | #92 chat probe | Per-key chat probe on its own 300s schedule. 402 and plan-level 429 are unusable. |
+| #100 OpenRouter 404 | /key precheck maps 404 and other non-2xx (not 401/403/429) to error with the HTTP code. |
 
 ## HT gates (#18 CLOSED, boxes ticked)
 

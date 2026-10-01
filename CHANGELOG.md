@@ -20,7 +20,8 @@ Append-only. Never edited, only added to. Newest first.
   daily limit, reset time, park state, and a scrubbed error. No secret.
 - OpenRouter precheck calls `GET https://openrouter.ai/api/v1/key` and stores
   `limit_remaining` and `is_free_tier` only. A non-2xx sets `precheck_status`
-  to `failed` with the HTTP code. Other providers are unchanged.
+  to `auth_fail`, `rate_limit`, or `error` with the HTTP code. Other
+  providers are unchanged.
 - `hop_attempts` records one row per fallback hop. No bodies and no keys.
   Rows older than 7 days, and rows past the cap, are pruned on write.
 
