@@ -25,6 +25,10 @@ class HopCircuit:
     last_error: str | None = None
     park_until: float | None = None
     park_reason: str | None = None
+    # Per (key, model) rate-limit parks. A 429 on one catalog id must not hide
+    # the rest of the key. Cleared only when that model's window expires.
+    model_park_until: dict[str, float] = field(default_factory=dict)
+    model_park_reason: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -163,6 +167,27 @@ class FallbackManager:
         circ.last_error = None
         circ.park_until = None
         circ.park_reason = None
+        # Leave model_park_until alone: a later model answering does not
+        # un-park a sibling that just returned 429.
+
+    def model_is_parked(self, key_id: str, model: str) -> bool:
+        """True while this (key, model) is inside its 429 window."""
+        circ = self._circuit(key_id)
+        until = circ.model_park_until.get(model)
+        if until is None:
+            return False
+        if time.time() >= until:
+            circ.model_park_until.pop(model, None)
+            circ.model_park_reason.pop(model, None)
+            return False
+        return True
+
+    def record_model_park(self, key_id: str, model: str, cooldown_ms: int, reason: str) -> None:
+        """Hide one model on this key. Does not park the key itself."""
+        circ = self._circuit(key_id)
+        wait_s = max(0.0, float(cooldown_ms) / 1000.0)
+        circ.model_park_until[model] = time.time() + wait_s
+        circ.model_park_reason[model] = reason
 
     def record_failure(self, key_id: str, error: str) -> None:
         circ = self._circuit(key_id)

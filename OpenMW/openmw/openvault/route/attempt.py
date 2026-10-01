@@ -22,6 +22,7 @@ AttemptClass = Literal[
     "auth_fail",
     "permanent",
     "context_overflow",
+    "model_unavailable",
     "non_retryable",
 ]
 
@@ -32,6 +33,36 @@ JobAction = Literal["continue_chain", "park_job", "demote", "dead", "done"]
 DEFAULT_RATE_LIMIT_PARK_MS: int = 5_000
 AUTH_STALE_PARK_MS: int = 60_000
 QUOTA_PARK_MS: int = 6 * 60 * 60 * 1_000
+
+
+def _body_says_model_unavailable(error_text: str | None) -> bool:
+    """True when a 400/422 body is a dead model, not a malformed caller request.
+
+    Matched phrases are the ones upstreams use for an unknown, missing, or
+    decommissioned model id. A validation error that merely mentions "model"
+    ("model field is required") stays non-retryable so the job still dies.
+    """
+    lower = str(error_text or "").lower()
+    if not lower:
+        return False
+    if "model_not_found" in lower or "model-not-found" in lower or "unknown_model" in lower:
+        return True
+    if "unknown model" in lower or "model is unknown" in lower:
+        return True
+    if "model not found" in lower or "model was not found" in lower:
+        return True
+    if "model" in lower and "does not exist" in lower:
+        return True
+    if "model" in lower and "decommission" in lower:
+        return True
+    return "model" in lower and "no longer available" in lower
+
+
+def _is_model_unavailable(status: int, error_text: str | None) -> bool:
+    """404 always. 400/422 only when the body names a dead model."""
+    if status == 404:
+        return True
+    return status in (400, 422) and _body_says_model_unavailable(error_text)
 
 
 @dataclass(frozen=True)
@@ -118,6 +149,19 @@ def classify_attempt(
             job="continue_chain",
             cooldown_ms=0,
             reason=decision.reason,
+            counts_as_hard_fail=False,
+            trip_provider_breaker=False,
+        )
+
+    # Dead model: eject this (key, model) for the job and keep walking.
+    # Any other 400/422 is the caller's request and still dies below.
+    if _is_model_unavailable(status, error_text):
+        return AttemptOutcome(
+            attempt_class="model_unavailable",
+            candidate="eject_for_job",
+            job="continue_chain",
+            cooldown_ms=0,
+            reason="model_unavailable",
             counts_as_hard_fail=False,
             trip_provider_breaker=False,
         )

@@ -6,14 +6,14 @@ import hashlib
 import json
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Literal
 
 import httpx
 import structlog
 
 from openmw.openvault.route.attempt import AttemptOutcome, classify_attempt
 from openmw.openvault.route.breaker import get_circuit_breaker
-from openmw.openvault.vault.budget import estimate_tokens_for_body, prepare_hop_body
+from openmw.openvault.vault.budget import BudgetDecision, estimate_tokens_for_body, prepare_hop_body
 from openmw.openvault.vault.crypto import VaultCryptoError, VaultSealedError
 from openmw.openvault.vault.fallback import FallbackManager
 from openmw.openvault.vault.local_hop import (
@@ -30,7 +30,12 @@ from openmw.openvault.vault.local_hop import (
     walkable_local_base,
 )
 from openmw.openvault.vault.precheck import _default_base_url
-from openmw.openvault.vault.providers import LOCAL_QWEN_ID, get_provider, resolve_model
+from openmw.openvault.vault.providers import (
+    LOCAL_QWEN_ID,
+    get_provider,
+    models_for,
+    resolve_model,
+)
 from openmw.openvault.vault.store import KeyRecord, KeyVault
 from openmw.openvault.vault.usage_store import HopTrace
 
@@ -202,6 +207,128 @@ def _local_fail_reason(status: int | None, body_text: str, model: str) -> str:
     if status is not None and chat_error_is_model_missing(status, body_text, model):
         return REASON_MODEL_NOT_LOADED
     return REASON_UNREACHABLE
+
+
+_ModelStep = Literal["served", "dead", "next_model", "next_hop"]
+
+
+def _models_for_hop(provider: str, requested: str | None, *, multimodal: bool) -> tuple[str, ...]:
+    """Model ids this hop may send, strongest first.
+
+    A pinned id the provider serves is the only id. ``auto``, or an id this
+    provider does not serve, walks the catalog. That is the only in-provider
+    fallback: a pinned model must never be swapped for a sibling here.
+    """
+    pool = models_for(provider, multimodal=multimodal)
+    want = (requested or "").strip()
+    resolved = resolve_model(provider, want or None, multimodal=multimodal)
+    if resolved is None:
+        return ()
+    if pool and want == resolved and want in pool:
+        return (want,)
+    if pool:
+        return pool
+    return (resolved,)
+
+
+def _log_budget(
+    provider: str,
+    model: str,
+    requested: object,
+    decision: BudgetDecision,
+) -> None:
+    if decision.raised_to is not None:
+        log.info(
+            "openvault_reasoning_budget_raised",
+            provider=provider,
+            model=model,
+            requested=requested,
+            sent=decision.raised_to,
+        )
+    if decision.clamped_to is not None:
+        log.info(
+            "openvault_output_budget_clamped",
+            provider=provider,
+            model=model,
+            requested=requested,
+            sent=decision.clamped_to,
+        )
+
+
+def _on_model_outcome(
+    vault: KeyVault,
+    fallback: FallbackManager,
+    cand: ProxyCandidate,
+    outcome: AttemptOutcome,
+    error: str,
+    model: str,
+) -> _ModelStep:
+    """Apply one model's health effects and say which way the walk goes.
+
+    A 429 parks ``(key, model)`` only. The caller parks the whole key once
+    every model on this hop has returned 429. A dead model is ejected for
+    this job. 402 and auth quarantine still apply to the key and stop the hop.
+    """
+    if outcome.attempt_class == "success":
+        _apply_candidate_outcome(vault, fallback, cand, outcome, "")
+        return "served"
+    if outcome.job == "dead":
+        return "dead"
+    # Only an HTTP 429 walks the next catalog model. Rate-limit text on any
+    # other status still parks the whole key, same as before this change.
+    if outcome.attempt_class == "rate_limit" and error.startswith("HTTP 429"):
+        if not cand.served_local:
+            fallback.record_model_park(
+                cand.key_id,
+                model,
+                outcome.cooldown_ms,
+                outcome.reason or "rate_limited",
+            )
+        return "next_model"
+    if outcome.attempt_class == "model_unavailable":
+        return "next_model"
+    _apply_candidate_outcome(vault, fallback, cand, outcome, error)
+    return "next_hop"
+
+
+def _park_key_if_every_model_limited(
+    fallback: FallbackManager,
+    cand: ProxyCandidate,
+    models: tuple[str, ...],
+    *,
+    limited: int,
+    already_parked: int,
+    cooldown_ms: int,
+    reason: str,
+) -> None:
+    """Park the key only when every model on this hop came back 429."""
+    if cand.served_local or not models or limited <= 0:
+        return
+    if limited + already_parked != len(models):
+        return
+    fallback.record_park(cand.key_id, cooldown_ms, reason)
+
+
+def _non_retryable(
+    trace: HopTrace,
+    outcome: AttemptOutcome,
+    errors: list[str],
+    *,
+    local_only: bool,
+    local_fail_reason: str,
+) -> tuple[int, dict[str, Any]]:
+    if local_only:
+        trace.error_type = "openvault_local_only_unavailable"
+        return local_only_refusal(local_fail_reason)
+    trace.error_type = "openvault_non_retryable"
+    return 400, {
+        "error": {
+            "message": "request rejected by upstream (non-retryable)",
+            "type": "openvault_non_retryable",
+            "reason": outcome.reason,
+            "details": errors,
+        }
+    }
 
 
 def _no_candidates_refusal(vault: KeyVault) -> dict[str, Any]:
@@ -440,108 +567,136 @@ async def chat_completions(
                 continue
 
             # Translate the model per hop. Forwarding the caller's value verbatim sent
-            # `"auto"` upstream as a model name, and every provider answered 404 - a
-            # healthy key that read as a dead provider.
+            # "auto" upstream as a model name, and every provider answered 404.
             wants_images = _is_multimodal(work)
-            model = resolve_model(cand.provider, work.get("model"), multimodal=wants_images)
-            if model is None:
+            raw_model = work.get("model")
+            requested = raw_model if isinstance(raw_model, str) else None
+            models = _models_for_hop(cand.provider, requested, multimodal=wants_images)
+            if not models:
                 why = "no vision model" if wants_images else "no catalogued model"
                 errors.append(f"{cand.label}: {why} for provider {cand.provider}")
                 continue
-            decision = prepare_hop_body(
-                work,
-                provider=cand.provider,
-                model=model,
-                prompt_tokens=prompt_estimate,
-            )
-            if decision.body is None:
-                # Not a hop failure — this model simply cannot hold the prompt,
-                # so it must not count against the key's health.
-                if decision.context_exceeded:
-                    context_blocked += 1
-                errors.append(f"{cand.label}: {decision.refusal}")
-                continue
-            hop_body = decision.body
-            if decision.raised_to is not None:
-                # Never silently: a caller that asked for 32 and is billed for 512
-                # deserves to see why in the log.
-                log.info(
-                    "openvault_reasoning_budget_raised",
+
+            limited = 0
+            already_parked = 0
+            limit_cooldown = 0
+            limit_reason = "rate_limited"
+            sent_any = False
+            context_skips = 0
+            other_skips = 0
+            leave_hop = False
+            for model in models:
+                if not cand.served_local and fallback.model_is_parked(cand.key_id, model):
+                    already_parked += 1
+                    errors.append(f"{cand.label}: {model} parked")
+                    continue
+                decision = prepare_hop_body(
+                    work,
                     provider=cand.provider,
                     model=model,
-                    requested=work.get("max_tokens"),
-                    sent=decision.raised_to,
+                    prompt_tokens=prompt_estimate,
                 )
-            if decision.clamped_to is not None:
-                log.info(
-                    "openvault_output_budget_clamped",
-                    provider=cand.provider,
-                    model=model,
-                    requested=work.get("max_tokens"),
-                    sent=decision.clamped_to,
-                )
+                if decision.body is None:
+                    # Not a hop failure. This model cannot hold the prompt, so
+                    # it must not count against the key's health.
+                    if decision.context_exceeded:
+                        context_skips += 1
+                    else:
+                        other_skips += 1
+                    errors.append(f"{cand.label}: {decision.refusal}")
+                    continue
+                hop_body = decision.body
+                _log_budget(cand.provider, model, work.get("max_tokens"), decision)
 
-            trace.note_attempt()
-            try:
-                resp = await client.post(url, headers=headers, json=hop_body)
-            except httpx.TimeoutException:
-                outcome = classify_attempt(None, "timeout")
-                _apply_candidate_outcome(vault, fallback, cand, outcome, "timeout")
-                errors.append(f"{cand.label}: timeout")
-                if cand.served_local:
-                    local_fail_reason = REASON_UNREACHABLE
-                continue
-            except (httpx.HTTPError, OSError) as exc:
-                outcome = classify_attempt(None, str(exc))
-                _apply_candidate_outcome(vault, fallback, cand, outcome, str(exc))
-                errors.append(f"{cand.label}: {exc}")
-                if cand.served_local:
-                    local_fail_reason = REASON_UNREACHABLE
-                continue
-
-            body_text = resp.text
-            outcome = classify_attempt(resp.status_code, body_text, headers=dict(resp.headers))
-
-            if outcome.attempt_class == "success":
-                _apply_candidate_outcome(vault, fallback, cand, outcome, "")
-                log.info(
-                    "openvault_proxy_ok",
-                    key_ref=cand.key_id[:8],
-                    provider=cand.provider,
-                    role=cand.role,
-                )
-                trace.note_served(
-                    provider=cand.provider,
-                    model=model,
-                    vault_key_id="" if cand.served_local else cand.key_id,
-                    served_local=cand.served_local,
-                )
+                trace.note_attempt()
+                sent_any = True
                 try:
-                    payload: dict[str, Any] | str = resp.json()
-                except Exception:
-                    payload = {"raw": body_text}
-                return resp.status_code, _stamp_served(payload, cand, model)
+                    resp = await client.post(url, headers=headers, json=hop_body)
+                except httpx.TimeoutException:
+                    outcome = classify_attempt(None, "timeout")
+                    _apply_candidate_outcome(vault, fallback, cand, outcome, "timeout")
+                    errors.append(f"{cand.label}: timeout")
+                    if cand.served_local:
+                        local_fail_reason = REASON_UNREACHABLE
+                    leave_hop = True
+                    break
+                except (httpx.HTTPError, OSError) as exc:
+                    outcome = classify_attempt(None, str(exc))
+                    _apply_candidate_outcome(vault, fallback, cand, outcome, str(exc))
+                    errors.append(f"{cand.label}: {exc}")
+                    if cand.served_local:
+                        local_fail_reason = REASON_UNREACHABLE
+                    leave_hop = True
+                    break
 
-            err = f"HTTP {resp.status_code}"
-            _apply_candidate_outcome(vault, fallback, cand, outcome, err)
-            errors.append(f"{cand.label}: {err} ({outcome.attempt_class})")
-            if cand.served_local:
-                local_fail_reason = _local_fail_reason(resp.status_code, body_text, model)
+                # Upstream body is for classification only. Do not log it or
+                # copy it into errors, the trace, or a usage row.
+                status_code = resp.status_code
+                body_text = resp.text if status_code >= 400 else ""
+                outcome = classify_attempt(
+                    status_code,
+                    body_text if status_code >= 400 else None,
+                    headers=dict(resp.headers),
+                )
+                err = f"HTTP {status_code}"
+                step = _on_model_outcome(vault, fallback, cand, outcome, err, model)
+                if cand.served_local and status_code >= 400:
+                    local_fail_reason = _local_fail_reason(status_code, body_text, model)
+                if step == "served":
+                    log.info(
+                        "openvault_proxy_ok",
+                        key_ref=cand.key_id[:8],
+                        provider=cand.provider,
+                        role=cand.role,
+                    )
+                    trace.note_served(
+                        provider=cand.provider,
+                        model=model,
+                        vault_key_id="" if cand.served_local else cand.key_id,
+                        served_local=cand.served_local,
+                    )
+                    try:
+                        payload: dict[str, Any] | str = resp.json()
+                    except Exception:
+                        payload = {"raw": resp.text}
+                    return status_code, _stamp_served(payload, cand, model)
+                if step == "dead":
+                    errors.append(f"{cand.label}: {err} ({outcome.attempt_class})")
+                    return _non_retryable(
+                        trace,
+                        outcome,
+                        errors,
+                        local_only=local_only,
+                        local_fail_reason=local_fail_reason,
+                    )
+                errors.append(f"{cand.label}: {err} ({outcome.attempt_class})")
+                if step == "next_model":
+                    if outcome.attempt_class == "rate_limit":
+                        limited += 1
+                        limit_cooldown = outcome.cooldown_ms
+                        limit_reason = outcome.reason or "rate_limited"
+                    continue
+                leave_hop = True
+                break
 
-            if outcome.job == "dead":
-                if local_only:
-                    trace.error_type = "openvault_local_only_unavailable"
-                    return local_only_refusal(local_fail_reason)
-                trace.error_type = "openvault_non_retryable"
-                return 400, {
-                    "error": {
-                        "message": "request rejected by upstream (non-retryable)",
-                        "type": "openvault_non_retryable",
-                        "reason": outcome.reason,
-                        "details": errors,
-                    }
-                }
-            continue
+            if (
+                not sent_any
+                and context_skips
+                and not other_skips
+                and not already_parked
+                and not limited
+            ):
+                context_blocked += 1
+            if not leave_hop:
+                _park_key_if_every_model_limited(
+                    fallback,
+                    cand,
+                    models,
+                    limited=limited,
+                    already_parked=already_parked,
+                    cooldown_ms=limit_cooldown,
+                    reason=limit_reason,
+                )
 
     if local_only:
         trace.error_type = "openvault_local_only_unavailable"
@@ -649,129 +804,155 @@ async def prepare_chat_stream(
             # Same per-hop translation as the non-streaming path. Fixing only one of
             # the two left streaming answering 404 while plain chat worked.
             wants_images = _is_multimodal(payload)
-            model = resolve_model(cand.provider, payload.get("model"), multimodal=wants_images)
-            if model is None:
+            raw_model = payload.get("model")
+            requested = raw_model if isinstance(raw_model, str) else None
+            models = _models_for_hop(cand.provider, requested, multimodal=wants_images)
+            if not models:
                 why = "no vision model" if wants_images else "no catalogued model"
                 errors.append(f"{cand.label}: {why} for provider {cand.provider}")
                 continue
-            decision = prepare_hop_body(
-                payload,
-                provider=cand.provider,
-                model=model,
-                prompt_tokens=prompt_estimate,
-            )
-            if decision.body is None:
-                if decision.context_exceeded:
-                    context_blocked += 1
-                errors.append(f"{cand.label}: {decision.refusal}")
-                continue
-            hop_payload = decision.body
-            hop_payload["stream"] = True
-            if decision.raised_to is not None:
-                log.info(
-                    "openvault_reasoning_budget_raised",
+
+            limited = 0
+            already_parked = 0
+            limit_cooldown = 0
+            limit_reason = "rate_limited"
+            sent_any = False
+            context_skips = 0
+            other_skips = 0
+            leave_hop = False
+            for model in models:
+                if not cand.served_local and fallback.model_is_parked(cand.key_id, model):
+                    already_parked += 1
+                    errors.append(f"{cand.label}: {model} parked")
+                    continue
+                decision = prepare_hop_body(
+                    payload,
                     provider=cand.provider,
                     model=model,
-                    requested=work.get("max_tokens"),
-                    sent=decision.raised_to,
+                    prompt_tokens=prompt_estimate,
                 )
-            if decision.clamped_to is not None:
-                log.info(
-                    "openvault_output_budget_clamped",
-                    provider=cand.provider,
-                    model=model,
-                    requested=work.get("max_tokens"),
-                    sent=decision.clamped_to,
-                )
+                if decision.body is None:
+                    if decision.context_exceeded:
+                        context_skips += 1
+                    else:
+                        other_skips += 1
+                    errors.append(f"{cand.label}: {decision.refusal}")
+                    continue
+                hop_payload = decision.body
+                hop_payload["stream"] = True
+                _log_budget(cand.provider, model, work.get("max_tokens"), decision)
 
-            trace.note_attempt()
-            try:
-                req = client.build_request("POST", url, headers=headers, json=hop_payload)
-                resp = await client.send(req, stream=True)
-            except httpx.TimeoutException:
-                outcome = classify_attempt(None, "timeout")
-                _apply_candidate_outcome(vault, fallback, cand, outcome, "timeout")
-                errors.append(f"{cand.label}: timeout")
-                if cand.served_local:
-                    local_fail_reason = REASON_UNREACHABLE
-                continue
-            except (httpx.HTTPError, OSError) as exc:
-                outcome = classify_attempt(None, str(exc))
-                _apply_candidate_outcome(vault, fallback, cand, outcome, str(exc))
-                errors.append(f"{cand.label}: {exc}")
-                if cand.served_local:
-                    local_fail_reason = REASON_UNREACHABLE
-                continue
-
-            if resp.status_code >= 400:
-                err_bytes = await resp.aread()
-                await resp.aclose()
-                body_text = err_bytes.decode("utf-8", errors="replace")
-                outcome = classify_attempt(resp.status_code, body_text, headers=dict(resp.headers))
-                err = f"HTTP {resp.status_code}"
-                _apply_candidate_outcome(vault, fallback, cand, outcome, err)
-                errors.append(f"{cand.label}: {err} ({outcome.attempt_class})")
-                if cand.served_local:
-                    local_fail_reason = _local_fail_reason(resp.status_code, body_text, model)
-                if outcome.job == "dead":
-                    await _close_client()
-                    if local_only:
-                        trace.error_type = "openvault_local_only_unavailable"
-                        return local_only_refusal(local_fail_reason)
-                    trace.error_type = "openvault_non_retryable"
-                    return 400, {
-                        "error": {
-                            "message": "request rejected by upstream (non-retryable)",
-                            "type": "openvault_non_retryable",
-                            "reason": outcome.reason,
-                            "details": errors,
-                        }
-                    }
-                continue
-
-            _apply_candidate_outcome(
-                vault,
-                fallback,
-                cand,
-                classify_attempt(resp.status_code, "", headers=dict(resp.headers)),
-                "",
-            )
-            log.info(
-                "openvault_proxy_stream_ok",
-                key_ref=cand.key_id[:8],
-                provider=cand.provider,
-                role=cand.role,
-            )
-            trace.note_served(
-                provider=cand.provider,
-                model=model,
-                vault_key_id="" if cand.served_local else cand.key_id,
-                served_local=cand.served_local,
-            )
-            served_provider = cand.provider
-            served_model = model
-            served_local = cand.served_local
-
-            async def _byte_iter(
-                response: httpx.Response = resp,
-                inj_provider: str = served_provider,
-                inj_model: str = served_model,
-                inj_local: bool = served_local,
-            ) -> AsyncIterator[bytes]:
+                trace.note_attempt()
+                sent_any = True
                 try:
-                    async for chunk in response.aiter_bytes():
-                        if chunk:
-                            yield inject_served_into_sse_chunk(
-                                chunk,
-                                provider=inj_provider,
-                                model=inj_model,
-                                served_local=inj_local,
-                            )
-                finally:
-                    await response.aclose()
-                    await _close_client()
+                    req = client.build_request("POST", url, headers=headers, json=hop_payload)
+                    resp = await client.send(req, stream=True)
+                except httpx.TimeoutException:
+                    outcome = classify_attempt(None, "timeout")
+                    _apply_candidate_outcome(vault, fallback, cand, outcome, "timeout")
+                    errors.append(f"{cand.label}: timeout")
+                    if cand.served_local:
+                        local_fail_reason = REASON_UNREACHABLE
+                    leave_hop = True
+                    break
+                except (httpx.HTTPError, OSError) as exc:
+                    outcome = classify_attempt(None, str(exc))
+                    _apply_candidate_outcome(vault, fallback, cand, outcome, str(exc))
+                    errors.append(f"{cand.label}: {exc}")
+                    if cand.served_local:
+                        local_fail_reason = REASON_UNREACHABLE
+                    leave_hop = True
+                    break
 
-            return resp.status_code, _byte_iter()
+                if resp.status_code >= 400:
+                    err_bytes = await resp.aread()
+                    await resp.aclose()
+                    # Classification only. Never log or store the upstream body.
+                    body_text = err_bytes.decode("utf-8", errors="replace")
+                    outcome = classify_attempt(
+                        resp.status_code, body_text, headers=dict(resp.headers)
+                    )
+                    err = f"HTTP {resp.status_code}"
+                    step = _on_model_outcome(vault, fallback, cand, outcome, err, model)
+                    if cand.served_local:
+                        local_fail_reason = _local_fail_reason(resp.status_code, body_text, model)
+                    if step == "dead":
+                        errors.append(f"{cand.label}: {err} ({outcome.attempt_class})")
+                        await _close_client()
+                        return _non_retryable(
+                            trace,
+                            outcome,
+                            errors,
+                            local_only=local_only,
+                            local_fail_reason=local_fail_reason,
+                        )
+                    errors.append(f"{cand.label}: {err} ({outcome.attempt_class})")
+                    if step == "next_model":
+                        if outcome.attempt_class == "rate_limit":
+                            limited += 1
+                            limit_cooldown = outcome.cooldown_ms
+                            limit_reason = outcome.reason or "rate_limited"
+                        continue
+                    leave_hop = True
+                    break
+
+                outcome = classify_attempt(resp.status_code, "", headers=dict(resp.headers))
+                _on_model_outcome(vault, fallback, cand, outcome, "", model)
+                log.info(
+                    "openvault_proxy_stream_ok",
+                    key_ref=cand.key_id[:8],
+                    provider=cand.provider,
+                    role=cand.role,
+                )
+                trace.note_served(
+                    provider=cand.provider,
+                    model=model,
+                    vault_key_id="" if cand.served_local else cand.key_id,
+                    served_local=cand.served_local,
+                )
+                served_provider = cand.provider
+                served_model = model
+                served_local = cand.served_local
+
+                async def _byte_iter(
+                    response: httpx.Response = resp,
+                    inj_provider: str = served_provider,
+                    inj_model: str = served_model,
+                    inj_local: bool = served_local,
+                ) -> AsyncIterator[bytes]:
+                    try:
+                        async for chunk in response.aiter_bytes():
+                            if chunk:
+                                yield inject_served_into_sse_chunk(
+                                    chunk,
+                                    provider=inj_provider,
+                                    model=inj_model,
+                                    served_local=inj_local,
+                                )
+                    finally:
+                        await response.aclose()
+                        await _close_client()
+
+                return resp.status_code, _byte_iter()
+
+            if (
+                not sent_any
+                and context_skips
+                and not other_skips
+                and not already_parked
+                and not limited
+            ):
+                context_blocked += 1
+            if not leave_hop:
+                _park_key_if_every_model_limited(
+                    fallback,
+                    cand,
+                    models,
+                    limited=limited,
+                    already_parked=already_parked,
+                    cooldown_ms=limit_cooldown,
+                    reason=limit_reason,
+                )
     except Exception:
         await _close_client()
         raise

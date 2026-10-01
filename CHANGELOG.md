@@ -2,6 +2,18 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-01 - Dead-model skip and per-model 429 (OpenVault #76)
+
+- A 404, or a 400/422 whose body says the model is unknown, decommissioned,
+  or not found, ejects that (key, model) for the job and the chain continues.
+  Any other 400/422 still fails the request after one upstream call.
+- A 429 parks (key, model) and tries the provider's next catalog model.
+  The key is parked only when every model returns 429. A 402 or credits
+  error still parks the whole key. 401/403 quarantine is unchanged.
+- In-provider fallback runs only for `auto`, or when the provider does not
+  serve the requested model. A pinned model the provider serves is never
+  swapped for a sibling model. Upstream bodies are not logged or stored.
+
 ## 2026-10-01 - FreeRoute catalog refresh (OpenVault #74)
 
 - OpenRouter `chat_models` are only `:free` ids whose prompt and completion
