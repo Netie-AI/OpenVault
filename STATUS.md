@@ -8,7 +8,9 @@ Last reconciled: 2026-09-11. GitHub OPEN = #60 (Get free keys). #12-#39, #48,
 `POST /keys/services` (loopback + `OPENVAULT_SERVICES_ALLOW`). JWKS pin kids
 (#50). Home pack: passphrase-scrypt only. Packs are DR-0016, passkeys DR-0017.
 DR-0015 accepted: irreversible IDs in the vault; rust console optional.
-Mesh omits `#auth` when `:5055` is down. HT1-HT5 CLEARED. Do not rebuild.
+Mesh omits `#auth` when `:5055` is down. Only HT1 is lifted. HT2, HT3, HT4,
+and HT5 remain HUMAN_STOP. HT3 also needs the human passphrase. Public
+`:5000` stays HUMAN_STOP.
 
 **UI:** `http://127.0.0.1:3010/` and `openvault app`. The Compiling-proxy hang
 is fixed: Turbopack is not used (`dev --webpack`), prod uses `next start` when
@@ -63,17 +65,17 @@ shell at HTTP 200 is refused and named "compiling", not "unreachable".
 | #88 sqlite close | Vault and usage connections close after commit. Open handles do not grow. |
 | #90 web CI | apps/web npm test runs in CI on ubuntu-latest with Node 20. |
 | #93 T3 slice 2 | Admin GET /api/keys/quota, OpenRouter key precheck, hop_attempts ledger. |
-| #92 chat probe | Per-key chat probe on its own 300s schedule. 402 and plan-level 429 are unusable. |
+| #92 chat probe | OPENVAULT_CHAT_PROBE_INTERVAL_S defaults to 86400s with a 3600s floor. OPENVAULT_CHAT_PROBE_TIMEOUT_S defaults to 120s with a 30s floor. Boot pass after 30-120s jitter. Keys checked within the floor are skipped (6h for sambanova and sea_lion). |
 | #100 OpenRouter 404 | /key precheck maps 404 and other non-2xx (not 401/403/429) to error with the HTTP code. |
 | #98 strict pin | openai/gpt-oss-120b strict pin binds to groq. A together key listing that id is not a hop. |
 | #104 chat probe cadence | Boot after 30-120s jitter, then once a day (86400s, floor 3600). Timeout 120s. Unusable only for 402, plan 429, or 401/403. |
 | #106 T4 | Single-turn same-provider keys spread by LRU weighted by remaining quota. The proxy breaker is per key. |
 | #95 web audit | apps/web npm audit fix: 0 high, 0 critical (was 3 high, 1 critical). next 16.3.8, sharp 0.35.5, nanoid 3.3.19. |
 
-## HT gates (#18 CLOSED, boxes ticked)
+## HT gates
 
-HT1 `https://netie.ai/ht1-demo/`. HT2 API chat 200. HT3 passphrase-scrypt + bak
-retired. HT4 Cortex healthy. HT5 inject; public `.env` 403.
+Only HT1 is lifted (`https://netie.ai/ht1-demo/`). HT2, HT3, HT4, and HT5 remain
+HUMAN_STOP. HT3 also needs the human passphrase. Public `:5000` stays HUMAN_STOP.
 
 ## Clone-and-verify
 

@@ -2,6 +2,11 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-01 - STATUS HT gates and chat-probe cadence
+
+- Only HT1 is lifted. HT2, HT3, HT4, and HT5 remain HUMAN_STOP. HT3 also needs the human passphrase. Public `:5000` stays HUMAN_STOP.
+- The #92 row matches the merged chat probe: `OPENVAULT_CHAT_PROBE_INTERVAL_S` defaults to 86400s with a 3600s floor, `OPENVAULT_CHAT_PROBE_TIMEOUT_S` defaults to 120s with a 30s floor, a boot pass runs after 30-120s of jitter, and keys checked within the floor are skipped (6h for sambanova and sea_lion).
+
 ## 2026-10-01 - apps/web npm audit high and critical (OpenVault #95)
 
 - `npm audit fix` (no `--force`) in `apps/web`. Before: 4 vulnerabilities (3 high, 1 critical). After: 0 high, 0 critical.
