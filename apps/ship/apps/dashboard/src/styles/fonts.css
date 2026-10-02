@@ -1,0 +1,11 @@
+/*
+ * ─────────────────────────────────────────────────────────────────
+ *  FREEBUILD FONTS
+ *  Modified by Netie AI, 2026: no web fonts, no third-party font CDN.
+ *  Upstream loaded "Gellix" + "SF Arabic" from cdn.oblien.com; FreeBuild
+ *  follows OpenVault's own font policy instead (system-ui / native stack —
+ *  see globals.css's --font-sans) and does not fetch fonts over the network.
+ *  Kept as an empty file (not deleted) so the `@import "../styles/fonts.css"`
+ *  in globals.css stays valid.
+ * ─────────────────────────────────────────────────────────────────
+ */

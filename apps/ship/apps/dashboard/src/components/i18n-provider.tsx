@@ -1,0 +1,176 @@
+"use client";
+
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import {
+  baseDictionary,
+  defaultLocale,
+  isRtl,
+  loadDictionary,
+  LOCALE_COOKIE,
+  locales,
+  type Dictionary,
+  type Locale,
+} from "@/i18n";
+import { brandNameFor, type ProductView } from "@/lib/product-view";
+
+/* ------------------------------------------------------------------ */
+/*  Context                                                            */
+/* ------------------------------------------------------------------ */
+
+type I18nContextValue = {
+  locale: Locale;
+  setLocale: (l: Locale) => void;
+  t: Dictionary;
+  dir: "ltr" | "rtl";
+  /** Which product this shell is presenting as. Lives here rather than in
+   *  PlatformContext because the brand appears on screens that render OUTSIDE
+   *  the dashboard providers — /login, /authorize, the API-unavailable and
+   *  not-found shells — while the root layout wraps all of them. */
+  productView: ProductView;
+};
+
+const I18nContext = createContext<I18nContextValue | null>(null);
+
+/* ------------------------------------------------------------------ */
+/*  Provider                                                           */
+/* ------------------------------------------------------------------ */
+
+/** Read the chosen locale on the client: cookie first (what SSR also reads),
+ *  then the localStorage mirror. Returns null when nothing valid is stored. */
+function readClientLocale(): Locale | null {
+  if (typeof document !== "undefined") {
+    const m = document.cookie.match(new RegExp(`(?:^|;\\s*)${LOCALE_COOKIE}=([^;]+)`));
+    const fromCookie = m ? decodeURIComponent(m[1]) : null;
+    if (fromCookie && (locales as readonly string[]).includes(fromCookie)) return fromCookie as Locale;
+  }
+  try {
+    const fromLs = localStorage.getItem(LOCALE_COOKIE);
+    if (fromLs && (locales as readonly string[]).includes(fromLs)) return fromLs as Locale;
+  } catch {
+    /* storage disabled */
+  }
+  return null;
+}
+
+export function I18nProvider({
+  children,
+  initialLocale = defaultLocale,
+  initialDictionary,
+  productView = "platform",
+}: {
+  children: React.ReactNode;
+  /** Locale resolved on the server from the cookie, so first paint matches. */
+  initialLocale?: Locale;
+  /** Active locale's dictionary, loaded server-side for non-English so SSR
+   *  renders in the right language with no English→translated flash. */
+  initialDictionary?: Dictionary;
+  /** Product view resolved on the server (cookie + instance default), so the
+   *  brand name is right on first paint. Changing it is a full reload — see
+   *  `setProductView` in PlatformContext. */
+  productView?: ProductView;
+}) {
+  const [locale, setLocaleState] = useState<Locale>(initialLocale);
+  // Seeded with the server-resolved dictionary (or bundled English), so the
+  // client hydrates in the same language the server rendered — no flash when
+  // SSR read the cookie.
+  const [t, setT] = useState<Dictionary>(initialDictionary ?? baseDictionary);
+
+  // Safety net: if the server render fell back to the default (couldn't surface
+  // the request cookie to SSR), reconcile from the cookie/localStorage on mount
+  // so the chosen locale ALWAYS survives a reload. No-op when SSR already got it
+  // right (stored === current) — so the common path stays flash-free.
+  useEffect(() => {
+    const stored = readClientLocale();
+    if (stored && stored !== initialLocale) setLocaleState(stored);
+    // Mount-only: initialLocale is the server value for this request.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Reload the dictionary when the locale changes at runtime (base resolves
+  // instantly; the initial locale is already seeded above so mount is a no-op).
+  useEffect(() => {
+    let alive = true;
+    void loadDictionary(locale).then((d) => {
+      if (alive) setT(d);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [locale]);
+
+  const setLocale = useCallback((l: Locale) => {
+    setLocaleState(l);
+    // Cookie is the source of truth (read server-side for SSR); localStorage is
+    // kept as a mirror. 1-year, lax so it rides top-level navigations.
+    document.cookie = `${LOCALE_COOKIE}=${l};path=/;max-age=31536000;samesite=lax`;
+    try {
+      localStorage.setItem(LOCALE_COOKIE, l);
+    } catch {
+      /* private mode / disabled storage — cookie still carries it */
+    }
+  }, []);
+
+  const dir: "ltr" | "rtl" = isRtl(locale) ? "rtl" : "ltr";
+
+  // Sync <html> attributes
+  useEffect(() => {
+    document.documentElement.lang = locale;
+    document.documentElement.dir = dir;
+  }, [locale, dir]);
+
+  const value = useMemo<I18nContextValue>(
+    () => ({ locale, setLocale, t, dir, productView }),
+    [locale, setLocale, t, dir, productView],
+  );
+
+  return (
+    <I18nContext.Provider value={value}>{children}</I18nContext.Provider>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Hook                                                               */
+/* ------------------------------------------------------------------ */
+
+// Fallback used only when a consumer renders outside I18nProvider — in practice
+// just Next's provider-less boundaries (global-error.tsx, and any error/not-found
+// fallback that replaces the root layout). Degrading to the bundled English
+// dictionary keeps those screens rendering instead of throwing a second error on
+// top of whatever already broke. The provider is hoisted to the root layout, so
+// every normal route still receives the live context.
+const I18N_FALLBACK: I18nContextValue = {
+  locale: defaultLocale,
+  setLocale: () => {},
+  t: baseDictionary,
+  dir: isRtl(defaultLocale) ? "rtl" : "ltr",
+  productView: "platform",
+};
+
+export function useI18n() {
+  return useContext(I18nContext) ?? I18N_FALLBACK;
+}
+
+/** Brand name for the current shell — "OpenShip" or "OpenShip Mail". */
+export function useBrandName(): string {
+  const { t, productView } = useI18n();
+  return brandNameFor(t.brand, productView);
+}
+
+/**
+ * Simple string interpolation: replaces {key} tokens.
+ *
+ * @example interpolate("Sent to {email}.", { email: "a@b.c" })
+ */
+export function interpolate(
+  template: string,
+  vars: Record<string, string>,
+): string {
+  return template.replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? `{${key}}`);
+}

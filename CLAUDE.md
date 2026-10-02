@@ -84,8 +84,8 @@ Estate law: `D:\Netie\Internal\Agents\AGENT_SYSTEM.md` (Human-inspectable gates)
 - Three separate `uv sync` roots: repo root (`nvme_sentinel`), `OpenMW/`, `Profiler/`.
   Never invoke `pip`, `poetry`, or `conda` directly — `uv run <cmd>` / `uv add <pkg>`
   (`uv add --dev` for dev deps) in the relevant root.
-- `D:` is exFAT (USB drive) — `bun`/`pnpm` cannot install there. `npm` only, in `apps/web`
-  and `apps/shell`.
+- `D:` is exFAT (USB drive) — `bun`/`pnpm` cannot install there. `npm` only, in `apps/web`,
+  `apps/shell`, `apps/router` and `apps/ship` (the last two are forks, DR-0018).
 - Never delete an existing test to make a build pass. If a test is wrong, explain why and ask.
 - Before writing code on a task flagged HIGH_RISK, state the file paths you will create or
   modify and wait for confirmation.
