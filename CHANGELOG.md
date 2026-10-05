@@ -2,6 +2,12 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-05 - Public JWKS alt is unauthenticated (OpenVault #112)
+
+- `GET /keys/jwks` matched the `/keys` admin root, so the published `jwks_alt` returned 401 without `X-OpenVault-Admin`. Live on `68514a72` (deploy 2026-10-02 02:13 MYT) the poller recorded 376x 401.
+- `GET`, `HEAD`, and `OPTIONS` on the exact path `/keys/jwks` (the `request.url.path` string `http_guard` already uses) are public. The body is the same bytes as `/.well-known/jwks.json` from `TrustStore.jwks()`. No private JWK members.
+- `POST`, `PUT`, and `DELETE` on that path stay on the admin gate (401, not 405). Near paths stay closed: `/keys/jwksX`, trailing slash, traversal, encoded, case, `/api/keys`, `/api/keys/quota`, `/keys/services`. A query token is not a credential. Loopback still needs the admin token off this path.
+
 ## 2026-10-01 - Strict pins for gemini-3.5-flash and gemma-4 free (OpenVault #109)
 
 - Strict mode for `gemini-3.5-flash` binds to google. Strict mode for
