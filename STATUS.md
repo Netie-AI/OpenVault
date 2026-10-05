@@ -49,6 +49,7 @@ shell at HTTP 200 is refused and named "compiling", not "unreachable".
 
 | # | Status |
 |---|--------|
+| #118 admin lock | Lock removes sessionStorage `openvault.admin` and the in-tab admin field. The .env paste text is cleared. Re-entering the token, then unseal, still works. |
 | #114 seal UX | VaultSealBar shows sealed vs open. Unseal sends the Providers admin session header and keeps the passphrase in tab memory until Lock. .env import masks values and POSTs /api/keys per row. |
 | #116 Hello unlock | When webauthn_registered, unseal and session reopen use the existing passkey ceremony. Passphrase stays the tab-memory fallback. Lock, fail, and reload clear the session. |
 | #112 public JWKS | GET/HEAD/OPTIONS `/keys/jwks` exact path is unauthenticated, same document as `/.well-known/jwks.json`. Other methods on that path stay 401. |

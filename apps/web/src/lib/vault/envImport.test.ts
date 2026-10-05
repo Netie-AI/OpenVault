@@ -5,7 +5,13 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { previewEnvText, runEnvAdds, type EnvAddBody } from "./envImport.ts";
+import {
+  clearEnvPaste,
+  onEnvPasteClear,
+  previewEnvText,
+  runEnvAdds,
+  type EnvAddBody,
+} from "./envImport.ts";
 
 const GROQ = "gsk_fixture_not_a_real_key_0001";
 const OPENROUTER = "sk-or-v1-fixture-openrouter-0001";
@@ -87,6 +93,21 @@ test("env import UI posts /api/keys and does not log", () => {
   );
   assert.equal(src.includes("previewEnvText"), true);
   assert.equal(src.includes("createKey"), true);
+  assert.equal(src.includes("onEnvPasteClear"), true);
   assert.equal(src.includes('data-testid="env-import-preview"'), true);
   assert.equal(src.toLowerCase().includes("console.log"), false);
+});
+
+test("Lock clears the .env paste listeners see", () => {
+  let text = `GROQ_API_KEY=${GROQ}`;
+  const stop = onEnvPasteClear(() => {
+    text = "";
+  });
+  try {
+    clearEnvPaste();
+    assert.equal(text, "");
+    assert.equal(text.includes(GROQ), false);
+  } finally {
+    stop();
+  }
 });

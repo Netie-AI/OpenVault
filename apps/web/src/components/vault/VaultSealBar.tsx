@@ -19,13 +19,19 @@ import {
   unsealVault,
   type VaultStatus,
 } from "@/lib/api/secrets";
-import { readAdminSession, redactShown, writeAdminSession } from "@/lib/api/adminSession";
+import {
+  clearAdminSession,
+  readAdminSession,
+  redactShown,
+  writeAdminSession,
+} from "@/lib/api/adminSession";
 import {
   clearVaultPasskey,
   registerVaultPasskey,
   unsealVaultWithPasskey,
   webauthnAvailable,
 } from "@/lib/api/webauthn";
+import { clearEnvPaste } from "@/lib/vault/envImport";
 import {
   SEALED_GATE_BODY,
   SEALED_GATE_HELLO_BODY,
@@ -173,6 +179,9 @@ export function VaultSealBar({
     try {
       const st = await lockVault();
       clearSessionPassphrase();
+      clearAdminSession();
+      setAdmin("");
+      clearEnvPaste();
       setGateDismissed(false);
       setUsePassphrase(false);
       apply(st);

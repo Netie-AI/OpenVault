@@ -5,13 +5,18 @@
  * Provider cards stay on /providers; this does not rebuild them.
  */
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { readAdminSession } from "@/lib/api/adminSession";
 import { createKey } from "@/lib/api/keys";
-import { previewEnvText, runEnvAdds, type EnvAddOutcome } from "@/lib/vault/envImport";
+import {
+  onEnvPasteClear,
+  previewEnvText,
+  runEnvAdds,
+  type EnvAddOutcome,
+} from "@/lib/vault/envImport";
 
 export function EnvTextImport({
   disabled = false,
@@ -26,6 +31,14 @@ export function EnvTextImport({
   const [notice, setNotice] = useState("");
 
   const preview = useMemo(() => previewEnvText(text), [text]);
+
+  useEffect(() => {
+    return onEnvPasteClear(() => {
+      setText("");
+      setOutcomes([]);
+      setNotice("");
+    });
+  }, []);
 
   function onFile(file: File | undefined) {
     if (!file) return;
