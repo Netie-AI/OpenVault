@@ -199,6 +199,21 @@ function plansFromText(text: string): EnvPlan[] {
   return plans;
 }
 
+const envPasteClears = new Set<() => void>();
+
+/** Ask every mounted .env paste field to drop its text. Lock calls this. */
+export function clearEnvPaste(): void {
+  for (const fn of [...envPasteClears]) fn();
+}
+
+/** Subscribe to Lock. Returns unsubscribe. */
+export function onEnvPasteClear(fn: () => void): () => void {
+  envPasteClears.add(fn);
+  return () => {
+    envPasteClears.delete(fn);
+  };
+}
+
 /** Masked rows only. The return value must not contain a full secret. */
 export function previewEnvText(text: string): EnvPreviewRow[] {
   return plansFromText(text).map((plan) => ({

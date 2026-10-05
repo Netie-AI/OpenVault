@@ -2,6 +2,11 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-05 - Lock clears the admin session (OpenVault #118)
+
+- After `lockVault` resolves, Lock removes `openvault.admin` from sessionStorage and clears the in-tab admin field. The next unseal does not resend the old token.
+- The same Lock drops the .env paste textarea. Re-entering the admin token, then unseal, still sends `X-OpenVault-Admin`. Tests use fixtures only.
+
 ## 2026-10-05 - Session unlock via Windows Hello (OpenVault #116)
 
 - When vault status says webauthn_registered, unseal and session reopen use the existing passkey ceremony (Windows Hello / platform authenticator). A successful passkey unseal marks the same in-tab session as a passphrase unseal. No second unlock API.

@@ -65,6 +65,16 @@ export function writeAdminSession(value: string): void {
   }
 }
 
+/** Drop the privileged console token. After this, getItem(openvault.admin) is null. */
+export function clearAdminSession(): void {
+  if (typeof sessionStorage === "undefined") return;
+  try {
+    sessionStorage.removeItem(ADMIN_SESSION_KEY);
+  } catch {
+    /* session storage unavailable */
+  }
+}
+
 /** Remove credential material from a string that might be shown in the UI. */
 export function redactShown(text: string, hidden: readonly string[]): string {
   let out = text;
