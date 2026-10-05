@@ -16,6 +16,11 @@ verifier that had to authenticate to learn a public key would be a verifier
 that stops working the moment credentials expire. Service registration is
 loopback plus ``OPENVAULT_SERVICES_ALLOW`` (prove VPC peers). Intermediate
 issue and revoke stay loopback-only, and issuance is bearer-authenticated.
+
+The HTTP guard does not require ``X-OpenVault-Admin`` on ``POST /keys/services``,
+``POST /keys/intermediate``, or ``POST /keys/intermediate/{kid}/revoke``.
+Those three keep the checks in this file. Other ``/keys`` methods stay on
+the admin gate. ``GET`` / ``HEAD`` / ``OPTIONS`` ``/keys/jwks`` stay public.
 """
 
 from __future__ import annotations

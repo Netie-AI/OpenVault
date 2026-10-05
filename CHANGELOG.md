@@ -2,6 +2,12 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-05 - Signing mint is not an admin route (OpenVault #126)
+
+- `POST /keys/services`, `POST /keys/intermediate`, and `POST /keys/intermediate/{kid}/revoke` no longer require `X-OpenVault-Admin`. Loopback prove was 401 `openvault_unauthenticated` before the #52 peer allowlist and reveal check ran.
+- `POST /keys/services` still requires a socket peer on loopback or `OPENVAULT_SERVICES_ALLOW` (default `10.128.0.3`, `34.30.222.22`) plus `X-OpenVault-Reveal: intentional`. An allowlisted peer with no `ov_` key reaches that gate. An unlisted remote with no credential stays 401. `X-Forwarded-For` and `Host` are not a peer.
+- Intermediate issue and revoke keep their loopback and Bearer service-token gates. `/api/keys`, `/api/vault`, secrets, and apikeys still require admin. `GET`/`HEAD`/`OPTIONS` `/keys/jwks` stay public.
+
 ## 2026-10-05 - One FreeRoute seat; vendor OpenShip client cut (Refs #99)
 
 - FreeRoute and FreeBuild stay the in-process OpenMW routers (`routers/freeroute.py`, `vault/proxy.py`, `ship/`). Draft #99's Node trees (`apps/router`, `apps/ship`, about 10k files) are not copied. They would be a second process beside the seat that already routes and ships. Key custody stays the OpenVault vault. No public `:5000` bind change.
