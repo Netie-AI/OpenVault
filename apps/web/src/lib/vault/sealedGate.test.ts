@@ -38,7 +38,9 @@ test("VaultSealBar renders the sealed gate and unseals in-app", () => {
   assert.equal(src.includes('data-testid="vault-seal-state"'), true);
   assert.equal(src.includes("unsealVault"), true);
   assert.equal(src.includes("fetchVaultStatus"), true);
-  assert.equal(src.includes("writeAdminSession"), true);
+  assert.equal(src.includes("writeAdminSession"), false);
+  assert.equal(src.includes("sealed-gate-admin"), false);
+  assert.equal(src.includes("Admin token"), false);
   assert.equal(src.includes("SEALED_GATE_TITLE"), true);
   assert.equal(src.includes("SEALED_GATE_BODY"), true);
   assert.equal(src.includes("sealedGateOpen"), true);
@@ -50,5 +52,12 @@ test("VaultSealBar renders the sealed gate and unseals in-app", () => {
   assert.equal(src.includes("clearSessionPassphrase"), true);
   assert.equal(src.includes("localStorage"), false);
   assert.equal(src.toLowerCase().includes("console.log"), false);
+  assert.equal(src.toLowerCase().includes("admin_token"), false);
+});
+
+test("Overview shows the same unseal control", () => {
+  const src = readFileSync(new URL("../../app/page.tsx", import.meta.url), "utf8");
+  assert.equal(src.includes("<VaultSealBar />"), true);
+  assert.equal(src.toLowerCase().includes("admin token"), false);
   assert.equal(src.toLowerCase().includes("admin_token"), false);
 });

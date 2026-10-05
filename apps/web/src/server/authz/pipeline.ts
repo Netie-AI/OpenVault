@@ -10,8 +10,13 @@ import {
   AUTHZ_HEADER_ROUTE_CLASS,
   AUTHZ_TRUSTED_HEADERS,
 } from "./headers";
+import {
+  applyLoopbackAdminHeader,
+  isLoopbackVaultBootstrap,
+  readLocalAdminToken,
+} from "./loopbackVaultAdmin";
 import { classifyRequestPeerLocality } from "./peerStamp";
-import { isLocalOnlyPath } from "./routeGuard";
+import { isLocalOnlyPath, isLoopbackHost } from "./routeGuard";
 import type { AuthOutcome, RouteClassification } from "./types";
 
 export interface AuthzPipelineOptions {
@@ -150,6 +155,16 @@ export async function runAuthzPipeline(
   requestHeaders.set(AUTHZ_HEADER_ROUTE_CLASS, classification.routeClass);
   requestHeaders.set(AUTHZ_HEADER_REQUEST_ID, requestId);
   requestHeaders.set(AUTHZ_HEADER_PEER_LOCALITY, peerLocality);
+
+  // URL host only. A spoofed X-Forwarded-For must not load the admin file.
+  if (isLoopbackHost(request.nextUrl.hostname) && isLoopbackVaultBootstrap(method, pathname)) {
+    applyLoopbackAdminHeader(requestHeaders, {
+      method,
+      pathname,
+      urlHost: request.nextUrl.hostname,
+      token: readLocalAdminToken(),
+    });
+  }
 
   const response = NextResponse.next({ request: { headers: requestHeaders } });
   applyCorsHeaders(response, request);
