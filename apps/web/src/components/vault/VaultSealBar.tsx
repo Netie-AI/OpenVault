@@ -19,12 +19,7 @@ import {
   unsealVault,
   type VaultStatus,
 } from "@/lib/api/secrets";
-import {
-  clearAdminSession,
-  readAdminSession,
-  redactShown,
-  writeAdminSession,
-} from "@/lib/api/adminSession";
+import { clearAdminSession, readAdminSession, redactShown } from "@/lib/api/adminSession";
 import {
   clearVaultPasskey,
   registerVaultPasskey,
@@ -58,7 +53,6 @@ export function VaultSealBar({
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
   const [passkeyOk, setPasskeyOk] = useState(false);
-  const [admin, setAdmin] = useState("");
   const [gateDismissed, setGateDismissed] = useState(() => sessionUnsealed());
   const [usePassphrase, setUsePassphrase] = useState(false);
   const [unauthorized, setUnauthorized] = useState(false);
@@ -72,11 +66,10 @@ export function VaultSealBar({
 
   useEffect(() => {
     setPasskeyOk(webauthnAvailable());
-    setAdmin(readAdminSession());
   }, []);
 
   function note(text: string) {
-    setNotice(redactShown(text, [passphrase, sessionPassphrase(), admin, readAdminSession()]));
+    setNotice(redactShown(text, [passphrase, sessionPassphrase(), readAdminSession()]));
   }
 
   useEffect(() => {
@@ -113,7 +106,7 @@ export function VaultSealBar({
         if (ac.signal.aborted) return;
         if (isApiError(err) && err.status === 401) {
           setUnauthorized(true);
-          setNotice("Could not read vault lock state. Enter the admin token, then check again.");
+          setNotice("Could not read vault lock state.");
           return;
         }
         setNotice(isApiError(err) ? err.message : "Could not read vault lock state");
@@ -123,7 +116,6 @@ export function VaultSealBar({
   }, []);
 
   async function onCheck() {
-    writeAdminSession(admin);
     setBusy("status");
     setNotice("");
     const cached = sessionPassphrase();
@@ -142,7 +134,7 @@ export function VaultSealBar({
       setGateDismissed(false);
       const raw = isApiError(err)
         ? err.status === 401
-          ? "Could not read vault lock state. Enter the admin token, then check again."
+          ? "Could not read vault lock state."
           : err.message
         : "Could not read vault lock state";
       if (isApiError(err) && err.status === 401) setUnauthorized(true);
@@ -155,7 +147,6 @@ export function VaultSealBar({
   async function onUnseal() {
     setBusy("unseal");
     setNotice("");
-    writeAdminSession(admin);
     try {
       const typed = passphrase;
       const st = await unsealVault(typed);
@@ -180,7 +171,6 @@ export function VaultSealBar({
       const st = await lockVault();
       clearSessionPassphrase();
       clearAdminSession();
-      setAdmin("");
       clearEnvPaste();
       setGateDismissed(false);
       setUsePassphrase(false);
@@ -215,7 +205,6 @@ export function VaultSealBar({
   async function onPasskeyUnseal() {
     setBusy("passkey-unseal");
     setNotice("");
-    writeAdminSession(admin);
     try {
       const st = await unsealVaultWithPasskey();
       apply(st);
@@ -494,23 +483,6 @@ export function VaultSealBar({
               {passkeyUnlock && !usePassphrase ? SEALED_GATE_HELLO_BODY : SEALED_GATE_BODY}
             </p>
             <div className="mt-4 space-y-3">
-              <div>
-                <Label htmlFor="sealed-gate-admin">Admin token</Label>
-                <Input
-                  id="sealed-gate-admin"
-                  type="password"
-                  autoComplete="off"
-                  spellCheck={false}
-                  value={admin}
-                  onChange={(e) => {
-                    setAdmin(e.target.value);
-                    writeAdminSession(e.target.value);
-                  }}
-                />
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Same session the Providers page uses.
-                </p>
-              </div>
               {!passkeyUnlock || usePassphrase ? (
                 <div>
                   <Label htmlFor="vault-passphrase">Passphrase</Label>

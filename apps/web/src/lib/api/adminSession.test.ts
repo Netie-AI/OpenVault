@@ -93,7 +93,6 @@ test("VaultSealBar Lock clears the admin session with the passphrase", () => {
   assert.equal(lockAt >= 0, true);
   assert.equal(passAt > lockAt, true);
   assert.equal(adminAt > passAt, true);
-  assert.equal(lock.includes('setAdmin("")'), true);
   assert.equal(lock.includes("clearEnvPaste()"), true);
 
   const passkey = src.slice(

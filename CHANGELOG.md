@@ -2,6 +2,12 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-05 - Localhost unseal without an admin paste (OpenVault #123)
+
+- On a loopback URL host the :3010 console attaches `X-OpenVault-Admin` from the local admin token file for vault status, passphrase unseal, Hello unseal, and `GET /api/keys`. The token is not written into the page. Next strips it from the browser response.
+- The unseal gate no longer asks for an admin token. Overview shows the same Unseal / Hello control as `/vault`.
+- A non-loopback host does not get that header. Other vault and key mutations still require it and stay 401 without it. The API guard is unchanged. Refs #123.
+
 ## 2026-10-05 - One FreeRoute seat; vendor OpenShip client cut (Refs #99)
 
 - FreeRoute and FreeBuild stay the in-process OpenMW routers (`routers/freeroute.py`, `vault/proxy.py`, `ship/`). Draft #99's Node trees (`apps/router`, `apps/ship`, about 10k files) are not copied. They would be a second process beside the seat that already routes and ships. Key custody stays the OpenVault vault. No public `:5000` bind change.
