@@ -49,6 +49,7 @@ shell at HTTP 200 is refused and named "compiling", not "unreachable".
 
 | # | Status |
 |---|--------|
+| #114 seal UX | VaultSealBar shows sealed vs open. Unseal sends the Providers admin session header and keeps the passphrase in tab memory until Lock. .env import masks values and POSTs /api/keys per row. |
 | #112 public JWKS | GET/HEAD/OPTIONS `/keys/jwks` exact path is unauthenticated, same document as `/.well-known/jwks.json`. Other methods on that path stay 401. |
 | #94 catalog | SambaNova and SEA-LION rows added. NVIDIA NIM chat models refreshed. DeepSeek stays on its own provider. |
 | #83 admin token | Key and secret admin routes plus /keys require X-OpenVault-Admin, even from loopback. |

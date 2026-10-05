@@ -2,6 +2,17 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-05 - Vault unseal lasts for the app session (OpenVault #114)
+
+- After a successful passphrase unseal, the passphrase stays in tab memory. A later screen that still sees the server sealed re-posts it once and does not open the gate again.
+- Lock, a failed re-unseal, or a reload drops that cache. It is not written to localStorage or sessionStorage. Windows Hello / passkey unlock is unchanged.
+
+## 2026-10-05 - In-app vault unseal and masked .env import (OpenVault #114)
+
+- VaultSealBar shows sealed vs open from GET /api/vault/status. While sealed, a gate asks for the passphrase once. POST /api/vault/unseal sends the same X-OpenVault-Admin session the Providers page stores.
+- Pasted or picked .env text is parsed in the browser. The list shows a mask. One click adds each known provider key with POST /api/keys. Each row reports ok or fail. Secret bodies are not shown.
+- Provider cards stay as they are. sea_lion is shown by name and stored as custom with the public SEA-LION base URL, because POST /api/keys has no sea_lion provider id.
+
 ## 2026-10-05 - Public JWKS alt is unauthenticated (OpenVault #112)
 
 - `GET /keys/jwks` matched the `/keys` admin root, so the published `jwks_alt` returned 401 without `X-OpenVault-Admin`. Live on `68514a72` (deploy 2026-10-02 02:13 MYT) the poller recorded 376x 401.

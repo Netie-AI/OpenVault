@@ -4,7 +4,7 @@
  * FreeRoute Get free keys onboard wizard (#60).
  *
  * Prefer Electron `openvault app` (STATUS: :3010 hang). Reuses POST /api/keys,
- * /api/keys/{id}/precheck, /api/vault/env-scan, ingest-env, seed-essentials.
+ * /api/keys/{id}/precheck, and seed-essentials. .env import is parsed here.
  * Site passwords are not this wizard — they live on /api/secrets*.
  * Retired inference APIs are not listed. Save never waits on CF /models 405.
  */
@@ -14,18 +14,15 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { apiGet, isApiError } from "@/lib/api/client";
 import {
   createKey,
-  ingestEnv,
   listKeys,
   precheckKey,
   seedEssentials,
-  type IngestEnvResult,
   type KeyRow,
 } from "@/lib/api/keys";
-import { VaultSealBar } from "@/components/vault/VaultSealBar";
+import { EnvTextImport } from "@/components/vault/EnvTextImport";
 import { rememberRegisterIntent } from "@/lib/vault/registerIntent";
 import {
   FREE_KEYS_ONBOARD,
@@ -52,15 +49,17 @@ function emptyDraft(): { secret: string; accountId: string; msg: string; warn: s
   return { secret: "", accountId: "", msg: "", warn: "" };
 }
 
-export function FreeKeysWizard({ focusProvider = "" }: { focusProvider?: string }) {
+export function FreeKeysWizard({
+  focusProvider = "",
+  sealed = true,
+}: {
+  focusProvider?: string;
+  sealed?: boolean;
+}) {
   const [rows, setRows] = useState<FreeKeyOnboardRow[]>([...FREE_KEYS_ONBOARD]);
   const [keys, setKeys] = useState<KeyRow[]>([]);
   const [drafts, setDrafts] = useState<Drafts>({});
   const [busy, setBusy] = useState<string | null>(null);
-  const [sealed, setSealed] = useState(true);
-  const [envText, setEnvText] = useState("");
-  const [envPreview, setEnvPreview] = useState<IngestEnvResult | null>(null);
-  const [envMsg, setEnvMsg] = useState("");
   const [seedMsg, setSeedMsg] = useState("");
 
   const refreshKeys = useCallback(async () => {
@@ -153,46 +152,6 @@ export function FreeKeysWizard({ focusProvider = "" }: { focusProvider?: string 
     }
   }
 
-  async function previewEnv() {
-    setBusy("env-preview");
-    setEnvMsg("");
-    try {
-      const preview = await ingestEnv(true, { envText });
-      setEnvPreview(preview);
-      setEnvMsg(
-        preview.scanned
-          ? `Dry run: ${preview.scanned} candidate(s). Nothing written.`
-          : "Dry-run: no importable keys in that paste.",
-      );
-    } catch (err) {
-      setEnvMsg(isApiError(err) ? err.message : "Dry-run ingest failed");
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  async function importEnv() {
-    setBusy("env-import");
-    setEnvMsg("");
-    try {
-      const result = await ingestEnv(false, { envText });
-      setEnvPreview(result);
-      setEnvText("");
-      await refreshKeys();
-      setEnvMsg(
-        `Imported ${result.imported ?? 0} key(s)` +
-          (result.passwords_imported
-            ? `, ${result.passwords_imported} password(s) routed to /api/secrets (not this wizard)`
-            : "") +
-          ". Testing is separate and cannot un-save a Cloudflare 405.",
-      );
-    } catch (err) {
-      setEnvMsg(isApiError(err) ? err.message : "Import failed");
-    } finally {
-      setBusy(null);
-    }
-  }
-
   async function seedLocal() {
     setBusy("seed");
     try {
@@ -207,10 +166,6 @@ export function FreeKeysWizard({ focusProvider = "" }: { focusProvider?: string 
 
   return (
     <section id="keypath-free" data-testid="free-screen" className="grid gap-5 lg:grid-cols-2">
-      <div className="space-y-5 lg:col-span-2">
-        <VaultSealBar onStatus={(st) => setSealed(st.sealed)} />
-      </div>
-
       <div className={CARD}>
         <h2 className={H2}>Get free keys</h2>
         <p className={LEAD}>
@@ -350,40 +305,14 @@ export function FreeKeysWizard({ focusProvider = "" }: { focusProvider?: string 
       </div>
 
       <div className={`${CARD} lg:col-span-2`}>
-        <h2 className={H2}>Batch .env ingest</h2>
+        <h2 className={H2}>Import a .env</h2>
         <p className={LEAD}>
-          Dry-run default. Uses existing <code className="text-foreground">/api/vault/env-scan</code>{" "}
-          and <code className="text-foreground">/api/vault/ingest-env</code>. Known API keys go to the
-          vault (custody pooled). SITE_* / passwords are routed to secrets, not this form.
+          Parsed in this browser. Known provider names are masked, then added with{" "}
+          <code className="text-foreground">POST /api/keys</code>. Provider cards stay on
+          Providers.
         </p>
-        <div className="mt-3 space-y-2">
-          <Label htmlFor="env-ingest-text">Paste a .env or several KEY=value lines</Label>
-          <Textarea
-            id="env-ingest-text"
-            rows={8}
-            placeholder={"GROQ_API_KEY=\nGOOGLE_API_KEY=\nCLOUDFLARE_API_TOKEN=\nCLOUDFLARE_ACCOUNT_ID="}
-            value={envText}
-            onChange={(e) => setEnvText(e.target.value)}
-          />
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={() => void previewEnv()} disabled={busy === "env-preview"}>
-              Dry-run scan
-            </Button>
-            <Button onClick={() => void importEnv()} disabled={busy === "env-import" || sealed}>
-              {busy === "env-import" ? "Importing…" : "Import into vault"}
-            </Button>
-          </div>
-          {envMsg ? <p className="text-xs text-muted-foreground">{envMsg}</p> : null}
-          {envPreview?.results?.length ? (
-            <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
-              {envPreview.results.map((row) => (
-                <li key={`${row.env_key}-${row.action}`}>
-                  {row.env_key} → {row.store || "keys"} · {row.action}
-                  {row.masked ? ` · ${row.masked}` : ""}
-                </li>
-              ))}
-            </ul>
-          ) : null}
+        <div className="mt-3">
+          <EnvTextImport disabled={sealed} onImported={() => void refreshKeys()} />
         </div>
         <div className="mt-5 border-t border-border pt-4">
           <p className="text-sm font-medium text-foreground">Local slots</p>
