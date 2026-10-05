@@ -7,11 +7,19 @@ valid issued OpenVault API key (the same ``Authorization: Bearer`` /
 ``OPENVAULT_REQUIRE_API_KEY`` cannot open a remote path: unset, false, or
 true, the guard still runs.
 
-Key and secret management routes, and every ``/keys`` route, also require
-the separate admin credential in ``X-OpenVault-Admin``. Loopback does not
-skip that check. The admin token is not an ``ov_`` key. The published JWKS
-alt is the exception: ``GET``, ``HEAD``, and ``OPTIONS`` on the exact path
-``/keys/jwks`` are public, same as ``/.well-known/jwks.json``.
+Key and secret management routes, and ``/keys`` routes, also require the
+separate admin credential in ``X-OpenVault-Admin``. Loopback does not skip
+that check. The admin token is not an ``ov_`` key. Two exceptions:
+
+* ``GET``, ``HEAD``, and ``OPTIONS`` on the exact path ``/keys/jwks`` are
+  public, same as ``/.well-known/jwks.json``.
+* ``POST /keys/services``, ``POST /keys/intermediate``, and
+  ``POST /keys/intermediate/{kid}/revoke`` do not require the admin header
+  (#126). They stay on this guard. ``POST /keys/services`` also admits a
+  socket peer on the #52 allowlist when no API key is presented, so the
+  route can apply its peer check and ``X-OpenVault-Reveal: intentional``.
+  A presented API key is still verified. Other methods and near paths stay
+  on the admin gate.
 
 The peer is ``request.client.host`` after the socket accept. Forwarded and
 Host headers are never read.
@@ -20,8 +28,10 @@ Host headers are never read.
 from __future__ import annotations
 
 import os
+import re
 from typing import Any, Protocol
 
+import structlog
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
@@ -41,6 +51,12 @@ _LOOPBACK_PEERS: frozenset[str] = frozenset({"127.0.0.1", "::1"})
 # Published jwks_alt. Equality on request.url.path. Not a prefix and not a regex.
 _PUBLIC_JWKS_PATH = "/keys/jwks"
 _PUBLIC_JWKS_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
+# Signing mint (#126). Equality on request.url.path, POST only. Not a prefix.
+_SERVICES_MINT_PATH = "/keys/services"
+_INTERMEDIATE_MINT_PATH = "/keys/intermediate"
+_REVOKE_MINT_PATH = re.compile(r"/keys/intermediate/[^/]+/revoke\Z")
+
+log = structlog.get_logger()
 
 
 class _KeyStore(Protocol):
@@ -72,6 +88,39 @@ def path_is_guarded(path: str) -> bool:
     return path.startswith(_GUARDED_PREFIXES)
 
 
+def signing_mint_kind(method: str, path: str) -> str:
+    """``services``, ``intermediate``, ``revoke``, or empty.
+
+    ``path`` is ``request.url.path`` with no further normalisation. POST only.
+    A trailing slash, an extra segment, a different method, or a different
+    case is not a mint route and stays on the admin gate.
+    """
+    if method.upper() != "POST":
+        return ""
+    if path == _SERVICES_MINT_PATH:
+        return "services"
+    if path == _INTERMEDIATE_MINT_PATH:
+        return "intermediate"
+    if _REVOKE_MINT_PATH.fullmatch(path) is not None:
+        return "revoke"
+    return ""
+
+
+def _socket_peer_may_mint_service(host: str) -> bool:
+    """True when ``host`` is on the #52 services allowlist.
+
+    ``host`` is ``request.client.host``. The allowlist helper does not read
+    ``X-Forwarded-For`` or ``Host``. Import is deferred because ``app`` imports
+    this module. A failure to load the allowlist refuses the peer.
+    """
+    try:
+        from openmw.openvault.app import _host_in_services_allow
+    except ImportError:
+        log.warning("services_allow_import_failed")
+        return False
+    return bool(_host_in_services_allow(host))
+
+
 def _public_jwks_read(method: str, path: str) -> bool:
     """True only for the published JWKS alt.
 
@@ -96,15 +145,17 @@ def refuse_if_unauthorised(request: Request, *, api_keys: _KeyStore) -> JSONResp
     """Return a 401/403 response to send, or None to let the request through.
 
     Method is ignored on every path except the public JWKS alt (GET, HEAD,
-    OPTIONS on exact ``/keys/jwks``). Other methods, including POST/PUT/DELETE
-    on that path, are guarded the same way as every other admin route.
+    OPTIONS on exact ``/keys/jwks``) and the three POST signing-mint routes.
+    Other methods, including POST/PUT/DELETE on ``/keys/jwks``, are guarded
+    the same way as every other admin route.
     """
     path = request.url.path
     # Same path string as the admin check below. Do not unquote or casefold.
     if _public_jwks_read(request.method, path):
         return None
 
-    if path_needs_admin(path):
+    mint = signing_mint_kind(request.method, path)
+    if not mint and path_needs_admin(path):
         presented = (request.headers.get(ADMIN_HEADER) or "").strip()
         if not admin_token_matches(presented):
             return _missing()
@@ -122,6 +173,11 @@ def refuse_if_unauthorised(request: Request, *, api_keys: _KeyStore) -> JSONResp
         record = api_keys.verify(token)
         if record is None:
             return _bad()
+        return None
+
+    # No credential. Only the services mint admits an allowlisted socket peer.
+    # Intermediate issue and revoke stay 401 here; their handlers are loopback.
+    if mint == "services" and _socket_peer_may_mint_service(host):
         return None
     return _missing()
 
@@ -153,4 +209,5 @@ __all__ = [
     "path_needs_admin",
     "peer_is_loopback",
     "refuse_if_unauthorised",
+    "signing_mint_kind",
 ]

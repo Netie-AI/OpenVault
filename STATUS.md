@@ -49,6 +49,7 @@ shell at HTTP 200 is refused and named "compiling", not "unreachable".
 
 | # | Status |
 |---|--------|
+| #126 prove mint | POST /keys/services, POST /keys/intermediate, and revoke skip X-OpenVault-Admin. Services mint still needs the #52 socket allowlist plus X-OpenVault-Reveal: intentional. Remote with no credential stays 401. |
 | #99 one seat | In-process FreeRoute and FreeBuild stay the seat. Vendor OpenShip HTTP client is deleted. /proxy redirects to /freeroute. Draft #99 Node trees are not copied. |
 | #120 tz fallback | quota.window_bounds falls back to UTC with a warning; tzdata is a Windows dependency. |
 | #118 admin lock | Lock removes sessionStorage `openvault.admin` and the in-tab admin field. The .env paste text is cleared. Re-entering the token, then unseal, still works. |
@@ -56,7 +57,7 @@ shell at HTTP 200 is refused and named "compiling", not "unreachable".
 | #116 Hello unlock | When webauthn_registered, unseal and session reopen use the existing passkey ceremony. Passphrase stays the tab-memory fallback. Lock, fail, and reload clear the session. |
 | #112 public JWKS | GET/HEAD/OPTIONS `/keys/jwks` exact path is unauthenticated, same document as `/.well-known/jwks.json`. Other methods on that path stay 401. |
 | #94 catalog | SambaNova and SEA-LION rows added. NVIDIA NIM chat models refreshed. DeepSeek stays on its own provider. |
-| #83 admin token | Key and secret admin routes plus /keys require X-OpenVault-Admin, even from loopback. |
+| #83 admin token | Key and secret admin routes plus /keys require X-OpenVault-Admin, even from loopback. Mint POSTs are the #126 exception. |
 | #76 T2 | Dead-model 404/unknown continues; 429 parks (key, model); pinned model is not swapped in-provider. |
 | #80 strict pin | Opt-in field or header. pin_unavailable when the exact catalog id has no healthy hop. |
 | #78 CLI add | openvault add <provider>: hidden prompt or stdin, 1-token chat, HMAC dedupe, one vault. |

@@ -53,6 +53,11 @@ def path_needs_admin(path: str) -> bool:
 
     ``/api/healthz``, ``/api/freeroute/status``, ``/v1/*``, and
     ``/.well-known/jwks.json`` are not admin routes.
+
+    This is path classification only. The HTTP guard skips the admin header
+    on three POST signing-mint routes: exact ``/keys/services``, exact
+    ``/keys/intermediate``, and ``/keys/intermediate/{kid}/revoke``. GET and
+    every other method on those paths stay admin routes.
     """
     for root in _ADMIN_ROOTS:
         if path == root or path.startswith(root + "/"):
