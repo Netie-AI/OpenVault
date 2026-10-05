@@ -2,6 +2,11 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-05 - Windows quota crash and tzdata (OpenVault #120)
+
+- `quota.window_bounds` no longer raises when the machine has no tz database; it falls back to UTC and logs `quota_tz_missing_using_utc`.
+- `tzdata` is a declared dependency on Windows. Before: chat routing and `/api/freeroute/status` returned 500 on Windows once a key existed.
+
 ## 2026-10-05 - Lock clears the admin session (OpenVault #118)
 
 - After `lockVault` resolves, Lock removes `openvault.admin` from sessionStorage and clears the in-tab admin field. The next unseal does not resend the old token.

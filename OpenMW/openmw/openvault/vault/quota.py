@@ -12,11 +12,15 @@ import math
 import sqlite3
 import time
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, tzinfo
 from pathlib import Path
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+import structlog
 
 from openmw.openvault.vault.providers import get_provider
+
+log = structlog.get_logger()
 
 _RESET_REASONS = frozenset(
     {
@@ -43,11 +47,27 @@ def iso_utc(epoch: float) -> str:
     return datetime.fromtimestamp(epoch, timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def _zone(tz_name: str) -> tzinfo:
+    """The reset zone. Stock Windows ships no tz database, so a missing one
+    must not take chat routing down: fall back to UTC and say so.
+
+    ``tzdata`` is a declared Windows dependency; this is the net under it. The
+    fallback shifts a non-UTC reset (Google resets on Pacific time) by hours,
+    which is why it logs instead of staying quiet.
+    """
+    name = tz_name or "UTC"
+    try:
+        return ZoneInfo(name)
+    except ZoneInfoNotFoundError:
+        log.warning("quota_tz_missing_using_utc", tz=name)
+        return timezone.utc
+
+
 def window_bounds(tz_name: str, now: float | None = None) -> tuple[float, float]:
     """``(window_start, next_reset)`` as epoch seconds in ``tz_name``."""
     current = datetime.fromtimestamp(
         time.time() if now is None else now,
-        ZoneInfo(tz_name or "UTC"),
+        _zone(tz_name),
     )
     start = current.replace(hour=0, minute=0, second=0, microsecond=0)
     nxt = start + timedelta(days=1)
