@@ -122,6 +122,10 @@ def test_route_walk_unauthenticated_remote_is_refused(home: Path) -> None:
         if path in AUTH_ALLOWLIST:
             continue
         response = remote.request(method, path)
+        # #112 published jwks_alt. Exact GET. Other /keys methods stay refused.
+        if (method, path) == ("GET", "/keys/jwks"):
+            assert response.status_code == 200, f"{method} {path} -> {response.status_code}"
+            continue
         assert response.status_code in (401, 403), f"{method} {path} -> {response.status_code}"
         if method == "HEAD":
             continue

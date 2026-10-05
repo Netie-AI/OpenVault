@@ -9,7 +9,9 @@ true, the guard still runs.
 
 Key and secret management routes, and every ``/keys`` route, also require
 the separate admin credential in ``X-OpenVault-Admin``. Loopback does not
-skip that check. The admin token is not an ``ov_`` key.
+skip that check. The admin token is not an ``ov_`` key. The published JWKS
+alt is the exception: ``GET``, ``HEAD``, and ``OPTIONS`` on the exact path
+``/keys/jwks`` are public, same as ``/.well-known/jwks.json``.
 
 The peer is ``request.client.host`` after the socket accept. Forwarded and
 Host headers are never read.
@@ -36,6 +38,9 @@ AUTH_ALLOWLIST: frozenset[str] = frozenset({"/api/healthz"})
 _GUARDED_PREFIXES: tuple[str, ...] = ("/api/", "/keys/")
 _DOCS_TRUTH = frozenset({"1", "true", "yes", "on"})
 _LOOPBACK_PEERS: frozenset[str] = frozenset({"127.0.0.1", "::1"})
+# Published jwks_alt. Equality on request.url.path. Not a prefix and not a regex.
+_PUBLIC_JWKS_PATH = "/keys/jwks"
+_PUBLIC_JWKS_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 
 
 class _KeyStore(Protocol):
@@ -67,6 +72,16 @@ def path_is_guarded(path: str) -> bool:
     return path.startswith(_GUARDED_PREFIXES)
 
 
+def _public_jwks_read(method: str, path: str) -> bool:
+    """True only for the published JWKS alt.
+
+    ``path`` is ``request.url.path`` with no further normalisation. HEAD and
+    OPTIONS stay on this side so they match ``/.well-known/jwks.json``. Any
+    other method stays on the admin gate and answers 401 before a 405.
+    """
+    return method.upper() in _PUBLIC_JWKS_METHODS and path == _PUBLIC_JWKS_PATH
+
+
 def peer_is_loopback(host: str) -> bool:
     """True only for a loopback socket peer. Never a header value."""
     value = (host or "").strip()
@@ -80,10 +95,15 @@ def peer_is_loopback(host: str) -> bool:
 def refuse_if_unauthorised(request: Request, *, api_keys: _KeyStore) -> JSONResponse | None:
     """Return a 401/403 response to send, or None to let the request through.
 
-    Method is ignored on purpose: PUT/POST/PATCH/DELETE are guarded the same
-    way as GET. Handlers do not need their own remote check.
+    Method is ignored on every path except the public JWKS alt (GET, HEAD,
+    OPTIONS on exact ``/keys/jwks``). Other methods, including POST/PUT/DELETE
+    on that path, are guarded the same way as every other admin route.
     """
     path = request.url.path
+    # Same path string as the admin check below. Do not unquote or casefold.
+    if _public_jwks_read(request.method, path):
+        return None
+
     if path_needs_admin(path):
         presented = (request.headers.get(ADMIN_HEADER) or "").strip()
         if not admin_token_matches(presented):
