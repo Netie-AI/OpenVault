@@ -8,6 +8,7 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import {
   SEALED_GATE_BODY,
+  SEALED_GATE_HELLO_BODY,
   SEALED_GATE_TITLE,
   sealChrome,
   sealedGateOpen,
@@ -24,6 +25,8 @@ test("sealed status opens the gate; open status does not", () => {
   assert.equal(sealedGateOpen(undefined, true, true), false);
   assert.match(SEALED_GATE_TITLE, /sealed/i);
   assert.match(SEALED_GATE_BODY, /passphrase once/i);
+  assert.match(SEALED_GATE_HELLO_BODY, /Windows Hello/);
+  assert.match(SEALED_GATE_HELLO_BODY, /Passphrase still works/);
 });
 
 test("VaultSealBar renders the sealed gate and unseals in-app", () => {
@@ -40,6 +43,10 @@ test("VaultSealBar renders the sealed gate and unseals in-app", () => {
   assert.equal(src.includes("SEALED_GATE_BODY"), true);
   assert.equal(src.includes("sealedGateOpen"), true);
   assert.equal(src.includes("rememberSessionPassphrase"), true);
+  assert.equal(src.includes("rememberSessionWebAuthn"), true);
+  assert.equal(src.includes("unsealVaultWithPasskey"), true);
+  assert.equal(src.includes("SEALED_GATE_HELLO_BODY"), true);
+  assert.equal(src.includes('data-testid="vault-hello-unlock"'), true);
   assert.equal(src.includes("clearSessionPassphrase"), true);
   assert.equal(src.includes("localStorage"), false);
   assert.equal(src.toLowerCase().includes("console.log"), false);

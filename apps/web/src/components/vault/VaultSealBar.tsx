@@ -28,14 +28,17 @@ import {
 } from "@/lib/api/webauthn";
 import {
   SEALED_GATE_BODY,
+  SEALED_GATE_HELLO_BODY,
   SEALED_GATE_TITLE,
   sealedGateOpen,
 } from "@/lib/vault/sealedGate";
 import {
   clearSessionPassphrase,
   rememberSessionPassphrase,
+  rememberSessionWebAuthn,
   reopenSealedVault,
   sessionPassphrase,
+  sessionUnlockKind,
   sessionUnsealed,
 } from "@/lib/vault/sessionUnseal";
 
@@ -51,6 +54,7 @@ export function VaultSealBar({
   const [passkeyOk, setPasskeyOk] = useState(false);
   const [admin, setAdmin] = useState("");
   const [gateDismissed, setGateDismissed] = useState(() => sessionUnsealed());
+  const [usePassphrase, setUsePassphrase] = useState(false);
   const [unauthorized, setUnauthorized] = useState(false);
   const onStatusRef = useRef(onStatus);
   onStatusRef.current = onStatus;
@@ -77,7 +81,11 @@ export function VaultSealBar({
         if (ac.signal.aborted) return;
         const cached = sessionPassphrase();
         try {
-          st = await reopenSealedVault(st, (phrase) => unsealVault(phrase));
+          st = await reopenSealedVault(
+            st,
+            (phrase) => unsealVault(phrase),
+            webauthnAvailable() ? unsealVaultWithPasskey : undefined,
+          );
         } catch (err) {
           if (ac.signal.aborted) return;
           setUnauthorized(false);
@@ -115,7 +123,11 @@ export function VaultSealBar({
     const cached = sessionPassphrase();
     try {
       let st = await fetchVaultStatus();
-      st = await reopenSealedVault(st, (phrase) => unsealVault(phrase));
+      st = await reopenSealedVault(
+        st,
+        (phrase) => unsealVault(phrase),
+        webauthnAvailable() ? unsealVaultWithPasskey : undefined,
+      );
       setUnauthorized(false);
       apply(st);
       setGateDismissed(!st.sealed);
@@ -162,6 +174,7 @@ export function VaultSealBar({
       const st = await lockVault();
       clearSessionPassphrase();
       setGateDismissed(false);
+      setUsePassphrase(false);
       apply(st);
       note(st.sealed ? "Vault locked" : "Lock did not seal");
     } catch (err) {
@@ -193,9 +206,15 @@ export function VaultSealBar({
   async function onPasskeyUnseal() {
     setBusy("passkey-unseal");
     setNotice("");
+    writeAdminSession(admin);
     try {
       const st = await unsealVaultWithPasskey();
       apply(st);
+      if (!st.sealed) {
+        rememberSessionWebAuthn();
+        setGateDismissed(true);
+        setUsePassphrase(false);
+      }
       note(st.sealed ? "Still sealed" : "Vault unsealed with passkey");
     } catch (err) {
       note(
@@ -237,6 +256,9 @@ export function VaultSealBar({
     setNotice("");
     try {
       const st = await clearVaultPasskey();
+      if (!st.webauthn_registered && sessionUnlockKind() === "webauthn") {
+        clearSessionPassphrase();
+      }
       apply(st);
       note(st.webauthn_registered ? "Passkey still registered" : "Passkey removed");
     } catch (err) {
@@ -266,6 +288,10 @@ export function VaultSealBar({
 
   const sealed = status?.sealed === true;
   const bakPresent = status?.plaintext_backup_present === true;
+  const passkeyUnlock = passkeyOk && status?.webauthn_registered === true;
+  const helloLabel = status?.webauthn_hybrid
+    ? "Unlock with iPhone passkey"
+    : "Unlock with Windows Hello";
   const showGate = sealedGateOpen(
     status?.sealed,
     gateDismissed,
@@ -303,25 +329,33 @@ export function VaultSealBar({
               <p className="font-medium text-foreground" data-testid="vault-seal-state">
                 {SEALED_GATE_TITLE}
                 {status.passphrase_configured
-                  ? " - enter the passphrase, or use Face ID / fingerprint."
+                  ? passkeyUnlock
+                    ? status.webauthn_hybrid
+                      ? " - iPhone passkey, or the passphrase."
+                      : " - Windows Hello, or the passphrase."
+                    : " - enter the passphrase, or use Face ID / fingerprint."
                   : " - unlock before mutating keys or secrets."}
               </p>
               <div className="flex flex-wrap items-center gap-2">
-                <Button size="sm" onClick={() => setGateDismissed(false)}>
-                  Enter passphrase
-                </Button>
-                {passkeyOk && status.webauthn_registered ? (
+                {passkeyUnlock ? (
                   <Button
-                    variant="outline"
                     size="sm"
                     disabled={busy === "passkey-unseal"}
                     onClick={() => void onPasskeyUnseal()}
                   >
-                    {busy === "passkey-unseal"
-                      ? "Waiting for device..."
-                      : "Unseal with Face ID / fingerprint"}
+                    {busy === "passkey-unseal" ? "Waiting for device..." : helloLabel}
                   </Button>
                 ) : null}
+                <Button
+                  variant={passkeyUnlock ? "outline" : "default"}
+                  size="sm"
+                  onClick={() => {
+                    if (passkeyUnlock) setUsePassphrase(true);
+                    setGateDismissed(false);
+                  }}
+                >
+                  {passkeyUnlock ? "Use passphrase" : "Enter passphrase"}
+                </Button>
               </div>
             </div>
           ) : (
@@ -447,7 +481,9 @@ export function VaultSealBar({
             <h2 id="sealed-gate-title" className="text-lg font-semibold">
               {SEALED_GATE_TITLE}
             </h2>
-            <p className="mt-2 text-sm text-muted-foreground">{SEALED_GATE_BODY}</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {passkeyUnlock && !usePassphrase ? SEALED_GATE_HELLO_BODY : SEALED_GATE_BODY}
+            </p>
             <div className="mt-4 space-y-3">
               <div>
                 <Label htmlFor="sealed-gate-admin">Admin token</Label>
@@ -466,25 +502,43 @@ export function VaultSealBar({
                   Same session the Providers page uses.
                 </p>
               </div>
-              <div>
-                <Label htmlFor="vault-passphrase">Passphrase</Label>
-                <Input
-                  id="vault-passphrase"
-                  type="password"
-                  autoComplete="current-password"
-                  value={passphrase}
-                  onChange={(e) => setPassphrase(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") void onUnseal();
-                  }}
-                />
-              </div>
+              {!passkeyUnlock || usePassphrase ? (
+                <div>
+                  <Label htmlFor="vault-passphrase">Passphrase</Label>
+                  <Input
+                    id="vault-passphrase"
+                    type="password"
+                    autoComplete="current-password"
+                    value={passphrase}
+                    onChange={(e) => setPassphrase(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") void onUnseal();
+                    }}
+                  />
+                </div>
+              ) : null}
               <div className="flex flex-wrap gap-2">
+                {passkeyUnlock ? (
+                  <Button
+                    size="sm"
+                    data-testid="vault-hello-unlock"
+                    disabled={busy === "passkey-unseal"}
+                    onClick={() => void onPasskeyUnseal()}
+                  >
+                    {busy === "passkey-unseal" ? "Waiting for device..." : helloLabel}
+                  </Button>
+                ) : null}
+                {passkeyUnlock && !usePassphrase ? (
+                  <Button variant="outline" size="sm" onClick={() => setUsePassphrase(true)}>
+                    Use passphrase
+                  </Button>
+                ) : (
+                  <Button size="sm" disabled={busy === "unseal"} onClick={() => void onUnseal()}>
+                    {busy === "unseal" ? "Unsealing..." : "Unseal"}
+                  </Button>
+                )}
                 <Button size="sm" disabled={busy === "status"} onClick={() => void onCheck()}>
                   {busy === "status" ? "Checking..." : "Check again"}
-                </Button>
-                <Button size="sm" disabled={busy === "unseal"} onClick={() => void onUnseal()}>
-                  {busy === "unseal" ? "Unsealing..." : "Unseal"}
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => setGateDismissed(true)}>
                   Not now

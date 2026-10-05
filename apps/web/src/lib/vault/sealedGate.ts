@@ -12,6 +12,9 @@ export const SEALED_GATE_TITLE = "Vault is sealed";
 export const SEALED_GATE_BODY =
   "Enter the passphrase once. It stays open for this app session until you Lock. After the vault opens, you can add keys here.";
 
+export const SEALED_GATE_HELLO_BODY =
+  "Unlock with Windows Hello. It stays open for this app session until you Lock. Passphrase still works.";
+
 export type SealChrome = "sealed" | "open" | "unknown";
 
 export function sealChrome(sealed: boolean | undefined): SealChrome {
@@ -23,7 +26,7 @@ export function sealChrome(sealed: boolean | undefined): SealChrome {
 /**
  * The gate blocks key add while the vault is sealed, or while status itself
  * is 401 (no admin session), until the user dismisses it.
- * A passphrase already cached for this app session keeps the gate closed.
+ * A session already unsealed (passphrase cache or Windows Hello) keeps the gate closed.
  * A 401 still opens it so the admin token can be entered.
  */
 export function sealedGateOpen(
