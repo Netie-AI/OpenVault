@@ -49,6 +49,7 @@ shell at HTTP 200 is refused and named "compiling", not "unreachable".
 
 | # | Status |
 |---|--------|
+| #99 one seat | In-process FreeRoute and FreeBuild stay the seat. Vendor OpenShip HTTP client is deleted. /proxy redirects to /freeroute. Draft #99 Node trees are not copied. |
 | #120 tz fallback | quota.window_bounds falls back to UTC with a warning; tzdata is a Windows dependency. |
 | #118 admin lock | Lock removes sessionStorage `openvault.admin` and the in-tab admin field. The .env paste text is cleared. Re-entering the token, then unseal, still works. |
 | #114 seal UX | VaultSealBar shows sealed vs open. Unseal sends the Providers admin session header and keeps the passphrase in tab memory until Lock. .env import masks values and POSTs /api/keys per row. |

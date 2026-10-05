@@ -21,7 +21,6 @@ import structlog
 from openmw.openvault.paths import ensure_home
 from openmw.openvault.ship.detect import DetectedStack, detect_project
 from openmw.openvault.ship.email_gates import check_email_auth
-from openmw.openvault.ship.openship_client import adapter_status
 
 log = structlog.get_logger()
 
@@ -72,8 +71,28 @@ def _ships_dir() -> Path:
     return path
 
 
+def adapter_status() -> dict[str, Any]:
+    """Local FreeBuild presence only. Vendor OpenShip is not a product path."""
+    mode = os.environ.get("OPENSHIP_MODE", "simulate")
+    return {
+        "mode": mode,
+        "effective": "simulate",
+        "api_ready": False,
+        "api_url": None,
+        "cli_found": False,
+        "cli_path": None,
+        "vendor_tree": None,
+        "docs": None,
+        "install_hint": ("Use Cloudflare Pages, Coolify, Netlify, Spaceship FTP, or VPS SSH"),
+        "honest": (
+            "OpenVault ships through in-repo hosts only (DR-0003). "
+            "Vendor OpenShip is not a product path. Simulate never invents a host URL."
+        ),
+    }
+
+
 def adapter_presence() -> dict[str, Any]:
-    """Prefer real FreeBuild API status; keep legacy keys for older UI."""
+    """In-repo FreeBuild presence. Legacy keys stay for older UI."""
     status = adapter_status()
     return {
         "cli_configured": os.environ.get("OPENSHIP_CLI", "openship"),

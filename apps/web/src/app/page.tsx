@@ -56,12 +56,6 @@ const LINKS = [
     icon: Server,
   },
   {
-    href: "/proxy",
-    title: "Route",
-    body: "LLM proxy strategies, breakers, fallback -- FreeRoute algorithms on our backend.",
-    icon: Route,
-  },
-  {
     href: "/peers",
     title: "Peers",
     body: "OpenVault <-> Cortex <-> OpenIDE mesh handshake.",

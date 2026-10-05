@@ -100,12 +100,12 @@ from openmw.openvault.ship.library import (
     scan_upload_session,
 )
 from openmw.openvault.ship.openship import (
+    adapter_status,
     build_openship_plan,
     execute_openship_plan,
     list_ship_plans,
     load_ship_plan,
 )
-from openmw.openvault.ship.openship_client import adapter_status
 from openmw.openvault.ship.playwright_smoke import load_smoke, run_playwright_smoke
 from openmw.openvault.vault import webauthn_unlock
 from openmw.openvault.vault.accounts import AccountStore, AuthProvider
