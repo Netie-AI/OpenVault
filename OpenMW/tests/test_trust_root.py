@@ -208,6 +208,22 @@ def test_revoked_service_cannot_verify(store: TrustStore) -> None:
     assert store.verify_service("dms", token) is False
 
 
+def test_active_service_bearer_uses_verify_service(store: TrustStore) -> None:
+    token = store.register_service("dms")
+    other = store.register_service("other")
+    assert store.service_is_registered("dms") is True
+    assert store.service_is_registered("missing") is False
+    assert store.active_service_bearer(token) is True
+    assert store.active_service_bearer(other) is True
+    assert store.active_service_bearer(token + "x") is False
+    assert store.verify_service("dms", other) is False
+    assert store.revoke_service("dms") is True
+    assert store.active_service_bearer(token) is False
+    assert store.service_is_registered("dms") is True
+    assert store.revoke_service("other") is True
+    assert store.active_service_bearer("anything") is False
+
+
 # ── the routes ───────────────────────────────────────────────────────────────
 
 

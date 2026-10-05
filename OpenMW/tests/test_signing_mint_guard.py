@@ -97,6 +97,32 @@ def _guard_401(response: Any) -> None:
     assert body["error"]["type"] == "openvault_unauthenticated"
 
 
+def _bearer(token: str) -> dict[str, str]:
+    return {"Authorization": f"Bearer {token}"}
+
+
+def _register(app: FastAPI, host: str, service_id: str = "dms") -> tuple[TestClient, str]:
+    client = _client(app, host)
+    response = client.post("/keys/services", json={"service_id": service_id}, headers=INTENT)
+    assert response.status_code == 200, response.text
+    token = response.json()["token"]
+    assert isinstance(token, str) and token
+    return client, token
+
+
+def _issue(app: FastAPI, token: str, service_id: str = "dms") -> Any:
+    return _client(app, "127.0.0.1").post(
+        "/keys/intermediate",
+        json={"service_id": service_id, "subject": service_id, "ttl_s": 300},
+        headers=_bearer(token),
+    )
+
+
+def _jwks_kids(app: FastAPI) -> list[str]:
+    body = _client(app, "127.0.0.1").get("/keys/jwks").json()
+    return [str(item["kid"]) for item in body["keys"]]
+
+
 def _audit_text(home: Any) -> str:
     path = home / "secret_audit.jsonl"
     if not path.is_file():
@@ -260,7 +286,15 @@ def test_intermediate_and_revoke_without_admin(app: FastAPI, home: Any) -> None:
     assert private_key
     assert kid.startswith("int-")
 
-    revoked = client.post(f"/keys/intermediate/{kid}/revoke")
+    bare = client.post(f"/keys/intermediate/{kid}/revoke")
+    assert bare.status_code == 401
+    assert bare.json().get("lifecycle") != "revoked"
+    assert kid in [item["kid"] for item in client.get("/keys/jwks").json()["keys"]]
+
+    revoked = client.post(
+        f"/keys/intermediate/{kid}/revoke",
+        headers={"Authorization": f"Bearer {service_token}"},
+    )
     assert revoked.status_code == 200
     assert revoked.json()["lifecycle"] == "revoked"
     assert private_key not in revoked.text
@@ -282,11 +316,188 @@ def test_allowlisted_peer_cannot_issue_or_revoke_without_a_credential(app: FastA
     _guard_401(revoked)
 
 
-def test_unknown_kid_revoke_reaches_the_loopback_handler(app: FastAPI) -> None:
-    """One path segment is the revoke route. A missing kid is 404, not an admin 401."""
+def test_unknown_kid_revoke_without_credential_is_401(app: FastAPI) -> None:
+    """No credential is 401 from the route, not a 404 and not the admin-guard envelope."""
     response = _client(app, "127.0.0.1").post("/keys/intermediate/extra/revoke")
+    assert response.status_code == 401
+    body = response.json()
+    assert "detail" in body
+    assert body.get("error", {}).get("type") != "openvault_unauthenticated"
+    assert body.get("lifecycle") != "revoked"
+
+
+def test_loopback_revoke_without_credential_is_401(app: FastAPI) -> None:
+    _client_dms, token = _register(app, "127.0.0.1")
+    kid = _issue(app, token).json()["kid"]
+    known = _client(app, "127.0.0.1").post(f"/keys/intermediate/{kid}/revoke")
+    unknown = _client(app, "127.0.0.1").post("/keys/intermediate/int-missing/revoke")
+    assert known.status_code == unknown.status_code == 401
+    assert known.json() == unknown.json()
+    assert known.json().get("lifecycle") != "revoked"
+    assert kid in _jwks_kids(app)
+
+
+def test_loopback_revoke_bad_bearer_is_401(app: FastAPI) -> None:
+    _client_dms, token = _register(app, "127.0.0.1")
+    kid = _issue(app, token).json()["kid"]
+    bad = _client(app, "127.0.0.1").post(
+        f"/keys/intermediate/{kid}/revoke",
+        headers={"Authorization": "Bearer not-the-token"},
+    )
+    assert bad.status_code == 401
+    assert token not in bad.text
+    assert kid in _jwks_kids(app)
+
+
+def test_loopback_revoke_with_service_bearer(app: FastAPI) -> None:
+    client, token = _register(app, "127.0.0.1")
+    kid = _issue(app, token).json()["kid"]
+    revoked = client.post(f"/keys/intermediate/{kid}/revoke", headers=_bearer(token))
+    assert revoked.status_code == 200
+    assert revoked.json() == {"kid": kid, "lifecycle": "revoked"}
+    assert token not in revoked.text
+    assert kid not in _jwks_kids(app)
+
+
+def test_loopback_revoke_with_admin(app: FastAPI) -> None:
+    _client_dms, token = _register(app, "127.0.0.1")
+    kid = _issue(app, token).json()["kid"]
+    admin = ensure_admin_token()
+    revoked = _client(app, "127.0.0.1").post(
+        f"/keys/intermediate/{kid}/revoke",
+        headers={ADMIN_HEADER: admin},
+    )
+    assert revoked.status_code == 200
+    assert revoked.json()["lifecycle"] == "revoked"
+    assert admin not in revoked.text
+    assert token not in revoked.text
+    assert kid not in _jwks_kids(app)
+
+
+def test_loopback_revoke_wrong_admin_is_401(app: FastAPI) -> None:
+    _client_dms, token = _register(app, "127.0.0.1")
+    kid = _issue(app, token).json()["kid"]
+    response = _client(app, "127.0.0.1").post(
+        f"/keys/intermediate/{kid}/revoke",
+        headers={ADMIN_HEADER: "not-the-admin-token"},
+    )
+    assert response.status_code == 401
+    assert kid in _jwks_kids(app)
+
+
+def test_loopback_revoke_unknown_kid_with_bearer_is_404(app: FastAPI) -> None:
+    _client_dms, token = _register(app, "127.0.0.1")
+    response = _client(app, "127.0.0.1").post(
+        "/keys/intermediate/int-missing/revoke",
+        headers=_bearer(token),
+    )
     assert response.status_code == 404
     assert response.json()["detail"] == "intermediate key not found"
+
+
+def test_allowlisted_peer_cannot_revoke_with_service_bearer(app: FastAPI) -> None:
+    _client_dms, token = _register(app, "127.0.0.1")
+    kid = _issue(app, token).json()["kid"]
+    remote = _client(app, "10.128.0.3").post(
+        f"/keys/intermediate/{kid}/revoke",
+        headers=_bearer(token),
+    )
+    assert remote.status_code == 403
+    assert kid in _jwks_kids(app)
+
+
+@pytest.mark.parametrize("host", ["127.0.0.1", "10.128.0.3", "34.30.222.22"])
+def test_reregister_reveal_only_does_not_rotate(app: FastAPI, host: str) -> None:
+    client, token = _register(app, host)
+    again = client.post("/keys/services", json=_SERVICE, headers=INTENT)
+    assert again.status_code == 401
+    assert "token" not in again.json()
+    issued = _issue(app, token)
+    assert issued.status_code == 200, issued.text
+
+
+def test_reregister_with_current_bearer_rotates(app: FastAPI) -> None:
+    client, token = _register(app, "34.30.222.22")
+    rotated = client.post("/keys/services", json=_SERVICE, headers={**INTENT, **_bearer(token)})
+    assert rotated.status_code == 200, rotated.text
+    new_token = rotated.json()["token"]
+    assert new_token != token
+    stale = _issue(app, token)
+    assert stale.status_code == 403
+    fresh = _issue(app, new_token)
+    assert fresh.status_code == 200, fresh.text
+
+
+def test_reregister_with_admin_rotates(app: FastAPI) -> None:
+    client, token = _register(app, "10.128.0.3")
+    admin = ensure_admin_token()
+    rotated = client.post(
+        "/keys/services",
+        json=_SERVICE,
+        headers={**INTENT, ADMIN_HEADER: admin},
+    )
+    assert rotated.status_code == 200, rotated.text
+    new_token = rotated.json()["token"]
+    assert new_token != token
+    assert admin not in rotated.text
+    assert _issue(app, token).status_code == 403
+    assert _issue(app, new_token).status_code == 200
+
+
+def test_other_service_bearer_does_not_rotate(app: FastAPI) -> None:
+    _client_dms, dms = _register(app, "10.128.0.3", "dms")
+    _client_other, other = _register(app, "10.128.0.3", "other")
+    denied = _client(app, "34.30.222.22").post(
+        "/keys/services",
+        json=_SERVICE,
+        headers={**INTENT, **_bearer(other)},
+    )
+    assert denied.status_code == 401
+    assert "token" not in denied.json()
+    assert other not in denied.text
+    assert _issue(app, dms).status_code == 200
+
+
+def test_second_service_first_mint_stays_reveal_only(app: FastAPI) -> None:
+    _register(app, "34.30.222.22", "dms")
+    other = _client(app, "34.30.222.22").post(
+        "/keys/services",
+        json={"service_id": "other"},
+        headers=INTENT,
+    )
+    assert other.status_code == 200, other.text
+    assert other.json()["service_id"] == "other"
+    assert other.json()["token"]
+
+
+def test_reregister_without_reveal_does_not_rotate(app: FastAPI) -> None:
+    client, token = _register(app, "10.128.0.3")
+    again = client.post("/keys/services", json=_SERVICE)
+    assert again.status_code == 428
+    assert _issue(app, token).status_code == 200
+
+
+def test_allowlisted_bad_ov_key_is_still_403(app: FastAPI) -> None:
+    response = _client(app, "34.30.222.22").post(
+        "/keys/services",
+        json=_SERVICE,
+        headers={**INTENT, "Authorization": "Bearer ov_not-a-real-key"},
+    )
+    assert response.status_code == 403
+    assert response.json()["error"]["type"] == "openvault_forbidden"
+    assert "token" not in response.text
+
+
+def test_unlisted_remote_service_bearer_cannot_register(app: FastAPI) -> None:
+    _client_dms, token = _register(app, "127.0.0.1")
+    remote = _client(app, _REMOTE).post(
+        "/keys/services",
+        json=_SERVICE,
+        headers={**INTENT, **_bearer(token)},
+    )
+    assert remote.status_code == 403
+    assert token not in remote.text
+    assert _issue(app, token).status_code == 200
 
 
 def test_remote_intermediate_and_revoke_without_credential_is_401(app: FastAPI) -> None:
