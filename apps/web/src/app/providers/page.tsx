@@ -132,6 +132,7 @@ export default function ProvidersPage() {
   const [admin, setAdmin] = useState("");
 
   useEffect(() => {
+    // sessionStorage key openvault.admin, shared with the vault gate.
     setAdmin(readAdminSession());
     const ac = new AbortController();
     apiFetch<CardsPayload>("/api/providers/cards", { signal: ac.signal })
