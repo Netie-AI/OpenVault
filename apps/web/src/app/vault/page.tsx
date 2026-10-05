@@ -664,16 +664,8 @@ export default function VaultPage() {
           await refresh();
           setClipSecret(null);
         }}
-        onWireToProxy={(created) => {
-          try {
-            sessionStorage.setItem(
-              "openvault.just_wired",
-              JSON.stringify({ keyId: created.id, label: created.label, at: Date.now() }),
-            );
-          } catch {
-            /* ignore */
-          }
-          router.push("/proxy");
+        onWireToProxy={() => {
+          router.push("/freeroute");
         }}
       />
     </PageContainer>

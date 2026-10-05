@@ -2,6 +2,12 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-05 - One FreeRoute seat; vendor OpenShip client cut (Refs #99)
+
+- FreeRoute and FreeBuild stay the in-process OpenMW routers (`routers/freeroute.py`, `vault/proxy.py`, `ship/`). Draft #99's Node trees (`apps/router`, `apps/ship`, about 10k files) are not copied. They would be a second process beside the seat that already routes and ships. Key custody stays the OpenVault vault. No public `:5000` bind change.
+- Deleted `ship/openship_client.py` (`OpenShipClient` HTTP to `OPENSHIP_URL`). `adapter_status()` now lives on `ship/openship.py` and still reports in-repo hosts only (`effective` is `simulate`, `api_url` is null).
+- `/proxy` is no longer a second Route dashboard. The page redirects to `/freeroute`. Nav, home, and Add key follow that page. `apps/web/src/proxy.ts` stays: it is the Next middleware entry. `vault/proxy.py` stays: it is the chat engine. `/api/route/*` stays: strategy, breakers, and metrics for the in-process router.
+
 ## 2026-10-05 - Windows quota crash and tzdata (OpenVault #120)
 
 - `quota.window_bounds` no longer raises when the machine has no tz database; it falls back to UTC and logs `quota_tz_missing_using_utc`.
