@@ -2,6 +2,11 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-05 - Session unlock via Windows Hello (OpenVault #116)
+
+- When vault status says webauthn_registered, unseal and session reopen use the existing passkey ceremony (Windows Hello / platform authenticator). A successful passkey unseal marks the same in-tab session as a passphrase unseal. No second unlock API.
+- The passphrase cache still reopens a sealed vault when Hello is not registered, this tab already used the passphrase, or the platform refuses. Lock, a failed reopen, and reload clear the session. Nothing is written to browser storage. Tests use fixtures only.
+
 ## 2026-10-05 - Vault unseal lasts for the app session (OpenVault #114)
 
 - After a successful passphrase unseal, the passphrase stays in tab memory. A later screen that still sees the server sealed re-posts it once and does not open the gate again.
