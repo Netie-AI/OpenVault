@@ -51,6 +51,7 @@ import {
 } from "@/lib/vault/registerIntent";
 import { KeyHealthSpark } from "@/components/vault/KeyHealthSpark";
 import { SecretsPanel } from "@/components/vault/SecretsPanel";
+import { EnvTextImport } from "@/components/vault/EnvTextImport";
 import { VaultSealBar } from "@/components/vault/VaultSealBar";
 import { AddKeyDialog } from "./AddKeyDialog";
 
@@ -279,6 +280,19 @@ export default function VaultPage() {
       />
 
       <VaultSealBar onStatus={(st) => setVaultSealed(st.sealed)} />
+
+      <div className="mb-5 rounded-2xl border border-border bg-card p-4">
+        <p className="text-sm font-medium text-foreground">Import a .env</p>
+        <p className="mt-1 mb-3 text-xs text-muted-foreground">
+          Parsed in this browser. Masked preview, then one add per known key.
+        </p>
+        <EnvTextImport
+          disabled={vaultSealed}
+          onImported={() => {
+            void refresh().catch(() => undefined);
+          }}
+        />
+      </div>
 
       {budget ? (
         <div

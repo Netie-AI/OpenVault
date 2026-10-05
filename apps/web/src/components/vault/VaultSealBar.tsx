@@ -19,12 +19,18 @@ import {
   unsealVault,
   type VaultStatus,
 } from "@/lib/api/secrets";
+import { readAdminSession, redactShown, writeAdminSession } from "@/lib/api/adminSession";
 import {
   clearVaultPasskey,
   registerVaultPasskey,
   unsealVaultWithPasskey,
   webauthnAvailable,
 } from "@/lib/api/webauthn";
+import {
+  SEALED_GATE_BODY,
+  SEALED_GATE_TITLE,
+  sealedGateOpen,
+} from "@/lib/vault/sealedGate";
 
 export function VaultSealBar({
   onStatus,
@@ -36,6 +42,9 @@ export function VaultSealBar({
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
   const [passkeyOk, setPasskeyOk] = useState(false);
+  const [admin, setAdmin] = useState("");
+  const [gateDismissed, setGateDismissed] = useState(false);
+  const [unauthorized, setUnauthorized] = useState(false);
   const onStatusRef = useRef(onStatus);
   onStatusRef.current = onStatus;
 
@@ -46,32 +55,67 @@ export function VaultSealBar({
 
   useEffect(() => {
     setPasskeyOk(webauthnAvailable());
+    setAdmin(readAdminSession());
   }, []);
+
+  function note(text: string) {
+    setNotice(redactShown(text, [passphrase, admin, readAdminSession()]));
+  }
 
   useEffect(() => {
     const ac = new AbortController();
     void (async () => {
       try {
-        apply(await fetchVaultStatus(ac.signal));
+        const st = await fetchVaultStatus(ac.signal);
+        if (ac.signal.aborted) return;
+        setUnauthorized(false);
+        apply(st);
       } catch (err) {
-        if (!ac.signal.aborted) {
-          setNotice(isApiError(err) ? err.message : "Could not read vault lock state");
+        if (ac.signal.aborted) return;
+        if (isApiError(err) && err.status === 401) {
+          setUnauthorized(true);
+          setNotice("Could not read vault lock state. Enter the admin token, then check again.");
+          return;
         }
+        setNotice(isApiError(err) ? err.message : "Could not read vault lock state");
       }
     })();
     return () => ac.abort();
   }, []);
 
+  async function onCheck() {
+    writeAdminSession(admin);
+    setBusy("status");
+    setNotice("");
+    try {
+      const st = await fetchVaultStatus();
+      setUnauthorized(false);
+      apply(st);
+      note(st.sealed ? "Vault is sealed" : "Vault open");
+    } catch (err) {
+      if (isApiError(err) && err.status === 401) {
+        setUnauthorized(true);
+        note("Could not read vault lock state. Enter the admin token, then check again.");
+        return;
+      }
+      note(isApiError(err) ? err.message : "Could not read vault lock state");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function onUnseal() {
     setBusy("unseal");
     setNotice("");
+    writeAdminSession(admin);
     try {
       const st = await unsealVault(passphrase);
       apply(st);
       setPassphrase("");
-      setNotice(st.sealed ? "Still sealed" : "Vault unsealed");
+      if (!st.sealed) setGateDismissed(false);
+      note(st.sealed ? "Still sealed" : "Vault unsealed");
     } catch (err) {
-      setNotice(isApiError(err) ? err.message : "Unseal failed");
+      note(isApiError(err) ? err.message : "Unseal failed");
     } finally {
       setBusy(null);
     }
@@ -83,9 +127,9 @@ export function VaultSealBar({
     try {
       const st = await lockVault();
       apply(st);
-      setNotice(st.sealed ? "Vault locked" : "Lock did not seal");
+      note(st.sealed ? "Vault locked" : "Lock did not seal");
     } catch (err) {
-      setNotice(isApiError(err) ? err.message : "Lock failed");
+      note(isApiError(err) ? err.message : "Lock failed");
     } finally {
       setBusy(null);
     }
@@ -98,13 +142,13 @@ export function VaultSealBar({
       const st = await setVaultPassphrase(passphrase);
       apply(st);
       setPassphrase("");
-      setNotice(
+      note(
         st.passphrase_configured
           ? "Passphrase configured. Lock, then Unseal, then retire the bak."
           : "Passphrase was not stored",
       );
     } catch (err) {
-      setNotice(isApiError(err) ? err.message : "Set passphrase failed");
+      note(isApiError(err) ? err.message : "Set passphrase failed");
     } finally {
       setBusy(null);
     }
@@ -116,9 +160,9 @@ export function VaultSealBar({
     try {
       const st = await unsealVaultWithPasskey();
       apply(st);
-      setNotice(st.sealed ? "Still sealed" : "Vault unsealed with passkey");
+      note(st.sealed ? "Still sealed" : "Vault unsealed with passkey");
     } catch (err) {
-      setNotice(
+      note(
         isApiError(err) ? err.message : err instanceof Error ? err.message : "Passkey unseal failed",
       );
     } finally {
@@ -132,7 +176,7 @@ export function VaultSealBar({
     try {
       const st = await registerVaultPasskey(hybrid);
       apply(st);
-      setNotice(
+      note(
         st.webauthn_registered
           ? hybrid
             ? "iPhone passkey registered. Passphrase still unlocks this vault."
@@ -140,7 +184,7 @@ export function VaultSealBar({
           : "Passkey was not stored",
       );
     } catch (err) {
-      setNotice(
+      note(
         isApiError(err)
           ? err.message
           : err instanceof Error
@@ -158,9 +202,9 @@ export function VaultSealBar({
     try {
       const st = await clearVaultPasskey();
       apply(st);
-      setNotice(st.webauthn_registered ? "Passkey still registered" : "Passkey removed");
+      note(st.webauthn_registered ? "Passkey still registered" : "Passkey removed");
     } catch (err) {
-      setNotice(isApiError(err) ? err.message : "Could not remove passkey");
+      note(isApiError(err) ? err.message : "Could not remove passkey");
     } finally {
       setBusy(null);
     }
@@ -172,13 +216,13 @@ export function VaultSealBar({
     try {
       const st = await retirePlaintextBackup(passphrase);
       apply(st);
-      setNotice(
+      note(
         st.plaintext_backup_present
           ? "Plaintext backup still present"
           : "Plaintext master-key backup retired",
       );
     } catch (err) {
-      setNotice(isApiError(err) ? err.message : "Retire failed");
+      note(isApiError(err) ? err.message : "Retire failed");
     } finally {
       setBusy(null);
     }
@@ -186,9 +230,24 @@ export function VaultSealBar({
 
   const sealed = status?.sealed === true;
   const bakPresent = status?.plaintext_backup_present === true;
+  const showGate = sealedGateOpen(status?.sealed, gateDismissed, unauthorized);
 
   return (
     <div className="mb-5 space-y-3">
+      {!status && unauthorized ? (
+        <div
+          data-glass
+          className="rounded-2xl border border-warning-border bg-warning-bg px-4 py-3 text-sm text-foreground"
+        >
+          <p className="font-medium" data-testid="vault-seal-state">
+            {SEALED_GATE_TITLE}
+          </p>
+          <Button className="mt-2" size="sm" onClick={() => setGateDismissed(false)}>
+            Enter passphrase
+          </Button>
+        </div>
+      ) : null}
+
       {status ? (
         <div
           data-glass
@@ -200,28 +259,15 @@ export function VaultSealBar({
         >
           {sealed ? (
             <div className="space-y-3">
-              <p className="font-medium text-foreground">
-                Vault is sealed
+              <p className="font-medium text-foreground" data-testid="vault-seal-state">
+                {SEALED_GATE_TITLE}
                 {status.passphrase_configured
-                  ? " — enter the passphrase, or use Face ID / fingerprint."
-                  : " — unlock before mutating keys or secrets."}
+                  ? " - enter the passphrase, or use Face ID / fingerprint."
+                  : " - unlock before mutating keys or secrets."}
               </p>
-              <div className="flex flex-wrap items-end gap-2">
-                <div className="min-w-[12rem] flex-1">
-                  <Label htmlFor="vault-passphrase">Passphrase</Label>
-                  <Input
-                    id="vault-passphrase"
-                    type="password"
-                    autoComplete="current-password"
-                    value={passphrase}
-                    onChange={(e) => setPassphrase(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") void onUnseal();
-                    }}
-                  />
-                </div>
-                <Button size="sm" disabled={busy === "unseal"} onClick={() => void onUnseal()}>
-                  {busy === "unseal" ? "Unsealing..." : "Unseal"}
+              <div className="flex flex-wrap items-center gap-2">
+                <Button size="sm" onClick={() => setGateDismissed(false)}>
+                  Enter passphrase
                 </Button>
                 {passkeyOk && status.webauthn_registered ? (
                   <Button
@@ -239,7 +285,7 @@ export function VaultSealBar({
             </div>
           ) : (
             <div className="space-y-3">
-              <p>
+              <p data-testid="vault-seal-state">
                 Vault open
                 {status.wrap_method ? ` · wrap=${status.wrap_method}` : ""}
                 {status.passphrase_configured ? " · passphrase configured" : ""}
@@ -344,6 +390,66 @@ export function VaultSealBar({
           >
             {busy === "retire-bak" ? "Retiring..." : "Retire plaintext backup"}
           </Button>
+        </div>
+      ) : null}
+
+      {showGate ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="sealed-gate-title"
+          data-testid="sealed-gate"
+        >
+          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 text-foreground">
+            <h2 id="sealed-gate-title" className="text-lg font-semibold">
+              {SEALED_GATE_TITLE}
+            </h2>
+            <p className="mt-2 text-sm text-muted-foreground">{SEALED_GATE_BODY}</p>
+            <div className="mt-4 space-y-3">
+              <div>
+                <Label htmlFor="sealed-gate-admin">Admin token</Label>
+                <Input
+                  id="sealed-gate-admin"
+                  type="password"
+                  autoComplete="off"
+                  spellCheck={false}
+                  value={admin}
+                  onChange={(e) => {
+                    setAdmin(e.target.value);
+                    writeAdminSession(e.target.value);
+                  }}
+                />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Same session the Providers page uses.
+                </p>
+              </div>
+              <div>
+                <Label htmlFor="vault-passphrase">Passphrase</Label>
+                <Input
+                  id="vault-passphrase"
+                  type="password"
+                  autoComplete="current-password"
+                  value={passphrase}
+                  onChange={(e) => setPassphrase(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") void onUnseal();
+                  }}
+                />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" disabled={busy === "status"} onClick={() => void onCheck()}>
+                  {busy === "status" ? "Checking..." : "Check again"}
+                </Button>
+                <Button size="sm" disabled={busy === "unseal"} onClick={() => void onUnseal()}>
+                  {busy === "unseal" ? "Unsealing..." : "Unseal"}
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setGateDismissed(true)}>
+                  Not now
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
       ) : null}
 

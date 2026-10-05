@@ -26,6 +26,7 @@ import { Tabs, type TabDef } from "@/components/ui/Tabs";
 import { apiPost, isApiError } from "@/lib/api/client";
 import { createKey, listRoutePacks, type RoutePack } from "@/lib/api/keys";
 import { guessByokProvider, honestByokLabel } from "@/keys/byok";
+import { VaultSealBar } from "@/components/vault/VaultSealBar";
 import { FreeKeysWizard } from "./FreeKeysWizard";
 
 type KeyPath = "subscribe" | "byok" | "free" | "operator";
@@ -92,6 +93,7 @@ export default function KeysPage() {
 
   const [packs, setPacks] = useState<RoutePack[]>([]);
   const [focusProvider, setFocusProvider] = useState("");
+  const [sealed, setSealed] = useState(true);
 
   useEffect(() => {
     setPath(pathFromHash(window.location.hash));
@@ -148,6 +150,10 @@ export default function KeysPage() {
 
   async function storeByok() {
     const secret = byokSecret.trim();
+    if (sealed) {
+      setByokMsg("Vault is sealed. Enter the passphrase once.");
+      return;
+    }
     if (!secret) {
       setByokMsg("Paste a key first");
       return;
@@ -175,6 +181,8 @@ export default function KeysPage() {
         description="Cortex API key · bring your own · Get free keys wizard · one vault"
       />
 
+      <VaultSealBar onStatus={(st) => setSealed(st.sealed)} />
+
       <Tabs tabs={TABS} value={path} onChange={activate} className="mb-6" />
 
       {path === "subscribe" && (
@@ -198,7 +206,7 @@ export default function KeysPage() {
               </p>
             )}
             <div className="flex flex-wrap gap-2">
-              <Button onClick={issueCortex} disabled={busy === "issue"}>
+              <Button onClick={issueCortex} disabled={busy === "issue" || sealed}>
                 Get Cortex API key
               </Button>
               <Button variant="outline" onClick={copyCortex} disabled={!issued}>
@@ -273,7 +281,7 @@ export default function KeysPage() {
               </p>
             )}
             <div className="flex flex-wrap gap-2">
-              <Button onClick={storeByok} disabled={busy === "byok"}>
+              <Button onClick={storeByok} disabled={busy === "byok" || sealed}>
                 Store this key
               </Button>
             </div>
@@ -282,7 +290,7 @@ export default function KeysPage() {
         </section>
       )}
 
-      {path === "free" && <FreeKeysWizard focusProvider={focusProvider} />}
+      {path === "free" && <FreeKeysWizard focusProvider={focusProvider} sealed={sealed} />}
 
       {path === "operator" && (
         <section id="keypath-operator" data-testid="operator-screen" className="max-w-2xl">
