@@ -39,6 +39,9 @@ test("VaultSealBar renders the sealed gate and unseals in-app", () => {
   assert.equal(src.includes("SEALED_GATE_TITLE"), true);
   assert.equal(src.includes("SEALED_GATE_BODY"), true);
   assert.equal(src.includes("sealedGateOpen"), true);
+  assert.equal(src.includes("rememberSessionPassphrase"), true);
+  assert.equal(src.includes("clearSessionPassphrase"), true);
+  assert.equal(src.includes("localStorage"), false);
   assert.equal(src.toLowerCase().includes("console.log"), false);
   assert.equal(src.toLowerCase().includes("admin_token"), false);
 });

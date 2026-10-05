@@ -31,6 +31,13 @@ import {
   SEALED_GATE_TITLE,
   sealedGateOpen,
 } from "@/lib/vault/sealedGate";
+import {
+  clearSessionPassphrase,
+  rememberSessionPassphrase,
+  reopenSealedVault,
+  sessionPassphrase,
+  sessionUnsealed,
+} from "@/lib/vault/sessionUnseal";
 
 export function VaultSealBar({
   onStatus,
@@ -43,7 +50,7 @@ export function VaultSealBar({
   const [notice, setNotice] = useState("");
   const [passkeyOk, setPasskeyOk] = useState(false);
   const [admin, setAdmin] = useState("");
-  const [gateDismissed, setGateDismissed] = useState(false);
+  const [gateDismissed, setGateDismissed] = useState(() => sessionUnsealed());
   const [unauthorized, setUnauthorized] = useState(false);
   const onStatusRef = useRef(onStatus);
   onStatusRef.current = onStatus;
@@ -59,17 +66,35 @@ export function VaultSealBar({
   }, []);
 
   function note(text: string) {
-    setNotice(redactShown(text, [passphrase, admin, readAdminSession()]));
+    setNotice(redactShown(text, [passphrase, sessionPassphrase(), admin, readAdminSession()]));
   }
 
   useEffect(() => {
     const ac = new AbortController();
     void (async () => {
       try {
-        const st = await fetchVaultStatus(ac.signal);
+        let st = await fetchVaultStatus(ac.signal);
+        if (ac.signal.aborted) return;
+        const cached = sessionPassphrase();
+        try {
+          st = await reopenSealedVault(st, (phrase) => unsealVault(phrase));
+        } catch (err) {
+          if (ac.signal.aborted) return;
+          setUnauthorized(false);
+          setGateDismissed(false);
+          apply(st);
+          setNotice(
+            redactShown(isApiError(err) ? err.message : "Unseal failed", [
+              cached,
+              readAdminSession(),
+            ]),
+          );
+          return;
+        }
         if (ac.signal.aborted) return;
         setUnauthorized(false);
         apply(st);
+        setGateDismissed(!st.sealed);
       } catch (err) {
         if (ac.signal.aborted) return;
         if (isApiError(err) && err.status === 401) {
@@ -87,18 +112,23 @@ export function VaultSealBar({
     writeAdminSession(admin);
     setBusy("status");
     setNotice("");
+    const cached = sessionPassphrase();
     try {
-      const st = await fetchVaultStatus();
+      let st = await fetchVaultStatus();
+      st = await reopenSealedVault(st, (phrase) => unsealVault(phrase));
       setUnauthorized(false);
       apply(st);
+      setGateDismissed(!st.sealed);
       note(st.sealed ? "Vault is sealed" : "Vault open");
     } catch (err) {
-      if (isApiError(err) && err.status === 401) {
-        setUnauthorized(true);
-        note("Could not read vault lock state. Enter the admin token, then check again.");
-        return;
-      }
-      note(isApiError(err) ? err.message : "Could not read vault lock state");
+      setGateDismissed(false);
+      const raw = isApiError(err)
+        ? err.status === 401
+          ? "Could not read vault lock state. Enter the admin token, then check again."
+          : err.message
+        : "Could not read vault lock state";
+      if (isApiError(err) && err.status === 401) setUnauthorized(true);
+      note(redactShown(raw, [cached]));
     } finally {
       setBusy(null);
     }
@@ -109,10 +139,14 @@ export function VaultSealBar({
     setNotice("");
     writeAdminSession(admin);
     try {
-      const st = await unsealVault(passphrase);
+      const typed = passphrase;
+      const st = await unsealVault(typed);
       apply(st);
+      if (!st.sealed) {
+        rememberSessionPassphrase(typed);
+        setGateDismissed(true);
+      }
       setPassphrase("");
-      if (!st.sealed) setGateDismissed(false);
       note(st.sealed ? "Still sealed" : "Vault unsealed");
     } catch (err) {
       note(isApiError(err) ? err.message : "Unseal failed");
@@ -126,6 +160,8 @@ export function VaultSealBar({
     setNotice("");
     try {
       const st = await lockVault();
+      clearSessionPassphrase();
+      setGateDismissed(false);
       apply(st);
       note(st.sealed ? "Vault locked" : "Lock did not seal");
     } catch (err) {
@@ -230,7 +266,12 @@ export function VaultSealBar({
 
   const sealed = status?.sealed === true;
   const bakPresent = status?.plaintext_backup_present === true;
-  const showGate = sealedGateOpen(status?.sealed, gateDismissed, unauthorized);
+  const showGate = sealedGateOpen(
+    status?.sealed,
+    gateDismissed,
+    unauthorized,
+    sessionUnsealed(),
+  );
 
   return (
     <div className="mb-5 space-y-3">
@@ -287,6 +328,7 @@ export function VaultSealBar({
             <div className="space-y-3">
               <p data-testid="vault-seal-state">
                 Vault open
+                {sessionUnsealed() ? " - unlocked for this app session" : ""}
                 {status.wrap_method ? ` · wrap=${status.wrap_method}` : ""}
                 {status.passphrase_configured ? " · passphrase configured" : ""}
               </p>
