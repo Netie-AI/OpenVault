@@ -54,8 +54,8 @@ _NEAR_MINT_PATHS = (
     "/keys/services/extra",
     "/keys/Services",
     "/keys/intermediate/",
-    "/keys/intermediate/extra/revoke",
     "/keys/intermediate//revoke",
+    "/keys/intermediate/a/b/revoke",
     "/keys/root",
 )
 
@@ -115,6 +115,7 @@ def test_mint_classification_is_exact_post_only() -> None:
         assert signing_mint_kind(method, "/keys/intermediate/int-abc/revoke") == ""
     for path in _NEAR_MINT_PATHS:
         assert signing_mint_kind("POST", path) == ""
+    assert signing_mint_kind("POST", "/keys/intermediate/extra/revoke") == "revoke"
     assert signing_mint_kind("POST", "/keys/intermediate/a/b/revoke") == ""
     assert signing_mint_kind("POST", "/api/keys") == ""
     assert path_needs_admin("/keys/services")
@@ -130,7 +131,9 @@ def test_mint_classification_is_exact_post_only() -> None:
     "host",
     ["127.0.0.1", "::1", "10.128.0.3", "34.30.222.22", "::ffff:10.128.0.3"],
 )
-def test_services_mint_without_admin_from_allowlisted_peer(app: FastAPI, home: Any, host: str) -> None:
+def test_services_mint_without_admin_from_allowlisted_peer(
+    app: FastAPI, home: Any, host: str
+) -> None:
     response = _client(app, host).post("/keys/services", json=_SERVICE, headers=INTENT)
     assert response.status_code == 200, response.text
     body = response.json()
@@ -170,7 +173,9 @@ def test_remote_services_mint_without_credential_is_401(app: FastAPI) -> None:
 
 
 @pytest.mark.parametrize("headers", _SPOOF_HEADERS)
-def test_spoofed_forwarded_or_host_is_not_a_mint_peer(app: FastAPI, headers: dict[str, str]) -> None:
+def test_spoofed_forwarded_or_host_is_not_a_mint_peer(
+    app: FastAPI, headers: dict[str, str]
+) -> None:
     response = _client(app, _REMOTE).post("/keys/services", json=_SERVICE, headers=headers)
     _guard_401(response)
     assert "token" not in response.json()
@@ -277,6 +282,13 @@ def test_allowlisted_peer_cannot_issue_or_revoke_without_a_credential(app: FastA
     _guard_401(issued)
     revoked = peer.post("/keys/intermediate/int-abc/revoke", headers=INTENT)
     _guard_401(revoked)
+
+
+def test_unknown_kid_revoke_reaches_the_loopback_handler(app: FastAPI) -> None:
+    """One path segment is the revoke route. A missing kid is 404, not an admin 401."""
+    response = _client(app, "127.0.0.1").post("/keys/intermediate/extra/revoke")
+    assert response.status_code == 404
+    assert response.json()["detail"] == "intermediate key not found"
 
 
 def test_remote_intermediate_and_revoke_without_credential_is_401(app: FastAPI) -> None:
