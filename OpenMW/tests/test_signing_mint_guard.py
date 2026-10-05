@@ -181,9 +181,7 @@ def test_spoofed_forwarded_or_host_is_not_a_mint_peer(
     assert "token" not in response.json()
 
 
-def test_forwarded_for_with_api_key_still_uses_the_socket(
-    app: FastAPI, home: Any
-) -> None:
+def test_forwarded_for_with_api_key_still_uses_the_socket(app: FastAPI, home: Any) -> None:
     _key_id, headers = issue_key(_client(app, "127.0.0.1"))
     remote = _client(app, "8.8.8.8")
     response = remote.post(
