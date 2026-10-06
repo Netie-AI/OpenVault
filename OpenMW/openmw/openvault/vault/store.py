@@ -34,6 +34,7 @@ ProviderKind = Literal[
     "github_models",
     "siliconflow",
     "deepgram",
+    "sea_lion",
     "custom",
 ]
 KeyRole = Literal["primary", "backup", "cheap", "free"]

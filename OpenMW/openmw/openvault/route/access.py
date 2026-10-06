@@ -31,16 +31,13 @@ going.
 
 from __future__ import annotations
 
+import json
+import os
 import time
 from dataclasses import asdict, dataclass, field
 from typing import Any, Literal
 
-from openmw.openvault.mesh.local_mesh import (
-    DEFAULT_CORTEX_URL,
-    LocalMeshState,
-    load_mesh,
-    netie_kb_base_url,
-)
+from openmw.openvault.paths import ensure_home
 from openmw.openvault.ship.gate import GateAction, GateDecision, check_gate
 from openmw.openvault.vault.fallback import FallbackManager
 from openmw.openvault.vault.store import KeyVault
@@ -90,6 +87,91 @@ _INTENT_TO_GATE: dict[AccessIntent, GateAction] = {
 # Process start, so uptime is real rather than inferred from a log line.
 _STARTED_AT = time.time()
 
+# Peer snapshot this module reads from local_mesh.json. Defaults match the
+# mesh file when it has not been written yet (unknown peers stay unknown).
+_DEFAULT_CORTEX_URL = "http://127.0.0.1:8010"
+_DEFAULT_NETIE_KB_URL = "http://127.0.0.1:8030"
+_MESH_FILE = "local_mesh.json"
+
+
+@dataclass
+class _PeerRecord:
+    kind: str
+    name: str
+    base_url: str
+    status: str = "unknown"
+    detail: str = ""
+    last_seen: float | None = None
+    approved: bool = False
+    meta: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class _MeshRecord:
+    peers: dict[str, _PeerRecord] = field(default_factory=dict)
+    updated_at: float = field(default_factory=time.time)
+
+
+def _cortex_base_url() -> str:
+    return os.environ.get("CORTEX_URL", _DEFAULT_CORTEX_URL).rstrip("/")
+
+
+def _netie_kb_base_url() -> str:
+    return os.environ.get("NETIE_KB_URL", _DEFAULT_NETIE_KB_URL).rstrip("/")
+
+
+def _default_mesh() -> _MeshRecord:
+    """Same four peers a missing mesh file produces, without writing the file."""
+    ov_port = int(os.environ.get("OPENVAULT_PORT", "5000"))
+    openide = os.environ.get("OPENIDE_URL", "http://127.0.0.1:8765")
+    rust = os.environ.get("OPENVAULT_RUST_URL", "http://127.0.0.1:5055")
+    now = time.time()
+    state = _MeshRecord()
+    state.peers["openvault"] = _PeerRecord(
+        kind="openvault",
+        name="OpenVault Python console",
+        base_url=f"http://127.0.0.1:{ov_port}",
+        status="online",
+        approved=True,
+        detail="self",
+        last_seen=now,
+    )
+    state.peers["cortex"] = _PeerRecord(
+        kind="cortex",
+        name="Cortex / Netie Engine",
+        base_url=_cortex_base_url(),
+        status="unknown",
+    )
+    state.peers["openide"] = _PeerRecord(
+        kind="openide",
+        name="FreeIDE local bridge",
+        base_url=openide.rstrip("/"),
+        status="unknown",
+    )
+    state.peers["rust_console"] = _PeerRecord(
+        kind="rust_console",
+        name="OpenVault Rust auth console",
+        base_url=rust.rstrip("/"),
+        status="unknown",
+    )
+    return state
+
+
+def _load_mesh_view() -> _MeshRecord:
+    """Read peer fields already on disk. A missing file stays the default view."""
+    path = ensure_home() / _MESH_FILE
+    if not path.is_file():
+        return _default_mesh()
+    raw: Any = json.loads(path.read_text(encoding="utf-8"))
+    state = _MeshRecord(updated_at=float(raw.get("updated_at", time.time())))
+    for key, row in raw.get("peers", {}).items():
+        state.peers[str(key)] = _PeerRecord(**row)
+    base = _default_mesh()
+    for kind, peer in base.peers.items():
+        if kind not in state.peers:
+            state.peers[kind] = peer
+    return state
+
 
 @dataclass(frozen=True)
 class AccessEntry:
@@ -120,16 +202,16 @@ class AccessEntry:
         return self.base_url or self.path
 
 
-def _peer(state: LocalMeshState, kind: str) -> Any:
+def _peer(state: _MeshRecord, kind: str) -> _PeerRecord | None:
     return state.peers.get(kind)
 
 
-def _peer_url(state: LocalMeshState, kind: str, fallback: str = "") -> str:
+def _peer_url(state: _MeshRecord, kind: str, fallback: str = "") -> str:
     peer = _peer(state, kind)
     return (peer.base_url if peer is not None else "") or fallback
 
 
-def _peer_reachable(state: LocalMeshState, kind: str) -> bool | None:
+def _peer_reachable(state: _MeshRecord, kind: str) -> bool | None:
     """``None`` means unprobed, which is not the same as offline.
 
     Reporting an unprobed peer as down would make the uptime view lie every
@@ -148,7 +230,7 @@ def _peer_reachable(state: LocalMeshState, kind: str) -> bool | None:
 def build_registry(
     *,
     vault: KeyVault,
-    state: LocalMeshState | None = None,
+    state: _MeshRecord | None = None,
     openvault_url: str = "http://127.0.0.1:5000",
 ) -> list[AccessEntry]:
     """Everything OpenVault knows how to route to, derived from live state.
@@ -158,9 +240,9 @@ def build_registry(
     An entry that cannot be derived does not appear, because a registry that
     lists things that are not there is worse than no registry.
     """
-    state = state if state is not None else load_mesh()
-    cortex_url = _peer_url(state, "cortex", DEFAULT_CORTEX_URL)
-    freeide_url = _peer_url(state, "openide", "http://127.0.0.1:8765")
+    mesh = state if state is not None else _load_mesh_view()
+    cortex_url = _peer_url(mesh, "cortex", _DEFAULT_CORTEX_URL)
+    freeide_url = _peer_url(mesh, "openide", "http://127.0.0.1:8765")
     entries: list[AccessEntry] = []
 
     # --- memory: Cortex owns it. We route, we do not store. ---
@@ -176,7 +258,7 @@ def build_registry(
                 "Cortex is the memory SoT (PRODUCT_ROLES lock 5). OpenVault gates "
                 "access; it never holds memory content."
             ),
-            reachable=_peer_reachable(state, "cortex"),
+            reachable=_peer_reachable(mesh, "cortex"),
         )
     )
     entries.append(
@@ -188,7 +270,7 @@ def build_registry(
             base_url=cortex_url,
             path="/api/context",
             detail="Context engineering / budget assembly lives with the brain.",
-            reachable=_peer_reachable(state, "cortex"),
+            reachable=_peer_reachable(mesh, "cortex"),
         )
     )
 
@@ -220,7 +302,7 @@ def build_registry(
         "airgpt": "AirGPT (shell / control plane)",
         "rust_console": "OpenVault Rust auth console (optional sandbox)",
     }
-    for peer_kind, peer in sorted(state.peers.items()):
+    for peer_kind, peer in sorted(mesh.peers.items()):
         entries.append(
             AccessEntry(
                 kind="component",
@@ -229,7 +311,7 @@ def build_registry(
                 owner=peer_kind,
                 base_url=peer.base_url,
                 detail=peer.detail or f"mesh peer, status={peer.status}",
-                reachable=_peer_reachable(state, peer_kind),
+                reachable=_peer_reachable(mesh, peer_kind),
                 meta={"approved": peer.approved, "status": peer.status},
             )
         )
@@ -258,7 +340,7 @@ def build_registry(
             base_url=cortex_url,
             path="/api/cortex/status",
             detail="Agent loop runs here, not in OpenVault.",
-            reachable=_peer_reachable(state, "cortex"),
+            reachable=_peer_reachable(mesh, "cortex"),
         )
     )
     entries.append(
@@ -273,7 +355,7 @@ def build_registry(
                 "Coding-expert activation is requested from Cortex; "
                 "FreeIDE does not host deploy UX."
             ),
-            reachable=_peer_reachable(state, "openide"),
+            reachable=_peer_reachable(mesh, "openide"),
         )
     )
     entries.append(
@@ -288,12 +370,12 @@ def build_registry(
                 "Crew loop and parent-task completion live in Cortex (DR-0012). "
                 "OpenVault gates invoke/leave; it does not spawn agents."
             ),
-            reachable=_peer_reachable(state, "cortex"),
+            reachable=_peer_reachable(mesh, "cortex"),
         )
     )
 
     # --- skill / mcp: Netie-KB is the one registry (R-0016). We route, we do not store. ---
-    kb_url = netie_kb_base_url()
+    kb_url = _netie_kb_base_url()
     entries.append(
         AccessEntry(
             kind="skill",
@@ -378,7 +460,7 @@ def registry_payload(
     *,
     vault: KeyVault,
     kind: AccessKind | None = None,
-    state: LocalMeshState | None = None,
+    state: _MeshRecord | None = None,
     openvault_url: str = "http://127.0.0.1:5000",
 ) -> dict[str, Any]:
     entries = build_registry(vault=vault, state=state, openvault_url=openvault_url)
@@ -426,7 +508,7 @@ def resolve_access(
     resource_id: str,
     intent: AccessIntent = "read",
     fallback: FallbackManager | None = None,
-    state: LocalMeshState | None = None,
+    state: _MeshRecord | None = None,
     openvault_url: str = "http://127.0.0.1:5000",
     required_providers: list[str] | None = None,
 ) -> ResolveResult:
@@ -495,7 +577,7 @@ def resolve_access(
 
 def uptime_payload(
     *,
-    state: LocalMeshState | None = None,
+    state: _MeshRecord | None = None,
     started_at: float | None = None,
 ) -> dict[str, Any]:
     """Per-surface uptime for the mesh, plus this process's own.
@@ -505,13 +587,13 @@ def uptime_payload(
     to ignore the panel. Call ``POST /api/local/mesh/refresh`` to turn unknowns
     into answers.
     """
-    state = state if state is not None else load_mesh()
+    mesh = state if state is not None else _load_mesh_view()
     start = started_at if started_at is not None else _STARTED_AT
     now = time.time()
 
     surfaces: list[dict[str, Any]] = []
-    for peer_kind, peer in sorted(state.peers.items()):
-        up = _peer_reachable(state, peer_kind)
+    for peer_kind, peer in sorted(mesh.peers.items()):
+        up = _peer_reachable(mesh, peer_kind)
         surfaces.append(
             {
                 "id": peer_kind,
@@ -539,6 +621,6 @@ def uptime_payload(
             "down": sum(1 for s in surfaces if s["up"] is False),
             "unknown": len(surfaces) - len(known),
         },
-        "mesh_updated_at": state.updated_at,
+        "mesh_updated_at": mesh.updated_at,
         "note": "up=null means never probed, not down. POST /api/local/mesh/refresh to probe.",
     }

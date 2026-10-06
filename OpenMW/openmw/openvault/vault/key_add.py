@@ -38,6 +38,7 @@ _EXTRA_KEY_ENV = frozenset(
         "OPENVAULT_SECRET",
         "OPENVAULT_ADD_KEY",
         "GEMINI_API_KEY",
+        "SEALION_API_KEY",
         "NVIDIA_NIM_API_KEY",
         "FREENVIDIA_API_KEY",
         "GH_TOKEN",

@@ -8,6 +8,22 @@ Append-only. Never edited, only added to. Newest first.
 - Hard caps: daily and monthly USD per vault key and per caller, plus `max_tokens_per_request`. The caller is the issued key id, or `service_id` for loopback. Spend persists in keys.db table `route_spend`, so `usage_events` stays 18 columns. A cap that would be exceeded returns 402 with `reason: "budget_exceeded"` and names the cap. A model is paid unless the policy marks it free. A role walk never runs a paid model unless that key or caller has a USD cap (`cap: "paid_default"`). No paid prices ship.
 - Every gateway JSON response carries `model`, `provider`, `tokens_in`, `tokens_out`, and `est_cost_usd`, naming the hop that actually served. Free models cost 0. Streams carry them on chunks. HttpGuard, admin_token, and auth are unchanged. No public `:5000`. Contract: `docs/reference/freeroute-role-budget.md`.
 
+## 2026-10-06 - Verify lookup always compares the digest (Refs #135)
+
+- `POST /api/apikeys/verify` calls `ApiKeyStore.match_issued`. Every input, including an unknown or empty token, hashes the body, runs the same digest lookup, and calls `hmac.compare_digest` once. A miss compares a fixed 64-character dummy. The raw token is not compared. `ApiKeyStore.verify` is unchanged and is still the auth-path check.
+
+## 2026-10-06 - Verify an issued key for an allowlisted service (Refs #135)
+
+- `POST /api/apikeys/verify` reads `{"token": "..."}` and looks the key up by hash. A live key returns `{"ok": true, "valid": true, "key_id", "tier"}`. Unknown, revoked, disabled, and malformed keys return `{"ok": true, "valid": false}` and nothing else. The raw key is not logged or returned.
+- The caller presents `X-OpenVault-Admin`, or an `Authorization: Bearer` that passes `verify_service` for a service_id in `OPENVAULT_VERIFY_SERVICES` (comma-separated, default empty, so only admin works). No credential is 401. A wrong, revoked, or unlisted service is 401. Loopback alone is not enough.
+- The socket peer must be loopback or the services allowlist. `X-Forwarded-For` and `Host` are not a peer. Every other `/api/apikeys` route still requires admin.
+- Each admitted caller is capped at 60 verify requests a minute by an in-process token-budget limiter that is not the chat limiter. A full bucket is 429.
+
+## 2026-10-06 - SEA-LION key import accepts sea_lion (Refs #134)
+
+- `POST /api/keys` and env ingest accept catalog id `sea_lion`. `SEA_LION_API_KEY` and `SEALION_API_KEY` store as `sea_lion`, with the catalog base URL. An unknown provider stays 422.
+- FreeRoute already lists the catalog row. A vaulted `sea_lion` key is selected like other OpenAI-compatible hops. SEA-Guard and the embedding model stay out of chat hops. Chat-probe low-cap handling is unchanged.
+
 ## 2026-10-06 - Intermediate revoke is limited to the issuing service (Refs #132)
 
 - A service Bearer on `POST /keys/intermediate/{kid}/revoke` can revoke only a kid that service issued. Another service's kid stays active and the response is 403.
