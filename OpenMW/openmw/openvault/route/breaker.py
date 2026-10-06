@@ -94,15 +94,6 @@ class CircuitBreakerStatus:
         }
 
 
-class CircuitBreakerOpenError(Exception):
-    """Raised when a call is short-circuited because the breaker is OPEN."""
-
-    def __init__(self, message: str, circuit_name: str, retry_after_ms: int) -> None:
-        super().__init__(message)
-        self.circuit_name = circuit_name
-        self.retry_after_ms = retry_after_ms
-
-
 class CircuitBreaker:
     """Single named breaker with lazy OPEN → HALF_OPEN recovery."""
 
@@ -335,8 +326,3 @@ def reset_all_circuit_breakers() -> None:
         for breaker in _registry.values():
             breaker.reset()
         _registry.clear()
-
-
-def registry_size_for_tests() -> int:
-    with _registry_lock:
-        return len(_registry)

@@ -2,6 +2,10 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-06 - Dead route symbols with zero callers (Refs #137)
+
+- Removed nine symbols in `OpenMW/openmw/openvault/route/` whose only `git grep -n -w` hits were the definition, a package re-export, or a design-doc mention: `registry_size_for_tests`, `CircuitBreakerOpenError`, `parse_delay_string`, `set_custom_banned_signals`, `MAX_RR_COUNTERS`, `semaphore.mark_rate_limited`, `semaphore.get_stats`, `semaphore.reset_all`, and `record_target_result`. Classify, breaker trips, FreeRoute, auth, HttpGuard, keys, and unseal are unchanged. `key_rotator` and `route/access.py` were not edited.
+
 ## 2026-10-06 - Verify lookup always compares the digest (Refs #135)
 
 - `POST /api/apikeys/verify` calls `ApiKeyStore.match_issued`. Every input, including an unknown or empty token, hashes the body, runs the same digest lookup, and calls `hmac.compare_digest` once. A miss compares a fixed 64-character dummy. The raw token is not compared. `ApiKeyStore.verify` is unchanged and is still the auth-path check.
