@@ -7,7 +7,7 @@ import json
 import math
 import time
 import uuid
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass
 from typing import Any, Literal
 
@@ -16,7 +16,12 @@ import structlog
 
 from openmw.openvault.route.attempt import AttemptOutcome, classify_attempt
 from openmw.openvault.route.breaker import CircuitBreaker, get_circuit_breaker
-from openmw.openvault.vault.budget import BudgetDecision, estimate_tokens_for_body, prepare_hop_body
+from openmw.openvault.vault.budget import (
+    BudgetDecision,
+    estimate_tokens_for_body,
+    prepare_hop_body,
+    resolve_requested_budget,
+)
 from openmw.openvault.vault.crypto import VaultCryptoError, VaultSealedError
 from openmw.openvault.vault.fallback import FallbackManager, note_key_used
 from openmw.openvault.vault.hop_attempts import record_hop_attempt
@@ -43,6 +48,13 @@ from openmw.openvault.vault.providers import (
     resolve_model,
 )
 from openmw.openvault.vault.quota import iso_utc, quota_blocks, quota_retry_after_s
+from openmw.openvault.vault.ratelimit import DEFAULT_MAX_OUTPUT_TOKENS
+from openmw.openvault.vault.route_policy import (
+    BUDGET_ERROR_TYPE,
+    BudgetBlock,
+    SpendGuard,
+    usage_pair,
+)
 from openmw.openvault.vault.store import KeyRecord, KeyVault
 from openmw.openvault.vault.usage_store import HopTrace
 
@@ -744,6 +756,86 @@ def _models_to_send(
     return _models_for_hop(provider, requested, multimodal=multimodal)
 
 
+#: ``(hop, models)``. ``None`` means the existing per-hop catalog walk.
+_PlanStep = tuple[ProxyCandidate, tuple[str, ...] | None]
+
+
+def _walk_plan(candidates: list[ProxyCandidate], spend: SpendGuard | None) -> list[_PlanStep]:
+    """Role order when the caller sent ``role``; otherwise today's pool order.
+
+    A role walks its configured model list in order. Each entry is tried on
+    every healthy hop of that provider, in the pool's own key order, before
+    the walk moves down to the next entry.
+    """
+    if spend is None or spend.route_role is None:
+        return [(cand, None) for cand in candidates]
+    plan: list[_PlanStep] = []
+    for hop in spend.policy.hops_for(spend.route_role):
+        for cand in candidates:
+            if cand.provider == hop.provider:
+                plan.append((cand, (hop.model,)))
+    return plan
+
+
+def _role_models(
+    provider: str, role_models: tuple[str, ...], *, multimodal: bool
+) -> tuple[str, ...]:
+    if not multimodal:
+        return role_models
+    return tuple(m for m in role_models if _hop_serves(provider, m, multimodal=True))
+
+
+def _admit_hop(
+    spend: SpendGuard | None,
+    cand: ProxyCandidate,
+    model: str,
+    hop_body: dict[str, Any],
+    prompt_tokens: int,
+) -> BudgetBlock | None:
+    if spend is None:
+        return None
+    sent, _present, _invalid = resolve_requested_budget(hop_body)
+    return spend.admit(
+        provider=cand.provider,
+        model=model,
+        key_id="" if cand.served_local else cand.key_id,
+        prompt_tokens=prompt_tokens,
+        max_output=sent if sent is not None else DEFAULT_MAX_OUTPUT_TOKENS,
+    )
+
+
+def _sse_stamp(
+    spend: SpendGuard | None, provider: str, model: str
+) -> Callable[[dict[str, Any]], dict[str, Any]] | None:
+    """Model and provider on every chunk; tokens and cost on the usage chunk."""
+    if spend is None:
+        return None
+
+    def stamp(obj: dict[str, Any]) -> dict[str, Any]:
+        out: dict[str, Any] = {"model": model, "provider": provider}
+        usage = obj.get("usage")
+        if isinstance(usage, dict):
+            tokens_in, tokens_out = usage_pair(usage)
+            out.update(
+                spend.stamps(
+                    provider=provider, model=model, tokens_in=tokens_in, tokens_out=tokens_out
+                )
+            )
+        return out
+
+    return stamp
+
+
+def _budget_refusal(
+    trace: HopTrace, spend: SpendGuard, errors: list[str]
+) -> tuple[int, dict[str, Any]]:
+    """Every hop that could still serve was refused by a cap. Name the first."""
+    trace.error_type = BUDGET_ERROR_TYPE
+    body = spend.blocks[0].to_body()
+    body["error"]["details"] = errors
+    return 402, body
+
+
 @dataclass
 class _Walk:
     candidates: list[ProxyCandidate]
@@ -776,6 +868,9 @@ def _open_walk(
     """
     local_only = pop_local_only(work)
     strict = pop_strict(work)
+    # Gateway fields. The role arrives on the SpendGuard; neither goes upstream.
+    work.pop("role", None)
+    work.pop("service_id", None)
     candidates, early = _collect_candidates(
         vault, fallback, work, tenant=tenant, local_only=local_only
     )
@@ -866,12 +961,16 @@ async def chat_completions(
     timeout_s: float = 60.0,
     trace: HopTrace | None = None,
     tenant: str = "",
+    spend: SpendGuard | None = None,
 ) -> tuple[int, dict[str, Any] | str]:
     """Try each healthy hop until one succeeds.
 
     Returns ``(status_code, payload)``. Pass ``trace`` to learn which hop
     actually served — the usage ledger cannot attribute spend without it, and
     the return tuple is unpacked by four test modules that do not want it.
+
+    ``spend`` carries the route role and the hard caps. Without it the walk
+    is exactly the pre-policy pool walk.
     """
     trace = trace if trace is not None else HopTrace()
     request_id = uuid.uuid4().hex
@@ -890,7 +989,7 @@ async def chat_completions(
     considered = 0
     local_fail_reason = REASON_UNREACHABLE
     async with httpx.AsyncClient(timeout=timeout_s) as client:
-        for cand in candidates:
+        for cand, role_models in _walk_plan(candidates, spend):
             considered += 1
             breaker = _hop_breaker(cand)
             if not breaker.acquire_probe_slot():
@@ -928,11 +1027,15 @@ async def chat_completions(
             wants_images = _is_multimodal(work)
             raw_model = work.get("model")
             requested = raw_model if isinstance(raw_model, str) else None
-            models = _models_to_send(
-                cand.provider,
-                requested,
-                multimodal=wants_images,
-                strict_pin=strict_pin,
+            models = (
+                _role_models(cand.provider, role_models, multimodal=wants_images)
+                if role_models is not None
+                else _models_to_send(
+                    cand.provider,
+                    requested,
+                    multimodal=wants_images,
+                    strict_pin=strict_pin,
+                )
             )
             if not models:
                 why = "no vision model" if wants_images else "no catalogued model"
@@ -958,6 +1061,7 @@ async def chat_completions(
                     provider=cand.provider,
                     model=model,
                     prompt_tokens=prompt_estimate,
+                    request_cap=spend.max_tokens_cap if spend is not None else None,
                 )
                 if decision.body is None:
                     # Not a hop failure. This model cannot hold the prompt, so
@@ -969,6 +1073,11 @@ async def chat_completions(
                     errors.append(f"{cand.label}: {decision.refusal}")
                     continue
                 hop_body = decision.body
+                blocked = _admit_hop(spend, cand, model, hop_body, prompt_estimate)
+                if blocked is not None:
+                    other_skips += 1
+                    errors.append(f"{cand.label}: {blocked.cap} refuses {model}")
+                    continue
                 _log_budget(cand.provider, model, work.get("max_tokens"), decision)
 
                 trace.note_attempt()
@@ -1085,7 +1194,9 @@ async def chat_completions(
                 and not limited
             ):
                 context_blocked += 1
-            if not leave_hop:
+            if not leave_hop and role_models is None:
+                # A role step tries one model on this key. Its 429 is a model
+                # park, not proof that every model on the key is limited.
                 _park_key_if_every_model_limited(
                     fallback,
                     cand,
@@ -1106,6 +1217,9 @@ async def chat_completions(
         # "all hops failed" here would blame the pool for the caller's prompt.
         trace.error_type = "openvault_context_length_exceeded"
         return _context_refusal(errors)
+
+    if spend is not None and spend.blocks:
+        return _budget_refusal(trace, spend, errors)
 
     if strict_pin is not None and pin_fail is not None:
         return _finish_pin(trace, strict_pin, pin_fail)
@@ -1128,6 +1242,7 @@ async def prepare_chat_stream(
     timeout_s: float = 120.0,
     trace: HopTrace | None = None,
     tenant: str = "",
+    spend: SpendGuard | None = None,
 ) -> tuple[int, dict[str, Any] | AsyncIterator[bytes]]:
     """Open a streaming upstream hop before returning bytes to the client.
 
@@ -1159,7 +1274,7 @@ async def prepare_chat_stream(
         await client.aclose()
 
     try:
-        for cand in candidates:
+        for cand, role_models in _walk_plan(candidates, spend):
             considered += 1
             breaker = _hop_breaker(cand)
             if not breaker.acquire_probe_slot():
@@ -1203,11 +1318,15 @@ async def prepare_chat_stream(
             wants_images = _is_multimodal(payload)
             raw_model = payload.get("model")
             requested = raw_model if isinstance(raw_model, str) else None
-            models = _models_to_send(
-                cand.provider,
-                requested,
-                multimodal=wants_images,
-                strict_pin=strict_pin,
+            models = (
+                _role_models(cand.provider, role_models, multimodal=wants_images)
+                if role_models is not None
+                else _models_to_send(
+                    cand.provider,
+                    requested,
+                    multimodal=wants_images,
+                    strict_pin=strict_pin,
+                )
             )
             if not models:
                 why = "no vision model" if wants_images else "no catalogued model"
@@ -1233,6 +1352,7 @@ async def prepare_chat_stream(
                     provider=cand.provider,
                     model=model,
                     prompt_tokens=prompt_estimate,
+                    request_cap=spend.max_tokens_cap if spend is not None else None,
                 )
                 if decision.body is None:
                     if decision.context_exceeded:
@@ -1243,6 +1363,11 @@ async def prepare_chat_stream(
                     continue
                 hop_payload = decision.body
                 hop_payload["stream"] = True
+                blocked = _admit_hop(spend, cand, model, hop_payload, prompt_estimate)
+                if blocked is not None:
+                    other_skips += 1
+                    errors.append(f"{cand.label}: {blocked.cap} refuses {model}")
+                    continue
                 _log_budget(cand.provider, model, work.get("max_tokens"), decision)
 
                 trace.note_attempt()
@@ -1362,11 +1487,14 @@ async def prepare_chat_stream(
                 served_model = model
                 served_local = cand.served_local
 
+                stamp = _sse_stamp(spend, served_provider, served_model)
+
                 async def _byte_iter(
                     response: httpx.Response = resp,
                     inj_provider: str = served_provider,
                     inj_model: str = served_model,
                     inj_local: bool = served_local,
+                    inj_stamp: Callable[[dict[str, Any]], dict[str, Any]] | None = stamp,
                 ) -> AsyncIterator[bytes]:
                     try:
                         async for chunk in response.aiter_bytes():
@@ -1376,6 +1504,7 @@ async def prepare_chat_stream(
                                     provider=inj_provider,
                                     model=inj_model,
                                     served_local=inj_local,
+                                    stamp=inj_stamp,
                                 )
                     finally:
                         await response.aclose()
@@ -1391,7 +1520,9 @@ async def prepare_chat_stream(
                 and not limited
             ):
                 context_blocked += 1
-            if not leave_hop:
+            if not leave_hop and role_models is None:
+                # A role step tries one model on this key. Its 429 is a model
+                # park, not proof that every model on the key is limited.
                 _park_key_if_every_model_limited(
                     fallback,
                     cand,
@@ -1413,6 +1544,9 @@ async def prepare_chat_stream(
     if context_blocked and context_blocked == considered:
         trace.error_type = "openvault_context_length_exceeded"
         return _context_refusal(errors)
+
+    if spend is not None and spend.blocks:
+        return _budget_refusal(trace, spend, errors)
 
     if strict_pin is not None and pin_fail is not None:
         return _finish_pin(trace, strict_pin, pin_fail)

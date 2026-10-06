@@ -311,6 +311,8 @@ class SseUsageCapture:
     def __init__(self) -> None:
         self._carry = b""
         self.total_tokens: int | None = None
+        self.prompt_tokens: int | None = None
+        self.completion_tokens: int | None = None
 
     def feed(self, chunk: bytes) -> None:
         if not chunk:
@@ -340,6 +342,13 @@ class SseUsageCapture:
         got = usage_total_tokens(obj)
         if got is not None:
             self.total_tokens = got
+            usage = obj.get("usage") if isinstance(obj, dict) else None
+            if isinstance(usage, dict):
+                prompt = usage.get("prompt_tokens")
+                completion = usage.get("completion_tokens")
+                if isinstance(prompt, int) and isinstance(completion, int):
+                    self.prompt_tokens = prompt
+                    self.completion_tokens = completion
 
 
 class TokenBudgetLimiter:

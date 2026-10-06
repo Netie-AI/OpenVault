@@ -2,6 +2,12 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-06 - FreeRoute role routing, hard spend caps, cost stamps (Refs #148)
+
+- `POST /v1/chat/completions` accepts `role` = `sql` | `tool` | `reason` | `summarize`. Each role walks an ordered model list from `OpenMW/openmw/openvault/vault/route_policy.json`, free first, overridable with `OPENVAULT_ROUTE_POLICY`. A provider failure falls back to the next entry in order. No `role` keeps the pool walk. Any other value is 422 `openvault_unknown_role`. `role` with `strict` or `local_only` is 422 `openvault_role_conflict`. Defaults use only NVIDIA NIM, Groq, OpenRouter, SambaNova, Gemini, and SEA-LION, with no DeepSeek or China-hosted model names.
+- Hard caps: daily and monthly USD per vault key and per caller, plus `max_tokens_per_request`. The caller is the issued key id, or `service_id` for loopback. Spend persists in keys.db table `route_spend`, so `usage_events` stays 18 columns. A cap that would be exceeded returns 402 with `reason: "budget_exceeded"` and names the cap. A model is paid unless the policy marks it free. A role walk never runs a paid model unless that key or caller has a USD cap (`cap: "paid_default"`). No paid prices ship.
+- Every gateway JSON response carries `model`, `provider`, `tokens_in`, `tokens_out`, and `est_cost_usd`, naming the hop that actually served. Free models cost 0. Streams carry them on chunks. HttpGuard, admin_token, and auth are unchanged. No public `:5000`. Contract: `docs/reference/freeroute-role-budget.md`.
+
 ## 2026-10-06 - Dead route symbols with zero callers (Refs #137)
 
 - Removed nine symbols in `OpenMW/openmw/openvault/route/` whose only `git grep -n -w` hits were the definition, a package re-export, or a design-doc mention: `registry_size_for_tests`, `CircuitBreakerOpenError`, `parse_delay_string`, `set_custom_banned_signals`, `MAX_RR_COUNTERS`, `semaphore.mark_rate_limited`, `semaphore.get_stats`, `semaphore.reset_all`, and `record_target_result`. Classify, breaker trips, FreeRoute, auth, HttpGuard, keys, and unseal are unchanged. `key_rotator` and `route/access.py` were not edited.

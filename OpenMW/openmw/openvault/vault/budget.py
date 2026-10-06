@@ -210,6 +210,7 @@ def prepare_hop_body(
     provider: str,
     model: str,
     prompt_tokens: int | None = None,
+    request_cap: int | None = None,
 ) -> BudgetDecision:
     """Return the body to send to this hop, or a refusal.
 
@@ -218,6 +219,10 @@ def prepare_hop_body(
     lower — the operator's or what is left of the context window. The floor must
     not win over the ceiling, or a reasoning model with a nearly-full context
     would get a budget that cannot fit.
+
+    ``request_cap`` is the route policy's hard per-request token cap. It joins
+    the ceilings, so a reasoning floor above it skips the hop instead of
+    sending more than the cap allows.
     """
     hop = {**body, "model": model}
     estimate = prompt_tokens if prompt_tokens is not None else estimate_tokens_for_body(body)
@@ -237,7 +242,7 @@ def prepare_hop_body(
         hop.pop(name, None)
     write_fields = [f for f in present_fields if f not in invalid_fields]
 
-    ceiling_candidates = [c for c in (configured_ceiling(),) if c]
+    ceiling_candidates = [c for c in (configured_ceiling(), request_cap) if c]
     if window:
         ceiling_candidates.append(max(_MIN_USEFUL_OUTPUT, window - estimate))
     ceiling = min(ceiling_candidates) if ceiling_candidates else None
@@ -266,7 +271,7 @@ def prepare_hop_body(
         requested = ceiling
         clamped_to = ceiling
         raised_to = None
-    elif requested is None and ceiling is not None and configured_ceiling():
+    elif requested is None and ceiling is not None and (configured_ceiling() or request_cap):
         # An operator ceiling applies even when the caller named no budget --
         # that is the whole point of a denial-of-wallet guard.
         requested = ceiling
