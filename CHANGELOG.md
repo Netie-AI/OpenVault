@@ -2,6 +2,10 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-06 - OV-3a kept live sentinel, observe, health, and control (Refs #137)
+
+- `OpenMW/openmw/openvault/sentinel/`, `observe/`, `health/`, and `control/` stay. `app.py` and `routers/sentinel.py` import them, and the Detect page calls `/api/health/devices`, `/api/sentinel/devices`, and `/api/observe/path`. The web route guard lists `/api/control/action` and `/api/sentinel/`. `nvme_sentinel/` and CI job `test-nvme-sentinel` are untouched. No auth, key, or route change.
+
 ## 2026-10-06 - Public prove IP is not a default services peer (OpenVault #133)
 
 - `POST /keys/services` defaults stay loopback and the private peer `10.128.0.3`. `34.30.222.22` is no longer built in. `OPENVAULT_SERVICES_ALLOW` is the only way to admit it. Unset, that peer plus `X-OpenVault-Reveal: intentional` is 401. Set to include it, the first mint is still 200, and the dms service Bearer on loopback `POST /keys/intermediate` is still 200. `HttpGuard` uses the path Starlette routes. A `root_path` prefix, a doubled slash under `root_path` `/`, or a trailing slash on that prefixed path is 401, the same as the unprefixed path. `POST /api/apikeys/verify` uses that same routed path. Behind a `root_path` prefix a good caller is still admitted and a bad caller is still rejected. A missing route helper on that path is 401. `GET`/`HEAD`/`OPTIONS` `/keys/jwks` and `/api/healthz` stay public. If `starlette._utils.get_route_path` cannot be imported, the guard returns 401 and does not skip auth. Loopback first mint is unchanged. No public `:5000` bind change.
