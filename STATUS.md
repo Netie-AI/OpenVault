@@ -2,6 +2,7 @@
 
 > Canonical "what's true now." History: [`CHANGELOG.md`](CHANGELOG.md). Deferred:
 > [`PARKING_LOT.md`](PARKING_LOT.md). Map: [`docs/ACTIVE.md`](docs/ACTIVE.md).
+> Merge tiers (`tier:fast` / `tier:full`): [`CLAUDE.md`](CLAUDE.md#merge-tiers).
 
 Last reconciled: 2026-09-11. GitHub OPEN = #60 (Get free keys). #12-#39, #48,
 #52, #61, #62 CLOSED. No public `:5000`. VPC allowlist for

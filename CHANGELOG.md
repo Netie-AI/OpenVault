@@ -2,6 +2,10 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-06 - Two-tier merge gate (tier:fast / tier:full)
+
+- Founder-approved 2026-10-06 12:02 MYT (FAST LANE, relayed by Netie Lead). The rules are in [`CLAUDE.md`](CLAUDE.md#merge-tiers) under Merge tiers. No CI check changed.
+
 ## 2026-10-05 - Revoke and service rotation need a credential (OpenVault #128)
 
 - Supersedes the #126 line that said intermediate revoke keeps a Bearer gate. After that change, loopback `POST /keys/intermediate/{kid}/revoke` with no credential returned 200. Revoke now requires a Bearer that passes the same `verify_service` check as issue, or `X-OpenVault-Admin`. Loopback alone is 401. Non-loopback revoke stays denied.

@@ -3,6 +3,8 @@
 What exists in this repo and where. Update when structure changes, not when state changes
 - state lives in STATUS.md.
 
+PR merge tiers (`tier:fast` / `tier:full`): [Merge tiers](../CLAUDE.md#merge-tiers).
+
 ## Layout
 
 | Path | What |

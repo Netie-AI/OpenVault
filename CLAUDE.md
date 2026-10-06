@@ -79,6 +79,16 @@ epic boxes, comment the evidence, and update `STATUS.md` in that same turn. Do n
 tick from pytest or simulate. Empty boxes after a founder walk are a clerk failure.
 Estate law: `D:\Netie\Internal\Agents\AGENT_SYSTEM.md` (Human-inspectable gates).
 
+### Merge tiers
+
+Founder-approved 2026-10-06 12:02 MYT (FAST LANE, relayed by Netie Lead).
+
+1. `tier:fast` applies to UI, docs, tests, cleanup that keeps an attic copy of what it removes, and features behind a flag that is off by default and byte-identical when off. A `tier:fast` PR merges on green required CI (9/9 here) plus one second-model AGREE on the exact head SHA. PR Bot's CLEAR is the CI result, not a separate serial wait. Post-merge R-0003 (Estate Verify) and Gating still run on the merge SHA.
+2. `tier:full` applies to everything else, and always to any PR touching auth, keys or secrets custody, vault or HttpGuard, routing (FreeRoute/router/proxy), prove pins, or scoring and eval paths. It keeps the existing bars unchanged: PR Bot CLEAR on the exact head, a Security glance YES before undraft, and post-merge R-0003. A head move voids CLEAR, AGREE and Security in both tiers.
+3. PR Bot bounces any `tier:fast` PR that touches the paths in rule 2 to `tier:full`. If no label is present, the PR is `tier:full`.
+4. No CI check is weakened, skipped or made optional by either tier. Every existing invariant stays as-is: Refs not Closes, one writer per branch, nothing declared PASS, no second vault, HUMAN_STOP (no public `:5000`).
+5. GitHub labels `tier:fast` and `tier:full` already exist in the repo.
+
 ### Environment (whole repo)
 
 - Three separate `uv sync` roots: repo root (`nvme_sentinel`), `OpenMW/`, `Profiler/`.

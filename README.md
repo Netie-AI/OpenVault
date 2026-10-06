@@ -51,6 +51,8 @@ To set this up in another repo: `python D:\Netie\scripts\netie_init.py <path>`
 
 **Product roles:** OpenVault = keys + gate + connect + deploy/host. Cortex = brains. AirGPT = shell. FreeIDE = coding. See [`PRODUCT_ROLES.md`](PRODUCT_ROLES.md) — do not grow a second key vault or a third orchestrator.
 
+PR merge tiers (`tier:fast` / `tier:full`): [Merge tiers](CLAUDE.md#merge-tiers).
+
 Libraries for measurement stay at the repo root; the operator console lives in OpenMW.
 
 ---

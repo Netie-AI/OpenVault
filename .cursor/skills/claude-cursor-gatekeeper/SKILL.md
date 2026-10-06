@@ -12,6 +12,8 @@ Use this skill when work is split between:
 
 The purpose is to prevent "trust me" summaries from replacing evidence. Every claim about changed code, test results, command output, generated files, or hardware behavior must be backed by something readable: a diff, file excerpt, command output, JSON artifact, or explicit statement that it was not verified.
 
+PR merge tiers (`tier:fast` / `tier:full`): [Merge tiers](../../../CLAUDE.md#merge-tiers).
+
 ## Core rule
 
 Do not treat a summary as proof. Treat proof as:
