@@ -395,6 +395,114 @@ def test_loopback_revoke_unknown_kid_with_bearer_is_404(app: FastAPI) -> None:
     assert response.json()["detail"] == "intermediate key not found"
 
 
+def test_revoke_is_scoped_to_the_owning_service(app: FastAPI, home: Any) -> None:
+    """Own kid 200, another service's kid 403 and still active, admin 200, bare 401."""
+    client_a, token_a = _register(app, "127.0.0.1", "svc-a")
+    _client_b, token_b = _register(app, "127.0.0.1", "svc-b")
+    issued_a = _client(app, "127.0.0.1").post(
+        "/keys/intermediate",
+        json={"service_id": "svc-a", "subject": "svc-b", "ttl_s": 300},
+        headers=_bearer(token_a),
+    )
+    assert issued_a.status_code == 200
+    kid_a = issued_a.json()["kid"]
+    issued_b = _issue(app, token_b, "svc-b")
+    assert issued_b.status_code == 200
+    kid_b = issued_b.json()["kid"]
+
+    foreign = client_a.post(
+        f"/keys/intermediate/{kid_b}/revoke",
+        headers=_bearer(token_a),
+    )
+    assert foreign.status_code == 403
+    assert foreign.json()["detail"] == "service is not authorised to revoke this key"
+    assert foreign.json().get("lifecycle") != "revoked"
+    assert kid_b in _jwks_kids(app)
+    assert token_a not in foreign.text
+    assert token_b not in foreign.text
+
+    # Subject is svc-b. Ownership is the issuing service_id, svc-a.
+    swapped = _client(app, "127.0.0.1").post(
+        f"/keys/intermediate/{kid_a}/revoke",
+        headers=_bearer(token_b),
+    )
+    assert swapped.status_code == 403
+    assert kid_a in _jwks_kids(app)
+    assert token_b not in swapped.text
+
+    own = client_a.post(f"/keys/intermediate/{kid_a}/revoke", headers=_bearer(token_a))
+    assert own.status_code == 200
+    assert own.json() == {"kid": kid_a, "lifecycle": "revoked"}
+    assert kid_a not in _jwks_kids(app)
+    assert token_a not in own.text
+
+    admin = ensure_admin_token()
+    admin_revoked = _client(app, "127.0.0.1").post(
+        f"/keys/intermediate/{kid_b}/revoke",
+        headers={ADMIN_HEADER: admin},
+    )
+    assert admin_revoked.status_code == 200
+    assert admin_revoked.json()["lifecycle"] == "revoked"
+    assert admin not in admin_revoked.text
+    assert token_b not in admin_revoked.text
+    assert kid_b not in _jwks_kids(app)
+
+    issued_again = _issue(app, token_a, "svc-a")
+    assert issued_again.status_code == 200
+    kid_again = issued_again.json()["kid"]
+    bare = _client(app, "127.0.0.1").post(f"/keys/intermediate/{kid_again}/revoke")
+    assert bare.status_code == 401
+    assert bare.json().get("lifecycle") != "revoked"
+    assert kid_again in _jwks_kids(app)
+
+    remote = _client(app, _REMOTE).post(
+        f"/keys/intermediate/{kid_again}/revoke",
+        headers=_bearer(token_a),
+    )
+    assert remote.status_code == 403
+    assert remote.json()["error"]["type"] == "openvault_forbidden"
+    peer = _client(app, "10.128.0.3").post(
+        f"/keys/intermediate/{kid_again}/revoke",
+        headers=_bearer(token_a),
+    )
+    assert peer.status_code == 403
+    assert peer.json()["error"]["type"] == "openvault_forbidden"
+    bare_remote = _client(app, _REMOTE).post(f"/keys/intermediate/{kid_again}/revoke")
+    _guard_401(bare_remote)
+    assert kid_again in _jwks_kids(app)
+    assert token_a not in remote.text
+    assert token_a not in peer.text
+
+    audit = _audit_text(home)
+    assert token_a not in audit
+    assert token_b not in audit
+    assert admin not in audit
+
+
+def test_dms_bearer_issue_and_first_service_mint_stay_200(app: FastAPI) -> None:
+    """First peer+reveal service mint stays 200, and the dms Bearer can still issue."""
+    peer = _client(app, "10.128.0.3")
+    registered = peer.post("/keys/services", json={"service_id": "dms"}, headers=INTENT)
+    assert registered.status_code == 200
+    assert registered.json()["service_id"] == "dms"
+    token = registered.json()["token"]
+    assert isinstance(token, str) and token
+
+    issued = _client(app, "127.0.0.1").post(
+        "/keys/intermediate",
+        json={"service_id": "dms", "subject": "dms-manifest-signer", "ttl_s": 300},
+        headers=_bearer(token),
+    )
+    assert issued.status_code == 200
+    body = issued.json()
+    assert str(body["kid"]).startswith("int-")
+    assert body["subject"] == "dms-manifest-signer"
+    assert isinstance(body["private_key"], str) and body["private_key"]
+    assert token not in body["kid"]
+    assert token not in body["public_key"]
+    assert token not in body["subject"]
+
+
 def test_allowlisted_peer_cannot_revoke_with_service_bearer(app: FastAPI) -> None:
     _client_dms, token = _register(app, "127.0.0.1")
     kid = _issue(app, token).json()["kid"]

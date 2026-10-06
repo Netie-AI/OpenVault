@@ -9,6 +9,7 @@ would turn manifest verification into theatre rather than breaking a build.
 from __future__ import annotations
 
 import base64
+import sqlite3
 import time
 from pathlib import Path
 
@@ -206,6 +207,56 @@ def test_revoked_service_cannot_verify(store: TrustStore) -> None:
     token = store.register_service("dms")
     assert store.revoke_service("dms") is True
     assert store.verify_service("dms", token) is False
+
+
+def test_service_id_for_active_bearer_is_one_service(store: TrustStore) -> None:
+    token = store.register_service("dms")
+    other = store.register_service("other")
+    assert store.service_id_for_active_bearer(token) == "dms"
+    assert store.service_id_for_active_bearer(other) == "other"
+    assert store.service_id_for_active_bearer(token + "x") == ""
+    assert store.service_id_for_active_bearer("") == ""
+
+
+def test_intermediate_owner_is_the_issuing_service(store: TrustStore) -> None:
+    issued = store.issue_intermediate("dms-manifest-signer", ttl_s=60, service_id="dms")
+    assert issued.record.subject == "dms-manifest-signer"
+    assert store.intermediate_owner(issued.record.kid) == "dms"
+    plain = store.issue_intermediate("other", ttl_s=60)
+    assert store.intermediate_owner(plain.record.kid) == ""
+    assert store.intermediate_owner("int-missing") is None
+
+
+def test_existing_signing_keys_gain_an_owner_column(home: Path) -> None:
+    db = home / "legacy.db"
+    conn = sqlite3.connect(db)
+    conn.execute(
+        """
+        CREATE TABLE signing_keys (
+          kid TEXT PRIMARY KEY,
+          kind TEXT NOT NULL,
+          subject TEXT NOT NULL DEFAULT '',
+          public_key TEXT NOT NULL,
+          private_blob BLOB,
+          parent_kid TEXT,
+          chain_signature TEXT,
+          not_before REAL NOT NULL,
+          not_after REAL,
+          lifecycle TEXT NOT NULL DEFAULT 'active',
+          created_at REAL NOT NULL,
+          revoked_reason TEXT
+        )
+        """
+    )
+    conn.execute(
+        "INSERT INTO signing_keys (kid, kind, subject, public_key, not_before, created_at) "
+        "VALUES ('int-legacy', 'intermediate', 'dms-manifest-signer', 'x', 1, 1)"
+    )
+    conn.commit()
+    conn.close()
+    store = TrustStore(db_path=db, seal=Seal(Fernet.generate_key()))
+    assert store.intermediate_owner("int-legacy") == ""
+    assert store.intermediate_owner("int-missing") is None
 
 
 def test_active_service_bearer_uses_verify_service(store: TrustStore) -> None:
