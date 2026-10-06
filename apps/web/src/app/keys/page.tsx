@@ -68,6 +68,11 @@ const PROVIDER_ID_BY_NAME: Record<string, string> = {
   nvidia: "nvidia",
   deepseek: "deepseek",
   siliconflow: "siliconflow",
+  sea_lion: "sea_lion",
+  "sea-lion": "sea_lion",
+  "sea lion": "sea_lion",
+  sealion: "sea_lion",
+  "ai singapore sea-lion": "sea_lion",
 };
 
 const FALLBACK_PROVIDER = "custom";
