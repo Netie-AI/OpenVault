@@ -8,7 +8,7 @@ Building the product comes before cleanup.
 
 ## Core product
 
-`OpenMW/rust` (Rust console), `apps/shell` (Electron), `ship/` (FreeBuild hosting), and product-role code are CORE. Cleanup and dead-code work never remove or edit them. Only truly dead code is removed. Building the product comes before cleanup. Founder ruling 2026-10-06 11:59 MYT.
+`OpenMW/rust` (Rust console), `apps/shell` (Electron), `OpenMW/openmw/openvault/ship/` (FreeBuild hosting), and product-role code are CORE. Cleanup and dead-code work never remove or edit them. Only truly dead code is removed. Building the product comes before cleanup. Founder ruling 2026-10-06 11:59 MYT.
 
 [PRODUCT_ROLES.md](PRODUCT_ROLES.md) is unchanged. The 2026-10-06 audit found the cross-repo copies are not byte-identical (this file says FreeIDE; Cortex says OpenIDE).
 
@@ -17,7 +17,7 @@ Building the product comes before cleanup.
 - One vault: `E:\OpenVault\.openvault`. No second vault.
 - HUMAN_STOP: do not bind `:5000` on a public or LAN interface.
 - HT1-HT5 on epic 18 are cleared (founder 2026-09-04; boxes ticked 2026-09-07). The epic is closed.
-- OpenMW suite is green: 1321 passed, 7 skipped, 0 collection errors.
+- test-openmw 1329 passed / 7 skipped, run 37414951161 @ 19446b7b
 - CI job `test-web` runs `apps/web` `npm test` on ubuntu-latest with Node 20 (`.github/workflows/ci.yml`).
 - #136 merged at `2483c6c3` (apps/web source-map-js 1.2.2).
 - #142 merged at `122c07e8` (unreferenced real-device smoke script deleted).
