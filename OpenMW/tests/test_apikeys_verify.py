@@ -543,15 +543,18 @@ def test_verify_behind_root_path_matches_unprefixed(
     assert remote == 403, remote_body
     assert json.loads(remote_body)["error"]["type"] == "openvault_forbidden"
 
+    # A trailing slash is not the verify POST. A service bearer stays on the
+    # admin gate, the same as POST /api/apikeys/verify/ with no mount prefix.
     slashed, slashed_body = _raw(
         app,
         "POST",
         "/mounted/api/apikeys/verify/",
         root_path="/mounted",
-        headers=admin,
+        headers=bearer,
         payload={"token": raw},
     )
     assert slashed == 401, slashed_body
+    assert json.loads(slashed_body)["error"]["type"] == "openvault_unauthenticated"
 
     def _missing() -> Any:
         raise ImportError("starlette._utils.get_route_path")
