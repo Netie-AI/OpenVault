@@ -2,7 +2,7 @@
 
 What is true now. History: [CHANGELOG.md](CHANGELOG.md). Deferred: [PARKING_LOT.md](PARKING_LOT.md). Map: [docs/ACTIVE.md](docs/ACTIVE.md). Rules: [AGENTS.md](AGENTS.md).
 
-Last reconciled: 2026-10-06. Base `b4d68021`.
+Last reconciled: 2026-10-06. Main is `2483c6c3`.
 
 Building the product comes before cleanup.
 
@@ -19,7 +19,8 @@ Rust console (`OpenMW/rust`, sandbox `:5055`), Electron `apps/shell`, `ship/` Fr
 - HT1-HT5 on epic 18 are cleared (founder 2026-09-04; boxes ticked 2026-09-07). The epic is closed.
 - OpenMW suite is green: 1321 passed, 7 skipped, 0 collection errors.
 - CI job `test-web` runs `apps/web` `npm test` on ubuntu-latest with Node 20 (`.github/workflows/ci.yml`).
-- Open pull requests are #99 and #125, plus current drafts #136 and #138. All four are drafts.
+- #136 merged at `2483c6c3` (apps/web source-map-js 1.2.2).
+- Open drafts: #99, #125, #138 (Refs #132), #139 (Refs #134), #140 (Refs #133), #141, #142, #143, #144, #145, and #146.
 - GitHub is the queue: 44 open issues at this reconcile. Landed behavior is in CHANGELOG.md.
 - Usage $/unit is still NEEDS-YOU. Display SKUs stay locked (DR-0013).
 
