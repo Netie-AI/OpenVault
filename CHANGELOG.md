@@ -2,6 +2,13 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-06 - Verify an issued key for an allowlisted service (Refs #135)
+
+- `POST /api/apikeys/verify` reads `{"token": "..."}` and looks the key up by hash. A live key returns `{"ok": true, "valid": true, "key_id", "tier"}`. Unknown, revoked, disabled, and malformed keys return `{"ok": true, "valid": false}` and nothing else. The raw key is not logged or returned.
+- The caller presents `X-OpenVault-Admin`, or an `Authorization: Bearer` that passes `verify_service` for a service_id in `OPENVAULT_VERIFY_SERVICES` (comma-separated, default empty, so only admin works). No credential is 401. A wrong, revoked, or unlisted service is 401. Loopback alone is not enough.
+- The socket peer must be loopback or the services allowlist. `X-Forwarded-For` and `Host` are not a peer. Every other `/api/apikeys` route still requires admin.
+- Each admitted caller is capped at 60 verify requests a minute by an in-process token-budget limiter that is not the chat limiter. A full bucket is 429.
+
 ## 2026-10-06 - SEA-LION key import accepts sea_lion (Refs #134)
 
 - `POST /api/keys` and env ingest accept catalog id `sea_lion`. `SEA_LION_API_KEY` and `SEALION_API_KEY` store as `sea_lion`, with the catalog base URL. An unknown provider stays 422.

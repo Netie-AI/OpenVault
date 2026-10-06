@@ -134,6 +134,7 @@ from openmw.openvault.vault.fallback import FallbackConfig, FallbackManager
 from openmw.openvault.vault.free_keys_onboard import catalog_base_url, looks_like_site_password_key
 from openmw.openvault.vault.http_guard import (
     HttpGuardMiddleware,
+    decide_apikey_verify,
     dev_docs_enabled,
 )
 from openmw.openvault.vault.local_hop import served_response_headers
@@ -155,6 +156,7 @@ from openmw.openvault.vault.ratelimit import (
     DEFAULT_MAX_OUTPUT_TOKENS,
     DEFAULT_TIER,
     SseUsageCapture,
+    TierLimits,
     TokenBudgetLimiter,
     estimate_prompt_tokens,
     usage_total_tokens,
@@ -815,6 +817,12 @@ class ApiKeyIssueBody(BaseModel):
     pack_id: str = ""
 
 
+class ApiKeyVerifyBody(BaseModel):
+    """The issued key to check. It is not a credential for this route."""
+
+    token: str = ""
+
+
 class RoutePackBody(BaseModel):
     api_key_id: str
     pack_id: str
@@ -1092,6 +1100,11 @@ def create_app(
     # same keys.db as the vault - one backup surface, no second store.
     state_api_keys = ApiKeyStore()
     state_usage = UsageStore()
+    # Verify cap is not the chat limiter. One bucket per admitted caller.
+    verify_limiter = TokenBudgetLimiter(
+        tiers={"verify": TierLimits("verify", requests_per_min=60, tokens_per_min=60)},
+        default_tier="verify",
+    )
     # Plan + seats live in accounts.db (same file as AccountStore). Not a
     # second vault; not the public rate page.
     state_entitlements = EntitlementStore(db_path=state_accounts.db_path)
@@ -3329,6 +3342,32 @@ def create_app(
         _require_loopback(request, "list api keys")
         keys = state_api_keys.list_keys(include_revoked=include_revoked)
         return {"ok": True, "keys": [k.to_dict() for k in keys], "count": len(keys)}
+
+    @app.post("/api/apikeys/verify")
+    def apikeys_verify(body: ApiKeyVerifyBody, request: Request) -> dict[str, Any]:
+        """Say whether an issued key is active. Never return the key itself.
+
+        Admission is the same decision the HTTP guard already applied: admin,
+        or a service Bearer on ``OPENVAULT_VERIFY_SERVICES`` that passes
+        ``verify_service``. The body token is looked up by hash. Unknown,
+        revoked, disabled, and malformed values are one negative shape.
+        """
+        decision = decide_apikey_verify(request)
+        if not decision.admitted:
+            detail = "forbidden" if decision.status_code == 403 else "unauthorized"
+            raise HTTPException(status_code=decision.status_code, detail=detail)
+        limit = verify_limiter.reserve(
+            decision.caller_id,
+            tier="verify",
+            prompt_tokens=1,
+            max_tokens=0,
+        )
+        if not limit.allowed:
+            raise HTTPException(status_code=429, detail="too many verify requests")
+        record = state_api_keys.verify(body.token.strip())
+        if record is None:
+            return {"ok": True, "valid": False}
+        return {"ok": True, "valid": True, "key_id": record.key_id, "tier": record.tier}
 
     @app.get("/api/keys/packs")
     def keys_packs_get() -> dict[str, Any]:
