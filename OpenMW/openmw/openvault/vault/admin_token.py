@@ -58,6 +58,10 @@ def path_needs_admin(path: str) -> bool:
     on three POST signing-mint routes: exact ``/keys/services``, exact
     ``/keys/intermediate``, and ``/keys/intermediate/{kid}/revoke``. GET and
     every other method on those paths stay admin routes.
+
+    ``/api/apikeys/verify`` stays classified here so GET and every near path
+    still require the admin header. ``refuse_if_unauthorised`` admits an
+    allowlisted service Bearer on exact ``POST /api/apikeys/verify`` only.
     """
     for root in _ADMIN_ROOTS:
         if path == root or path.startswith(root + "/"):

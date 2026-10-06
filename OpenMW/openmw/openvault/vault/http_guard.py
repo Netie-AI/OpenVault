@@ -25,12 +25,22 @@ that check. The admin token is not an ``ov_`` key. Two exceptions:
 
 The peer is ``request.client.host`` after the socket accept. Forwarded and
 Host headers are never read.
+
+``POST /api/apikeys/verify`` is the one extra admission. The path stays an
+admin route in ``path_needs_admin`` (every other method still needs
+``X-OpenVault-Admin``). This guard admits that exact POST when the socket
+peer is loopback or the services allowlist, and the caller presents either
+the admin token or a Bearer that passes ``verify_service`` for a service_id
+listed in ``OPENVAULT_VERIFY_SERVICES``. The list defaults to empty, so a
+service Bearer is refused until an operator sets it. Loopback alone is not
+enough. No other ``/api/apikeys`` path accepts a service Bearer.
 """
 
 from __future__ import annotations
 
 import os
 import re
+from dataclasses import dataclass
 from typing import Any, Protocol
 
 import structlog
@@ -58,8 +68,24 @@ _PUBLIC_JWKS_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 _SERVICES_MINT_PATH = "/keys/services"
 _INTERMEDIATE_MINT_PATH = "/keys/intermediate"
 _REVOKE_MINT_PATH = re.compile(r"/keys/intermediate/[^/]+/revoke\Z")
+# Exact path. Not a prefix. Other methods stay on the admin gate.
+_APIKEY_VERIFY_PATH = "/api/apikeys/verify"
+VERIFY_SERVICES_ENV = "OPENVAULT_VERIFY_SERVICES"
 
 log = structlog.get_logger()
+
+
+@dataclass(frozen=True)
+class ApikeyVerifyDecision:
+    """Admission for ``POST /api/apikeys/verify``.
+
+    ``caller_id`` is ``admin`` or ``service:<id>`` when admitted, else empty.
+    It is a rate-limit bucket name, never a raw key or bearer.
+    """
+
+    admitted: bool
+    status_code: int
+    caller_id: str
 
 
 class _KeyStore(Protocol):
@@ -124,6 +150,114 @@ def _socket_peer_may_mint_service(host: str) -> bool:
     return bool(_host_in_services_allow(host))
 
 
+def apikey_verify_post(method: str, path: str) -> bool:
+    """True only for exact ``POST /api/apikeys/verify``.
+
+    ``path`` is ``request.url.path`` with no further normalisation. A trailing
+    slash, a different method, or a different case stays on the admin gate.
+    """
+    return method.upper() == "POST" and path == _APIKEY_VERIFY_PATH
+
+
+def verify_service_allowlist() -> tuple[str, ...]:
+    """Service ids allowed to call verify. Empty unless the env is set.
+
+    Comma-separated. Whitespace around each id is ignored. Default empty means
+    only ``X-OpenVault-Admin`` can verify. Prove sets this to ``cortex``.
+    """
+    raw = (os.environ.get(VERIFY_SERVICES_ENV) or "").strip()
+    if not raw:
+        return ()
+    seen: list[str] = []
+    for part in raw.split(","):
+        item = part.strip()
+        if item and item not in seen:
+            seen.append(item)
+    return tuple(seen)
+
+
+def _presented_service_bearer(request: Request) -> str:
+    """Authorization Bearer value, or empty. ``X-API-Key`` is not this credential."""
+    authorization = request.headers.get("authorization") or ""
+    scheme, _, token = authorization.partition(" ")
+    if scheme.lower() != "bearer":
+        return ""
+    return token.strip()
+
+
+def _admin_presented(request: Request) -> bool:
+    presented = (request.headers.get(ADMIN_HEADER) or "").strip()
+    if not presented:
+        return False
+    return admin_token_matches(presented)
+
+
+def _allowlisted_service_id(request: Request, token: str) -> str:
+    """Return the allowlisted service_id this bearer matches, or empty.
+
+    Every id on the list is checked, including after a match, so the list
+    length does not change with which id hit. The bearer is never logged.
+    """
+    allowed = verify_service_allowlist()
+    if not allowed or not token:
+        return ""
+    from openmw.openvault.vault.trust import TrustStore
+
+    seal = getattr(request.app.state, "seal", None)
+    store = TrustStore(seal=seal)
+    matched = ""
+    for service_id in allowed:
+        if store.verify_service(service_id, token):
+            matched = service_id
+    return matched
+
+
+def _verify_peer_allowed(request: Request) -> bool:
+    """Socket peer is loopback or the services allowlist.
+
+    Reads ``request.client.host`` only. ``X-Forwarded-For`` and ``Host`` are
+    not consulted.
+    """
+    client = request.client
+    host = client.host if client is not None else ""
+    return _socket_peer_may_mint_service(host)
+
+
+def decide_apikey_verify(request: Request) -> ApikeyVerifyDecision:
+    """Admit admin or an allowlisted service bearer from an allowed peer.
+
+    Peer is checked first so a remote caller cannot learn whether a bearer
+    matches. No credential, an unlisted service, a wrong bearer, and a revoked
+    service are 401. A peer that is not loopback and not on the services
+    allowlist is 403.
+    """
+    if not _verify_peer_allowed(request):
+        client = request.client
+        host = client.host if client is not None else ""
+        log.warning("apikey_verify_rejected", reason="peer", client=host)
+        return ApikeyVerifyDecision(False, 403, "")
+    if _admin_presented(request):
+        return ApikeyVerifyDecision(True, 200, "admin")
+    token = _presented_service_bearer(request)
+    if not token:
+        log.info("apikey_verify_rejected", reason="credential")
+        return ApikeyVerifyDecision(False, 401, "")
+    service_id = _allowlisted_service_id(request, token)
+    if not service_id:
+        log.info("apikey_verify_rejected", reason="service")
+        return ApikeyVerifyDecision(False, 401, "")
+    return ApikeyVerifyDecision(True, 200, f"service:{service_id}")
+
+
+def _refuse_apikey_verify(request: Request) -> JSONResponse | None:
+    decision = decide_apikey_verify(request)
+    if decision.admitted:
+        return None
+    if decision.status_code == 403:
+        return _bad()
+    return _missing()
+
+
 def _public_jwks_read(method: str, path: str) -> bool:
     """True only for the published JWKS alt.
 
@@ -160,14 +294,17 @@ def refuse_if_unauthorised(request: Request, *, api_keys: _KeyStore) -> JSONResp
     """Return a 401/403 response to send, or None to let the request through.
 
     Method is ignored on every path except the public JWKS alt (GET, HEAD,
-    OPTIONS on exact ``/keys/jwks``) and the three POST signing-mint routes.
-    Other methods, including POST/PUT/DELETE on ``/keys/jwks``, are guarded
-    the same way as every other admin route.
+    OPTIONS on exact ``/keys/jwks``), the three POST signing-mint routes, and
+    exact ``POST /api/apikeys/verify``. Other methods, including
+    POST/PUT/DELETE on ``/keys/jwks`` and every other ``/api/apikeys`` path,
+    are guarded the same way as every other admin route.
     """
     path = request.url.path
     # Same path string as the admin check below. Do not unquote or casefold.
     if _public_jwks_read(request.method, path):
         return None
+    if apikey_verify_post(request.method, path):
+        return _refuse_apikey_verify(request)
 
     mint = signing_mint_kind(request.method, path)
     if not mint and path_needs_admin(path):
@@ -220,11 +357,16 @@ class HttpGuardMiddleware:
 
 __all__ = [
     "AUTH_ALLOWLIST",
+    "VERIFY_SERVICES_ENV",
+    "ApikeyVerifyDecision",
     "HttpGuardMiddleware",
+    "apikey_verify_post",
+    "decide_apikey_verify",
     "dev_docs_enabled",
     "path_is_guarded",
     "path_needs_admin",
     "peer_is_loopback",
     "refuse_if_unauthorised",
     "signing_mint_kind",
+    "verify_service_allowlist",
 ]
