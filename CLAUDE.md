@@ -1,6 +1,10 @@
 # CLAUDE.md
 
-Claude Code reads this file. Binding rules are in [AGENTS.md](AGENTS.md). Do not restate them here.
+Claude Code reads this file. Binding rules are in [AGENTS.md](AGENTS.md).
+
+## Full tier order
+
+Full tier is auth, HttpGuard, `admin_token`, keys, custody, unseal, FreeRoute routing, prove-host redeploys, and #135. The order is PR Bot CLEAR, then Security YES, then PR Bot undrafts and squashes (`--match-head-commit`), then R-0003 (Estate Verify) and Gating on the merge SHA, then a prove-host redeploy only with founder GO. A head move voids the CLEAR and Security YES.
 
 ## Role
 

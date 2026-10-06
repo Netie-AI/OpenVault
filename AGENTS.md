@@ -1,15 +1,15 @@
 # AGENTS.md
 
-Binding rules for every agent. Do not copy them into CLAUDE.md. Current truth: STATUS.md.
+Binding rules for every agent. Current truth: STATUS.md. The full-tier order below is repeated in the same words in CLAUDE.md and STATUS.md.
 
 ## Rules
 
 1. One vault: `E:\OpenVault\.openvault`. No second vault and no second key store.
 2. HUMAN_STOP: do not bind `:5000` on a public or LAN interface.
 3. Refs only. Agents close nothing. Write `Refs` and the issue. Never Closes, Fixes, or Resolves.
-4. Auth and key paths go through R-0003 (a different agent verifies) and Gating (founder gate).
+4. Auth and key paths are full tier. Use the full-tier order below.
 5. Product boundaries: [PRODUCT_ROLES.md](PRODUCT_ROLES.md). Leave that file's content alone.
-6. Core product, founder 2026-10-06 11:59 MYT: Rust console (`OpenMW/rust`), Electron `apps/shell`, `ship/` FreeBuild hosting, and product-role code.
+6. CORE paths, founder 2026-10-06 11:59 MYT: `OpenMW/rust` (Rust console), `apps/shell` (Electron), `ship/` (FreeBuild hosting), and product-role code. They are CORE. Cleanup and dead-code work never remove or edit them. Only truly dead code is removed.
 7. Building the product comes before cleanup.
 8. GitHub issues are the ticket list. Do not keep a markdown backlog.
 9. A feature or defect you are told about goes to the PRD agent before it is built.
@@ -20,7 +20,7 @@ Binding rules for every agent. Do not copy them into CLAUDE.md. Current truth: S
 
 Merge on CI 9/9 plus one second-model AGREE that names the model family. R-0003 and Gating run after the merge. Revert immediately if they fail.
 
-Full tier is auth, HttpGuard, `admin_token`, keys, custody, unseal, FreeRoute routing, prove-host redeploys, and #135. It stays serial before merge: PR Bot CLEAR, then Security, then R-0003 and Gating.
+Full tier is auth, HttpGuard, `admin_token`, keys, custody, unseal, FreeRoute routing, prove-host redeploys, and #135. The order is PR Bot CLEAR, then Security YES, then PR Bot undrafts and squashes (`--match-head-commit`), then R-0003 (Estate Verify) and Gating on the merge SHA, then a prove-host redeploy only with founder GO. A head move voids the CLEAR and Security YES.
 
 The author labels each PR. When unsure, it is full.
 
