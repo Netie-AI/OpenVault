@@ -70,11 +70,6 @@ RATE_LIMIT_TEXT_PATTERNS: tuple[re.Pattern[str], ...] = (
 _custom_banned_signals: list[str] = []
 
 
-def set_custom_banned_signals(signals: list[str]) -> None:
-    _custom_banned_signals.clear()
-    _custom_banned_signals.extend(signals)
-
-
 def get_merged_banned_signals() -> list[str]:
     if not _custom_banned_signals:
         return list(ACCOUNT_DEACTIVATED_SIGNALS)
@@ -104,28 +99,6 @@ def is_context_overflow(error_text: str) -> bool:
 def is_rate_limit_text(error_text: str) -> bool:
     text = str(error_text or "")
     return any(p.search(text) for p in RATE_LIMIT_TEXT_PATTERNS)
-
-
-def parse_delay_string(value: str | int | float | None) -> int | None:
-    if value is None:
-        return None
-    text = str(value).strip()
-    ms_match = re.fullmatch(r"(\d+)\s*ms", text, re.I)
-    if ms_match:
-        return int(ms_match.group(1))
-    sec_match = re.fullmatch(r"(\d+)\s*s", text, re.I)
-    if sec_match:
-        return int(sec_match.group(1)) * 1000
-    min_match = re.fullmatch(r"(\d+)\s*m", text, re.I)
-    if min_match:
-        return int(min_match.group(1)) * 60_000
-    hr_match = re.fullmatch(r"(\d+)\s*h", text, re.I)
-    if hr_match:
-        return int(hr_match.group(1)) * 3_600_000
-    try:
-        return int(text) * 1000
-    except ValueError:
-        return None
 
 
 def _compute_duration_ms(match: re.Match[str]) -> int:
