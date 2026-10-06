@@ -16,9 +16,13 @@ Binding rules for every agent. Do not copy them into CLAUDE.md. Current truth: S
 
 ## Fast lane
 
-`tier:fast` covers docs, tests, UI, the console, Electron UI, and dead-code cleanup for the slim-down issue. Merge when CI is 9/9 and one second-model review says AGREE and names the model family. R-0003 and Gating run after that merge. Revert immediately if they fail.
+`tier:fast` is docs, tests, UI/console/Electron UI, and #137 dead-code cleanup. Dead-code removal keeps an attic copy and needs a green import check.
 
-Full tier covers auth, HttpGuard, `admin_token`, keys, custody, unseal, FreeRoute routing, and prove-host redeploys. It stays serial, before merge. When unsure, it is full.
+Merge on CI 9/9 plus one second-model AGREE that names the model family. R-0003 and Gating run after the merge. Revert immediately if they fail.
+
+Full tier is auth, HttpGuard, `admin_token`, keys, custody, unseal, FreeRoute routing, prove-host redeploys, and #135. It stays serial before merge: PR Bot CLEAR, then Security, then R-0003 and Gating.
+
+The author labels each PR. When unsure, it is full.
 
 ## Pointers
 

@@ -2,7 +2,7 @@
 
 What is true now. History: [CHANGELOG.md](CHANGELOG.md). Deferred: [PARKING_LOT.md](PARKING_LOT.md). Map: [docs/ACTIVE.md](docs/ACTIVE.md). Rules: [AGENTS.md](AGENTS.md).
 
-Last reconciled: 2026-10-06. Main is `2483c6c3`.
+Last reconciled: 2026-10-06. Main is `122c07e8`.
 
 Building the product comes before cleanup.
 
@@ -20,7 +20,9 @@ Rust console (`OpenMW/rust`, sandbox `:5055`), Electron `apps/shell`, `ship/` Fr
 - OpenMW suite is green: 1321 passed, 7 skipped, 0 collection errors.
 - CI job `test-web` runs `apps/web` `npm test` on ubuntu-latest with Node 20 (`.github/workflows/ci.yml`).
 - #136 merged at `2483c6c3` (apps/web source-map-js 1.2.2).
-- Open drafts: #99, #125, #138 (Refs #132), #139 (Refs #134), #140 (Refs #133), #141, #142, #143, #144, #145, and #146.
+- #142 merged at `122c07e8` (unreferenced real-device smoke script deleted).
+- #143 is closed unmerged, superseded by #141.
+- Open drafts from `gh pr list`: #99, #125, #138, #139, #140, #141, #144, #145, #146, #147.
 - GitHub is the queue: 44 open issues at this reconcile. Landed behavior is in CHANGELOG.md.
 - Usage $/unit is still NEEDS-YOU. Display SKUs stay locked (DR-0013).
 
