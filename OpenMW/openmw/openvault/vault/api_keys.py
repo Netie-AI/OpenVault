@@ -89,6 +89,12 @@ def token_digest(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
+# Same width as token_digest (SHA-256 hex). Used when the indexed lookup misses
+# so compare_digest still runs. Not a stored key. A false digest match still
+# fails the lifecycle check below.
+_ABSENT_DIGEST = "0" * 64
+
+
 def looks_like_issued_token(value: str) -> bool:
     return value.startswith(TOKEN_PREFIX) and len(value) > len(TOKEN_PREFIX) + 8
 
@@ -205,6 +211,35 @@ class ApiKeyStore:
             return None
         record = self._row(row)
         return record if record.active else None
+
+    def match_issued(self, token: str) -> ApiKeyRecord | None:
+        """Hash lookup plus one constant-time digest compare.
+
+        Used only by ``POST /api/apikeys/verify``. Empty, unknown, malformed,
+        revoked, and disabled inputs each hash the token, run the same indexed
+        lookup, and call ``hmac.compare_digest`` once. The raw token is never
+        compared. A miss compares against a fixed dummy digest of the same
+        width so the compare cannot be skipped. ``verify`` is unchanged and
+        remains the auth-path check.
+        """
+        offered = token_digest(token)
+        with contextlib.closing(self._connect()) as conn, conn:
+            row = conn.execute(
+                "SELECT * FROM api_keys WHERE token_sha256=?",
+                (offered,),
+            ).fetchone()
+        stored = _ABSENT_DIGEST
+        lifecycle = ""
+        if row is not None:
+            stored = str(row["token_sha256"])
+            lifecycle = str(row["lifecycle"] or "")
+        digest_ok = hmac.compare_digest(offered, stored)
+        active = lifecycle == "active"
+        # Bool ``&`` evaluates both sides. ``and`` would skip the lifecycle
+        # check whenever the digest misses, which is a timing tell.
+        if not (digest_ok & active):
+            return None
+        return self._row(row)
 
     def touch(self, key_id: str, *, when: float | None = None) -> None:
         """Record last use. Best-effort — never fails a request that worked."""

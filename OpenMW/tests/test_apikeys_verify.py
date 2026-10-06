@@ -6,6 +6,7 @@ is not enough. Other /api/apikeys routes stay admin-only.
 
 from __future__ import annotations
 
+import hmac
 import logging
 import sqlite3
 from typing import Any
@@ -19,6 +20,7 @@ from structlog.testing import capture_logs
 from openmw.openvault.app import create_app
 from openmw.openvault.paths import keys_db_path
 from openmw.openvault.vault.admin_token import admin_headers, path_needs_admin
+from openmw.openvault.vault.api_keys import ApiKeyStore
 from openmw.openvault.vault.http_guard import (
     VERIFY_SERVICES_ENV,
     apikey_verify_post,
@@ -329,6 +331,74 @@ def test_other_apikey_routes_reject_service_bearer_alone(
     assert client.get("/api/apikeys/verify", headers=headers).status_code == 401
     near = client.post("/api/apikeys/verify/", json={"token": "x"}, headers=headers)
     assert near.status_code == 401, near.status_code
+
+
+def test_negative_paths_each_compare_one_digest(
+    tmp_path: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Unknown, empty, malformed, revoked, and disabled do the same compare."""
+    store = ApiKeyStore(db_path=tmp_path / "keys.db")
+    revoked, revoked_token = store.issue(label="revoked", tier="free")
+    disabled, disabled_token = store.issue(label="disabled", tier="free")
+    live, live_token = store.issue(label="live", tier="free")
+    assert store.revoke(revoked.key_id) is True
+    _set_lifecycle_at(tmp_path / "keys.db", disabled.key_id, "disabled")
+
+    seen: list[tuple[str, str]] = []
+    real = hmac.compare_digest
+
+    def _spy(left: object, right: object) -> bool:
+        seen.append((str(left), str(right)))
+        return bool(real(str(left), str(right)))
+
+    monkeypatch.setattr("openmw.openvault.vault.api_keys.hmac.compare_digest", _spy)
+    negatives = ("", "nope", "ov_not-real", revoked_token, disabled_token)
+    for item in negatives:
+        assert store.match_issued(item) is None
+        left, right = seen[-1]
+        if item and (item in left or item in right):
+            raise AssertionError("raw key reached compare_digest")
+        if len(left) != 64 or len(right) != 64:
+            raise AssertionError("digest compare was not a fixed-width hash")
+    assert len(seen) == len(negatives)
+    found = store.match_issued(live_token)
+    assert found is not None
+    assert found.key_id == live.key_id
+    left, right = seen[-1]
+    if live_token in left or live_token in right:
+        raise AssertionError("raw key reached compare_digest")
+    assert len(seen) == len(negatives) + 1
+
+
+def _set_lifecycle_at(db_path: Any, key_id: str, lifecycle: str) -> None:
+    connection = sqlite3.connect(str(db_path))
+    try:
+        cursor = connection.execute(
+            "UPDATE api_keys SET lifecycle=? WHERE key_id=?",
+            (lifecycle, key_id),
+        )
+        connection.commit()
+        assert cursor.rowcount == 1
+    finally:
+        connection.close()
+
+
+def test_route_lookup_does_not_use_auth_verify(
+    app: FastAPI, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def _refuse(self: ApiKeyStore, token: str) -> None:
+        raise AssertionError("shared auth verify was used")
+
+    monkeypatch.setattr(ApiKeyStore, "verify", _refuse)
+    client = _client(app)
+    key_id, _tier, raw = _issue(client)
+    live = _verify(client, raw, admin_headers())
+    _assert_absent(raw, live.text)
+    assert live.status_code == 200, live.status_code
+    assert live.json()["key_id"] == key_id
+    missing = _verify(client, "ov_not-real", admin_headers())
+    assert missing.status_code == 200, missing.status_code
+    assert missing.json() == _NEGATIVE
 
 
 def test_verify_rate_cap_is_429(app: FastAPI) -> None:

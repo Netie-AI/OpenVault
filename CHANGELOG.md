@@ -2,6 +2,10 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-06 - Verify lookup always compares the digest (Refs #135)
+
+- `POST /api/apikeys/verify` calls `ApiKeyStore.match_issued`. Every input, including an unknown or empty token, hashes the body, runs the same digest lookup, and calls `hmac.compare_digest` once. A miss compares a fixed 64-character dummy. The raw token is not compared. `ApiKeyStore.verify` is unchanged and is still the auth-path check.
+
 ## 2026-10-06 - Verify an issued key for an allowlisted service (Refs #135)
 
 - `POST /api/apikeys/verify` reads `{"token": "..."}` and looks the key up by hash. A live key returns `{"ok": true, "valid": true, "key_id", "tier"}`. Unknown, revoked, disabled, and malformed keys return `{"ok": true, "valid": false}` and nothing else. The raw key is not logged or returned.

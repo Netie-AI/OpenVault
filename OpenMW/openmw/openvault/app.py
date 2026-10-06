@@ -3349,7 +3349,8 @@ def create_app(
 
         Admission is the same decision the HTTP guard already applied: admin,
         or a service Bearer on ``OPENVAULT_VERIFY_SERVICES`` that passes
-        ``verify_service``. The body token is looked up by hash. Unknown,
+        ``verify_service``. The body token is looked up by hash and compared
+        with ``hmac.compare_digest`` (``ApiKeyStore.match_issued``). Unknown,
         revoked, disabled, and malformed values are one negative shape.
         """
         decision = decide_apikey_verify(request)
@@ -3364,7 +3365,7 @@ def create_app(
         )
         if not limit.allowed:
             raise HTTPException(status_code=429, detail="too many verify requests")
-        record = state_api_keys.verify(body.token.strip())
+        record = state_api_keys.match_issued(body.token.strip())
         if record is None:
             return {"ok": True, "valid": False}
         return {"ok": True, "valid": True, "key_id": record.key_id, "tier": record.tier}
