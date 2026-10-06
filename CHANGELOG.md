@@ -2,6 +2,12 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-06 - Intermediate revoke is limited to the issuing service (Refs #132)
+
+- A service Bearer on `POST /keys/intermediate/{kid}/revoke` can revoke only a kid that service issued. Another service's kid stays active and the response is 403.
+- `X-OpenVault-Admin` can still revoke any kid. Loopback with no credential stays 401. Non-loopback revoke stays denied.
+- `POST /keys/intermediate` with the dms service Bearer is unchanged. The first `POST /keys/services` from an allowlisted peer plus `X-OpenVault-Reveal: intentional` stays 200 and does not need an admin token.
+
 ## 2026-10-05 - Revoke and service rotation need a credential (OpenVault #128)
 
 - Supersedes the #126 line that said intermediate revoke keeps a Bearer gate. After that change, loopback `POST /keys/intermediate/{kid}/revoke` with no credential returned 200. Revoke now requires a Bearer that passes the same `verify_service` check as issue, or `X-OpenVault-Admin`. Loopback alone is 401. Non-loopback revoke stays denied.

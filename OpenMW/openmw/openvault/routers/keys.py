@@ -18,8 +18,9 @@ loopback plus ``OPENVAULT_SERVICES_ALLOW`` (prove VPC peers). The first
 registration for a service_id needs that peer plus the reveal header. A
 later registration rotates the token only with the current service Bearer
 or ``X-OpenVault-Admin``. Intermediate issue and revoke stay loopback-only.
-Issue requires a Bearer service token. Revoke requires that same check, or
-``X-OpenVault-Admin``. Loopback alone does not revoke.
+Issue requires a Bearer service token. Revoke with that Bearer succeeds only
+for a kid that same service issued. ``X-OpenVault-Admin`` can revoke any kid.
+Loopback alone does not revoke.
 
 The HTTP guard does not require ``X-OpenVault-Admin`` on ``POST /keys/services``,
 ``POST /keys/intermediate``, or ``POST /keys/intermediate/{kid}/revoke``.
@@ -93,12 +94,21 @@ def _admin_credential_ok(request: Request) -> bool:
     return admin_token_matches(presented)
 
 
-def _revoke_credential_ok(request: Request, store: TrustStore) -> bool:
-    """Active service bearer (same ``verify_service`` as issue) or admin."""
+def _revoke_caller(request: Request, store: TrustStore) -> tuple[str, str]:
+    """``("admin", "")``, ``("service", service_id)``, or ``("", "")``.
+
+    Admin wins when the header matches, including if a bearer is also present.
+    A bearer counts only when it verifies for exactly one active service.
+    """
+    if _admin_credential_ok(request):
+        return ("admin", "")
     token = _presented_bearer(request)
-    if token and store.active_service_bearer(token):
-        return True
-    return _admin_credential_ok(request)
+    if not token:
+        return ("", "")
+    service_id = store.service_id_for_active_bearer(token)
+    if not service_id:
+        return ("", "")
+    return ("service", service_id)
 
 
 def _rotation_credential_ok(request: Request, store: TrustStore, service_id: str) -> bool:
@@ -223,7 +233,11 @@ def issue_intermediate(body: IntermediateRequest, request: Request) -> dict[str,
         raise HTTPException(status_code=403, detail="service is not authorised to sign")
 
     try:
-        issued = store.issue_intermediate(body.subject or body.service_id, ttl_s=body.ttl_s)
+        issued = store.issue_intermediate(
+            body.subject or body.service_id,
+            ttl_s=body.ttl_s,
+            service_id=body.service_id.strip(),
+        )
     except VaultSealedError as exc:
         raise HTTPException(
             status_code=403,
@@ -246,14 +260,16 @@ def issue_intermediate(body: IntermediateRequest, request: Request) -> dict[str,
 def revoke_intermediate(kid: str, request: Request) -> dict[str, Any]:
     """Drop a key from the JWKS before its own expiry.
 
-    Revocation is only as fast as the consumer's refresh, which is why
-    intermediates are short-lived in the first place — this narrows the window,
-    it does not close it.
+    A service bearer can drop only a kid that service issued. Admin can drop
+    any intermediate. Revocation is only as fast as the consumer's refresh,
+    which is why intermediates are short-lived in the first place: this
+    narrows the window, it does not close it.
     """
     require_loopback, _intent, audit = _guards()
     require_loopback(request, "intermediate key revoke")
     store = _store(request)
-    if not _revoke_credential_ok(request, store):
+    kind, service_id = _revoke_caller(request, store)
+    if not kind:
         raise HTTPException(
             status_code=401,
             detail=(
@@ -261,6 +277,16 @@ def revoke_intermediate(kid: str, request: Request) -> dict[str, Any]:
                 "<service token> header or X-OpenVault-Admin"
             ),
         )
+    if kind == "service":
+        owner = store.intermediate_owner(kid)
+        if owner is None:
+            raise HTTPException(status_code=404, detail="intermediate key not found")
+        if owner != service_id:
+            audit("signing_key_revoke_denied", request, service_id=service_id, kid=kid)
+            raise HTTPException(
+                status_code=403,
+                detail="service is not authorised to revoke this key",
+            )
     revoked = store.revoke_key(kid)
     if not revoked:
         raise HTTPException(status_code=404, detail="intermediate key not found")

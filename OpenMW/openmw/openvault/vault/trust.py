@@ -176,10 +176,17 @@ class TrustStore:
                   not_after REAL,
                   lifecycle TEXT NOT NULL DEFAULT 'active',
                   created_at REAL NOT NULL,
-                  revoked_reason TEXT
+                  revoked_reason TEXT,
+                  owner_service_id TEXT
                 )
                 """
             )
+            # Rows minted before ownership have a NULL owner. A service bearer
+            # cannot revoke those; admin still can. Intermediates expire within
+            # MAX_INTERMEDIATE_TTL_S, so the unowned window is bounded.
+            cols = {row[1] for row in conn.execute("PRAGMA table_info(signing_keys)").fetchall()}
+            if "owner_service_id" not in cols:
+                conn.execute("ALTER TABLE signing_keys ADD COLUMN owner_service_id TEXT")
             conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS signing_services (
@@ -322,10 +329,9 @@ class TrustStore:
             ).fetchone()
         return row is not None
 
-    def active_service_bearer(self, token: str) -> bool:
-        """True when ``token`` passes :meth:`verify_service` for an active service.
+    def _matching_active_service_ids(self, token: str) -> list[str]:
+        """Active service_ids this bearer verifies.
 
-        Revoke has no service_id, so the same check runs for every active row.
         No active rows still hashes once, matching a missing row in ``verify_service``.
         """
         with contextlib.closing(self._connect()) as conn, conn:
@@ -334,12 +340,30 @@ class TrustStore:
             ).fetchall()
         if not rows:
             hashlib.sha256(token.encode("utf-8")).hexdigest()
-            return False
-        matched = False
+            return []
+        matched: list[str] = []
         for row in rows:
-            if self.verify_service(str(row["service_id"]), token):
-                matched = True
+            service_id = str(row["service_id"])
+            if self.verify_service(service_id, token):
+                matched.append(service_id)
         return matched
+
+    def active_service_bearer(self, token: str) -> bool:
+        """True when ``token`` passes :meth:`verify_service` for an active service.
+
+        No active rows still hashes once, matching a missing row in ``verify_service``.
+        """
+        return bool(self._matching_active_service_ids(token))
+
+    def service_id_for_active_bearer(self, token: str) -> str:
+        """The single active service_id this bearer verifies, or empty.
+
+        More than one match is empty so revoke cannot pick an owner.
+        """
+        matched = self._matching_active_service_ids(token)
+        if len(matched) != 1:
+            return ""
+        return matched[0]
 
     def revoke_service(self, service_id: str) -> bool:
         with contextlib.closing(self._connect()) as conn, conn:
@@ -353,12 +377,17 @@ class TrustStore:
     # -- intermediates -------------------------------------------------------
 
     def issue_intermediate(
-        self, subject: str, *, ttl_s: int = DEFAULT_INTERMEDIATE_TTL_S
+        self,
+        subject: str,
+        *,
+        ttl_s: int = DEFAULT_INTERMEDIATE_TTL_S,
+        service_id: str = "",
     ) -> IssuedIntermediate:
         """Mint a short-lived signing key chained to the root.
 
         The private half is returned and then dropped: the row keeps only the
-        public key, so nothing later can serve it again.
+        public key, so nothing later can serve it again. ``service_id`` is the
+        issuing service and is stored as the revoke owner. It is not the subject.
         """
         if not subject.strip():
             raise TrustError("subject is required")
@@ -385,6 +414,7 @@ class TrustStore:
             )
         )
 
+        owner = service_id.strip()
         record = SigningKeyRecord(
             kid=kid,
             kind="intermediate",
@@ -400,8 +430,9 @@ class TrustStore:
         with contextlib.closing(self._connect()) as conn, conn:
             conn.execute(
                 "INSERT INTO signing_keys (kid, kind, subject, public_key, private_blob, "
-                "parent_kid, chain_signature, not_before, not_after, lifecycle, created_at) "
-                "VALUES (?,?,?,?,NULL,?,?,?,?,?,?)",
+                "parent_kid, chain_signature, not_before, not_after, lifecycle, created_at, "
+                "owner_service_id) "
+                "VALUES (?,?,?,?,NULL,?,?,?,?,?,?,?)",
                 (
                     record.kid,
                     record.kind,
@@ -413,10 +444,22 @@ class TrustStore:
                     record.not_after,
                     record.lifecycle,
                     record.created_at,
+                    owner,
                 ),
             )
             conn.commit()
         return IssuedIntermediate(record=record, private_key=b64u(_raw_private(private)))
+
+    def intermediate_owner(self, kid: str) -> str | None:
+        """Issuing service_id, empty when the row has no owner, None if absent."""
+        with contextlib.closing(self._connect()) as conn, conn:
+            row = conn.execute(
+                "SELECT owner_service_id FROM signing_keys WHERE kid=? AND kind='intermediate'",
+                (kid,),
+            ).fetchone()
+        if row is None:
+            return None
+        return str(row["owner_service_id"] or "")
 
     def revoke_key(self, kid: str, *, reason: str = "operator_revoke") -> bool:
         with contextlib.closing(self._connect()) as conn, conn:
