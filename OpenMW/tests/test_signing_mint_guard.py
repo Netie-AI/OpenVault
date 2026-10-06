@@ -155,7 +155,7 @@ def test_mint_classification_is_exact_post_only() -> None:
 
 @pytest.mark.parametrize(
     "host",
-    ["127.0.0.1", "::1", "10.128.0.3", "34.30.222.22", "::ffff:10.128.0.3"],
+    ["127.0.0.1", "::1", "10.128.0.3", "::ffff:10.128.0.3"],
 )
 def test_services_mint_without_admin_from_allowlisted_peer(
     app: FastAPI, home: Any, host: str
@@ -171,6 +171,43 @@ def test_services_mint_without_admin_from_allowlisted_peer(
     assert admin not in response.text
     assert token not in _audit_text(home)
     assert admin not in _audit_text(home)
+
+
+def test_public_prove_ip_is_denied_without_services_allow(app: FastAPI) -> None:
+    """34.30.222.22 is not a built-in peer. Reveal alone does not mint."""
+    response = _client(app, "34.30.222.22").post("/keys/services", json=_SERVICE, headers=INTENT)
+    _guard_401(response)
+    mapped = _client(app, "::ffff:34.30.222.22").post(
+        "/keys/services", json=_SERVICE, headers=INTENT
+    )
+    _guard_401(mapped)
+
+
+def test_public_prove_ip_is_allowed_when_services_allow_is_set(
+    app: FastAPI, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("OPENVAULT_SERVICES_ALLOW", "34.30.222.22")
+    response = _client(app, "34.30.222.22").post("/keys/services", json=_SERVICE, headers=INTENT)
+    assert response.status_code == 200, response.text
+    assert response.json()["service_id"] == "dms"
+    assert response.json()["token"]
+
+
+def test_configured_prove_peer_dms_bearer_intermediate_still_200(
+    app: FastAPI, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Day-1 mint from the configured prove peer, then the dms Bearer issue.
+
+    Intermediate issue stays on loopback. The Bearer is the dms service token
+    from that mint. Setting the allowlist must not change either 200.
+    """
+    monkeypatch.setenv("OPENVAULT_SERVICES_ALLOW", "34.30.222.22")
+    minted = _client(app, "34.30.222.22").post("/keys/services", json=_SERVICE, headers=INTENT)
+    assert minted.status_code == 200, minted.text
+    token = minted.json()["token"]
+    issued = _issue(app, token)
+    assert issued.status_code == 200, issued.text
+    assert issued.json()["kid"]
 
 
 def test_services_mint_env_cidr_without_admin(
@@ -515,7 +552,11 @@ def test_allowlisted_peer_cannot_revoke_with_service_bearer(app: FastAPI) -> Non
 
 
 @pytest.mark.parametrize("host", ["127.0.0.1", "10.128.0.3", "34.30.222.22"])
-def test_reregister_reveal_only_does_not_rotate(app: FastAPI, host: str) -> None:
+def test_reregister_reveal_only_does_not_rotate(
+    app: FastAPI, host: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    if host == "34.30.222.22":
+        monkeypatch.setenv("OPENVAULT_SERVICES_ALLOW", host)
     client, token = _register(app, host)
     again = client.post("/keys/services", json=_SERVICE, headers=INTENT)
     assert again.status_code == 401
@@ -524,7 +565,10 @@ def test_reregister_reveal_only_does_not_rotate(app: FastAPI, host: str) -> None
     assert issued.status_code == 200, issued.text
 
 
-def test_reregister_with_current_bearer_rotates(app: FastAPI) -> None:
+def test_reregister_with_current_bearer_rotates(
+    app: FastAPI, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("OPENVAULT_SERVICES_ALLOW", "34.30.222.22")
     client, token = _register(app, "34.30.222.22")
     rotated = client.post("/keys/services", json=_SERVICE, headers={**INTENT, **_bearer(token)})
     assert rotated.status_code == 200, rotated.text
@@ -552,7 +596,10 @@ def test_reregister_with_admin_rotates(app: FastAPI) -> None:
     assert _issue(app, new_token).status_code == 200
 
 
-def test_other_service_bearer_does_not_rotate(app: FastAPI) -> None:
+def test_other_service_bearer_does_not_rotate(
+    app: FastAPI, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("OPENVAULT_SERVICES_ALLOW", "34.30.222.22")
     _client_dms, dms = _register(app, "10.128.0.3", "dms")
     _client_other, other = _register(app, "10.128.0.3", "other")
     denied = _client(app, "34.30.222.22").post(
@@ -566,7 +613,10 @@ def test_other_service_bearer_does_not_rotate(app: FastAPI) -> None:
     assert _issue(app, dms).status_code == 200
 
 
-def test_second_service_first_mint_stays_reveal_only(app: FastAPI) -> None:
+def test_second_service_first_mint_stays_reveal_only(
+    app: FastAPI, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("OPENVAULT_SERVICES_ALLOW", "34.30.222.22")
     _register(app, "34.30.222.22", "dms")
     other = _client(app, "34.30.222.22").post(
         "/keys/services",
@@ -585,7 +635,8 @@ def test_reregister_without_reveal_does_not_rotate(app: FastAPI) -> None:
     assert _issue(app, token).status_code == 200
 
 
-def test_allowlisted_bad_ov_key_is_still_403(app: FastAPI) -> None:
+def test_allowlisted_bad_ov_key_is_still_403(app: FastAPI, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("OPENVAULT_SERVICES_ALLOW", "34.30.222.22")
     response = _client(app, "34.30.222.22").post(
         "/keys/services",
         json=_SERVICE,

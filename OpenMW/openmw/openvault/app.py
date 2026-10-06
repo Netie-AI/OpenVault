@@ -193,8 +193,10 @@ _REVEAL_INTENT_HEADER = "X-OpenVault-Reveal"
 _VAULT_SEALED_DETAIL = "vault is sealed; POST /api/vault/unseal with the passphrase first"
 # POST /keys/services only (#52). Loopback stays allowed separately. Extra CIDRs
 # come from OPENVAULT_SERVICES_ALLOW so ops can extend without a code change.
+# The private Cortex prove peer stays in the default. A public address does not:
+# 34.30.222.22 is admitted only when that env lists it.
 _SERVICES_ALLOW_ENV = "OPENVAULT_SERVICES_ALLOW"
-_DEFAULT_SERVICES_ALLOW = ("10.128.0.3", "34.30.222.22")
+_DEFAULT_SERVICES_ALLOW = ("10.128.0.3",)
 
 
 def _write_secret_audit(entry: dict[str, Any]) -> None:
@@ -280,11 +282,13 @@ def _require_loopback(request: Request, action: str) -> str:
 
 
 def _services_allow_networks() -> tuple[ipaddress.IPv4Network | ipaddress.IPv6Network, ...]:
-    """Default prove peers plus extra CIDRs from ``OPENVAULT_SERVICES_ALLOW``.
+    """Private prove peer plus extra CIDRs from ``OPENVAULT_SERVICES_ALLOW``.
 
-    Defaults stay on so an env typo cannot drop Cortex prove. The env value
-    only adds networks. Loopback is not listed here; ``_LOOPBACK_HOSTS`` covers
-    OpenVault self. Invalid tokens are skipped rather than failing open or 500.
+    ``10.128.0.3`` stays in the default so an unset env does not drop the VPC
+    prove peer. Public addresses are not defaults; list them in the env.
+    The env value only adds networks. Loopback is not listed here;
+    ``_LOOPBACK_HOSTS`` covers OpenVault self. Invalid tokens are skipped
+    rather than failing open or 500.
     """
     extra = (os.environ.get(_SERVICES_ALLOW_ENV) or "").strip()
     raw = ",".join(_DEFAULT_SERVICES_ALLOW)

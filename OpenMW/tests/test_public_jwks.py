@@ -5,7 +5,8 @@ Red on ``68514a7214784632248a87a62822ba6acbf777fe`` (deploy 2026-10-02
 The poller recorded 376x 401. ``/.well-known/jwks.json`` was already
 public. ``/keys/jwks`` is the published ``jwks_alt``.
 
-The guard compares ``request.url.path`` with equality. No prefix, no
+The guard compares the routed path with equality. That is ``scope["path"]``
+after the same ``root_path`` strip the router uses. No prefix match, no
 regex, no second normaliser. This module sends no admin token.
 
 R-0007, each control fails on its own:
