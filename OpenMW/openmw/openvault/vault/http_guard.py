@@ -18,8 +18,10 @@ that check. The admin token is not an ``ov_`` key. Two exceptions:
   (#126). They stay on this guard. ``POST /keys/services`` also admits a
   socket peer on the #52 allowlist when no API key is presented, so the
   route can apply its peer check and ``X-OpenVault-Reveal: intentional``.
-  A presented API key is still verified. Other methods and near paths stay
-  on the admin gate.
+  A presented ``ov_`` API key is still verified. A non-``ov_`` bearer from an
+  allowlisted peer on ``POST /keys/services`` is left for the route, so a
+  re-register can present the current service token. Other methods and near
+  paths stay on the admin gate.
 
 The peer is ``request.client.host`` after the socket accept. Forwarded and
 Host headers are never read.
@@ -40,6 +42,7 @@ from openmw.openvault.vault.admin_token import (
     admin_token_matches,
     path_needs_admin,
 )
+from openmw.openvault.vault.api_keys import TOKEN_PREFIX
 from openmw.openvault.vault.auth import bearer_token
 
 #: The only unauthenticated ``/api/*`` path. Length 1 is a contract test.
@@ -131,6 +134,18 @@ def _public_jwks_read(method: str, path: str) -> bool:
     return method.upper() in _PUBLIC_JWKS_METHODS and path == _PUBLIC_JWKS_PATH
 
 
+def _defer_non_api_bearer(mint: str, host: str, token: str) -> bool:
+    """True when the route, not this guard, must judge ``token``.
+
+    ``POST /keys/services`` from an allowlisted socket may carry the current
+    service bearer. That value is not an ``ov_`` API key. Failed ``ov_`` keys
+    stay 403. Other mint routes and unlisted peers do not get this pass.
+    """
+    if mint != "services" or token.startswith(TOKEN_PREFIX):
+        return False
+    return _socket_peer_may_mint_service(host)
+
+
 def peer_is_loopback(host: str) -> bool:
     """True only for a loopback socket peer. Never a header value."""
     value = (host or "").strip()
@@ -171,9 +186,11 @@ def refuse_if_unauthorised(request: Request, *, api_keys: _KeyStore) -> JSONResp
     token = bearer_token(request)
     if token:
         record = api_keys.verify(token)
-        if record is None:
-            return _bad()
-        return None
+        if record is not None:
+            return None
+        if _defer_non_api_bearer(mint, host, token):
+            return None
+        return _bad()
 
     # No credential. Only the services mint admits an allowlisted socket peer.
     # Intermediate issue and revoke stay 401 here; their handlers are loopback.

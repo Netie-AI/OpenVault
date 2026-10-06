@@ -310,6 +310,37 @@ class TrustStore:
         offered = hashlib.sha256(token.encode("utf-8")).hexdigest()
         return hmac.compare_digest(offered, row["token_sha256"])
 
+    def service_is_registered(self, service_id: str) -> bool:
+        """True when this service_id already has a row, active or revoked."""
+        sid = service_id.strip()
+        if not sid:
+            return False
+        with contextlib.closing(self._connect()) as conn, conn:
+            row = conn.execute(
+                "SELECT 1 FROM signing_services WHERE service_id=?",
+                (sid,),
+            ).fetchone()
+        return row is not None
+
+    def active_service_bearer(self, token: str) -> bool:
+        """True when ``token`` passes :meth:`verify_service` for an active service.
+
+        Revoke has no service_id, so the same check runs for every active row.
+        No active rows still hashes once, matching a missing row in ``verify_service``.
+        """
+        with contextlib.closing(self._connect()) as conn, conn:
+            rows = conn.execute(
+                "SELECT service_id FROM signing_services WHERE lifecycle='active'"
+            ).fetchall()
+        if not rows:
+            hashlib.sha256(token.encode("utf-8")).hexdigest()
+            return False
+        matched = False
+        for row in rows:
+            if self.verify_service(str(row["service_id"]), token):
+                matched = True
+        return matched
+
     def revoke_service(self, service_id: str) -> bool:
         with contextlib.closing(self._connect()) as conn, conn:
             cur = conn.execute(

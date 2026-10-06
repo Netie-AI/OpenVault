@@ -2,6 +2,12 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-05 - Revoke and service rotation need a credential (OpenVault #128)
+
+- Supersedes the #126 line that said intermediate revoke keeps a Bearer gate. After that change, loopback `POST /keys/intermediate/{kid}/revoke` with no credential returned 200. Revoke now requires a Bearer that passes the same `verify_service` check as issue, or `X-OpenVault-Admin`. Loopback alone is 401. Non-loopback revoke stays denied.
+- First `POST /keys/services` is unchanged: loopback or an `OPENVAULT_SERVICES_ALLOW` peer (default `10.128.0.3`, `34.30.222.22`) plus `X-OpenVault-Reveal: intentional`. That first mint does not need admin.
+- Re-registering an existing service_id rotates the token only with that service's current Bearer or `X-OpenVault-Admin`. Reveal alone does not rotate. An allowlisted peer can send the current service Bearer. A presented `ov_` key is still verified. No public `:5000` bind change.
+
 ## 2026-10-05 - Signing mint is not an admin route (OpenVault #126)
 
 - `POST /keys/services`, `POST /keys/intermediate`, and `POST /keys/intermediate/{kid}/revoke` no longer require `X-OpenVault-Admin`. Loopback prove was 401 `openvault_unauthenticated` before the #52 peer allowlist and reveal check ran.

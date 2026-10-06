@@ -14,8 +14,12 @@ a missing JWKS.
 Reads here are unauthenticated on purpose. A JWKS is public key material; a
 verifier that had to authenticate to learn a public key would be a verifier
 that stops working the moment credentials expire. Service registration is
-loopback plus ``OPENVAULT_SERVICES_ALLOW`` (prove VPC peers). Intermediate
-issue and revoke stay loopback-only, and issuance is bearer-authenticated.
+loopback plus ``OPENVAULT_SERVICES_ALLOW`` (prove VPC peers). The first
+registration for a service_id needs that peer plus the reveal header. A
+later registration rotates the token only with the current service Bearer
+or ``X-OpenVault-Admin``. Intermediate issue and revoke stay loopback-only.
+Issue requires a Bearer service token. Revoke requires that same check, or
+``X-OpenVault-Admin``. Loopback alone does not revoke.
 
 The HTTP guard does not require ``X-OpenVault-Admin`` on ``POST /keys/services``,
 ``POST /keys/intermediate``, or ``POST /keys/intermediate/{kid}/revoke``.
@@ -31,6 +35,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
+from openmw.openvault.vault.admin_token import ADMIN_HEADER, admin_token_matches
 from openmw.openvault.vault.crypto import VaultSealedError
 from openmw.openvault.vault.trust import (
     DEFAULT_INTERMEDIATE_TTL_S,
@@ -69,6 +74,39 @@ def _service_registration_guards() -> tuple[Any, Any, Any]:
     )
 
     return _require_signing_service_peer, _require_reveal_intent, _audit_custody
+
+
+def _presented_bearer(request: Request) -> str:
+    """Authorization Bearer value, or empty when the header is not a bearer token."""
+    authorization = request.headers.get("authorization", "")
+    scheme, _, token = authorization.partition(" ")
+    if scheme.lower() != "bearer":
+        return ""
+    return token.strip()
+
+
+def _admin_credential_ok(request: Request) -> bool:
+    """True when ``X-OpenVault-Admin`` is present and matches. Absent is false."""
+    presented = (request.headers.get(ADMIN_HEADER) or "").strip()
+    if not presented:
+        return False
+    return admin_token_matches(presented)
+
+
+def _revoke_credential_ok(request: Request, store: TrustStore) -> bool:
+    """Active service bearer (same ``verify_service`` as issue) or admin."""
+    token = _presented_bearer(request)
+    if token and store.active_service_bearer(token):
+        return True
+    return _admin_credential_ok(request)
+
+
+def _rotation_credential_ok(request: Request, store: TrustStore, service_id: str) -> bool:
+    """Current bearer for this service_id, or admin. Reveal is not enough."""
+    token = _presented_bearer(request)
+    if token and store.verify_service(service_id, token):
+        return True
+    return _admin_credential_ok(request)
 
 
 class ServiceRegistration(BaseModel):
@@ -132,14 +170,26 @@ def register_service(body: ServiceRegistration, request: Request) -> dict[str, s
     have open cannot mint a service identity with a drive-by POST.
 
     Peer check is loopback plus configured prove CIDRs, not world-open mint.
-    Only the token's SHA-256 is kept. Re-registering the same service_id issues
-    a new token and invalidates the old one, which is the rotation path.
+    Only the token's SHA-256 is kept. The first registration returns the token.
+    Re-registering the same service_id rotates it only when the caller presents
+    that service's current Bearer or ``X-OpenVault-Admin``.
     """
     require_peer, require_intent, audit = _service_registration_guards()
     require_peer(request, "signing service registration")
     require_intent(request)
+    store = _store(request)
+    service_id = body.service_id.strip()
+    registered = bool(service_id) and store.service_is_registered(service_id)
+    if registered and not _rotation_credential_ok(request, store, service_id):
+        raise HTTPException(
+            status_code=401,
+            detail=(
+                "re-registering a service requires Authorization: Bearer "
+                "<current service token> or X-OpenVault-Admin"
+            ),
+        )
     try:
-        token = _store(request).register_service(body.service_id)
+        token = store.register_service(body.service_id)
     except TrustError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     audit("signing_service_registered", request, service_id=body.service_id)
@@ -156,9 +206,8 @@ def issue_intermediate(body: IntermediateRequest, request: Request) -> dict[str,
     require_loopback, _intent, audit = _guards()
     require_loopback(request, "intermediate key issue")
 
-    authorization = request.headers.get("authorization", "")
-    scheme, _, token = authorization.partition(" ")
-    if scheme.lower() != "bearer" or not token.strip():
+    token = _presented_bearer(request)
+    if not token:
         raise HTTPException(
             status_code=401,
             detail=(
@@ -167,7 +216,7 @@ def issue_intermediate(body: IntermediateRequest, request: Request) -> dict[str,
         )
 
     store = _store(request)
-    if not store.verify_service(body.service_id, token.strip()):
+    if not store.verify_service(body.service_id, token):
         # Same response for an unknown service and a wrong token: telling them
         # apart turns this into a service-name oracle.
         audit("signing_key_denied", request, service_id=body.service_id)
@@ -203,7 +252,16 @@ def revoke_intermediate(kid: str, request: Request) -> dict[str, Any]:
     """
     require_loopback, _intent, audit = _guards()
     require_loopback(request, "intermediate key revoke")
-    revoked = _store(request).revoke_key(kid)
+    store = _store(request)
+    if not _revoke_credential_ok(request, store):
+        raise HTTPException(
+            status_code=401,
+            detail=(
+                "intermediate key revoke requires an Authorization: Bearer "
+                "<service token> header or X-OpenVault-Admin"
+            ),
+        )
+    revoked = store.revoke_key(kid)
     if not revoked:
         raise HTTPException(status_code=404, detail="intermediate key not found")
     audit("signing_key_revoked", request, kid=kid)
