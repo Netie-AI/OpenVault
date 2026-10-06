@@ -6,6 +6,10 @@ decision-makers: Claude, founder
 
 # DR-0003 - OpenVault Desktop rebuild (fork vs embed)
 
+> **Superseded in part by [DR-0018](DR-0018-fork-router-and-ship.md) (2026-09-26).** The
+> "run none of OmniRoute's / FreeBuild's stack" and "not wholesale" verdicts below no longer
+> hold: the founder chose to fork both into `apps/router` and `apps/ship`. The rest stands.
+
 ## Context and Problem Statement
 
 OpenVault needed a real desktop/web UI, and there were three existing UI codebases in

@@ -1,0 +1,1 @@
+ALTER TABLE "project" ADD COLUMN "deletion_in_progress" boolean DEFAULT false NOT NULL;

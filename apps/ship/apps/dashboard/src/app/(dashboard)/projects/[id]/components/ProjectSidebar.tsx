@@ -1,0 +1,288 @@
+"use client";
+
+import { Icon as UiIcon } from "@repo/ui/icons";
+
+import { useMemo, useState } from "react";
+import Link from "next/link";
+import { useProjectSettings } from "@/context/ProjectSettingsContext";
+import { useProjectTabNavigation } from "@/hooks/useProjectTabNavigation";
+import { useLocalhostForward } from "@/hooks/useLocalhostForward";
+import { useI18n, interpolate } from "@/components/i18n-provider";
+import { AppLogo } from "@/components/AppLogo";
+import { DomainSwitcher } from "@/components/routing/DomainSwitcher";
+import { formatDate } from "@/utils/date";
+import { ProjectStatusBadge } from "@/components/shared/ProjectStatusBadge";
+
+/**
+ * Domains tab needs attention when routing failed but the deploy still
+ * succeeded (`routingUnsynced` — domains are optional, so a routing failure
+ * never fails a deploy; it's flagged here instead) OR a domain row is in a hard
+ * failure state (registration failed / SSL errored). Drives the Domains-tab
+ * yellow dot. Pending/unverified rows are NOT flagged (normal in-progress DNS).
+ */
+function domainsNeedAttention(
+  projectData: Record<string, unknown> | undefined,
+  domainsData?: { domains?: Array<{ status?: string; sslStatus?: string }> | undefined },
+): boolean {
+  if (projectData?.routingUnsynced) return true;
+  return (domainsData?.domains ?? []).some(
+    (d) => d?.status === "failed" || d?.sslStatus === "error",
+  );
+}
+
+/** Desktop right-column navigation - matches LibrarySidebar / Home pattern */
+export const ProjectSidebar = () => {
+  const {
+    projectData,
+    projectNotFound,
+    activeTabGroup,
+    tabs,
+    access,
+    domainsData,
+    selectedDomain,
+    setSelectedDomain,
+    setPendingDomainAction,
+  } = useProjectSettings();
+  const handleTabChange = useProjectTabNavigation();
+  const { t } = useI18n();
+  const domainsAttention = domainsNeedAttention(projectData, domainsData);
+
+  // Route switch: pick which domain the Production line shows/opens (shared via
+  // context so switching here also refetches the overview analytics).
+  const domains = useMemo(
+    () =>
+      (domainsData?.domains ?? [])
+        .map((d: any) => d?.domain)
+        .filter((d: unknown): d is string => typeof d === "string" && d.length > 0),
+    [domainsData?.domains],
+  );
+
+  // Everything below reads the server-computed access URL (context `access`):
+  // whether there's a public host, whether it's localhost, and the href — so the
+  // sidebar no longer re-derives localhost or keys off an instance-wide flag.
+  const isLocal = access.isLocal;
+  const hasDomain = !isLocal && !!access.host;
+  const activeDomain = hasDomain ? selectedDomain || access.host || "" : "";
+  const canOpen = hasDomain ? !!activeDomain : !!access.url;
+  const displayUrl = hasDomain ? activeDomain : (access.host ?? "");
+  const siteHref = hasDomain ? `https://${activeDomain}` : (access.url ?? "#");
+
+  // No domain, but a desktop dashboard managing a remote server can still reach
+  // the app by forwarding its runtime port over the SSH tunnel (same mechanism
+  // as the connection card). Only offered when there's genuinely no public URL.
+  const { canForward, forward } = useLocalhostForward({
+    serverId: projectData.serverId,
+    deployTarget: projectData.deployTarget,
+  });
+  const [openingLocal, setOpeningLocal] = useState(false);
+  const forwardPort = Number(projectData.port) || 0;
+  const canOpenLocal = !canOpen && canForward && forwardPort > 0;
+  const openOnLocalhost = async () => {
+    if (!forwardPort || openingLocal) return;
+    setOpeningLocal(true);
+    try {
+      await forward(forwardPort, "open");
+    } finally {
+      setOpeningLocal(false);
+    }
+  };
+
+  if (!projectData.id || projectNotFound) {
+    return null;
+  }
+
+  return (
+    <div className="space-y-4 lg:sticky lg:top-6 lg:self-start">
+      <div className="bg-card rounded-2xl border border-border/50 p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-start gap-3">
+            {projectData.isApp && projectData.appTemplateId && (
+              <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl border border-border/50 bg-muted/40">
+                <AppLogo appId={projectData.appTemplateId} className="size-5" />
+              </div>
+            )}
+            <div className="min-w-0">
+              <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground/70">
+                {t.projects.sidebar.project}
+              </p>
+              <div className="mt-2 flex items-center gap-2">
+                <h3 className="truncate text-base font-semibold text-foreground">
+                  {projectData.name || t.projects.sidebar.untitledProject}
+                </h3>
+                {canOpen && (
+                  <a
+                    href={siteHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={interpolate(t.projects.sidebar.openAria, {
+                      name: projectData.name || t.projects.sidebar.openProjectFallback,
+                    })}
+                    className="shrink-0 text-muted-foreground transition-colors hover:text-primary"
+                  >
+                    <UiIcon name="arrow-up-right" className="size-3.5" />
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+          <ProjectStatusBadge
+            project={projectData}
+            className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold"
+          />
+        </div>
+
+        <div className="mt-4 space-y-3">
+          <div className="flex items-center justify-between gap-4">
+            <span className="text-sm text-muted-foreground">
+              {isLocal ? t.projects.sidebar.local : t.projects.sidebar.production}
+            </span>
+            {canOpen ? (
+              <div className="flex min-w-0 items-center gap-1.5">
+                {domains.length > 1 ? (
+                  <DomainSwitcher
+                    domains={domains}
+                    value={activeDomain}
+                    onChange={setSelectedDomain}
+                  />
+                ) : (
+                  <span className="truncate text-sm font-medium text-foreground">{displayUrl}</span>
+                )}
+                <a
+                  href={siteHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={t.projects.sidebar.open}
+                  className="shrink-0 text-muted-foreground transition-colors hover:text-primary"
+                >
+                  <UiIcon name="arrow-up-right" className="size-3 shrink-0" />
+                </a>
+              </div>
+            ) : (
+              // No assigned domain — show a placeholder + jump to the Domains tab
+              // to add one (never synthesize a fake slug domain). On a desktop
+              // dashboard managing a remote server, also offer "Open" to reach
+              // the app now via the SSH tunnel.
+              <div className="flex items-center gap-2">
+                {canOpenLocal ? (
+                  <button
+                    type="button"
+                    onClick={openOnLocalhost}
+                    disabled={openingLocal}
+                    title={t.projects.connections.openLocalhost}
+                    aria-label={t.projects.connections.openLocalhost}
+                    className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-primary transition-opacity hover:opacity-80 disabled:opacity-50"
+                  >
+                    <UiIcon name="devices" className={openingLocal ? "size-3.5 animate-pulse" : "size-3.5"} />
+                    {t.projects.connections.openShort}
+                  </button>
+                ) : (
+                  <span className="text-sm text-muted-foreground/50">
+                    {t.projects.sidebar.noDomain}
+                  </span>
+                )}
+                <Link
+                  href={`/projects/${projectData.id}/domains`}
+                  onClick={(event) => {
+                    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+                    event.preventDefault();
+                    setPendingDomainAction("add");
+                    handleTabChange("domains");
+                  }}
+                  className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-primary transition-opacity hover:opacity-80"
+                >
+                  <UiIcon name="plus" className="size-3.5" />
+                  {t.projects.sidebar.addDomain}
+                </Link>
+              </div>
+            )}
+          </div>
+          {projectData.last_deployed && (
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-sm text-muted-foreground">{t.projects.sidebar.lastDeploy}</span>
+              <p className="truncate text-sm font-medium text-foreground">
+                {formatDate(projectData.last_deployed)}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="bg-card rounded-2xl border border-border/50 p-3">
+        <div className="space-y-1">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTabGroup === tab.id;
+            return (
+              <Link
+                key={tab.id}
+                href={`/projects/${projectData.id}/${tab.id}`}
+                aria-current={isActive ? "page" : undefined}
+                onClick={(e) => {
+                  // Let modified/middle clicks open the tab in a new browser tab;
+                  // a plain click switches client-side (snappy, keeps scroll).
+                  if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+                  e.preventDefault();
+                  handleTabChange(tab.id);
+                }}
+                className="th-nav-item w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] font-medium transition-colors"
+              >
+                <UiIcon name={Icon} className="size-5 shrink-0" />
+                {tab.label}
+                {tab.id === "domains" && domainsAttention && (
+                  <span
+                    className="ms-auto size-1.5 rounded-full bg-warning-solid"
+                    aria-label="Routing needs attention"
+                  />
+                )}
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/** Mobile horizontal scroll tabs - rendered above content in left column */
+export const ProjectMobileTabs = () => {
+  const { projectData, projectNotFound, activeTabGroup, tabs, domainsData } = useProjectSettings();
+  const handleTabChange = useProjectTabNavigation();
+  const domainsAttention = domainsNeedAttention(projectData, domainsData);
+
+  if (!projectData.id || projectNotFound) {
+    return null;
+  }
+
+  return (
+    <div className="lg:hidden sticky top-0 z-30 bg-background/80 backdrop-blur-md border-b border-border/40 -mx-4 px-4 sm:-mx-6 sm:px-6">
+      <div className="flex items-center gap-1 overflow-x-auto py-2.5 scrollbar-hide">
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTabGroup === tab.id;
+          return (
+            <Link
+              key={tab.id}
+              href={`/projects/${projectData.id}/${tab.id}`}
+              aria-current={isActive ? "page" : undefined}
+              onClick={(e) => {
+                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+                e.preventDefault();
+                handleTabChange(tab.id);
+              }}
+              className="th-nav-item flex items-center gap-2 px-3 py-2 rounded-xl text-[13px] font-medium whitespace-nowrap transition-colors"
+            >
+              <UiIcon name={Icon} className="size-4 shrink-0" />
+              {tab.label}
+              {tab.id === "domains" && domainsAttention && (
+                <span
+                  className="size-1.5 rounded-full bg-warning-solid"
+                  aria-label="Routing needs attention"
+                />
+              )}
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
