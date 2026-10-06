@@ -60,30 +60,52 @@ test("preview masks known providers and skips unknown names", () => {
   assert.equal(blob.includes("127.0.0.1"), false);
 });
 
-test("add reports ok and fail without secret bodies", async () => {
+test("add reports sea_lion success and a failed row without secret bodies", async () => {
   const posted: EnvAddBody[] = [];
   const outcomes = await runEnvAdds(PASTE, async (body) => {
     posted.push(body);
-    if (body.provider === "custom") {
-      throw new Error(`rejected ${body.secret}`);
-    }
   });
   assert.equal(posted.length, 5);
   assert.equal(posted[0]?.provider, "groq");
   assert.equal(posted[0]?.role, "free");
-  assert.equal(posted[4]?.provider, "custom");
-  assert.equal(posted[4]?.base_url, "https://api.sea-lion.ai/v1");
+  assert.equal(posted[4]?.provider, "sea_lion");
+  assert.equal(posted[4]?.base_url, undefined);
 
   const blob = JSON.stringify(outcomes);
   for (const secret of SECRETS) {
     assert.equal(blob.includes(secret), false);
   }
-  assert.equal(outcomes.filter((row) => row.ok).length, 4);
-  const failed = outcomes.find((row) => row.envKey === "SEA_LION_API_KEY");
-  assert.equal(failed?.ok, false);
-  assert.equal(failed?.provider, "sea_lion");
-  assert.match(failed?.error ?? "", /rejected/);
-  assert.equal((failed?.error ?? "").includes(SEA), false);
+  assert.equal(outcomes.filter((row) => row.ok).length, 5);
+  const sea = outcomes.find((row) => row.envKey === "SEA_LION_API_KEY");
+  assert.equal(sea?.ok, true);
+  assert.equal(sea?.provider, "sea_lion");
+
+  const cursor = "cursor-fixture-key-0000000001";
+  const failed = await runEnvAdds(`CURSOR_API_KEY=${cursor}`, async (body) => {
+    throw new Error(`rejected ${body.secret}`);
+  });
+  const failBlob = JSON.stringify(failed);
+  assert.equal(failBlob.includes(cursor), false);
+  assert.equal(failed[0]?.ok, false);
+  assert.equal(failed[0]?.provider, "custom");
+  assert.match(failed[0]?.error ?? "", /rejected/);
+});
+
+test("SEALION_API_KEY imports as sea_lion", async () => {
+  const secret = "sealion-alias-fixture-key-0002";
+  const text = `SEALION_API_KEY=${secret}`;
+  const rows = previewEnvText(text);
+  assert.equal(rows[0]?.envKey, "SEALION_API_KEY");
+  assert.equal(rows[0]?.provider, "sea_lion");
+  assert.equal(JSON.stringify(rows).includes(secret), false);
+  const posted: EnvAddBody[] = [];
+  const outcomes = await runEnvAdds(text, async (body) => {
+    posted.push(body);
+  });
+  assert.equal(posted[0]?.provider, "sea_lion");
+  assert.equal(outcomes[0]?.ok, true);
+  assert.equal(outcomes[0]?.provider, "sea_lion");
+  assert.equal(JSON.stringify(outcomes).includes(secret), false);
 });
 
 test("env import UI posts /api/keys and does not log", () => {

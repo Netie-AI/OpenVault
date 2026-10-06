@@ -2,6 +2,11 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-06 - SEA-LION key import accepts sea_lion (Refs #134)
+
+- `POST /api/keys` and env ingest accept catalog id `sea_lion`. `SEA_LION_API_KEY` and `SEALION_API_KEY` store as `sea_lion`, with the catalog base URL. An unknown provider stays 422.
+- FreeRoute already lists the catalog row. A vaulted `sea_lion` key is selected like other OpenAI-compatible hops. SEA-Guard and the embedding model stay out of chat hops. Chat-probe low-cap handling is unchanged.
+
 ## 2026-10-06 - Intermediate revoke is limited to the issuing service (Refs #132)
 
 - A service Bearer on `POST /keys/intermediate/{kid}/revoke` can revoke only a kid that service issued. Another service's kid stays active and the response is 403.
