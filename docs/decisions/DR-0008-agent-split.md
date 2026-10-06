@@ -23,7 +23,7 @@ reached a file first.
 Chosen option: "Explicit split plus shared lock file," implemented as `AGENT_LANES.md`:
 Cursor owns mechanical execution (detailed per-task in DR-0006), Claude owns review,
 architecture calls, and `PARKING_LOT.md` prioritization. The lock-file mechanism has since
-been folded into `CLAUDE.md`'s "Agent roles" section during the 2026-08-02 cleanup.
+been folded into `docs/archive/CLAUDE-removed-2026-10-06.md` during the 2026-08-02 cleanup. Live rules are in `AGENTS.md`.
 
 ## Consequences
 
@@ -36,7 +36,7 @@ been folded into `CLAUDE.md`'s "Agent roles" section during the 2026-08-02 clean
 ## Confirmation
 
 This is a process decision, not a code invariant — no automated test can confirm agent
-coordination. Honest gap: the closest enforcement is `CLAUDE.md`'s "Agent roles" section
+coordination. Honest gap: the closest enforcement is `AGENTS.md` and the archived copy in `docs/archive/CLAUDE-removed-2026-10-06.md`
 plus human review of diffs, not a test file.
 
 ---
