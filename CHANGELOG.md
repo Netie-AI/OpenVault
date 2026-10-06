@@ -2,6 +2,10 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-06 - Public prove IP is not a default services peer (OpenVault #133)
+
+- `POST /keys/services` defaults stay loopback and the private peer `10.128.0.3`. `34.30.222.22` is no longer built in. `OPENVAULT_SERVICES_ALLOW` is the only way to admit it. Unset, that peer plus `X-OpenVault-Reveal: intentional` is 401. Set to include it, the first mint is still 200, and the dms service Bearer on loopback `POST /keys/intermediate` is still 200. `HttpGuard` uses the path Starlette routes. A `root_path` prefix, a doubled slash under `root_path` `/`, or a trailing slash on that prefixed path is 401, the same as the unprefixed path. `POST /api/apikeys/verify` uses that same routed path. Behind a `root_path` prefix a good caller is still admitted and a bad caller is still rejected. A missing route helper on that path is 401. `GET`/`HEAD`/`OPTIONS` `/keys/jwks` and `/api/healthz` stay public. If `starlette._utils.get_route_path` cannot be imported, the guard returns 401 and does not skip auth. Loopback first mint is unchanged. No public `:5000` bind change.
+
 ## 2026-10-06 - Dead route symbols with zero callers (Refs #137)
 
 - Removed nine symbols in `OpenMW/openmw/openvault/route/` whose only `git grep -n -w` hits were the definition, a package re-export, or a design-doc mention: `registry_size_for_tests`, `CircuitBreakerOpenError`, `parse_delay_string`, `set_custom_banned_signals`, `MAX_RR_COUNTERS`, `semaphore.mark_rate_limited`, `semaphore.get_stats`, `semaphore.reset_all`, and `record_target_result`. Classify, breaker trips, FreeRoute, auth, HttpGuard, keys, and unseal are unchanged. `key_rotator` and `route/access.py` were not edited.
