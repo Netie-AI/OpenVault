@@ -76,6 +76,9 @@ class KeyRecord:
     lifecycle: KeyLifecycle = "active"
     replaced_by: str | None = None
     custody: KeyCustody = "pooled"
+    #: Service allowed to mint a lease for this kid. NULL until an admin assigns
+    #: it. Not backfilled: assigning every existing kid would hand them out.
+    owner_service_id: str | None = None
 
 
 class KeyVault:
@@ -126,7 +129,8 @@ class KeyVault:
                   lifecycle TEXT NOT NULL DEFAULT 'active',
                   replaced_by TEXT,
                   custody TEXT NOT NULL DEFAULT 'pooled',
-                  key_fp TEXT
+                  key_fp TEXT,
+                  owner_service_id TEXT
                 )
                 """
             )
@@ -155,6 +159,10 @@ class KeyVault:
             if "key_fp" not in cols:
                 # HMAC of the provider key under a vault-held secret. Not a bare sha256.
                 conn.execute("ALTER TABLE keys ADD COLUMN key_fp TEXT")
+            if "owner_service_id" not in cols:
+                # NULL, not a service id. Pre-lease kids stay unowned until
+                # POST /api/keys/owner. A default owner would lease every kid.
+                conn.execute("ALTER TABLE keys ADD COLUMN owner_service_id TEXT")
             # One-time backfill: persist masks so list_keys never decrypts plaintext.
             # Skip while sealed — decrypt would fail closed, and masks stay empty
             # until an unseal + later write/backfill.
@@ -205,6 +213,11 @@ class KeyVault:
             custody=cast(
                 KeyCustody,
                 (str(row["custody"]) if "custody" in keys and row["custody"] else "pooled"),
+            ),
+            owner_service_id=(
+                str(row["owner_service_id"])
+                if "owner_service_id" in keys and row["owner_service_id"]
+                else None
             ),
         )
 
@@ -394,6 +407,24 @@ class KeyVault:
             conn.commit()
         return self.get(key_id)
 
+    def set_owner_service(self, key_id: str, service_id: str | None) -> KeyRecord | None:
+        """Assign or clear the service that may lease this kid.
+
+        Empty ``service_id`` clears ownership. The row is unchanged when the
+        kid does not exist. Rotation does not call this: the new kid stays
+        unowned until an admin assigns it.
+        """
+        if self.get(key_id) is None:
+            return None
+        owner = (service_id or "").strip() or None
+        with contextlib.closing(self._connect()) as conn, conn:
+            conn.execute(
+                "UPDATE keys SET owner_service_id = ?, updated_at = ? WHERE id = ?",
+                (owner, time.time(), key_id),
+            )
+            conn.commit()
+        return self.get(key_id)
+
     def delete(self, key_id: str) -> bool:
         with contextlib.closing(self._connect()) as conn, conn:
             cur = conn.execute("DELETE FROM keys WHERE id = ?", (key_id,))
@@ -428,6 +459,7 @@ class KeyVault:
         current = self.get(key_id)
         if current is None:
             return None
+        # The replacement kid is unowned. A lease is for one kid, not the label.
         replacement = self.create(
             label=f"{current.label} ({label_suffix})",
             provider=current.provider,

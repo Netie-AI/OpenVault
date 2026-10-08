@@ -2,6 +2,14 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-08 - Single-kid connector lease (Refs #160)
+
+- `KeyRecord.owner_service_id` is NULL on existing rows and on new rows. Nothing is backfilled to a service. `POST /api/keys/owner` with `X-OpenVault-Admin` assigns `{kid, service_id}` for a service already registered with `POST /keys/services`. An empty `service_id` clears it. The kid is not in the path. Rotation does not copy ownership.
+- `POST /api/keys/leases` mints one lease: one tenant-custody kid, one `space`, TTL default 60s and max 120s, single use. `POST /api/keys/leases/redeem` returns the plaintext once. Both are JSON bodies. The service id is `verify_service` on the Bearer via `service_id_for_active_bearer`. A `service_id` in the body is ignored. `X-OpenVault-Admin` does not open these two POSTs.
+- The ref is `ovlease_` plus a random token. Only the SHA-256 is stored. `AKIA`, `ghp_`, `sk-ant`, `xoxb`, and long plain strings are `lease_raw_secret_ref`. A query string is `lease_ref_in_url` and is not redeemed. There is no route with the ref in the path.
+- HttpGuard admits only those two exact POSTs. GET and every other method on those paths stay on the admin gate. Loopback is allowed. Any other peer needs https, and `LEASE_TLS_VERIFY` stays true with no env switch. Forwarded headers are not a peer or a scheme.
+- Every lease row has `tenant_key`, `ttl_s`, and `owner_service_id` before insert. There is no feature flag that skips them. A non-owned kid is `lease_kid_not_owned`. Expired is `lease_expired`. A second redeem is `lease_reused`. This is not a query broker. No public `:5000` bind change.
+
 ## 2026-10-06 - Public prove IP is not a default services peer (OpenVault #133)
 
 - `POST /keys/services` defaults stay loopback and the private peer `10.128.0.3`. `34.30.222.22` is no longer built in. `OPENVAULT_SERVICES_ALLOW` is the only way to admit it. Unset, that peer plus `X-OpenVault-Reveal: intentional` is 401. Set to include it, the first mint is still 200, and the dms service Bearer on loopback `POST /keys/intermediate` is still 200. `HttpGuard` uses the path Starlette routes. A `root_path` prefix, a doubled slash under `root_path` `/`, or a trailing slash on that prefixed path is 401, the same as the unprefixed path. `POST /api/apikeys/verify` uses that same routed path. Behind a `root_path` prefix a good caller is still admitted and a bad caller is still rejected. A missing route helper on that path is 401. `GET`/`HEAD`/`OPTIONS` `/keys/jwks` and `/api/healthz` stay public. If `starlette._utils.get_route_path` cannot be imported, the guard returns 401 and does not skip auth. Loopback first mint is unchanged. No public `:5000` bind change.
