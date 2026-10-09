@@ -199,12 +199,17 @@ _SERVICES_ALLOW_ENV = "OPENVAULT_SERVICES_ALLOW"
 _DEFAULT_SERVICES_ALLOW = ("10.128.0.3",)
 
 
-def _write_secret_audit(entry: dict[str, Any]) -> None:
+class SecretAuditError(OSError):
+    """The secret-audit file could not be written."""
+
+
+def _write_secret_audit(entry: dict[str, Any], *, required: bool = False) -> None:
     """Append one line to the secret-access audit log.
 
-    Best-effort by design: an audit write that fails must not deny the caller
-    an operation they are entitled to, but it must be loud. Kept separate from
-    control_audit.jsonl so custody access can be shipped or reviewed on its own.
+    Best-effort unless ``required`` is set. A required write that fails raises
+    ``SecretAuditError`` (lease redeem rolls the consume back). Every other
+    caller still logs ``secret_audit_write_failed`` and continues. Kept
+    separate from control_audit.jsonl so custody access can be reviewed alone.
 
     Callers pass only identifiers and metadata. Nothing in ``entry`` may be
     derived from a decrypted payload — the audit file is not a second place a
@@ -224,8 +229,12 @@ def _write_secret_audit(entry: dict[str, Any]) -> None:
         path = ensure_home() / "secret_audit.jsonl"
         with path.open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(entry) + "\n")
-    except OSError as exc:
+    except Exception as exc:
         log.error("secret_audit_write_failed", error=str(exc), entry_event=entry.get("event"))
+        if required:
+            raise SecretAuditError(str(exc)) from exc
+        if not isinstance(exc, OSError):
+            raise
 
 
 def _normalise_host(host: str) -> str:
@@ -501,6 +510,59 @@ def _audit_secret_reveal(key_id: str, client_host: str, user_agent: str) -> None
             "key_id": key_id,
             "client": client_host,
             "user_agent": user_agent[:200],
+        }
+    )
+
+
+def _audit_lease_redeem(
+    request: Request,
+    *,
+    key_id: str,
+    space: str,
+    service_id: str,
+    expires_at: int,
+    owner_tenant: str,
+) -> None:
+    """Same file as secret reveal. Never pass the ref or the plaintext.
+
+    ``required`` is on: a write failure raises ``SecretAuditError`` so redeem
+    can roll the consume back. Other custody audits stay best-effort.
+    """
+    _write_secret_audit(
+        {
+            "event": "lease_redeem",
+            "key_id": key_id,
+            "space": space,
+            "service_id": service_id,
+            "expires_at": expires_at,
+            "owner_tenant": owner_tenant,
+            "client": _client_host(request),
+            "user_agent": request.headers.get("user-agent", "")[:200],
+        },
+        required=True,
+    )
+
+
+def _audit_lease_redeem_refused(
+    request: Request,
+    *,
+    reason: str,
+    key_id: str,
+    space: str,
+    service_id: str,
+    owner_tenant: str = "",
+) -> None:
+    """Best-effort refusal line. Never pass the ref or the plaintext."""
+    _write_secret_audit(
+        {
+            "event": "lease_redeem_refused",
+            "reason": reason,
+            "key_id": key_id,
+            "space": space,
+            "service_id": service_id,
+            "owner_tenant": owner_tenant,
+            "client": _client_host(request),
+            "user_agent": request.headers.get("user-agent", "")[:200],
         }
     )
 
@@ -1202,6 +1264,7 @@ def create_app(
     from openmw.openvault.routers.key_quota import build_key_quota_router
     from openmw.openvault.routers.key_ui import build_key_ui_router
     from openmw.openvault.routers.keys import router as keys_router
+    from openmw.openvault.routers.lease import build_lease_router
     from openmw.openvault.routers.provider_cards import build_provider_cards_router
     from openmw.openvault.routers.route import router as route_router
     from openmw.openvault.routers.sentinel import router as sentinel_router
@@ -1212,6 +1275,7 @@ def create_app(
     app.include_router(sentinel_router)
     app.include_router(route_router)
     app.include_router(keys_router)
+    app.include_router(build_lease_router(state_vault))
     app.include_router(build_health_router(state_vault))
     app.include_router(build_key_quota_router(state_vault))
     app.include_router(build_provider_cards_router(state_vault))

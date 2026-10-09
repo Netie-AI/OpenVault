@@ -2,10 +2,37 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-09 - Space credentials are admin plus loopback (Refs #160)
+
+- Creating or rotating a `dms:<space>` service id on `POST /keys/services` needs both `X-OpenVault-Admin` and a loopback socket peer. The services allowlist (including `10.128.0.3`), a reveal header, and any service Bearer, including that Space's own Bearer, do not qualify. Plain service ids (`dms`, `cortex`, and the rest) keep the previous peer and rotation rules. #166 is this gate.
+- The Space must already be lowercase and match `^dms:[a-z0-9][a-z0-9-]{0,62}$`. Anything else that is trying to be a `dms:` credential is `dms_space_invalid` (422). DMS normalises the Space to lowercase before it calls. There is no HTTP route that revokes a service credential. That gap stays on #164.
+
 ## 2026-10-09 - Gemini per-minute 429 is a short park (Refs #162)
 
 - Only an explicit per-minute Gemini `quotaId` parks as `rate_limited` for `RetryInfo.retryDelay`. The delay is capped at the lesser of 3600s and the time until Google's daily reset. A missing or rejected delay uses about 60s. A non-finite delay, or a parse error, falls back to the old text tables. A plain-text 429 with no structured details, a per-day quota id, and an unrecognized quota id still park until midnight Pacific.
 - Strict `503 pin_unavailable` keeps its fields and adds `provider`, `park_reason`, and `retry_after_s`. A park also sets `Retry-After`. The body has no key id and no secret. A strict pin still does not call another provider or model.
+
+## 2026-10-09 - Credential-bound Space and fail-closed redeem audit (Refs #160)
+
+- A Space credential is `dms:<space>`. It is minted once with `POST /keys/services` and reused. Lease mint and redeem do not mint or refresh it. The service id charset accepts that form: the Space is 1 to 64 of `A-Za-z0-9._-`, and a colon is allowed only in `dms:<space>`.
+- The kid is owned by that `dms:<space>` service through admin `POST /api/keys/owner`. `owner_tenant` stays on the binding. Mint and redeem derive the Space from the Bearer. The tenant is the binding, not the body. A body `space` or `tenant` that disagrees is `lease_space_mismatch` or `lease_tenant_mismatch`, and redeem does not consume the lease. A Bearer that is not `dms:<space>` is `lease_space_credential`. This is credential-bound Space. #165 is this behavior.
+- A successful redeem writes `lease_redeem` (kid, space, service_id, expires_at, owner_tenant) before the consume commits. If that write fails, the response is `lease_audit_failed`, the secret is not returned, and the lease stays redeemable. A refused redeem writes `lease_redeem_refused` with the reason, key_id when known, space, and service_id. Neither line contains the ref or the secret. Rate limit and purge of expired rows stay on #164.
+- A ref placed in the query string is refused (`lease_ref_in_url`) and is not redeemed, but uvicorn still records that request line on the access log.
+
+## 2026-10-09 - Lease Space and tenant binding (Refs #160)
+
+- `POST /api/keys/owner` stores `owner_space` and `owner_tenant` beside `owner_service_id`. The columns are additive and stay NULL until that assign. An empty `service_id` clears all three. A tenant that disagrees with a set `account_id` is `lease_tenant_mismatch` and is not written.
+- Mint refuses `lease_space_unbound` when the kid has no Space, `lease_space_mismatch` when the requested Space differs, and `lease_tenant_mismatch` when the tenant differs from `owner_tenant` or from `account_id`. Redeem re-checks the same and does not consume the lease on those mismatches.
+- A successful redeem appends `lease_redeem` to `secret_audit.jsonl` through the secret-reveal writer, with `key_id`, `space`, `service_id`, and `expires_at`. The ref and the secret are not written.
+- A ref placed in the query string is refused (`lease_ref_in_url`) and is not redeemed, but uvicorn still records that request line on the access log.
+
+## 2026-10-08 - Single-kid connector lease (Refs #160)
+
+- `KeyRecord.owner_service_id` is NULL on existing rows and on new rows. Nothing is backfilled to a service. `POST /api/keys/owner` with `X-OpenVault-Admin` assigns `{kid, service_id}` for a service already registered with `POST /keys/services`. An empty `service_id` clears it. The kid is not in the path. Rotation does not copy ownership.
+- `POST /api/keys/leases` mints one lease: one tenant-custody kid, one `space`, TTL default 60s and max 120s, single use. `POST /api/keys/leases/redeem` returns the plaintext once. Both are JSON bodies. The service id is `verify_service` on the Bearer via `service_id_for_active_bearer`. A `service_id` in the body is ignored. `X-OpenVault-Admin` does not open these two POSTs.
+- The ref is `ovlease_` plus a random token. Only the SHA-256 is stored. `AKIA`, `ghp_`, `sk-ant`, `xoxb`, and long plain strings are `lease_raw_secret_ref`. A query string is `lease_ref_in_url` and is not redeemed. There is no route with the ref in the path.
+- HttpGuard admits only those two exact POSTs. GET and every other method on those paths stay on the admin gate. Loopback is allowed. Any other peer needs https, and `LEASE_TLS_VERIFY` stays true with no env switch. Forwarded headers are not a peer or a scheme.
+- Every lease row has `tenant_key`, `ttl_s`, and `owner_service_id` before insert. There is no feature flag that skips them. A non-owned kid is `lease_kid_not_owned`. Expired is `lease_expired`. A second redeem is `lease_reused`. This is not a query broker. No public `:5000` bind change.
 
 ## 2026-10-06 - Public prove IP is not a default services peer (OpenVault #133)
 
