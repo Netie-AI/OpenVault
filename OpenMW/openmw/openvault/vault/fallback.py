@@ -378,10 +378,18 @@ class FallbackManager:
         reason: str,
         *,
         error_text: str = "",
+        honor_cooldown: bool = False,
     ) -> None:
-        """Hide one model on this key. Does not park the key itself."""
+        """Hide one model on this key. Does not park the key itself.
+
+        ``honor_cooldown`` keeps the classifier's wait. The daily-reset stretch
+        still applies when it is false, including a plain-text Google 429.
+        """
         circ = self._circuit(key_id)
-        wait_s = self._wait_s(key_id, cooldown_ms, reason)
+        if honor_cooldown:
+            wait_s = max(0.0, float(cooldown_ms) / 1000.0)
+        else:
+            wait_s = self._wait_s(key_id, cooldown_ms, reason)
         until = time.time() + wait_s
         stored = clip_error_text(error_text) if error_text else ""
         circ.model_park_until[model] = until
@@ -412,15 +420,21 @@ class FallbackManager:
         reason: str,
         *,
         error_text: str = "",
+        honor_cooldown: bool = False,
     ) -> None:
         """Temporarily hide a key without counting a circuit failure.
 
         Rate limits and stale OAuth must not open the hop circuit — that is the
         live bug fixed by DESIGN_TIERED_QUEUE_LB §1.1 / §4.2.
         The park is written to keys.db so a new process sees the same window.
+        ``honor_cooldown`` keeps the classifier's wait instead of stretching a
+        Google rate-limit reason to the next Pacific midnight.
         """
         circ = self._circuit(key_id)
-        wait_s = self._wait_s(key_id, cooldown_ms, reason)
+        if honor_cooldown:
+            wait_s = max(0.0, float(cooldown_ms) / 1000.0)
+        else:
+            wait_s = self._wait_s(key_id, cooldown_ms, reason)
         until = time.time() + wait_s
         stored = clip_error_text(error_text) if error_text else ""
         circ.park_until = until
@@ -446,6 +460,12 @@ class FallbackManager:
         if not self.key_is_parked(key_id):
             return None
         return self._circuit(key_id).park_reason
+
+    def model_park_reason(self, key_id: str, model: str) -> str | None:
+        """Park reason while this (key, model) is parked, else None."""
+        if not self.model_is_parked(key_id, model):
+            return None
+        return self._circuit(key_id).model_park_reason.get(model) or None
 
     def soonest_key_park_until(self, key_ids: list[str]) -> float | None:
         """Earliest still-active key park, or None when none of them are parked."""
