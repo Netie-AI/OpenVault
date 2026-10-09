@@ -2,6 +2,11 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-09 - Gemini per-minute 429 is a short park (Refs #162)
+
+- A Gemini 429 with `QuotaFailure` is classified from `quotaId` and `RetryInfo.retryDelay`. Per-minute, or a quota id that is not per-day, parks as `rate_limited` for `retryDelay`, or about 60s when the delay is missing. Per-day still parks until the provider's daily reset. The phrase "exceeded your current quota" without those details still means credits exhausted.
+- Strict `503 pin_unavailable` keeps its fields and adds `provider`, `park_reason`, and `retry_after_s`. A park also sets `Retry-After`. The body has no key id and no secret. A strict pin still does not call another provider or model.
+
 ## 2026-10-06 - Public prove IP is not a default services peer (OpenVault #133)
 
 - `POST /keys/services` defaults stay loopback and the private peer `10.128.0.3`. `34.30.222.22` is no longer built in. `OPENVAULT_SERVICES_ALLOW` is the only way to admit it. Unset, that peer plus `X-OpenVault-Reveal: intentional` is 401. Set to include it, the first mint is still 200, and the dms service Bearer on loopback `POST /keys/intermediate` is still 200. `HttpGuard` uses the path Starlette routes. A `root_path` prefix, a doubled slash under `root_path` `/`, or a trailing slash on that prefixed path is 401, the same as the unprefixed path. `POST /api/apikeys/verify` uses that same routed path. Behind a `root_path` prefix a good caller is still admitted and a bad caller is still rejected. A missing route helper on that path is 401. `GET`/`HEAD`/`OPTIONS` `/keys/jwks` and `/api/healthz` stay public. If `starlette._utils.get_route_path` cannot be imported, the guard returns 401 and does not skip auth. Loopback first mint is unchanged. No public `:5000` bind change.

@@ -212,13 +212,14 @@ def test_google_is_parked_until_quota_resets(
     )
     mgr = FallbackManager(vault)
     before = time.time()
-    mgr.record_park(key_id, 1_000, "rate_limited")
+    mgr.record_park(key_id, 1_000, "credits_exhausted")
     until = mgr._circuit(key_id).park_until
     _, reset = window_bounds("America/Los_Angeles", before)
     assert until is not None
     assert abs(until - reset) < 2.0
     assert until - before > 60
     assert mgr.key_is_parked(key_id)
+    assert mgr.key_park_reason(key_id) == "credits_exhausted"
     assert key_id not in [row.id for row in mgr.ordered_candidates()]
 
     monkeypatch.setattr(fallback_mod.time, "time", lambda: until + 1.0)
@@ -226,6 +227,26 @@ def test_google_is_parked_until_quota_resets(
     hop = next(item for item in mgr.status().hops if item["key_id"] == key_id)
     assert hop["park_state"] == "expired"
     assert key_id in [row.id for row in mgr.ordered_candidates()]
+
+
+def test_google_rate_limit_park_keeps_the_cooldown(vault: KeyVault) -> None:
+    key_id = _key(
+        vault,
+        provider="google",
+        secret="AIza-test-ov86-rpm",
+        base_url=_GOOGLE,
+        label="google-rpm",
+    )
+    mgr = FallbackManager(vault)
+    before = time.time()
+    mgr.record_park(key_id, 1_000, "rate_limited")
+    until = mgr._circuit(key_id).park_until
+    _, reset = window_bounds("America/Los_Angeles", before)
+    assert until is not None
+    assert abs((until - before) - 1.0) < 0.5
+    assert abs(until - reset) > 60
+    assert mgr.key_park_reason(key_id) == "rate_limited"
+    assert key_id not in [row.id for row in mgr.ordered_candidates()]
 
 
 class _CloseRecorder:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 import time
 from collections.abc import Mapping
@@ -66,6 +67,11 @@ RATE_LIMIT_TEXT_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"频繁"),
     re.compile(r"频率"),
 )
+
+# Gemini RetryInfo.retryDelay is a protobuf JSON duration, for example "27s".
+_RETRY_DELAY_S = re.compile(r"^(\d+(?:\.\d+)?)s$")
+# Per-minute, or a 429 whose quota id is not per-day, when RetryInfo is absent.
+_GOOGLE_SHORT_429_MS = 60_000
 
 _custom_banned_signals: list[str] = []
 
@@ -160,6 +166,89 @@ def parse_reset_from_headers(headers: Mapping[str, str] | None) -> int | None:
     return None
 
 
+def _retry_delay_ms(value: object) -> int | None:
+    """Milliseconds from a Gemini ``RetryInfo.retryDelay`` string."""
+    if not isinstance(value, str):
+        return None
+    match = _RETRY_DELAY_S.fullmatch(value.strip())
+    if match is None:
+        return None
+    seconds = float(match.group(1))
+    if seconds <= 0:
+        return None
+    return max(1, int(seconds * 1000.0))
+
+
+def _violations_include_per_day(violations: object) -> bool:
+    if not isinstance(violations, list):
+        return False
+    for item in violations:
+        if not isinstance(item, dict):
+            continue
+        quota_id = item.get("quotaId")
+        if isinstance(quota_id, str) and "perday" in quota_id.lower():
+            return True
+    return False
+
+
+def _google_429_decision(error_text: str) -> FallbackDecision | None:
+    """Gemini ``error.details`` quota class, or None when those details are absent.
+
+    A per-minute body still says "exceeded your current quota". ``quotaId``
+    decides: ``PerDay`` stays a daily credits park. ``PerMinute``, or any other
+    quota id, is a short rate-limit park for ``RetryInfo.retryDelay`` (else
+    about 60s). Providers that do not send these details keep the text tables.
+    """
+    text = error_text.strip()
+    if not text.startswith("{"):
+        return None
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(payload, dict):
+        return None
+    err = payload.get("error")
+    source = err if isinstance(err, dict) else payload
+    return _decision_from_google_details(source.get("details"))
+
+
+def _decision_from_google_details(details: object) -> FallbackDecision | None:
+    if not isinstance(details, list):
+        return None
+    saw = False
+    per_day = False
+    retry_ms: int | None = None
+    for item in details:
+        if not isinstance(item, dict):
+            continue
+        kind = item.get("@type")
+        if not isinstance(kind, str):
+            continue
+        lowered = kind.lower()
+        if lowered.endswith("google.rpc.quotafailure"):
+            saw = True
+            if _violations_include_per_day(item.get("violations")):
+                per_day = True
+        elif lowered.endswith("google.rpc.retryinfo"):
+            saw = True
+            parsed = _retry_delay_ms(item.get("retryDelay"))
+            if parsed is not None:
+                retry_ms = parsed
+    if not saw:
+        return None
+    if per_day:
+        return FallbackDecision(True, 0, reason="credits_exhausted", credits_exhausted=True)
+    if retry_ms is not None:
+        return FallbackDecision(
+            True,
+            retry_ms,
+            reason="rate_limited",
+            used_upstream_retry_hint=True,
+        )
+    return FallbackDecision(True, _GOOGLE_SHORT_429_MS, reason="rate_limited")
+
+
 def parse_upstream_retry_hint_ms(
     headers: Mapping[str, str] | None,
     error_text: str | None,
@@ -198,6 +287,12 @@ def check_fallback_error(
 
     if is_account_deactivated(text):
         return FallbackDecision(False, 0, reason="account_deactivated", permanent=True)
+
+    # Before the credits phrase table: Gemini reuses that phrase for RPM.
+    if status == 429:
+        structured = _google_429_decision(text)
+        if structured is not None:
+            return structured
 
     if is_credits_exhausted(text) or status == 402:
         return FallbackDecision(True, 0, reason="credits_exhausted", credits_exhausted=True)

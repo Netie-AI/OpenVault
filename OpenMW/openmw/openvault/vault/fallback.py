@@ -447,6 +447,12 @@ class FallbackManager:
             return None
         return self._circuit(key_id).park_reason
 
+    def model_park_reason(self, key_id: str, model: str) -> str | None:
+        """Park reason while this (key, model) is parked, else None."""
+        if not self.model_is_parked(key_id, model):
+            return None
+        return self._circuit(key_id).model_park_reason.get(model) or None
+
     def soonest_key_park_until(self, key_ids: list[str]) -> float | None:
         """Earliest still-active key park, or None when none of them are parked."""
         now = time.time()

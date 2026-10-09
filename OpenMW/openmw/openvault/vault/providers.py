@@ -231,7 +231,8 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
             "gemini-flash-latest",
             "gemini-3.1-flash-lite",
         ),
-        # AI Studio RPD resets at midnight Pacific. A park lasts until then.
+        # AI Studio RPD resets at midnight Pacific. A daily quota park lasts
+        # until then. A rate-limit park keeps its cooldown.
         quota_reset_tz="America/Los_Angeles",
     ),
     ProviderSpec(

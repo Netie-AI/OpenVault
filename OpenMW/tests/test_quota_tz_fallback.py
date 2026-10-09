@@ -53,9 +53,9 @@ def test_a_non_utc_zone_falls_back_to_utc_and_says_so(no_tz_database: None) -> N
 
 def test_reset_countdown_and_park_wait_do_not_raise(no_tz_database: None) -> None:
     assert quota.seconds_until_reset("UTC", _NOW) == pytest.approx(_UTC_MIDNIGHT + _DAY - _NOW)
-    # Google has a reset zone and no tracked token ceiling, so it parks to that
-    # zone's next midnight. That used to be the second crash site.
-    wait = quota.park_wait_s("google", 60.0, "rate_limited")
+    # A daily quota park on Google still counts down to the reset zone. That
+    # used to be the second crash site when the zone database was missing.
+    wait = quota.park_wait_s("google", 60.0, "credits_exhausted")
     assert 0.0 <= wait <= _DAY
 
 

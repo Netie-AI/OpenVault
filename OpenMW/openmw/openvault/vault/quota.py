@@ -22,10 +22,11 @@ from openmw.openvault.vault.providers import get_provider
 
 log = structlog.get_logger()
 
+# Daily-reset reasons only. A rate-limit park keeps the cooldown the classifier
+# computed (Retry-After, RetryInfo.retryDelay, or the short fallback). Stretching
+# those to midnight turned a Gemini per-minute 429 into a day-long park.
 _RESET_REASONS = frozenset(
     {
-        "rate_limited",
-        "rate_limit_text",
         "credits_exhausted",
         "quota_exhausted",
     }
@@ -83,8 +84,10 @@ def seconds_until_reset(tz_name: str, now: float | None = None) -> float:
 def park_wait_s(provider: str, cooldown_s: float, reason: str) -> float:
     """How long a park lasts.
 
-    A provider with a reset zone and no tracked token ceiling (Google) stays
-    parked until that zone's next midnight. Everyone else keeps ``cooldown_s``.
+    A daily quota park (``credits_exhausted`` or ``quota_exhausted``) on a
+    provider with a reset zone and no tracked token ceiling (Google) lasts
+    until that zone's next midnight. A rate-limit park keeps ``cooldown_s``.
+    Everyone else keeps ``cooldown_s``.
     """
     wait = max(0.0, cooldown_s)
     spec = get_provider(provider)
