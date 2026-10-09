@@ -26,12 +26,13 @@ from openmw.openvault.route.breaker import reset_all_circuit_breakers
 from openmw.openvault.vault import fallback as fallback_mod
 from openmw.openvault.vault.crypto import Seal
 from openmw.openvault.vault.fallback import FallbackManager
+from openmw.openvault.vault.parks import provider_error_text
 from openmw.openvault.vault.proxy import (
     PIN_UNAVAILABLE,
     STRICT_PIN_HEADER,
     chat_completions,
 )
-from openmw.openvault.vault.quota import window_bounds
+from openmw.openvault.vault.quota import seconds_until_reset, window_bounds
 from openmw.openvault.vault.store import KeyRecord, KeyVault
 from openmw.openvault.vault.usage_store import HopTrace
 
@@ -165,6 +166,7 @@ def test_per_minute_quota_phrase_is_not_credits_exhausted() -> None:
     assert outcome.attempt_class == "rate_limit"
     assert outcome.reason == "rate_limited"
     assert outcome.candidate == "park"
+    assert outcome.honor_cooldown is True
     assert outcome.cooldown_ms == 27_000
 
 
@@ -184,12 +186,50 @@ def test_per_day_quota_stays_credits_exhausted() -> None:
     assert outcome.cooldown_ms == QUOTA_PARK_MS
 
 
-def test_unknown_quota_id_is_a_short_rate_limit() -> None:
-    body = _google_429(_HOUR_ID, None)
+def test_unknown_quota_id_stays_credits_exhausted() -> None:
+    body = _google_429(_HOUR_ID, "27s")
     outcome = classify_attempt(429, body)
+    assert outcome.attempt_class == "quota_exhausted"
+    assert outcome.reason == "credits_exhausted"
+    assert outcome.honor_cooldown is False
+    assert outcome.cooldown_ms == QUOTA_PARK_MS
+
+
+@pytest.mark.parametrize("delay", ["1e400s", "-5s", "NaNs", "30"])
+def test_rejected_retry_delay_uses_the_short_fallback(delay: str) -> None:
+    outcome = classify_attempt(429, _google_429(_MINUTE_ID, delay))
     assert outcome.attempt_class == "rate_limit"
     assert outcome.reason == "rate_limited"
+    assert outcome.honor_cooldown is True
     assert outcome.cooldown_ms == 60_000
+
+
+def test_huge_finite_retry_delay_is_capped() -> None:
+    outcome = classify_attempt(429, _google_429(_MINUTE_ID, "99999999s"))
+    reset_ms = int(seconds_until_reset("America/Los_Angeles") * 1000.0)
+    assert outcome.attempt_class == "rate_limit"
+    assert outcome.reason == "rate_limited"
+    assert outcome.honor_cooldown is True
+    assert 1 <= outcome.cooldown_ms <= 3_600_000
+    assert outcome.cooldown_ms <= reset_ms + 2_000
+    assert outcome.cooldown_ms < 99_999_999_000
+
+
+def test_four_hundred_digit_delay_falls_back_to_credits() -> None:
+    outcome = classify_attempt(429, _google_429(_MINUTE_ID, "9" * 400 + "s"))
+    assert outcome.attempt_class == "quota_exhausted"
+    assert outcome.reason == "credits_exhausted"
+    assert outcome.honor_cooldown is False
+    assert outcome.cooldown_ms == QUOTA_PARK_MS
+
+
+def test_deeply_nested_429_does_not_raise() -> None:
+    nested = '{"error":' * 20_000 + '"x"' + "}" * 20_000
+    outcome = classify_attempt(429, nested)
+    assert outcome.attempt_class == "rate_limit"
+    assert outcome.honor_cooldown is False
+    text = provider_error_text(nested, status=429)
+    assert text == "HTTP 429"
 
 
 def test_strict_per_day_parks_until_reset_and_does_not_swap(vault: KeyVault) -> None:
@@ -394,3 +434,105 @@ def test_non_strict_short_park_is_skipped_then_expires(
     assert third_payload["served_provider"] == "google"
     assert third_payload["served_model"] == _GEMINI
     assert _urls(mock)[-1] == f"{_GOOGLE}/chat/completions"
+
+
+def _two_hops(vault: KeyVault) -> tuple[KeyRecord, FallbackManager]:
+    google = _hop(
+        vault,
+        label="google",
+        provider="google",
+        secret=_VAULT_SECRET,
+        base_url=_GOOGLE,
+        role="primary",
+        priority=0,
+    )
+    _hop(
+        vault,
+        label="groq",
+        provider="groq",
+        secret="gsk-test-ov162-walk",
+        base_url=_GROQ,
+        role="backup",
+        priority=10,
+    )
+    return google, FallbackManager(vault)
+
+
+def test_plain_text_google_429_parks_until_midnight(vault: KeyVault) -> None:
+    google, mgr = _two_hops(vault)
+    text = "Resource has been exhausted (e.g. check quota)."
+    mock = _client(
+        _response(429, text),
+        _response(200, '{"id":"ok","choices":[]}', {"id": "ok", "choices": []}),
+    )
+    chat = {"model": _GEMINI, "messages": [{"role": "user", "content": "hi"}]}
+    before = time.time()
+    with patch("openmw.openvault.vault.proxy.httpx.AsyncClient", return_value=mock):
+        status, payload = asyncio.run(chat_completions(vault, mgr, chat))
+    assert status == 200
+    assert isinstance(payload, dict)
+    assert payload["served_provider"] == "groq"
+    until = mgr._circuit(google.id).park_until
+    _, reset = window_bounds("America/Los_Angeles", before)
+    assert until is not None
+    assert abs(until - reset) < 2.0
+    assert mgr.key_park_reason(google.id) == "rate_limited"
+
+
+def test_huge_retry_delay_park_stays_inside_the_cap(vault: KeyVault) -> None:
+    google, mgr = _two_hops(vault)
+    mock = _client(
+        _response(429, _google_429(_MINUTE_ID, "99999999s")),
+        _response(200, '{"id":"ok","choices":[]}', {"id": "ok", "choices": []}),
+    )
+    chat = {"model": _GEMINI, "messages": [{"role": "user", "content": "hi"}]}
+    before = time.time()
+    with patch("openmw.openvault.vault.proxy.httpx.AsyncClient", return_value=mock):
+        status, _payload = asyncio.run(chat_completions(vault, mgr, chat))
+    assert status == 200
+    until = mgr._circuit(google.id).park_until
+    _, reset = window_bounds("America/Los_Angeles", before)
+    assert until is not None
+    wait = until - before
+    assert 0 < wait <= 3600.0 + 2.0
+    assert until <= reset + 2.0
+    assert wait < 99_999_999
+    assert mgr.key_park_reason(google.id) == "rate_limited"
+
+
+def test_four_hundred_digit_delay_does_not_crash_the_handler(vault: KeyVault) -> None:
+    google, mgr = _two_hops(vault)
+    mock = _client(
+        _response(429, _google_429(_MINUTE_ID, "9" * 400 + "s")),
+        _response(200, '{"id":"ok","choices":[]}', {"id": "ok", "choices": []}),
+    )
+    chat = {"model": _GEMINI, "messages": [{"role": "user", "content": "hi"}]}
+    before = time.time()
+    with patch("openmw.openvault.vault.proxy.httpx.AsyncClient", return_value=mock):
+        status, payload = asyncio.run(chat_completions(vault, mgr, chat))
+    assert status == 200
+    assert isinstance(payload, dict)
+    until = mgr._circuit(google.id).park_until
+    _, reset = window_bounds("America/Los_Angeles", before)
+    assert until is not None
+    assert abs(until - reset) < 2.0
+    assert mgr.key_park_reason(google.id) == "credits_exhausted"
+
+
+def test_deeply_nested_429_does_not_crash_the_handler(vault: KeyVault) -> None:
+    nested = '{"error":' * 20_000 + '"x"' + "}" * 20_000
+    google, mgr = _two_hops(vault)
+    mock = _client(
+        _response(429, nested),
+        _response(200, '{"id":"ok","choices":[]}', {"id": "ok", "choices": []}),
+    )
+    chat = {"model": _GEMINI, "messages": [{"role": "user", "content": "hi"}]}
+    before = time.time()
+    with patch("openmw.openvault.vault.proxy.httpx.AsyncClient", return_value=mock):
+        status, _payload = asyncio.run(chat_completions(vault, mgr, chat))
+    assert status == 200
+    until = mgr._circuit(google.id).park_until
+    _, reset = window_bounds("America/Los_Angeles", before)
+    assert until is not None
+    assert abs(until - reset) < 2.0
+    assert mgr.key_park_reason(google.id) == "rate_limited"

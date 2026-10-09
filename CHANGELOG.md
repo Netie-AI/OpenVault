@@ -4,7 +4,7 @@ Append-only. Never edited, only added to. Newest first.
 
 ## 2026-10-09 - Gemini per-minute 429 is a short park (Refs #162)
 
-- A Gemini 429 with `QuotaFailure` is classified from `quotaId` and `RetryInfo.retryDelay`. Per-minute, or a quota id that is not per-day, parks as `rate_limited` for `retryDelay`, or about 60s when the delay is missing. Per-day still parks until the provider's daily reset. The phrase "exceeded your current quota" without those details still means credits exhausted.
+- Only an explicit per-minute Gemini `quotaId` parks as `rate_limited` for `RetryInfo.retryDelay`. The delay is capped at the lesser of 3600s and the time until Google's daily reset. A missing or rejected delay uses about 60s. A non-finite delay, or a parse error, falls back to the old text tables. A plain-text 429 with no structured details, a per-day quota id, and an unrecognized quota id still park until midnight Pacific.
 - Strict `503 pin_unavailable` keeps its fields and adds `provider`, `park_reason`, and `retry_after_s`. A park also sets `Retry-After`. The body has no key id and no secret. A strict pin still does not call another provider or model.
 
 ## 2026-10-06 - Public prove IP is not a default services peer (OpenVault #133)

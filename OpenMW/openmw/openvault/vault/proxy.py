@@ -334,6 +334,7 @@ def _on_model_outcome(
                 outcome.cooldown_ms,
                 outcome.reason or "rate_limited",
                 error_text=error_text,
+                honor_cooldown=outcome.honor_cooldown,
             )
         return "next_model"
     if outcome.attempt_class == "model_unavailable":
@@ -352,13 +353,20 @@ def _park_key_if_every_model_limited(
     cooldown_ms: int,
     reason: str,
     error_text: str = "",
+    honor_cooldown: bool = False,
 ) -> None:
     """Park the key only when every model on this hop came back 429."""
     if cand.served_local or not models or limited <= 0:
         return
     if limited + already_parked != len(models):
         return
-    fallback.record_park(cand.key_id, cooldown_ms, reason, error_text=error_text)
+    fallback.record_park(
+        cand.key_id,
+        cooldown_ms,
+        reason,
+        error_text=error_text,
+        honor_cooldown=honor_cooldown,
+    )
 
 
 def _non_retryable(
@@ -527,6 +535,7 @@ def _apply_outcome(
             outcome.cooldown_ms,
             outcome.reason or error,
             error_text=error_text,
+            honor_cooldown=outcome.honor_cooldown,
         )
         return
 
@@ -1037,6 +1046,7 @@ async def chat_completions(
             limit_cooldown = 0
             limit_reason = "rate_limited"
             limit_error = ""
+            limit_honor = False
             sent_any = False
             context_skips = 0
             other_skips = 0
@@ -1173,6 +1183,7 @@ async def chat_completions(
                         limit_cooldown = outcome.cooldown_ms
                         limit_reason = outcome.reason or "rate_limited"
                         limit_error = snippet
+                        limit_honor = outcome.honor_cooldown
                     continue
                 leave_hop = True
                 break
@@ -1195,6 +1206,7 @@ async def chat_completions(
                     cooldown_ms=limit_cooldown,
                     reason=limit_reason,
                     error_text=limit_error,
+                    honor_cooldown=limit_honor,
                 )
 
     if local_only:
@@ -1319,6 +1331,7 @@ async def prepare_chat_stream(
             limit_cooldown = 0
             limit_reason = "rate_limited"
             limit_error = ""
+            limit_honor = False
             sent_any = False
             context_skips = 0
             other_skips = 0
@@ -1438,6 +1451,7 @@ async def prepare_chat_stream(
                             limit_cooldown = outcome.cooldown_ms
                             limit_reason = outcome.reason or "rate_limited"
                             limit_error = snippet
+                            limit_honor = outcome.honor_cooldown
                         continue
                     leave_hop = True
                     break
@@ -1508,6 +1522,7 @@ async def prepare_chat_stream(
                     cooldown_ms=limit_cooldown,
                     reason=limit_reason,
                     error_text=limit_error,
+                    honor_cooldown=limit_honor,
                 )
     except Exception:
         await _close_client()
