@@ -2,6 +2,11 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-09 - Space credentials are admin plus loopback (Refs #160)
+
+- Creating or rotating a `dms:<space>` service id on `POST /keys/services` needs both `X-OpenVault-Admin` and a loopback socket peer. The services allowlist (including `10.128.0.3`), a reveal header, and any service Bearer, including that Space's own Bearer, do not qualify. Plain service ids (`dms`, `cortex`, and the rest) keep the previous peer and rotation rules. #166 is this gate.
+- The Space must already be lowercase and match `^dms:[a-z0-9][a-z0-9-]{0,62}$`. Anything else that is trying to be a `dms:` credential is `dms_space_invalid` (422). DMS normalises the Space to lowercase before it calls. There is no HTTP route that revokes a service credential. That gap stays on #164.
+
 ## 2026-10-09 - Credential-bound Space and fail-closed redeem audit (Refs #160)
 
 - A Space credential is `dms:<space>`. It is minted once with `POST /keys/services` and reused. Lease mint and redeem do not mint or refresh it. The service id charset accepts that form: the Space is 1 to 64 of `A-Za-z0-9._-`, and a colon is allowed only in `dms:<space>`.

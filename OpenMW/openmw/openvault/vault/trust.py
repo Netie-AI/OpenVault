@@ -61,32 +61,56 @@ KeyLifecycle = Literal["active", "revoked", "rotated", "expired"]
 DEFAULT_INTERMEDIATE_TTL_S = 900
 MAX_INTERMEDIATE_TTL_S = 3600
 
-#: A Space credential. The part after ``dms:`` is the Space, 1 to 64 characters.
-_DMS_SPACE_SERVICE = re.compile(r"^dms:([A-Za-z0-9][A-Za-z0-9._-]{0,63})\Z")
-#: Any other service id. One colon is not allowed here; that form is only ``dms:<space>``.
+#: Canonical Space credential. DMS must normalise the Space to lowercase.
+#: One to 63 of ``a-z``, ``0-9``, and ``-``. No uppercase, dot, or underscore.
+_DMS_SPACE_SERVICE = re.compile(r"^dms:([a-z0-9][a-z0-9-]{0,62})\Z")
+#: Any other service id. A colon is not allowed here.
 _PLAIN_SERVICE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}\Z")
+DMS_SPACE_INVALID = "dms_space_invalid"
+
+
+def dms_space_attempt(service_id: str) -> bool:
+    """True when the id is trying to be a ``dms:<space>`` credential.
+
+    The check is the prefix before the colon, compared case-insensitively.
+    ``dms:SPACE-B`` and ``DMS:space`` are attempts. ``cortex`` and ``foo:bar``
+    are not.
+    """
+    text = service_id.strip()
+    prefix, sep, _rest = text.partition(":")
+    if not sep:
+        return False
+    return prefix.lower() == "dms"
+
+
+def dms_space_canonical(service_id: str) -> bool:
+    """True only for lowercase ``dms:<space>`` with a bounded Space.
+
+    Surrounding whitespace and uppercase are not repaired. DMS must send the
+    Space already in lowercase.
+    """
+    return _DMS_SPACE_SERVICE.fullmatch(service_id) is not None
 
 
 def service_id_allowed(service_id: str) -> bool:
-    """True for a bounded service id, including ``dms:<space>``.
+    """True for a bounded service id, including canonical ``dms:<space>``.
 
     Plain ids are letters, digits, ``.``, ``_``, and ``-``, at most 128
-    characters. ``dms:<space>`` is the only form that may contain a colon.
-    The Space is 1 to 64 of those same characters.
+    characters, and they may contain uppercase. A Space credential must
+    match ``dms_space_canonical``. Any other colon form is refused.
     """
     if any(ord(ch) < 33 for ch in service_id):
         return False
-    text = service_id.strip()
-    if _DMS_SPACE_SERVICE.fullmatch(text):
+    if dms_space_canonical(service_id):
         return True
-    if ":" in text:
+    if ":" in service_id:
         return False
-    return _PLAIN_SERVICE.fullmatch(text) is not None
+    return _PLAIN_SERVICE.fullmatch(service_id.strip()) is not None
 
 
 def space_from_service_id(service_id: str) -> str:
-    """Space bound to a ``dms:<space>`` credential, or empty."""
-    match = _DMS_SPACE_SERVICE.fullmatch(service_id.strip())
+    """Space bound to a canonical ``dms:<space>`` credential, or empty."""
+    match = _DMS_SPACE_SERVICE.fullmatch(service_id)
     if match is None:
         return ""
     return match.group(1)
@@ -318,8 +342,10 @@ class TrustStore:
         Only the SHA-256 of the token is stored. There is nothing here to
         decrypt and nothing to hand back later, so a copy of ``keys.db`` does
         not yield a working credential — unlike sealing it, which would.
-        A Space credential is ``dms:<space>`` and is minted here once, then
-        reused. This method does not refresh a token on its own.
+        A Space credential is canonical ``dms:<space>`` and is minted here
+        once, then reused. This method does not check the caller. ``POST
+        /keys/services`` admits that form only for ``X-OpenVault-Admin`` on
+        a loopback socket. This method does not refresh a token on its own.
         """
         if not service_id_allowed(service_id):
             raise TrustError("service_id_invalid")

@@ -6,8 +6,9 @@ redeem learn that service from ``verify_service`` on the Bearer. They do not
 read it from the body.
 
 Space is derived from the Bearer. A Space credential is the service_id
-``dms:<space>``, minted once with ``POST /keys/services`` and reused on every
-later call. This module does not mint or refresh that credential. The tenant
+``dms:<space>`` in lowercase, minted once with ``POST /keys/services`` by
+``X-OpenVault-Admin`` on a loopback socket, and reused on every later call.
+This module does not mint or refresh that credential. The tenant
 is ``owner_tenant`` on the kid, stored by admin ``POST /api/keys/owner``.
 A ``space`` or ``tenant`` in the JSON body is not the source of truth. If
 either is present and it disagrees with the Bearer-derived Space or the

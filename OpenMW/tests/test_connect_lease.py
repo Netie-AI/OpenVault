@@ -52,7 +52,7 @@ from openmw.openvault.vault.lease import (
     grant_is_complete,
     is_raw_secret_ref,
 )
-from openmw.openvault.vault.trust import TrustStore
+from openmw.openvault.vault.trust import DMS_SPACE_INVALID, TrustStore, dms_space_canonical
 
 INTENT = {"X-OpenVault-Reveal": "intentional"}
 SECRET = "connector-secret-value"
@@ -97,10 +97,13 @@ def _bearer(token: str) -> dict[str, str]:
 
 
 def _register(client: TestClient, service_id: str) -> str:
+    headers = dict(INTENT)
+    if dms_space_canonical(service_id):
+        headers.update(admin_headers())
     response = client.post(
         "/keys/services",
         json={"service_id": service_id},
-        headers=INTENT,
+        headers=headers,
     )
     assert response.status_code == 200, response.status_code
     token = response.json()["token"]
@@ -941,19 +944,38 @@ def test_refused_redeem_is_audited_without_ref_or_secret(app: FastAPI, home: Pat
 
 def test_dms_space_service_id_is_bounded(app: FastAPI) -> None:
     client = _client(app)
-    ok = client.post("/keys/services", json={"service_id": "dms:sales"}, headers=INTENT)
+    ok = client.post(
+        "/keys/services",
+        json={"service_id": "dms:sales"},
+        headers={**INTENT, **admin_headers()},
+    )
     assert ok.status_code == 200, ok.text
-    long_ok = "dms:" + ("a" * 64)
-    bounded = client.post("/keys/services", json={"service_id": long_ok}, headers=INTENT)
+    long_ok = "dms:" + ("a" * 63)
+    bounded = client.post(
+        "/keys/services",
+        json={"service_id": long_ok},
+        headers={**INTENT, **admin_headers()},
+    )
     assert bounded.status_code == 200, bounded.text
-    rejected = (
+    named = (
         "dms:",
         "dms:a/b",
-        "dms:" + ("a" * 65),
-        "foo:bar",
-        "has space",
+        "dms:" + ("a" * 64),
         "dms:space\n",
+        "dms:Space-B",
+        "dms:SPACE-B",
+        "dms:space_b",
+        "DMS:space",
     )
+    for service_id in named:
+        response = client.post(
+            "/keys/services",
+            json={"service_id": service_id},
+            headers={**INTENT, **admin_headers()},
+        )
+        assert response.status_code == 422, service_id
+        assert _code(response) == DMS_SPACE_INVALID
+    rejected = ("foo:bar", "has space")
     for service_id in rejected:
         response = client.post(
             "/keys/services",
@@ -961,6 +983,87 @@ def test_dms_space_service_id_is_bounded(app: FastAPI) -> None:
             headers=INTENT,
         )
         assert response.status_code == 400, service_id
+    plain = client.post("/keys/services", json={"service_id": "cortex"}, headers=INTENT)
+    assert plain.status_code == 200, plain.text
+
+
+def test_dms_space_registration_requires_admin_and_loopback(app: FastAPI) -> None:
+    client = _client(app)
+    missing = client.post(
+        "/keys/services",
+        json={"service_id": "dms:new"},
+        headers=INTENT,
+    )
+    assert missing.status_code == 401
+    assert _code(missing) == "dms_space_admin_required"
+    future = client.post(
+        "/keys/services",
+        json={"service_id": "dms:future"},
+        headers=INTENT,
+    )
+    assert future.status_code == 401
+    assert _code(future) == "dms_space_admin_required"
+    store = TrustStore(seal=app.state.seal)
+    assert store.service_is_registered("dms:future") is False
+    upper = client.post(
+        "/keys/services",
+        json={"service_id": "dms:SPACE-B"},
+        headers=INTENT,
+    )
+    assert upper.status_code == 422
+    assert _code(upper) == DMS_SPACE_INVALID
+    mixed = client.post(
+        "/keys/services",
+        json={"service_id": "dms:Space-B"},
+        headers=INTENT,
+    )
+    assert mixed.status_code == 422
+    assert _code(mixed) == DMS_SPACE_INVALID
+
+    remote = _client(app, "10.128.0.3")
+    allowlisted = remote.post(
+        "/keys/services",
+        json={"service_id": "dms:new"},
+        headers={**INTENT, **admin_headers()},
+    )
+    assert allowlisted.status_code == 403
+    assert _code(allowlisted) == "dms_space_loopback_only"
+
+    created = client.post(
+        "/keys/services",
+        json={"service_id": "dms:new"},
+        headers=admin_headers(),
+    )
+    assert created.status_code == 200, created.text
+    token = created.json()["token"]
+    assert store.verify_service("dms:new", token) is True
+    rotate = client.post(
+        "/keys/services",
+        json={"service_id": "dms:new"},
+        headers=INTENT,
+    )
+    assert rotate.status_code == 401
+    assert _code(rotate) == "dms_space_admin_required"
+    assert store.verify_service("dms:new", token) is True
+
+    token_a = _register(client, "dms:space-a")
+    cross = client.post(
+        "/keys/services",
+        json={"service_id": "dms:space-b"},
+        headers={**INTENT, **_bearer(token_a)},
+    )
+    assert cross.status_code == 401
+    assert _code(cross) == "dms_space_admin_required"
+    assert store.service_is_registered("dms:space-b") is False
+    self_rotate = client.post(
+        "/keys/services",
+        json={"service_id": "dms:space-a"},
+        headers={**INTENT, **_bearer(token_a)},
+    )
+    assert self_rotate.status_code == 401
+    assert _code(self_rotate) == "dms_space_admin_required"
+    assert store.verify_service("dms:space-a", token_a) is True
+
     plain = client.post("/keys/services", json={"service_id": "cortex"}, headers=INTENT)
     assert plain.status_code == 200, plain.text
 

@@ -5,9 +5,11 @@ exception. Mint and redeem ignore ``X-OpenVault-Admin`` and any ``service_id``
 in the body. The service comes from ``TrustStore.service_id_for_active_bearer``.
 
 Space is the part after ``dms:`` on that service id. The credential is minted
-once with ``POST /keys/services`` and reused. The tenant is the admin binding
-on the kid. A body ``space`` or ``tenant`` that disagrees is refused. It is
-not used as the Space or the tenant.
+once with ``POST /keys/services`` and reused. Creating or rotating it needs
+``X-OpenVault-Admin`` and a loopback socket. DMS normalises the Space to
+lowercase before that call. The tenant is the admin binding on the kid. A
+body ``space`` or ``tenant`` that disagrees is refused. It is not used as
+the Space or the tenant.
 """
 
 from __future__ import annotations
