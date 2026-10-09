@@ -30,6 +30,7 @@ from openmw.openvault.vault.http_guard import (
     lease_transport_allowed,
 )
 from openmw.openvault.vault.lease import (
+    ERR_AUDIT,
     ERR_EXPIRED,
     ERR_NOT_OWNED,
     ERR_NOT_OWNER,
@@ -38,6 +39,7 @@ from openmw.openvault.vault.lease import (
     ERR_REF_IN_URL,
     ERR_REF_INVALID,
     ERR_REUSED,
+    ERR_SPACE_CREDENTIAL,
     ERR_SPACE_MISMATCH,
     ERR_SPACE_UNBOUND,
     ERR_TENANT_MISMATCH,
@@ -56,6 +58,7 @@ INTENT = {"X-OpenVault-Reveal": "intentional"}
 SECRET = "connector-secret-value"
 SPACE = "sales"
 TENANT = "tenant-a"
+OWNER = "dms:sales"
 _REMOTE = "203.0.113.10"
 
 
@@ -225,9 +228,9 @@ def test_real_guard_rejects_admin_header_alone(app: FastAPI) -> None:
     assert "HttpGuardMiddleware" in _guard_names(app)
     assert HttpGuardMiddleware.__name__ == "HttpGuardMiddleware"
     client = _client(app)
-    dms = _register(client, "dms")
+    dms = _register(client, OWNER)
     kid = _make_key(client, custody="tenant")
-    _assign(client, kid, "dms")
+    _assign(client, kid, OWNER)
     alone = client.post(
         LEASE_MINT_PATH,
         json={"kid": kid, "space": "sales"},
@@ -258,17 +261,17 @@ def test_real_guard_rejects_admin_header_alone(app: FastAPI) -> None:
         headers=_bearer(dms),
     )
     assert opened.status_code == 200, opened.text
-    assert opened.json()["owner_service_id"] == "dms"
+    assert opened.json()["owner_service_id"] == OWNER
     assert opened.json()["tenant_key"] == kid
     assert opened.json()["ttl_s"] == 60
 
 
 def test_non_owned_kid_is_named_refuse(app: FastAPI) -> None:
     client = _client(app)
-    dms = _register(client, "dms")
-    other = _register(client, "other")
+    dms = _register(client, OWNER)
+    other = _register(client, "dms:other")
     kid = _make_key(client, custody="tenant")
-    _assign(client, kid, "dms")
+    _assign(client, kid, OWNER)
     before = client.post(
         LEASE_MINT_PATH,
         json={"kid": kid, "space": SPACE, "tenant": TENANT},
@@ -276,10 +279,18 @@ def test_non_owned_kid_is_named_refuse(app: FastAPI) -> None:
     )
     # Owned path works; the spoofed service_id in the body is not the owner.
     spoofed = _mint(client, dms, kid, extra={"service_id": "other"})
-    assert spoofed["owner_service_id"] == "dms"
-    refused = client.post(
+    assert spoofed["owner_service_id"] == OWNER
+    claimed = client.post(
         LEASE_MINT_PATH,
         json={"kid": kid, "space": SPACE, "tenant": TENANT, "service_id": "dms"},
+        headers=_bearer(other),
+    )
+    assert claimed.status_code == 403
+    assert _code(claimed) == ERR_SPACE_MISMATCH
+    _assert_absent(SECRET, claimed.text)
+    refused = client.post(
+        LEASE_MINT_PATH,
+        json={"kid": kid, "space": "other", "tenant": TENANT},
         headers=_bearer(other),
     )
     assert refused.status_code == 403
@@ -297,9 +308,9 @@ def test_non_owned_kid_is_named_refuse(app: FastAPI) -> None:
 
 def test_expired_and_reused_leases_refuse(app: FastAPI, home: Path) -> None:
     client = _client(app)
-    dms = _register(client, "dms")
+    dms = _register(client, OWNER)
     kid = _make_key(client, custody="tenant")
-    _assign(client, kid, "dms")
+    _assign(client, kid, OWNER)
     first = _mint(client, dms, kid, space=SPACE)
     ref = str(first["ref"])
     assert ref.startswith(REF_PREFIX)
@@ -333,7 +344,7 @@ def test_expired_and_reused_leases_refuse(app: FastAPI, home: Path) -> None:
     assert ok.json()["secret"] == SECRET
     assert ok.json()["tenant_key"] == kid
     assert ok.json()["ttl_s"] == 60
-    assert ok.json()["owner_service_id"] == "dms"
+    assert ok.json()["owner_service_id"] == OWNER
     assert ok.json()["space"] == SPACE
     assert again.status_code == 403
     assert _code(again) == ERR_REUSED
@@ -348,7 +359,7 @@ def test_expired_and_reused_leases_refuse(app: FastAPI, home: Path) -> None:
 
 def test_raw_secret_shaped_refs_refuse(app: FastAPI) -> None:
     client = _client(app)
-    dms = _register(client, "dms")
+    dms = _register(client, OWNER)
     headers = _bearer(dms)
     shapes = [
         "AKIAIOSFODNN7EXAMPLE",
@@ -381,9 +392,9 @@ def test_raw_secret_shaped_refs_refuse(app: FastAPI) -> None:
 
 def test_ref_in_the_url_is_not_accepted(app: FastAPI) -> None:
     client = _client(app)
-    dms = _register(client, "dms")
+    dms = _register(client, OWNER)
     kid = _make_key(client, custody="tenant")
-    _assign(client, kid, "dms")
+    _assign(client, kid, OWNER)
     minted = _mint(client, dms, kid)
     ref = str(minted["ref"])
     headers = _bearer(dms)
@@ -422,7 +433,7 @@ def test_ref_in_the_url_is_not_accepted(app: FastAPI) -> None:
 
 def test_other_methods_stay_on_the_admin_gate(app: FastAPI) -> None:
     client = _client(app)
-    dms = _register(client, "dms")
+    dms = _register(client, OWNER)
     headers = _bearer(dms)
     for method in ("GET", "PUT", "DELETE", "PATCH"):
         response = client.request(method, LEASE_MINT_PATH, headers=headers)
@@ -443,9 +454,9 @@ def test_other_methods_stay_on_the_admin_gate(app: FastAPI) -> None:
 
 def test_pooled_key_and_grant_row(app: FastAPI) -> None:
     client = _client(app)
-    dms = _register(client, "dms")
+    dms = _register(client, OWNER)
     pooled = _make_key(client, custody="pooled", secret="pooled-secret-value-xx")
-    _assign(client, pooled, "dms")
+    _assign(client, pooled, OWNER)
     refused = client.post(
         LEASE_MINT_PATH,
         json={"kid": pooled, "space": SPACE, "tenant": TENANT},
@@ -458,8 +469,10 @@ def test_pooled_key_and_grant_row(app: FastAPI) -> None:
     bare = client.get("/api/keys", headers=admin_headers()).json()["keys"]
     row = next(item for item in bare if item["id"] == kid)
     assert row["owner_service_id"] is None
-    _assign(client, kid, "dms", space="warehouse")
-    minted = _mint(client, dms, kid, space="warehouse")
+    wh_owner = "dms:warehouse"
+    wh = _register(client, wh_owner)
+    _assign(client, kid, wh_owner, space="warehouse")
+    minted = _mint(client, wh, kid, space="warehouse")
     connection = sqlite3.connect(str(keys_db_path()))
     try:
         stored = connection.execute(
@@ -468,7 +481,7 @@ def test_pooled_key_and_grant_row(app: FastAPI) -> None:
         assert stored is not None
         assert stored[0] == kid
         assert stored[1] == 60
-        assert stored[2] == "dms"
+        assert stored[2] == wh_owner
         assert stored[3] == "warehouse"
         assert stored[4] == TENANT
         with pytest.raises(sqlite3.IntegrityError):
@@ -483,15 +496,15 @@ def test_pooled_key_and_grant_row(app: FastAPI) -> None:
     finally:
         connection.close()
     assert minted["tenant_key"] == kid
-    assert minted["owner_service_id"] == "dms"
+    assert minted["owner_service_id"] == wh_owner
     assert minted["ttl_s"] == 60
 
 
 def test_plaintext_non_loopback_is_refused(app: FastAPI, monkeypatch: pytest.MonkeyPatch) -> None:
     local = _client(app)
-    dms = _register(local, "dms")
+    dms = _register(local, OWNER)
     kid = _make_key(local, custody="tenant")
-    _assign(local, kid, "dms")
+    _assign(local, kid, OWNER)
     remote = _client(app, _REMOTE)
     blocked = remote.post(
         LEASE_MINT_PATH,
@@ -538,9 +551,9 @@ def test_plaintext_non_loopback_is_refused(app: FastAPI, monkeypatch: pytest.Mon
 
 def test_root_path_does_not_skip_the_guard(app: FastAPI) -> None:
     client = _client(app)
-    dms = _register(client, "dms")
+    dms = _register(client, OWNER)
     kid = _make_key(client, custody="tenant")
-    _assign(client, kid, "dms")
+    _assign(client, kid, OWNER)
     status, body = _raw(
         app,
         "POST",
@@ -572,10 +585,10 @@ def test_root_path_does_not_skip_the_guard(app: FastAPI) -> None:
 
 def test_revoked_bearer_and_rotation(app: FastAPI) -> None:
     client = _client(app)
-    dms = _register(client, "dms")
+    dms = _register(client, OWNER)
     kid = _make_key(client, custody="tenant")
-    _assign(client, kid, "dms")
-    TrustStore(seal=app.state.seal).revoke_service("dms")
+    _assign(client, kid, OWNER)
+    TrustStore(seal=app.state.seal).revoke_service(OWNER)
     revoked = client.post(
         LEASE_MINT_PATH,
         json={"kid": kid, "space": SPACE, "tenant": TENANT},
@@ -586,7 +599,7 @@ def test_revoked_bearer_and_rotation(app: FastAPI) -> None:
     # this uses the admin header. The lease path itself still does not.
     rotated_svc = client.post(
         "/keys/services",
-        json={"service_id": "dms"},
+        json={"service_id": OWNER},
         headers={**INTENT, **admin_headers()},
     )
     assert rotated_svc.status_code == 200, rotated_svc.text
@@ -619,9 +632,9 @@ def test_revoked_bearer_and_rotation(app: FastAPI) -> None:
 
 def test_wrong_space_wrong_tenant_and_unbound_space_refuse(app: FastAPI) -> None:
     client = _client(app)
-    dms = _register(client, "dms")
+    dms = _register(client, OWNER)
     kid = _make_key(client, custody="tenant")
-    _assign(client, kid, "dms")
+    _assign(client, kid, OWNER)
     wrong_space = client.post(
         LEASE_MINT_PATH,
         json={"kid": kid, "space": "other-space", "tenant": TENANT},
@@ -639,13 +652,13 @@ def test_wrong_space_wrong_tenant_and_unbound_space_refuse(app: FastAPI) -> None
     assert _code(wrong_tenant) == ERR_TENANT_MISMATCH
     _assert_absent(SECRET, wrong_tenant.text)
     unbound = _make_key(client, custody="tenant")
-    bare = client.post(
-        OWNER_ASSIGN_PATH,
-        json={"kid": unbound, "service_id": "dms", "tenant": TENANT},
-        headers=admin_headers(),
-    )
-    assert bare.status_code == 200, bare.text
-    assert bare.json()["owner_space"] == ""
+    _assign(client, unbound, OWNER)
+    db = sqlite3.connect(str(keys_db_path()))
+    try:
+        db.execute("UPDATE keys SET owner_space = NULL WHERE id = ?", (unbound,))
+        db.commit()
+    finally:
+        db.close()
     refused = client.post(
         LEASE_MINT_PATH,
         json={"kid": unbound, "space": SPACE, "tenant": TENANT},
@@ -658,7 +671,7 @@ def test_wrong_space_wrong_tenant_and_unbound_space_refuse(app: FastAPI) -> None
 
 def test_account_tenant_must_match_the_owner_tenant(app: FastAPI) -> None:
     client = _client(app)
-    dms = _register(client, "dms")
+    dms = _register(client, OWNER)
     created = client.post("/api/accounts", json={"display_name": "Tenant B"})
     assert created.status_code == 200, created.text
     account_id = str(created.json()["id"])
@@ -671,12 +684,12 @@ def test_account_tenant_must_match_the_owner_tenant(app: FastAPI) -> None:
     kid = str(keyed.json()["id"])
     disagree = client.post(
         OWNER_ASSIGN_PATH,
-        json={"kid": kid, "service_id": "dms", "space": SPACE, "tenant": "other-tenant"},
+        json={"kid": kid, "service_id": OWNER, "space": SPACE, "tenant": "other-tenant"},
         headers=admin_headers(),
     )
     assert disagree.status_code == 403
     assert _code(disagree) == ERR_TENANT_MISMATCH
-    _assign(client, kid, "dms", tenant=account_id)
+    _assign(client, kid, OWNER, tenant=account_id)
     mismatch = client.post(
         LEASE_MINT_PATH,
         json={"kid": kid, "space": SPACE, "tenant": TENANT},
@@ -691,9 +704,9 @@ def test_account_tenant_must_match_the_owner_tenant(app: FastAPI) -> None:
 
 def test_redeem_rechecks_space_and_tenant(app: FastAPI) -> None:
     client = _client(app)
-    dms = _register(client, "dms")
+    dms = _register(client, OWNER)
     kid = _make_key(client, custody="tenant")
-    _assign(client, kid, "dms")
+    _assign(client, kid, OWNER)
     minted = _mint(client, dms, kid)
     ref = str(minted["ref"])
     digest = hashlib.sha256(ref.encode("utf-8")).hexdigest()
@@ -747,10 +760,10 @@ def test_redeem_rechecks_space_and_tenant(app: FastAPI) -> None:
 
 def test_other_service_cannot_redeem(app: FastAPI) -> None:
     client = _client(app)
-    dms = _register(client, "dms")
-    other = _register(client, "other")
+    dms = _register(client, OWNER)
+    other = _register(client, "dms:other")
     kid = _make_key(client, custody="tenant")
-    _assign(client, kid, "dms")
+    _assign(client, kid, OWNER)
     minted = _mint(client, dms, kid)
     ref = str(minted["ref"])
     stolen = client.post(LEASE_REDEEM_PATH, json={"ref": ref}, headers=_bearer(other))
@@ -763,11 +776,68 @@ def test_other_service_cannot_redeem(app: FastAPI) -> None:
     assert ok.json()["secret"] == SECRET
 
 
+def test_space_a_credential_cannot_mint_or_redeem_space_b(app: FastAPI) -> None:
+    """PR Bot HOLD 6076217980. Bearer for A sending B's space and tenant.
+
+    On 762e4239 every Space shared one ``dms`` Bearer, so the first mint
+    returned 200. A Space credential is ``dms:<space>`` and is not that body.
+    """
+    client = _client(app)
+    shared = _register(client, "dms")
+    kid_shared = _make_key(client, custody="tenant")
+    _assign(client, kid_shared, "dms", space="space-b", tenant="tenant-b")
+    shared_claim = {
+        "kid": kid_shared,
+        "space": "space-b",
+        "tenant": "tenant-b",
+        "ttl_s": 60,
+    }
+    shared_mint = client.post(LEASE_MINT_PATH, json=shared_claim, headers=_bearer(shared))
+    assert shared_mint.status_code == 403, shared_mint.text
+    assert _code(shared_mint) == ERR_SPACE_CREDENTIAL
+    _assert_absent(SECRET, shared_mint.text)
+
+    token_a = _register(client, "dms:space-a")
+    token_b = _register(client, "dms:space-b")
+    kid_b = _make_key(client, custody="tenant")
+    _assign(client, kid_b, "dms:space-b", space="space-b", tenant="tenant-b")
+    claim_b = {"kid": kid_b, "space": "space-b", "tenant": "tenant-b", "ttl_s": 60}
+    cross_mint = client.post(LEASE_MINT_PATH, json=claim_b, headers=_bearer(token_a))
+    assert cross_mint.status_code == 403, cross_mint.text
+    assert _code(cross_mint) == ERR_SPACE_MISMATCH
+    _assert_absent(SECRET, cross_mint.text)
+    owned = client.post(LEASE_MINT_PATH, json=claim_b, headers=_bearer(token_b))
+    assert owned.status_code == 200, owned.text
+    ref = str(owned.json()["ref"])
+    stolen = client.post(
+        LEASE_REDEEM_PATH,
+        json={"ref": ref, "space": "space-b", "tenant": "tenant-b"},
+        headers=_bearer(token_a),
+    )
+    assert stolen.status_code == 403, stolen.text
+    assert _code(stolen) == ERR_SPACE_MISMATCH
+    _assert_absent(SECRET, stolen.text)
+    _assert_absent(ref, stolen.text)
+    digest = hashlib.sha256(ref.encode("utf-8")).hexdigest()
+    db = sqlite3.connect(str(keys_db_path()))
+    try:
+        row = db.execute(
+            "SELECT consumed_at FROM key_leases WHERE ref_sha256 = ?",
+            (digest,),
+        ).fetchone()
+    finally:
+        db.close()
+    assert row is not None and row[0] is None
+    ok = client.post(LEASE_REDEEM_PATH, json={"ref": ref}, headers=_bearer(token_b))
+    assert ok.status_code == 200, ok.text
+    assert ok.json()["secret"] == SECRET
+
+
 def test_redeem_writes_lease_audit_without_ref_or_secret(app: FastAPI, home: Path) -> None:
     client = _client(app)
-    dms = _register(client, "dms")
+    dms = _register(client, OWNER)
     kid = _make_key(client, custody="tenant")
-    _assign(client, kid, "dms")
+    _assign(client, kid, OWNER)
     minted = _mint(client, dms, kid)
     ref = str(minted["ref"])
     expires_at = minted["expires_at"]
@@ -784,13 +854,115 @@ def test_redeem_writes_lease_audit_without_ref_or_secret(app: FastAPI, home: Pat
         found = True
         assert entry["key_id"] == kid
         assert entry["space"] == SPACE
-        assert entry["service_id"] == "dms"
+        assert entry["service_id"] == OWNER
         assert entry["expires_at"] == expires_at
+        assert entry["owner_tenant"] == TENANT
         assert ref not in line
         assert SECRET not in line
     assert found
     assert ref not in audit
     assert SECRET not in audit
+
+
+def test_redeem_audit_failure_does_not_return_or_consume(
+    app: FastAPI, monkeypatch: pytest.MonkeyPatch, home: Path
+) -> None:
+    client = _client(app)
+    dms = _register(client, OWNER)
+    kid = _make_key(client, custody="tenant")
+    _assign(client, kid, OWNER)
+    minted = _mint(client, dms, kid)
+    ref = str(minted["ref"])
+    import openmw.openvault.app as appmod
+
+    real = appmod._write_secret_audit
+    fail = {"on": True}
+
+    def boom(entry: dict[str, object], *, required: bool = False) -> None:
+        if required and fail["on"]:
+            raise OSError("audit disk full")
+        real(entry, required=required)
+
+    monkeypatch.setattr(appmod, "_write_secret_audit", boom)
+    failed = client.post(LEASE_REDEEM_PATH, json={"ref": ref}, headers=_bearer(dms))
+    assert failed.status_code == 503
+    assert _code(failed) == ERR_AUDIT
+    _assert_absent(SECRET, failed.text)
+    _assert_absent(ref, failed.text)
+    digest = hashlib.sha256(ref.encode("utf-8")).hexdigest()
+    db = sqlite3.connect(str(keys_db_path()))
+    try:
+        row = db.execute(
+            "SELECT consumed_at FROM key_leases WHERE ref_sha256 = ?",
+            (digest,),
+        ).fetchone()
+    finally:
+        db.close()
+    assert row is not None and row[0] is None
+    fail["on"] = False
+    ok = client.post(LEASE_REDEEM_PATH, json={"ref": ref}, headers=_bearer(dms))
+    assert ok.status_code == 200, ok.text
+    assert ok.json()["secret"] == SECRET
+    audit = (home / "secret_audit.jsonl").read_text(encoding="utf-8")
+    assert ref not in audit
+    assert SECRET not in audit
+    assert '"lease_redeem"' in audit
+
+
+def test_refused_redeem_is_audited_without_ref_or_secret(app: FastAPI, home: Path) -> None:
+    client = _client(app)
+    dms = _register(client, OWNER)
+    other = _register(client, "dms:other")
+    kid = _make_key(client, custody="tenant")
+    _assign(client, kid, OWNER)
+    minted = _mint(client, dms, kid)
+    ref = str(minted["ref"])
+    refused = client.post(LEASE_REDEEM_PATH, json={"ref": ref}, headers=_bearer(other))
+    assert refused.status_code == 403
+    assert _code(refused) == ERR_NOT_OWNER
+    audit = (home / "secret_audit.jsonl").read_text(encoding="utf-8")
+    found = False
+    for line in audit.splitlines():
+        if '"lease_redeem_refused"' not in line:
+            continue
+        entry = json.loads(line)
+        if entry.get("reason") != ERR_NOT_OWNER:
+            continue
+        found = True
+        assert entry["key_id"] == kid
+        assert entry["space"] == SPACE
+        assert entry["service_id"] == "dms:other"
+        assert ref not in line
+        assert SECRET not in line
+    assert found
+    assert ref not in audit
+    assert SECRET not in audit
+
+
+def test_dms_space_service_id_is_bounded(app: FastAPI) -> None:
+    client = _client(app)
+    ok = client.post("/keys/services", json={"service_id": "dms:sales"}, headers=INTENT)
+    assert ok.status_code == 200, ok.text
+    long_ok = "dms:" + ("a" * 64)
+    bounded = client.post("/keys/services", json={"service_id": long_ok}, headers=INTENT)
+    assert bounded.status_code == 200, bounded.text
+    rejected = (
+        "dms:",
+        "dms:a/b",
+        "dms:" + ("a" * 65),
+        "foo:bar",
+        "has space",
+        "dms:space\n",
+    )
+    for service_id in rejected:
+        response = client.post(
+            "/keys/services",
+            json={"service_id": service_id},
+            headers=INTENT,
+        )
+        assert response.status_code == 400, service_id
+    plain = client.post("/keys/services", json={"service_id": "cortex"}, headers=INTENT)
+    assert plain.status_code == 200, plain.text
 
 
 def _raw(

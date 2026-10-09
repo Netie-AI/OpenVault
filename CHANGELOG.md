@@ -2,6 +2,13 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-09 - Credential-bound Space and fail-closed redeem audit (Refs #160)
+
+- A Space credential is `dms:<space>`. It is minted once with `POST /keys/services` and reused. Lease mint and redeem do not mint or refresh it. The service id charset accepts that form: the Space is 1 to 64 of `A-Za-z0-9._-`, and a colon is allowed only in `dms:<space>`.
+- The kid is owned by that `dms:<space>` service through admin `POST /api/keys/owner`. `owner_tenant` stays on the binding. Mint and redeem derive the Space from the Bearer. The tenant is the binding, not the body. A body `space` or `tenant` that disagrees is `lease_space_mismatch` or `lease_tenant_mismatch`, and redeem does not consume the lease. A Bearer that is not `dms:<space>` is `lease_space_credential`. This is credential-bound Space. #165 is this behavior.
+- A successful redeem writes `lease_redeem` (kid, space, service_id, expires_at, owner_tenant) before the consume commits. If that write fails, the response is `lease_audit_failed`, the secret is not returned, and the lease stays redeemable. A refused redeem writes `lease_redeem_refused` with the reason, key_id when known, space, and service_id. Neither line contains the ref or the secret. Rate limit and purge of expired rows stay on #164.
+- A ref placed in the query string is refused (`lease_ref_in_url`) and is not redeemed, but uvicorn still records that request line on the access log.
+
 ## 2026-10-09 - Lease Space and tenant binding (Refs #160)
 
 - `POST /api/keys/owner` stores `owner_space` and `owner_tenant` beside `owner_service_id`. The columns are additive and stay NULL until that assign. An empty `service_id` clears all three. A tenant that disagrees with a set `account_id` is `lease_tenant_mismatch` and is not written.

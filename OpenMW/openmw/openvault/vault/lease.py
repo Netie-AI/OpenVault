@@ -5,14 +5,24 @@ single use. The owner is the service_id already stored on the key. Mint and
 redeem learn that service from ``verify_service`` on the Bearer. They do not
 read it from the body.
 
+Space is derived from the Bearer. A Space credential is the service_id
+``dms:<space>``, minted once with ``POST /keys/services`` and reused on every
+later call. This module does not mint or refresh that credential. The tenant
+is ``owner_tenant`` on the kid, stored by admin ``POST /api/keys/owner``.
+A ``space`` or ``tenant`` in the JSON body is not the source of truth. If
+either is present and it disagrees with the Bearer-derived Space or the
+binding's tenant, mint and redeem refuse, and redeem does not consume the
+lease. Credential-bound Space (#165) is this binding.
+
 The ref is ``ovlease_`` plus a random token. Only its SHA-256 is stored. Raw
 secret shapes are refused before any lookup. There is no feature flag: a row
 is inserted only when tenant_key, ttl_s, and owner_service_id are all set.
-The Space and the tenant are the ones stored on the kid by the admin assign.
-A request that names a different Space or tenant is refused.
 
 A ref placed in the query string is refused and is not redeemed. The process
 access log can still record that request line.
+
+A successful redeem writes ``lease_redeem`` before the consume commits. If
+that write fails, the lease is not consumed and the secret is not returned.
 
 This module does not open a database connection for the caller and does not
 return a path that contains the kid, the ref, or the secret.
@@ -27,6 +37,7 @@ import re
 import secrets
 import sqlite3
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import NoReturn
@@ -36,6 +47,7 @@ import structlog
 from openmw.openvault.paths import keys_db_path
 from openmw.openvault.vault.crypto import VaultSealedError
 from openmw.openvault.vault.store import KeyRecord, KeyVault
+from openmw.openvault.vault.trust import space_from_service_id
 
 log = structlog.get_logger()
 
@@ -65,6 +77,8 @@ ERR_REF_INVALID = "lease_ref_invalid"
 ERR_REF_IN_URL = "lease_ref_in_url"
 ERR_UNKNOWN = "lease_ref_unknown"
 ERR_BAD = "lease_bad_request"
+ERR_AUDIT = "lease_audit_failed"
+ERR_SPACE_CREDENTIAL = "lease_space_credential"
 ERR_TRANSPORT = "lease_transport"
 ERR_SEALED = "vault_sealed"
 ERR_SPACE_MISMATCH = "lease_space_mismatch"
@@ -84,10 +98,21 @@ GRANT_FIELDS = ("tenant_key", "ttl_s", "owner_service_id")
 class LeaseError(Exception):
     """Named lease refusal. ``code`` is safe to return. It is not a secret."""
 
-    def __init__(self, code: str, status: int) -> None:
+    def __init__(
+        self,
+        code: str,
+        status: int,
+        *,
+        key_id: str = "",
+        space: str = "",
+        owner_tenant: str = "",
+    ) -> None:
         super().__init__(code)
         self.code = code
         self.status = status
+        self.key_id = key_id
+        self.space = space
+        self.owner_tenant = owner_tenant
 
 
 @dataclass(frozen=True)
@@ -122,6 +147,7 @@ class RedeemedLease:
     owner_service_id: str
     space: str
     expires_at: int
+    owner_tenant: str
 
     def to_dict(self) -> dict[str, str | int]:
         return {
@@ -131,6 +157,7 @@ class RedeemedLease:
             "owner_service_id": self.owner_service_id,
             "space": self.space,
             "expires_at": self.expires_at,
+            "owner_tenant": self.owner_tenant,
         }
 
 
@@ -259,39 +286,62 @@ class LeaseStore:
         *,
         service_id: str,
         kid: str,
-        space: str,
-        tenant: str,
+        space: str | None,
+        tenant: str | None,
         ttl_s: int,
     ) -> MintedLease:
-        """Mint one lease. ``service_id`` is the verified bearer, not a body field."""
+        """Mint one lease. Space comes from the Bearer, not from ``space``.
+
+        ``service_id`` is the verified bearer. ``space`` and ``tenant`` are
+        optional body claims. A present claim that disagrees is refused.
+        """
         owner = service_id.strip()
         if not owner:
             raise LeaseError(ERR_NOT_OWNED, 403)
+        derived = space_from_service_id(owner)
+        if not derived:
+            log.info("lease_refused", reason=ERR_SPACE_CREDENTIAL)
+            raise LeaseError(ERR_SPACE_CREDENTIAL, 403)
         key_id = kid.strip()
         if not key_id or len(key_id) > _KID_MAX:
             raise LeaseError(ERR_BAD, 400)
-        space_id = space.strip()
-        if not _bounded(space_id, _SPACE_MAX):
-            raise LeaseError(ERR_BAD, 400)
-        tenant_id = tenant.strip()
-        if not _bounded(tenant_id, _TENANT_MAX):
-            raise LeaseError(ERR_BAD, 400)
+        if space is not None and space.strip() != derived:
+            log.info("lease_refused", reason=ERR_SPACE_MISMATCH)
+            raise LeaseError(ERR_SPACE_MISMATCH, 403, space=derived)
         if ttl_s < 1 or ttl_s > MAX_LEASE_TTL_S:
             raise LeaseError(ERR_BAD, 400)
         record = vault.get(key_id)
         if record is None or record.owner_service_id != owner:
             log.info("lease_refused", reason=ERR_NOT_OWNED)
-            raise LeaseError(ERR_NOT_OWNED, 403)
+            raise LeaseError(ERR_NOT_OWNED, 403, space=derived)
         if record.custody != "tenant":
             log.info("lease_refused", reason=ERR_NOT_TENANT)
-            raise LeaseError(ERR_NOT_TENANT, 403)
+            raise LeaseError(ERR_NOT_TENANT, 403, key_id=key_id, space=derived)
         if record.lifecycle != "active" or not record.enabled:
             log.info("lease_refused", reason=ERR_NOT_OWNED)
-            raise LeaseError(ERR_NOT_OWNED, 403)
-        binding = _binding_error(record, space_id, tenant_id)
+            raise LeaseError(ERR_NOT_OWNED, 403, key_id=key_id, space=derived)
+        bound_tenant = (record.owner_tenant or "").strip()
+        if tenant is not None and tenant.strip() != bound_tenant:
+            log.info("lease_refused", reason=ERR_TENANT_MISMATCH)
+            raise LeaseError(
+                ERR_TENANT_MISMATCH,
+                403,
+                key_id=key_id,
+                space=derived,
+                owner_tenant=bound_tenant,
+            )
+        binding = _binding_error(record, derived, bound_tenant)
         if binding is not None:
             log.info("lease_refused", reason=binding.code)
-            raise binding
+            raise LeaseError(
+                binding.code,
+                binding.status,
+                key_id=key_id,
+                space=derived,
+                owner_tenant=bound_tenant,
+            )
+        space_id = derived
+        tenant_id = bound_tenant
         if not grant_is_complete(key_id, ttl_s, owner):
             raise LeaseError(ERR_GRANT, 400)
         now = int(time.time())
@@ -319,36 +369,74 @@ class LeaseStore:
             expires_at=expires_at,
         )
 
-    def redeem(self, vault: KeyVault, *, service_id: str, ref: str) -> RedeemedLease:
-        """Return the plaintext once. A second call, or an expired row, refuses."""
+    def redeem(
+        self,
+        vault: KeyVault,
+        *,
+        service_id: str,
+        ref: str,
+        audit: Callable[[str, str, str, int, str], None],
+        body_space: str | None = None,
+        body_tenant: str | None = None,
+    ) -> RedeemedLease:
+        """Return the plaintext once. Audit runs before the consume commits.
+
+        ``audit`` is ``(key_id, space, service_id, expires_at, owner_tenant)``.
+        If it raises, the consume rolls back and the secret is not read.
+        ``body_space`` and ``body_tenant`` are optional claims. A present
+        claim that disagrees does not consume the lease.
+        """
         owner = service_id.strip()
-        if not owner:
-            raise LeaseError(ERR_NOT_OWNER, 403)
+        derived = space_from_service_id(owner)
         kind = classify_ref(ref)
         if kind == "raw":
             log.info("lease_refused", reason=ERR_RAW)
-            raise LeaseError(ERR_RAW, 400)
+            raise LeaseError(ERR_RAW, 400, space=derived)
         if kind != "ok":
             log.info("lease_refused", reason=ERR_REF_INVALID)
-            raise LeaseError(ERR_REF_INVALID, 400)
+            raise LeaseError(ERR_REF_INVALID, 400, space=derived)
+        if not owner or not derived:
+            log.info("lease_refused", reason=ERR_SPACE_CREDENTIAL)
+            raise LeaseError(ERR_SPACE_CREDENTIAL, 403, space=derived)
+        if body_space is not None and body_space.strip() != derived:
+            log.info("lease_refused", reason=ERR_SPACE_MISMATCH)
+            raise LeaseError(ERR_SPACE_MISMATCH, 403, space=derived)
         if vault.seal.is_sealed:
             log.info("lease_refused", reason=ERR_SEALED)
-            raise LeaseError(ERR_SEALED, 403)
+            raise LeaseError(ERR_SEALED, 403, space=derived)
         offered = _digest(ref.strip())
         row = self._lookup(offered)
         if row is None:
             log.info("lease_refused", reason=ERR_UNKNOWN)
-            raise LeaseError(ERR_UNKNOWN, 404)
-        if row.owner_service_id != owner:
+            raise LeaseError(ERR_UNKNOWN, 404, space=derived)
+        if row.owner_service_id != owner or row.space != derived:
             log.info("lease_refused", reason=ERR_NOT_OWNER)
-            raise LeaseError(ERR_NOT_OWNER, 403)
+            raise LeaseError(
+                ERR_NOT_OWNER,
+                403,
+                key_id=row.tenant_key,
+                space=row.space,
+                owner_tenant=row.tenant_id,
+            )
         now = int(time.time())
         if row.consumed_at is not None:
             log.info("lease_refused", reason=ERR_REUSED)
-            raise LeaseError(ERR_REUSED, 403)
+            raise LeaseError(
+                ERR_REUSED,
+                403,
+                key_id=row.tenant_key,
+                space=row.space,
+                owner_tenant=row.tenant_id,
+            )
         if row.expires_at <= now:
             log.info("lease_refused", reason=ERR_EXPIRED)
-            raise LeaseError(ERR_EXPIRED, 403)
+            raise LeaseError(
+                ERR_EXPIRED,
+                403,
+                key_id=row.tenant_key,
+                space=row.space,
+                owner_tenant=row.tenant_id,
+            )
         record = vault.get(row.tenant_key)
         if (
             record is None
@@ -359,20 +447,42 @@ class LeaseStore:
         ):
             self._consume(offered, now)
             log.info("lease_refused", reason=ERR_NOT_OWNED)
-            raise LeaseError(ERR_NOT_OWNED, 403)
-        binding = _binding_error(record, row.space, row.tenant_id)
+            raise LeaseError(ERR_NOT_OWNED, 403, key_id=row.tenant_key, space=derived)
+        bound_tenant = (record.owner_tenant or "").strip()
+        if body_tenant is not None and body_tenant.strip() != bound_tenant:
+            log.info("lease_refused", reason=ERR_TENANT_MISMATCH)
+            raise LeaseError(
+                ERR_TENANT_MISMATCH,
+                403,
+                key_id=row.tenant_key,
+                space=derived,
+                owner_tenant=bound_tenant,
+            )
+        binding = _binding_error(record, derived, row.tenant_id)
         if binding is not None:
             log.info("lease_refused", reason=binding.code)
-            raise binding
-        if not self._consume(offered, now):
-            self._refuse_spent(offered, now)
+            raise LeaseError(
+                binding.code,
+                binding.status,
+                key_id=row.tenant_key,
+                space=derived,
+                owner_tenant=bound_tenant,
+            )
+        self._consume_after_audit(
+            offered,
+            now,
+            lambda: audit(row.tenant_key, derived, owner, row.expires_at, bound_tenant),
+            key_id=row.tenant_key,
+            space=derived,
+            owner_tenant=bound_tenant,
+        )
         try:
             secret = vault.get_secret(row.tenant_key)
         except VaultSealedError as exc:
-            raise LeaseError(ERR_SEALED, 403) from exc
+            raise LeaseError(ERR_SEALED, 403, key_id=row.tenant_key, space=derived) from exc
         if secret is None:
             log.info("lease_refused", reason=ERR_NOT_OWNED)
-            raise LeaseError(ERR_NOT_OWNED, 403)
+            raise LeaseError(ERR_NOT_OWNED, 403, key_id=row.tenant_key, space=derived)
         log.info("lease_redeemed", service_id=owner)
         return RedeemedLease(
             secret=secret,
@@ -381,6 +491,7 @@ class LeaseStore:
             owner_service_id=row.owner_service_id,
             space=row.space,
             expires_at=row.expires_at,
+            owner_tenant=bound_tenant,
         )
 
     def _lookup(self, offered: str) -> _LeaseRow | None:
@@ -409,6 +520,56 @@ class LeaseStore:
             expires_at=int(found["expires_at"]),
             consumed_at=None if consumed is None else int(consumed),
         )
+
+    def _consume_after_audit(
+        self,
+        digest: str,
+        now: int,
+        audit: Callable[[], None],
+        *,
+        key_id: str,
+        space: str,
+        owner_tenant: str,
+    ) -> None:
+        """Consume one live row only after ``audit`` returns.
+
+        The update is held in a transaction. An audit failure rolls it back,
+        so the lease stays redeemable and the caller does not receive the secret.
+        """
+        conn = self._connect()
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            cur = conn.execute(
+                """
+                UPDATE key_leases
+                SET consumed_at = ?
+                WHERE ref_sha256 = ? AND consumed_at IS NULL AND expires_at > ?
+                """,
+                (now, digest, now),
+            )
+            if cur.rowcount != 1:
+                conn.rollback()
+                self._refuse_spent(digest, now)
+            try:
+                audit()
+            except OSError as exc:
+                conn.rollback()
+                log.info("lease_refused", reason=ERR_AUDIT)
+                raise LeaseError(
+                    ERR_AUDIT,
+                    503,
+                    key_id=key_id,
+                    space=space,
+                    owner_tenant=owner_tenant,
+                ) from exc
+            conn.commit()
+        except LeaseError:
+            raise
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
 
     def _consume(self, digest: str, now: int) -> bool:
         """Mark one live row used. False when it was already used or expired."""
@@ -448,6 +609,7 @@ class LeaseStore:
 
 __all__ = [
     "DEFAULT_LEASE_TTL_S",
+    "ERR_AUDIT",
     "ERR_BAD",
     "ERR_EXPIRED",
     "ERR_GRANT",
@@ -459,6 +621,7 @@ __all__ = [
     "ERR_REF_IN_URL",
     "ERR_REUSED",
     "ERR_SEALED",
+    "ERR_SPACE_CREDENTIAL",
     "ERR_SPACE_MISMATCH",
     "ERR_SPACE_UNBOUND",
     "ERR_TENANT_MISMATCH",

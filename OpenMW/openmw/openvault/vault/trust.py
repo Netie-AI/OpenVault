@@ -34,6 +34,7 @@ import contextlib
 import hashlib
 import hmac
 import json
+import re
 import secrets
 import sqlite3
 import time
@@ -59,6 +60,36 @@ KeyLifecycle = Literal["active", "revoked", "rotated", "expired"]
 #: is a signing key someone can steal and reuse.
 DEFAULT_INTERMEDIATE_TTL_S = 900
 MAX_INTERMEDIATE_TTL_S = 3600
+
+#: A Space credential. The part after ``dms:`` is the Space, 1 to 64 characters.
+_DMS_SPACE_SERVICE = re.compile(r"^dms:([A-Za-z0-9][A-Za-z0-9._-]{0,63})\Z")
+#: Any other service id. One colon is not allowed here; that form is only ``dms:<space>``.
+_PLAIN_SERVICE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}\Z")
+
+
+def service_id_allowed(service_id: str) -> bool:
+    """True for a bounded service id, including ``dms:<space>``.
+
+    Plain ids are letters, digits, ``.``, ``_``, and ``-``, at most 128
+    characters. ``dms:<space>`` is the only form that may contain a colon.
+    The Space is 1 to 64 of those same characters.
+    """
+    if any(ord(ch) < 33 for ch in service_id):
+        return False
+    text = service_id.strip()
+    if _DMS_SPACE_SERVICE.fullmatch(text):
+        return True
+    if ":" in text:
+        return False
+    return _PLAIN_SERVICE.fullmatch(text) is not None
+
+
+def space_from_service_id(service_id: str) -> str:
+    """Space bound to a ``dms:<space>`` credential, or empty."""
+    match = _DMS_SPACE_SERVICE.fullmatch(service_id.strip())
+    if match is None:
+        return ""
+    return match.group(1)
 
 
 class TrustError(RuntimeError):
@@ -287,9 +318,11 @@ class TrustStore:
         Only the SHA-256 of the token is stored. There is nothing here to
         decrypt and nothing to hand back later, so a copy of ``keys.db`` does
         not yield a working credential — unlike sealing it, which would.
+        A Space credential is ``dms:<space>`` and is minted here once, then
+        reused. This method does not refresh a token on its own.
         """
-        if not service_id.strip():
-            raise TrustError("service_id is required")
+        if not service_id_allowed(service_id):
+            raise TrustError("service_id_invalid")
         token = secrets.token_urlsafe(32)
         digest = hashlib.sha256(token.encode("utf-8")).hexdigest()
         with contextlib.closing(self._connect()) as conn, conn:
