@@ -65,7 +65,7 @@ def _message_only(raw: str) -> str:
     if text.startswith("{") or text.startswith("["):
         try:
             payload = json.loads(text)
-        except json.JSONDecodeError:
+        except (ValueError, OverflowError, RecursionError):
             return ""
         return _dig_message(payload)
     if "\n" in text:
