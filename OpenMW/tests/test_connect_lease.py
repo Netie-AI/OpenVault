@@ -942,6 +942,97 @@ def test_refused_redeem_is_audited_without_ref_or_secret(app: FastAPI, home: Pat
     assert SECRET not in audit
 
 
+def test_lease_logs_omit_kid_ref_and_secret(
+    app: FastAPI, home: Path, caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Mint, redeem, refusal, and audit failure leave the kid, ref, and secret out of logs.
+
+    ``secret_audit.jsonl`` still stores ``key_id``. TestClient does not emit a
+    uvicorn access line, so this test also sends the access-log shape uvicorn
+    uses, with the kid, ref, and secret in the query.
+    """
+    client = _client(app)
+    dms = _register(client, OWNER)
+    other = _register(client, "dms:other")
+    kid = _make_key(client, custody="tenant")
+    caplog.set_level(logging.DEBUG)
+    handler = _Grab()
+    root = logging.getLogger()
+    access = logging.getLogger("uvicorn.access")
+    error_log = logging.getLogger("uvicorn.error")
+    previous_level = access.level
+    access.setLevel(logging.INFO)
+    root.addHandler(handler)
+    access.addHandler(handler)
+    error_log.addHandler(handler)
+    real_open = Path.open
+    ref = ""
+    second_ref = ""
+
+    def failing_open(self: Path, *args: object, **kwargs: object) -> object:
+        if self.name == "secret_audit.jsonl":
+            raise OSError("audit disk full")
+        return real_open(self, *args, **kwargs)
+
+    try:
+        with capture_logs() as logs:
+            _assign(client, kid, OWNER)
+            minted = _mint(client, dms, kid)
+            ref = str(minted["ref"])
+            ok = client.post(LEASE_REDEEM_PATH, json={"ref": ref}, headers=_bearer(dms))
+            assert ok.status_code == 200, ok.text
+            again = client.post(LEASE_REDEEM_PATH, json={"ref": ref}, headers=_bearer(dms))
+            assert again.status_code == 403
+            assert _code(again) == ERR_REUSED
+            second = _mint(client, dms, kid)
+            second_ref = str(second["ref"])
+            refused = client.post(
+                LEASE_REDEEM_PATH,
+                json={"ref": second_ref},
+                headers=_bearer(other),
+            )
+            assert refused.status_code == 403
+            assert _code(refused) == ERR_NOT_OWNER
+            monkeypatch.setattr(Path, "open", failing_open)
+            failed = client.post(
+                LEASE_REDEEM_PATH,
+                json={"ref": second_ref},
+                headers=_bearer(dms),
+            )
+            monkeypatch.setattr(Path, "open", real_open)
+            assert failed.status_code == 503
+            assert _code(failed) == ERR_AUDIT
+            for path in (LEASE_MINT_PATH, LEASE_REDEEM_PATH, OWNER_ASSIGN_PATH):
+                access.info(
+                    '%s - "%s %s HTTP/%s" %d',
+                    "127.0.0.1:5555",
+                    "POST",
+                    f"{path}?ref={ref}&kid={kid}&secret={SECRET}",
+                    "1.1",
+                    200,
+                )
+    finally:
+        monkeypatch.setattr(Path, "open", real_open)
+        access.setLevel(previous_level)
+        root.removeHandler(handler)
+        access.removeHandler(handler)
+        error_log.removeHandler(handler)
+    blob = _blobs(logs, handler.lines, caplog.text)
+    for record in caplog.records:
+        blob = _blobs(blob, record.getMessage(), record.args)
+    _assert_absent(kid, blob)
+    _assert_absent(ref, blob)
+    _assert_absent(second_ref, blob)
+    _assert_absent(SECRET, blob)
+    assert LEASE_REDEEM_PATH in blob
+    audit = (home / "secret_audit.jsonl").read_text(encoding="utf-8")
+    assert '"key_id"' in audit
+    assert kid in audit
+    assert ref not in audit
+    assert second_ref not in audit
+    assert SECRET not in audit
+
+
 def test_dms_space_service_id_is_bounded(app: FastAPI) -> None:
     client = _client(app)
     ok = client.post(

@@ -2,6 +2,11 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-09 - Lease logs omit the kid, ref, and secret (Refs #160)
+
+- Redeem still writes `lease_redeem` to `secret_audit.jsonl` with `key_id`. That id is not passed to `log.info`. Mint, redeem, redeem refusal, audit-failure, and owner-assign lines do not include the kid, the `ovlease_` ref, or the secret.
+- Uvicorn access lines for `POST /api/keys/leases`, `POST /api/keys/leases/redeem`, and `POST /api/keys/owner` drop the query string. A ref in that query is refused and is not on the access line.
+
 ## 2026-10-09 - Space credentials are admin plus loopback (Refs #160)
 
 - Creating or rotating a `dms:<space>` service id on `POST /keys/services` needs both `X-OpenVault-Admin` and a loopback socket peer. The services allowlist (including `10.128.0.3`), a reveal header, and any service Bearer, including that Space's own Bearer, do not qualify. Plain service ids (`dms`, `cortex`, and the rest) keep the previous peer and rotation rules. #166 is this gate.
@@ -14,7 +19,7 @@ Append-only. Never edited, only added to. Newest first.
 
 ## 2026-10-09 - Credential-bound Space and fail-closed redeem audit (Refs #160)
 
-- A Space credential is `dms:<space>`. It is minted once with `POST /keys/services` and reused. Lease mint and redeem do not mint or refresh it. The service id charset accepts that form: the Space is 1 to 64 of `A-Za-z0-9._-`, and a colon is allowed only in `dms:<space>`.
+- A Space credential is `dms:<space>`. It is minted once with `POST /keys/services` and reused. Lease mint and redeem do not mint or refresh it. The Space must match `^dms:[a-z0-9][a-z0-9-]{0,62}$`. A plain id is letters, digits, `.`, `_`, and `-`. `foo:bar` is 400 because that colon form was refused at `2204ce8c`. Main before that commit accepted it.
 - The kid is owned by that `dms:<space>` service through admin `POST /api/keys/owner`. `owner_tenant` stays on the binding. Mint and redeem derive the Space from the Bearer. The tenant is the binding, not the body. A body `space` or `tenant` that disagrees is `lease_space_mismatch` or `lease_tenant_mismatch`, and redeem does not consume the lease. A Bearer that is not `dms:<space>` is `lease_space_credential`. This is credential-bound Space. #165 is this behavior.
 - A successful redeem writes `lease_redeem` (kid, space, service_id, expires_at, owner_tenant) before the consume commits. If that write fails, the response is `lease_audit_failed`, the secret is not returned, and the lease stays redeemable. A refused redeem writes `lease_redeem_refused` with the reason, key_id when known, space, and service_id. Neither line contains the ref or the secret. Rate limit and purge of expired rows stay on #164.
 - A ref placed in the query string is refused (`lease_ref_in_url`) and is not redeemed, but uvicorn still records that request line on the access log.
