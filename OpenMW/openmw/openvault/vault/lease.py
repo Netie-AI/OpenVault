@@ -8,6 +8,11 @@ read it from the body.
 The ref is ``ovlease_`` plus a random token. Only its SHA-256 is stored. Raw
 secret shapes are refused before any lookup. There is no feature flag: a row
 is inserted only when tenant_key, ttl_s, and owner_service_id are all set.
+The Space and the tenant are the ones stored on the kid by the admin assign.
+A request that names a different Space or tenant is refused.
+
+A ref placed in the query string is refused and is not redeemed. The process
+access log can still record that request line.
 
 This module does not open a database connection for the caller and does not
 return a path that contains the kid, the ref, or the secret.
@@ -30,7 +35,7 @@ import structlog
 
 from openmw.openvault.paths import keys_db_path
 from openmw.openvault.vault.crypto import VaultSealedError
-from openmw.openvault.vault.store import KeyVault
+from openmw.openvault.vault.store import KeyRecord, KeyVault
 
 log = structlog.get_logger()
 
@@ -62,11 +67,15 @@ ERR_UNKNOWN = "lease_ref_unknown"
 ERR_BAD = "lease_bad_request"
 ERR_TRANSPORT = "lease_transport"
 ERR_SEALED = "vault_sealed"
+ERR_SPACE_MISMATCH = "lease_space_mismatch"
+ERR_SPACE_UNBOUND = "lease_space_unbound"
+ERR_TENANT_MISMATCH = "lease_tenant_mismatch"
 ERR_GRANT = "lease_grant_incomplete"
 
 _ABSENT_DIGEST = "0" * 64
 _KID_MAX = 256
 _SPACE_MAX = 128
+_TENANT_MAX = 128
 
 # Grant columns that must be set on every row. No flag skips them.
 GRANT_FIELDS = ("tenant_key", "ttl_s", "owner_service_id")
@@ -112,6 +121,7 @@ class RedeemedLease:
     ttl_s: int
     owner_service_id: str
     space: str
+    expires_at: int
 
     def to_dict(self) -> dict[str, str | int]:
         return {
@@ -120,6 +130,7 @@ class RedeemedLease:
             "ttl_s": self.ttl_s,
             "owner_service_id": self.owner_service_id,
             "space": self.space,
+            "expires_at": self.expires_at,
         }
 
 
@@ -155,6 +166,34 @@ def grant_is_complete(tenant_key: str, ttl_s: int, owner_service_id: str) -> boo
     return ttl_s > 0
 
 
+def _bounded(value: str, limit: int) -> bool:
+    """True for a single-line token that fits ``limit``."""
+    if not value or len(value) > limit:
+        return False
+    return "\n" not in value and "\r" not in value
+
+
+def _binding_error(record: KeyRecord, space_id: str, tenant_id: str) -> LeaseError | None:
+    """Refuse a Space or tenant that is not the one stored on the kid.
+
+    ``account_id`` is the vault tenant when the key was created under an
+    account. It must equal the assigned owner tenant. A kid with a service
+    and no Space is ``lease_space_unbound``.
+    """
+    owner_space = (record.owner_space or "").strip()
+    if not owner_space:
+        return LeaseError(ERR_SPACE_UNBOUND, 403)
+    if owner_space != space_id:
+        return LeaseError(ERR_SPACE_MISMATCH, 403)
+    owner_tenant = (record.owner_tenant or "").strip()
+    account_id = (record.account_id or "").strip()
+    if not owner_tenant or owner_tenant != tenant_id:
+        return LeaseError(ERR_TENANT_MISMATCH, 403)
+    if account_id and account_id != owner_tenant:
+        return LeaseError(ERR_TENANT_MISMATCH, 403)
+    return None
+
+
 def _digest(ref: str) -> str:
     return hashlib.sha256(ref.encode("utf-8")).hexdigest()
 
@@ -170,6 +209,7 @@ class _LeaseRow:
     ttl_s: int
     owner_service_id: str
     space: str
+    tenant_id: str
     expires_at: int
     consumed_at: int | None
 
@@ -197,6 +237,7 @@ class LeaseStore:
                   ttl_s INTEGER NOT NULL,
                   owner_service_id TEXT NOT NULL,
                   space_id TEXT NOT NULL,
+                  tenant_id TEXT,
                   expires_at INTEGER NOT NULL,
                   consumed_at INTEGER,
                   created_at INTEGER NOT NULL,
@@ -207,6 +248,9 @@ class LeaseStore:
                 )
                 """
             )
+            cols = {row[1] for row in conn.execute("PRAGMA table_info(key_leases)")}
+            if "tenant_id" not in cols:
+                conn.execute("ALTER TABLE key_leases ADD COLUMN tenant_id TEXT")
             conn.commit()
 
     def mint(
@@ -216,6 +260,7 @@ class LeaseStore:
         service_id: str,
         kid: str,
         space: str,
+        tenant: str,
         ttl_s: int,
     ) -> MintedLease:
         """Mint one lease. ``service_id`` is the verified bearer, not a body field."""
@@ -226,7 +271,10 @@ class LeaseStore:
         if not key_id or len(key_id) > _KID_MAX:
             raise LeaseError(ERR_BAD, 400)
         space_id = space.strip()
-        if not space_id or len(space_id) > _SPACE_MAX or "\n" in space_id or "\r" in space_id:
+        if not _bounded(space_id, _SPACE_MAX):
+            raise LeaseError(ERR_BAD, 400)
+        tenant_id = tenant.strip()
+        if not _bounded(tenant_id, _TENANT_MAX):
             raise LeaseError(ERR_BAD, 400)
         if ttl_s < 1 or ttl_s > MAX_LEASE_TTL_S:
             raise LeaseError(ERR_BAD, 400)
@@ -240,6 +288,10 @@ class LeaseStore:
         if record.lifecycle != "active" or not record.enabled:
             log.info("lease_refused", reason=ERR_NOT_OWNED)
             raise LeaseError(ERR_NOT_OWNED, 403)
+        binding = _binding_error(record, space_id, tenant_id)
+        if binding is not None:
+            log.info("lease_refused", reason=binding.code)
+            raise binding
         if not grant_is_complete(key_id, ttl_s, owner):
             raise LeaseError(ERR_GRANT, 400)
         now = int(time.time())
@@ -251,10 +303,10 @@ class LeaseStore:
                 """
                 INSERT INTO key_leases (
                   ref_sha256, tenant_key, ttl_s, owner_service_id, space_id,
-                  expires_at, consumed_at, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, NULL, ?)
+                  tenant_id, expires_at, consumed_at, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?)
                 """,
-                (digest, key_id, ttl_s, owner, space_id, expires_at, now),
+                (digest, key_id, ttl_s, owner, space_id, tenant_id, expires_at, now),
             )
             conn.commit()
         log.info("lease_minted", service_id=owner)
@@ -308,6 +360,10 @@ class LeaseStore:
             self._consume(offered, now)
             log.info("lease_refused", reason=ERR_NOT_OWNED)
             raise LeaseError(ERR_NOT_OWNED, 403)
+        binding = _binding_error(record, row.space, row.tenant_id)
+        if binding is not None:
+            log.info("lease_refused", reason=binding.code)
+            raise binding
         if not self._consume(offered, now):
             self._refuse_spent(offered, now)
         try:
@@ -324,6 +380,7 @@ class LeaseStore:
             ttl_s=row.ttl_s,
             owner_service_id=row.owner_service_id,
             space=row.space,
+            expires_at=row.expires_at,
         )
 
     def _lookup(self, offered: str) -> _LeaseRow | None:
@@ -340,12 +397,15 @@ class LeaseStore:
         if not digest_ok or found is None:
             return None
         consumed = found["consumed_at"]
+        names = found.keys()
+        raw_tenant = found["tenant_id"] if "tenant_id" in names else None
         return _LeaseRow(
             ref_sha256=stored,
             tenant_key=str(found["tenant_key"]),
             ttl_s=int(found["ttl_s"]),
             owner_service_id=str(found["owner_service_id"]),
             space=str(found["space_id"]),
+            tenant_id="" if raw_tenant is None else str(raw_tenant),
             expires_at=int(found["expires_at"]),
             consumed_at=None if consumed is None else int(consumed),
         )
@@ -399,6 +459,9 @@ __all__ = [
     "ERR_REF_IN_URL",
     "ERR_REUSED",
     "ERR_SEALED",
+    "ERR_SPACE_MISMATCH",
+    "ERR_SPACE_UNBOUND",
+    "ERR_TENANT_MISMATCH",
     "ERR_TRANSPORT",
     "ERR_UNKNOWN",
     "GRANT_FIELDS",

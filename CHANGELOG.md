@@ -2,6 +2,13 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-09 - Lease Space and tenant binding (Refs #160)
+
+- `POST /api/keys/owner` stores `owner_space` and `owner_tenant` beside `owner_service_id`. The columns are additive and stay NULL until that assign. An empty `service_id` clears all three. A tenant that disagrees with a set `account_id` is `lease_tenant_mismatch` and is not written.
+- Mint refuses `lease_space_unbound` when the kid has no Space, `lease_space_mismatch` when the requested Space differs, and `lease_tenant_mismatch` when the tenant differs from `owner_tenant` or from `account_id`. Redeem re-checks the same and does not consume the lease on those mismatches.
+- A successful redeem appends `lease_redeem` to `secret_audit.jsonl` through the secret-reveal writer, with `key_id`, `space`, `service_id`, and `expires_at`. The ref and the secret are not written.
+- A ref placed in the query string is refused (`lease_ref_in_url`) and is not redeemed, but uvicorn still records that request line on the access log.
+
 ## 2026-10-08 - Single-kid connector lease (Refs #160)
 
 - `KeyRecord.owner_service_id` is NULL on existing rows and on new rows. Nothing is backfilled to a service. `POST /api/keys/owner` with `X-OpenVault-Admin` assigns `{kid, service_id}` for a service already registered with `POST /keys/services`. An empty `service_id` clears it. The kid is not in the path. Rotation does not copy ownership.

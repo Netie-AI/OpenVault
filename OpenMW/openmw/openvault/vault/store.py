@@ -79,6 +79,10 @@ class KeyRecord:
     #: Service allowed to mint a lease for this kid. NULL until an admin assigns
     #: it. Not backfilled: assigning every existing kid would hand them out.
     owner_service_id: str | None = None
+    #: Space this kid may be leased into. NULL until the same admin assign.
+    owner_space: str | None = None
+    #: Tenant (account id) this kid may be leased for. NULL until that assign.
+    owner_tenant: str | None = None
 
 
 class KeyVault:
@@ -130,7 +134,9 @@ class KeyVault:
                   replaced_by TEXT,
                   custody TEXT NOT NULL DEFAULT 'pooled',
                   key_fp TEXT,
-                  owner_service_id TEXT
+                  owner_service_id TEXT,
+                  owner_space TEXT,
+                  owner_tenant TEXT
                 )
                 """
             )
@@ -163,6 +169,12 @@ class KeyVault:
                 # NULL, not a service id. Pre-lease kids stay unowned until
                 # POST /api/keys/owner. A default owner would lease every kid.
                 conn.execute("ALTER TABLE keys ADD COLUMN owner_service_id TEXT")
+            if "owner_space" not in cols:
+                # Additive. NULL means no Space is bound. Mint refuses that.
+                conn.execute("ALTER TABLE keys ADD COLUMN owner_space TEXT")
+            if "owner_tenant" not in cols:
+                # Additive. The account id this kid may be leased for.
+                conn.execute("ALTER TABLE keys ADD COLUMN owner_tenant TEXT")
             # One-time backfill: persist masks so list_keys never decrypts plaintext.
             # Skip while sealed — decrypt would fail closed, and masks stay empty
             # until an unseal + later write/backfill.
@@ -218,6 +230,12 @@ class KeyVault:
                 str(row["owner_service_id"])
                 if "owner_service_id" in keys and row["owner_service_id"]
                 else None
+            ),
+            owner_space=(
+                str(row["owner_space"]) if "owner_space" in keys and row["owner_space"] else None
+            ),
+            owner_tenant=(
+                str(row["owner_tenant"]) if "owner_tenant" in keys and row["owner_tenant"] else None
             ),
         )
 
@@ -407,20 +425,38 @@ class KeyVault:
             conn.commit()
         return self.get(key_id)
 
-    def set_owner_service(self, key_id: str, service_id: str | None) -> KeyRecord | None:
-        """Assign or clear the service that may lease this kid.
+    def set_owner_service(
+        self,
+        key_id: str,
+        service_id: str | None,
+        *,
+        owner_space: str | None = None,
+        owner_tenant: str | None = None,
+    ) -> KeyRecord | None:
+        """Assign or clear who may lease this kid.
 
-        Empty ``service_id`` clears ownership. The row is unchanged when the
-        kid does not exist. Rotation does not call this: the new kid stays
-        unowned until an admin assigns it.
+        Empty ``service_id`` clears the service, the Space, and the tenant.
+        A set service stores ``owner_space`` and ``owner_tenant`` beside it.
+        Blank space or tenant is stored as NULL. The row is unchanged when
+        the kid does not exist. Rotation does not call this.
         """
         if self.get(key_id) is None:
             return None
         owner = (service_id or "").strip() or None
+        if owner is None:
+            space = None
+            tenant = None
+        else:
+            space = (owner_space or "").strip() or None
+            tenant = (owner_tenant or "").strip() or None
         with contextlib.closing(self._connect()) as conn, conn:
             conn.execute(
-                "UPDATE keys SET owner_service_id = ?, updated_at = ? WHERE id = ?",
-                (owner, time.time(), key_id),
+                """
+                UPDATE keys
+                SET owner_service_id = ?, owner_space = ?, owner_tenant = ?, updated_at = ?
+                WHERE id = ?
+                """,
+                (owner, space, tenant, time.time(), key_id),
             )
             conn.commit()
         return self.get(key_id)

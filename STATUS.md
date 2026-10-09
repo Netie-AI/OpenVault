@@ -25,7 +25,7 @@ Building the product comes before cleanup.
 - #138 merged at `7ea63b0b` (intermediate revoke limited to the issuing service).
 - #146 merged at `9b81b463` (access gate reads mesh peers without importing local_mesh).
 - #139 merged at `dd8f1d88` (SEA-LION key import).
-- #160 single-kid lease is draft PR #161. Service Bearer only. No broker. Admin header does not open the lease POSTs. Local pytest 1381 passed / 7 skipped. Not merged.
+- #160 single-kid lease is draft PR #161. Owner Space and tenant are bound on assign. Redeem writes lease_redeem without the ref or the secret. Local pytest 1386 passed / 7 skipped. Not merged.
 - #143 is closed unmerged, superseded by #141.
 - Full tier is auth, HttpGuard, `admin_token`, keys, custody, unseal, FreeRoute routing, prove-host redeploys, and #135. The order is PR Bot CLEAR, then Security YES, then PR Bot undrafts and squashes (`--match-head-commit`), then R-0003 (Estate Verify) and Gating on the merge SHA, then a prove-host redeploy only with founder GO. A head move voids the CLEAR and Security YES.
 - Open drafts from `gh pr list --state open --draft`: #99, #125, #140, #141, #144, #147, #149, #150.

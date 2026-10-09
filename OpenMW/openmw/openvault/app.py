@@ -505,6 +505,28 @@ def _audit_secret_reveal(key_id: str, client_host: str, user_agent: str) -> None
     )
 
 
+def _audit_lease_redeem(
+    request: Request,
+    *,
+    key_id: str,
+    space: str,
+    service_id: str,
+    expires_at: int,
+) -> None:
+    """Same file as secret reveal. Never pass the ref or the plaintext."""
+    _write_secret_audit(
+        {
+            "event": "lease_redeem",
+            "key_id": key_id,
+            "space": space,
+            "service_id": service_id,
+            "expires_at": expires_at,
+            "client": _client_host(request),
+            "user_agent": request.headers.get("user-agent", "")[:200],
+        }
+    )
+
+
 def _audit_custody(event: str, request: Request, **fields: Any) -> None:
     """Audit a custody mutation (create / update / delete / revoke / rotate)."""
     _write_secret_audit(

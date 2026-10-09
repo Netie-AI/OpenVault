@@ -16,6 +16,7 @@ from openmw.openvault.vault.lease import (
     ERR_BAD,
     ERR_REF_IN_URL,
     ERR_REF_INVALID,
+    ERR_TENANT_MISMATCH,
     ERR_TRANSPORT,
     LEASE_MINT_PATH,
     LEASE_REDEEM_PATH,
@@ -87,7 +88,11 @@ def _transport_error(request: Request) -> JSONResponse | None:
 
 
 def _query_error(request: Request) -> JSONResponse | None:
-    """A query string is a URL channel. Lease routes accept the JSON body only."""
+    """A query string is a URL channel. Lease routes accept the JSON body only.
+
+    The request is refused and is not redeemed. The process access log can
+    still record the request line, including a ref that was placed there.
+    """
     if not request.url.query:
         return None
     log.info("lease_refused", reason=ERR_REF_IN_URL)
@@ -108,6 +113,13 @@ def _text(value: object) -> str:
     if not isinstance(value, str):
         raise LeaseError(ERR_BAD, 400)
     return value
+
+
+def _optional_text(value: object) -> str:
+    """Missing is empty. A non-string is a bad request."""
+    if value is None:
+        return ""
+    return _text(value).strip()
 
 
 def build_lease_router(vault: KeyVault) -> APIRouter:
@@ -134,6 +146,7 @@ def build_lease_router(vault: KeyVault) -> APIRouter:
                 service_id=service_id,
                 kid=_text(body.get("kid")),
                 space=_text(body.get("space")),
+                tenant=_text(body.get("tenant")),
                 ttl_s=_ttl(body.get("ttl_s")),
             )
         except LeaseError as exc:
@@ -159,6 +172,15 @@ def build_lease_router(vault: KeyVault) -> APIRouter:
             redeemed = leases.redeem(vault, service_id=service_id, ref=ref)
         except LeaseError as exc:
             return _from_lease(exc)
+        from openmw.openvault.app import _audit_lease_redeem
+
+        _audit_lease_redeem(
+            request,
+            key_id=redeemed.tenant_key,
+            space=redeemed.space,
+            service_id=service_id,
+            expires_at=redeemed.expires_at,
+        )
         return JSONResponse(content=redeemed.to_dict(), headers=_NO_STORE)
 
     @router.post(OWNER_ASSIGN_PATH)
@@ -183,6 +205,8 @@ def build_lease_router(vault: KeyVault) -> APIRouter:
         try:
             kid = _text(body.get("kid")).strip()
             service_id = _text(body.get("service_id")).strip()
+            space = _optional_text(body.get("space"))
+            tenant = _optional_text(body.get("tenant"))
         except LeaseError as exc:
             return _from_lease(exc)
         if not kid:
@@ -191,7 +215,21 @@ def build_lease_router(vault: KeyVault) -> APIRouter:
             trust = TrustStore(seal=getattr(request.app.state, "seal", None))
             if not trust.service_is_registered(service_id):
                 return _error(400, "service_not_registered")
-        record = vault.set_owner_service(kid, service_id or None)
+            existing = vault.get(kid)
+            if existing is None:
+                return _error(404, "key_not_found")
+            account_id = (existing.account_id or "").strip()
+            if tenant and account_id and tenant != account_id:
+                return _error(403, ERR_TENANT_MISMATCH)
+        if service_id:
+            record = vault.set_owner_service(
+                kid,
+                service_id,
+                owner_space=space or None,
+                owner_tenant=tenant or None,
+            )
+        else:
+            record = vault.set_owner_service(kid, None)
         if record is None:
             return _error(404, "key_not_found")
         log.info("key_owner_assigned", service_id=service_id or "")
@@ -199,6 +237,8 @@ def build_lease_router(vault: KeyVault) -> APIRouter:
             content={
                 "kid": record.id,
                 "owner_service_id": record.owner_service_id or "",
+                "owner_space": record.owner_space or "",
+                "owner_tenant": record.owner_tenant or "",
                 "custody": record.custody,
             },
             headers=_NO_STORE,
