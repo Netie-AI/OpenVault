@@ -790,10 +790,14 @@ def _strict_candidates(
 ) -> tuple[list[ProxyCandidate], tuple[int, dict[str, Any]] | None, int | None]:
     """Hops that serve ``pin`` exactly, or a fast ``pin_unavailable`` refusal."""
     if not catalog_contains_model(pin, multimodal=multimodal):
-        return [], (
-            503,
-            _pin_unavailable_body(pin, _PIN_NOT_IN_CATALOG, provider=_bound_provider(pin)),
-        ), None
+        return (
+            [],
+            (
+                503,
+                _pin_unavailable_body(pin, _PIN_NOT_IN_CATALOG, provider=_bound_provider(pin)),
+            ),
+            None,
+        )
     healthy: list[ProxyCandidate] = []
     for cand in candidates:
         if not _strict_hop_serves(cand.provider, pin, multimodal=multimodal):
