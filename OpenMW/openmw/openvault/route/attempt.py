@@ -76,6 +76,7 @@ class AttemptOutcome:
     reason: str | None
     counts_as_hard_fail: bool
     trip_provider_breaker: bool
+    honor_cooldown: bool = False
 
 
 def classify_attempt(
@@ -176,6 +177,7 @@ def classify_attempt(
             reason=decision.reason or "rate_limited",
             counts_as_hard_fail=False,
             trip_provider_breaker=False,
+            honor_cooldown=decision.short_rate_limit,
         )
 
     if decision.reason == "transient" or status in TRIP_STATUS_CODES:

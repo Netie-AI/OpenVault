@@ -1,7 +1,8 @@
-"""Provider circuit breaker — CLOSED → DEGRADED → OPEN → HALF_OPEN.
+"""Named circuit breaker — CLOSED → DEGRADED → OPEN → HALF_OPEN.
 
-Ports OmniRoute ``circuitBreaker.ts``. Only HTTP 408/500/502/503/504 trip the
-breaker; connection-scoped 429 rate limits stay outside this layer.
+The chat proxy registers one breaker per vault key. A local hop, which has
+no vault key, keeps the provider name. Only HTTP 408/500/502/503/504 trip
+the breaker; connection-scoped 429 rate limits stay outside this layer.
 """
 
 from __future__ import annotations
@@ -91,15 +92,6 @@ class CircuitBreakerStatus:
             "effectiveResetTimeoutMs": self.effective_reset_timeout_ms,
             "profile": self.profile,
         }
-
-
-class CircuitBreakerOpenError(Exception):
-    """Raised when a call is short-circuited because the breaker is OPEN."""
-
-    def __init__(self, message: str, circuit_name: str, retry_after_ms: int) -> None:
-        super().__init__(message)
-        self.circuit_name = circuit_name
-        self.retry_after_ms = retry_after_ms
 
 
 class CircuitBreaker:
@@ -334,8 +326,3 @@ def reset_all_circuit_breakers() -> None:
         for breaker in _registry.values():
             breaker.reset()
         _registry.clear()
-
-
-def registry_size_for_tests() -> int:
-    with _registry_lock:
-        return len(_registry)

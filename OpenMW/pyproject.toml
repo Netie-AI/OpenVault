@@ -29,6 +29,9 @@ dependencies = [
   "tomli>=2.0.1",
   "redis>=5",
   "python-multipart>=0.0.32",
+  # zoneinfo has no IANA database on stock Windows; quota.window_bounds (chat
+  # routing, /api/freeroute/status) needs one. Linux and macOS ship their own.
+  "tzdata>=2024.1; sys_platform == 'win32'",
 ]
 
 [project.scripts]

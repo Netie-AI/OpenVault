@@ -12,7 +12,12 @@
  * `http://127.0.0.1:5000`). Same-origin means no CORS preflight and no hardcoded
  * port in the bundle. On the server the rewrite does not exist, so we hit the
  * backend origin directly using the same env var the rewrite reads.
+ *
+ * Admin routes attach `X-OpenVault-Admin` from the Providers session when the
+ * caller did not set it. The token is not logged.
  */
+
+import { mergeAdminHeader, readAdminSession } from "./adminSession";
 
 /** Where a request went wrong. `http` means the server answered and refused. */
 export type ApiFailureKind = "http" | "network" | "timeout" | "aborted" | "parse";
@@ -224,7 +229,11 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const link = linkSignals(options.signal, timeoutMs);
 
-  const headers: Record<string, string> = { Accept: "application/json", ...options.headers };
+  const headers: Record<string, string> = mergeAdminHeader(
+    path,
+    { Accept: "application/json", ...options.headers },
+    readAdminSession(),
+  );
   let payload: string | undefined;
   if (options.body !== undefined) {
     payload = JSON.stringify(options.body);

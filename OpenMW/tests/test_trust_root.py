@@ -9,6 +9,7 @@ would turn manifest verification into theatre rather than breaking a build.
 from __future__ import annotations
 
 import base64
+import sqlite3
 import time
 from pathlib import Path
 
@@ -208,6 +209,72 @@ def test_revoked_service_cannot_verify(store: TrustStore) -> None:
     assert store.verify_service("dms", token) is False
 
 
+def test_service_id_for_active_bearer_is_one_service(store: TrustStore) -> None:
+    token = store.register_service("dms")
+    other = store.register_service("other")
+    assert store.service_id_for_active_bearer(token) == "dms"
+    assert store.service_id_for_active_bearer(other) == "other"
+    assert store.service_id_for_active_bearer(token + "x") == ""
+    assert store.service_id_for_active_bearer("") == ""
+
+
+def test_intermediate_owner_is_the_issuing_service(store: TrustStore) -> None:
+    issued = store.issue_intermediate("dms-manifest-signer", ttl_s=60, service_id="dms")
+    assert issued.record.subject == "dms-manifest-signer"
+    assert store.intermediate_owner(issued.record.kid) == "dms"
+    plain = store.issue_intermediate("other", ttl_s=60)
+    assert store.intermediate_owner(plain.record.kid) == ""
+    assert store.intermediate_owner("int-missing") is None
+
+
+def test_existing_signing_keys_gain_an_owner_column(home: Path) -> None:
+    db = home / "legacy.db"
+    conn = sqlite3.connect(db)
+    conn.execute(
+        """
+        CREATE TABLE signing_keys (
+          kid TEXT PRIMARY KEY,
+          kind TEXT NOT NULL,
+          subject TEXT NOT NULL DEFAULT '',
+          public_key TEXT NOT NULL,
+          private_blob BLOB,
+          parent_kid TEXT,
+          chain_signature TEXT,
+          not_before REAL NOT NULL,
+          not_after REAL,
+          lifecycle TEXT NOT NULL DEFAULT 'active',
+          created_at REAL NOT NULL,
+          revoked_reason TEXT
+        )
+        """
+    )
+    conn.execute(
+        "INSERT INTO signing_keys (kid, kind, subject, public_key, not_before, created_at) "
+        "VALUES ('int-legacy', 'intermediate', 'dms-manifest-signer', 'x', 1, 1)"
+    )
+    conn.commit()
+    conn.close()
+    store = TrustStore(db_path=db, seal=Seal(Fernet.generate_key()))
+    assert store.intermediate_owner("int-legacy") == ""
+    assert store.intermediate_owner("int-missing") is None
+
+
+def test_active_service_bearer_uses_verify_service(store: TrustStore) -> None:
+    token = store.register_service("dms")
+    other = store.register_service("other")
+    assert store.service_is_registered("dms") is True
+    assert store.service_is_registered("missing") is False
+    assert store.active_service_bearer(token) is True
+    assert store.active_service_bearer(other) is True
+    assert store.active_service_bearer(token + "x") is False
+    assert store.verify_service("dms", other) is False
+    assert store.revoke_service("dms") is True
+    assert store.active_service_bearer(token) is False
+    assert store.service_is_registered("dms") is True
+    assert store.revoke_service("other") is True
+    assert store.active_service_bearer("anything") is False
+
+
 # ── the routes ───────────────────────────────────────────────────────────────
 
 
@@ -318,7 +385,7 @@ def test_service_registration_allows_loopback(home: Path, host: str) -> None:
     assert registered.json()["token"]
 
 
-@pytest.mark.parametrize("host", ["10.128.0.3", "34.30.222.22", "::ffff:10.128.0.3"])
+@pytest.mark.parametrize("host", ["10.128.0.3", "::ffff:10.128.0.3"])
 def test_service_registration_allows_default_prove_peers(home: Path, host: str) -> None:
     headers = _issued()
     client = _client(host=host)
@@ -327,6 +394,24 @@ def test_service_registration_allows_default_prove_peers(home: Path, host: str) 
     )
     assert registered.status_code == 200, registered.text
     assert registered.json()["service_id"] == "dms"
+
+
+def test_public_prove_ip_registration_needs_services_allow(
+    home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Reveal from 34.30.222.22 is denied until OPENVAULT_SERVICES_ALLOW lists it."""
+    monkeypatch.delenv("OPENVAULT_SERVICES_ALLOW", raising=False)
+    denied = _client(host="34.30.222.22").post(
+        "/keys/services", json={"service_id": "dms"}, headers=INTENT
+    )
+    assert denied.status_code == 401
+    monkeypatch.setenv("OPENVAULT_SERVICES_ALLOW", "34.30.222.22")
+    allowed = _client(host="34.30.222.22").post(
+        "/keys/services", json={"service_id": "dms"}, headers=INTENT
+    )
+    assert allowed.status_code == 200, allowed.text
+    assert allowed.json()["service_id"] == "dms"
+    assert allowed.json()["token"]
 
 
 def test_service_registration_allows_env_cidr(home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -378,11 +463,16 @@ def test_allowlisted_peer_cannot_issue_intermediate(home: Path) -> None:
     assert token not in issued.text
 
 
-def test_default_prove_peers_are_the_founder_go_addresses() -> None:
-    assert _DEFAULT_SERVICES_ALLOW == ("10.128.0.3", "34.30.222.22")
+def test_default_prove_peer_is_the_private_vpc_address(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Public 34.30.222.22 is env-only. The private prove peer stays built in."""
+    monkeypatch.delenv("OPENVAULT_SERVICES_ALLOW", raising=False)
+    assert _DEFAULT_SERVICES_ALLOW == ("10.128.0.3",)
     assert _host_in_services_allow("127.0.0.1") is True
     assert _host_in_services_allow("10.128.0.3") is True
-    assert _host_in_services_allow("34.30.222.22") is True
+    assert _host_in_services_allow("34.30.222.22") is False
+    assert _host_in_services_allow("::ffff:34.30.222.22") is False
     assert _host_in_services_allow("10.0.0.9") is False
 
 

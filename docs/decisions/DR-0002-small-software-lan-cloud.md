@@ -34,8 +34,9 @@ infrastructure or a new trust boundary. Private LAN/loopback only; `bypass`/`for
 
 ## Confirmation
 
-`OpenMW/tests/test_small_cloud.py` (exists) plus manual multi-tab stress via
-`scripts/stress_four_mesh_playwright.py`.
+`OpenMW/tests/test_small_cloud.py` (exists). The manual multi-tab script
+`scripts/stress_four_mesh_playwright.py` was removed in the #137 slim-down.
+A copy is kept in Netie-AI/netie-attic under `openvault/ov1-ov5`.
 
 ---
 

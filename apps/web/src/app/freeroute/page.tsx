@@ -12,6 +12,7 @@ import { PageContainer } from "@/components/ui/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Textarea } from "@/components/ui/textarea";
 import { LONG_TIMEOUT_MS, apiGet, apiPost, isApiError } from "@/lib/api/client";
+import { VaultSealBar } from "@/components/vault/VaultSealBar";
 
 type Hop = {
   key_id?: string;
@@ -123,6 +124,8 @@ export default function FreeRoutePage() {
           Refresh
         </Button>
       </div>
+
+      <VaultSealBar onStatus={() => void load()} />
 
       {err ? <p className="mb-4 text-sm text-destructive">{err}</p> : null}
 

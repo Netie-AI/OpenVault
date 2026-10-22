@@ -88,10 +88,10 @@ messages. **A vault that stores everything is a liability, not a feature.**
 { "id": "a1b2…", "provider": "anthropic", "label": "Anthropic key",
   "masked_secret": "sk-a…********", "precheck": "pending",
   "provider_source": "server_inferred",     // or "hint_agreed" | "register_intent"
-  "next": "/proxy?highlight=a1b2…" }
+  "next": "/freeroute?highlight=a1b2…" }
 
 // 409 — already have it
-{ "duplicate_of": "a1b2…", "label": "Anthropic key", "next": "/proxy?highlight=a1b2…" }
+{ "duplicate_of": "a1b2…", "label": "Anthropic key", "next": "/freeroute?highlight=a1b2…" }
 
 // 422 — not a credential, nothing stored
 { "stored": false, "reason": "not_credential_shaped",

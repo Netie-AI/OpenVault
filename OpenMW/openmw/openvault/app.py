@@ -100,12 +100,12 @@ from openmw.openvault.ship.library import (
     scan_upload_session,
 )
 from openmw.openvault.ship.openship import (
+    adapter_status,
     build_openship_plan,
     execute_openship_plan,
     list_ship_plans,
     load_ship_plan,
 )
-from openmw.openvault.ship.openship_client import adapter_status
 from openmw.openvault.ship.playwright_smoke import load_smoke, run_playwright_smoke
 from openmw.openvault.vault import webauthn_unlock
 from openmw.openvault.vault.accounts import AccountStore, AuthProvider
@@ -134,6 +134,7 @@ from openmw.openvault.vault.fallback import FallbackConfig, FallbackManager
 from openmw.openvault.vault.free_keys_onboard import catalog_base_url, looks_like_site_password_key
 from openmw.openvault.vault.http_guard import (
     HttpGuardMiddleware,
+    decide_apikey_verify,
     dev_docs_enabled,
 )
 from openmw.openvault.vault.local_hop import served_response_headers
@@ -155,6 +156,7 @@ from openmw.openvault.vault.ratelimit import (
     DEFAULT_MAX_OUTPUT_TOKENS,
     DEFAULT_TIER,
     SseUsageCapture,
+    TierLimits,
     TokenBudgetLimiter,
     estimate_prompt_tokens,
     usage_total_tokens,
@@ -191,16 +193,23 @@ _REVEAL_INTENT_HEADER = "X-OpenVault-Reveal"
 _VAULT_SEALED_DETAIL = "vault is sealed; POST /api/vault/unseal with the passphrase first"
 # POST /keys/services only (#52). Loopback stays allowed separately. Extra CIDRs
 # come from OPENVAULT_SERVICES_ALLOW so ops can extend without a code change.
+# The private Cortex prove peer stays in the default. A public address does not:
+# 34.30.222.22 is admitted only when that env lists it.
 _SERVICES_ALLOW_ENV = "OPENVAULT_SERVICES_ALLOW"
-_DEFAULT_SERVICES_ALLOW = ("10.128.0.3", "34.30.222.22")
+_DEFAULT_SERVICES_ALLOW = ("10.128.0.3",)
 
 
-def _write_secret_audit(entry: dict[str, Any]) -> None:
+class SecretAuditError(OSError):
+    """The secret-audit file could not be written."""
+
+
+def _write_secret_audit(entry: dict[str, Any], *, required: bool = False) -> None:
     """Append one line to the secret-access audit log.
 
-    Best-effort by design: an audit write that fails must not deny the caller
-    an operation they are entitled to, but it must be loud. Kept separate from
-    control_audit.jsonl so custody access can be shipped or reviewed on its own.
+    Best-effort unless ``required`` is set. A required write that fails raises
+    ``SecretAuditError`` (lease redeem rolls the consume back). Every other
+    caller still logs ``secret_audit_write_failed`` and continues. Kept
+    separate from control_audit.jsonl so custody access can be reviewed alone.
 
     Callers pass only identifiers and metadata. Nothing in ``entry`` may be
     derived from a decrypted payload — the audit file is not a second place a
@@ -220,8 +229,12 @@ def _write_secret_audit(entry: dict[str, Any]) -> None:
         path = ensure_home() / "secret_audit.jsonl"
         with path.open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(entry) + "\n")
-    except OSError as exc:
+    except Exception as exc:
         log.error("secret_audit_write_failed", error=str(exc), entry_event=entry.get("event"))
+        if required:
+            raise SecretAuditError(str(exc)) from exc
+        if not isinstance(exc, OSError):
+            raise
 
 
 def _normalise_host(host: str) -> str:
@@ -278,11 +291,13 @@ def _require_loopback(request: Request, action: str) -> str:
 
 
 def _services_allow_networks() -> tuple[ipaddress.IPv4Network | ipaddress.IPv6Network, ...]:
-    """Default prove peers plus extra CIDRs from ``OPENVAULT_SERVICES_ALLOW``.
+    """Private prove peer plus extra CIDRs from ``OPENVAULT_SERVICES_ALLOW``.
 
-    Defaults stay on so an env typo cannot drop Cortex prove. The env value
-    only adds networks. Loopback is not listed here; ``_LOOPBACK_HOSTS`` covers
-    OpenVault self. Invalid tokens are skipped rather than failing open or 500.
+    ``10.128.0.3`` stays in the default so an unset env does not drop the VPC
+    prove peer. Public addresses are not defaults; list them in the env.
+    The env value only adds networks. Loopback is not listed here;
+    ``_LOOPBACK_HOSTS`` covers OpenVault self. Invalid tokens are skipped
+    rather than failing open or 500.
     """
     extra = (os.environ.get(_SERVICES_ALLOW_ENV) or "").strip()
     raw = ",".join(_DEFAULT_SERVICES_ALLOW)
@@ -495,6 +510,59 @@ def _audit_secret_reveal(key_id: str, client_host: str, user_agent: str) -> None
             "key_id": key_id,
             "client": client_host,
             "user_agent": user_agent[:200],
+        }
+    )
+
+
+def _audit_lease_redeem(
+    request: Request,
+    *,
+    key_id: str,
+    space: str,
+    service_id: str,
+    expires_at: int,
+    owner_tenant: str,
+) -> None:
+    """Same file as secret reveal. Never pass the ref or the plaintext.
+
+    ``required`` is on: a write failure raises ``SecretAuditError`` so redeem
+    can roll the consume back. Other custody audits stay best-effort.
+    """
+    _write_secret_audit(
+        {
+            "event": "lease_redeem",
+            "key_id": key_id,
+            "space": space,
+            "service_id": service_id,
+            "expires_at": expires_at,
+            "owner_tenant": owner_tenant,
+            "client": _client_host(request),
+            "user_agent": request.headers.get("user-agent", "")[:200],
+        },
+        required=True,
+    )
+
+
+def _audit_lease_redeem_refused(
+    request: Request,
+    *,
+    reason: str,
+    key_id: str,
+    space: str,
+    service_id: str,
+    owner_tenant: str = "",
+) -> None:
+    """Best-effort refusal line. Never pass the ref or the plaintext."""
+    _write_secret_audit(
+        {
+            "event": "lease_redeem_refused",
+            "reason": reason,
+            "key_id": key_id,
+            "space": space,
+            "service_id": service_id,
+            "owner_tenant": owner_tenant,
+            "client": _client_host(request),
+            "user_agent": request.headers.get("user-agent", "")[:200],
         }
     )
 
@@ -805,12 +873,6 @@ class ShipPreflightBody(BaseModel):
     vps_host: str = ""
 
 
-class ApiKeyVerifyBody(BaseModel):
-    """Token a co-located fork received from its own client (DR-0018)."""
-
-    token: str
-
-
 class ApiKeyIssueBody(BaseModel):
     """Mint a FreeRoute credential for someone else's app."""
 
@@ -819,6 +881,12 @@ class ApiKeyIssueBody(BaseModel):
     tier: str = "free"
     #: Optional experience pack (DR-0016). Simulate attach only.
     pack_id: str = ""
+
+
+class ApiKeyVerifyBody(BaseModel):
+    """The issued key to check. It is not a credential for this route."""
+
+    token: str = ""
 
 
 class RoutePackBody(BaseModel):
@@ -1098,6 +1166,11 @@ def create_app(
     # same keys.db as the vault - one backup surface, no second store.
     state_api_keys = ApiKeyStore()
     state_usage = UsageStore()
+    # Verify cap is not the chat limiter. One bucket per admitted caller.
+    verify_limiter = TokenBudgetLimiter(
+        tiers={"verify": TierLimits("verify", requests_per_min=60, tokens_per_min=60)},
+        default_tier="verify",
+    )
     # Plan + seats live in accounts.db (same file as AccountStore). Not a
     # second vault; not the public rate page.
     state_entitlements = EntitlementStore(db_path=state_accounts.db_path)
@@ -1191,6 +1264,7 @@ def create_app(
     from openmw.openvault.routers.key_quota import build_key_quota_router
     from openmw.openvault.routers.key_ui import build_key_ui_router
     from openmw.openvault.routers.keys import router as keys_router
+    from openmw.openvault.routers.lease import build_lease_router
     from openmw.openvault.routers.provider_cards import build_provider_cards_router
     from openmw.openvault.routers.route import router as route_router
     from openmw.openvault.routers.sentinel import router as sentinel_router
@@ -1201,6 +1275,7 @@ def create_app(
     app.include_router(sentinel_router)
     app.include_router(route_router)
     app.include_router(keys_router)
+    app.include_router(build_lease_router(state_vault))
     app.include_router(build_health_router(state_vault))
     app.include_router(build_key_quota_router(state_vault))
     app.include_router(build_provider_cards_router(state_vault))
@@ -3338,18 +3413,30 @@ def create_app(
 
     @app.post("/api/apikeys/verify")
     def apikeys_verify(body: ApiKeyVerifyBody, request: Request) -> dict[str, Any]:
-        """Check a caller's token for a co-located fork (FreeRoute, DR-0018).
+        """Say whether an issued key is active. Never return the key itself.
 
-        The forks keep no key store of their own, so they ask here. Loopback-only:
-        off-box this would be a free oracle for guessing tokens. The answer is
-        the same shape for unknown and revoked, like ``ApiKeyStore.verify``.
+        Admission is the same decision the HTTP guard already applied: admin,
+        or a service Bearer on ``OPENVAULT_VERIFY_SERVICES`` that passes
+        ``verify_service``. The body token is looked up by hash and compared
+        with ``hmac.compare_digest`` (``ApiKeyStore.match_issued``). Unknown,
+        revoked, disabled, and malformed values are one negative shape.
         """
-        _require_loopback(request, "verify api key")
-        record = state_api_keys.verify(body.token.strip())
+        decision = decide_apikey_verify(request)
+        if not decision.admitted:
+            detail = "forbidden" if decision.status_code == 403 else "unauthorized"
+            raise HTTPException(status_code=decision.status_code, detail=detail)
+        limit = verify_limiter.reserve(
+            decision.caller_id,
+            tier="verify",
+            prompt_tokens=1,
+            max_tokens=0,
+        )
+        if not limit.allowed:
+            raise HTTPException(status_code=429, detail="too many verify requests")
+        record = state_api_keys.match_issued(body.token.strip())
         if record is None:
-            return {"valid": False}
-        state_api_keys.touch(record.key_id)
-        return {"valid": True, "key_id": record.key_id, "tier": record.tier}
+            return {"ok": True, "valid": False}
+        return {"ok": True, "valid": True, "key_id": record.key_id, "tier": record.tier}
 
     @app.get("/api/keys/packs")
     def keys_packs_get() -> dict[str, Any]:

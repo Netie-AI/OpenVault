@@ -29,7 +29,8 @@ ENV_KEY_TO_PROVIDER: dict[str, ProviderKind] = {
     "GOOGLE_AISTUDIO_FREE": "google",
     "GEMINI_API_KEY": "google",
     "DEEPSEEK_API_KEY": "deepseek",
-    "SEA_LION_API_KEY": "custom",
+    "SEA_LION_API_KEY": "sea_lion",
+    "SEALION_API_KEY": "sea_lion",
     "CEREBRAS_API_KEY": "cerebras",
     "MISTRAL_API_KEY": "mistral",
     "NVIDIA_API_KEY": "nvidia",
@@ -68,6 +69,7 @@ PROVIDER_TO_ENV: dict[str, str] = {
     "github_models": "GITHUB_TOKEN",
     "siliconflow": "SILICONFLOW_API_KEY",
     "deepgram": "DEEPGRAM_API_KEY",
+    "sea_lion": "SEA_LION_API_KEY",
 }
 
 
@@ -223,6 +225,7 @@ def upsert_env_secret(
         "litellm",
         "github_models",
         "siliconflow",
+        "sea_lion",
         "custom",
     ):
         provider = provider_hint  # type: ignore[assignment]

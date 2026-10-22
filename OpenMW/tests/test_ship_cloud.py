@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 from openmw.openvault.app import create_app
 from openmw.openvault.ship.aws_guide import build_aws_render_plan
 from openmw.openvault.ship.cloud_targets import build_ship_blueprint
-from openmw.openvault.ship.openship_client import adapter_status
+from openmw.openvault.ship.openship import adapter_status
 from openmw.openvault.vault.crypto import Seal
 from openmw.openvault.vault.store import KeyVault
 
@@ -40,7 +40,10 @@ def test_blueprint_and_budget(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
     assert bp["target"]["id"] == "aws_guide"
     assert bp["aws_plan"] is not None
     assert bp["budget"]["monthly_cap_usd"] == 10.0
-    assert adapter_status()["effective"] in ("simulate", "api", "cli")
+    status = adapter_status()
+    assert status["effective"] == "simulate"
+    assert status["api_ready"] is False
+    assert status["api_url"] is None
 
 
 def test_ship_api_routes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -109,3 +112,10 @@ def test_ship_api_routes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Non
     body = press.json()
     assert body["blueprint"]["target"]["id"] == "local_demo"
     assert body["one_press"]["executed"] is True
+
+
+def test_vendor_openship_http_client_is_retired() -> None:
+    import importlib
+
+    with pytest.raises(ModuleNotFoundError):
+        importlib.import_module("openmw.openvault.ship.openship_client")

@@ -8,7 +8,7 @@
     "start": "next start -H 127.0.0.1 --port 3010",
     "lint": "next lint",
     "clean": "cmd /c rmdir /s /q .next",
-    "test": "tsx --test src/keys/copy.test.ts src/keys/render.test.ts src/keys/byok.test.ts src/lib/vault/registerIntent.test.ts src/lib/vault/inferProvider.test.ts src/lib/vault/freeKeysOnboard.test.ts src/server/authz/routeGuard.test.ts src/app/api/provider-cards/route.test.ts",
+    "test": "tsx --test src/keys/copy.test.ts src/keys/render.test.ts src/keys/byok.test.ts src/lib/vault/registerIntent.test.ts src/lib/vault/inferProvider.test.ts src/lib/vault/freeKeysOnboard.test.ts src/lib/vault/sealedGate.test.ts src/lib/vault/sessionUnseal.test.ts src/lib/vault/envImport.test.ts src/lib/api/adminSession.test.ts src/server/authz/routeGuard.test.ts src/app/api/provider-cards/route.test.ts",
     "serve": "tsx src/serve.ts"
   },
   "dependencies": {
@@ -18,13 +18,11 @@
     "@xterm/xterm": "^6.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "jose": "^6.1.0",
     "lucide-react": "^0.577.0",
     "next": "^16.1.6",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "tailwind-merge": "^3.5.0",
-    "zod": "^4.1.11"
+    "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.1",

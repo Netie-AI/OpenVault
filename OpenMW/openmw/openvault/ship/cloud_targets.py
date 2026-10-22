@@ -18,7 +18,7 @@ from typing import Any, Literal
 from openmw.openvault.paths import ensure_home
 from openmw.openvault.ship.aws_guide import build_aws_render_plan
 from openmw.openvault.ship.domain_guide import build_domain_guide
-from openmw.openvault.ship.openship_client import adapter_status
+from openmw.openvault.ship.openship import adapter_status
 
 # `cloudflare_pages` is the first target that genuinely publishes: it uploads
 # the built artifact to the *user's own* Cloudflare account and attaches a

@@ -245,7 +245,7 @@ export function AddKeyDialog({
             </Button>
             {wireToProxy ? (
               <Button onClick={() => void store(true)} disabled={!canSubmit}>
-                {busy ? "Stored · testing…" : "Add & open Proxy"}
+                {busy ? "Stored · testing…" : "Add & open FreeRoute"}
               </Button>
             ) : (
               <Button onClick={() => void store(false)} disabled={!canSubmit}>

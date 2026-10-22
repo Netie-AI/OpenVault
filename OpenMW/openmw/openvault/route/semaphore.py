@@ -145,35 +145,3 @@ def acquire(
     if item.release_fn is None:
         raise SemaphoreError("Semaphore acquire failed", SEMAPHORE_TIMEOUT)
     return item.release_fn
-
-
-def mark_rate_limited(model_str: str, cooldown_ms: int) -> None:
-    with _gate_lock:
-        gate = _get_gate(model_str, 3)
-        gate.rate_limited_until = time.time() + cooldown_ms / 1000.0
-
-
-def get_stats() -> dict[str, dict[str, int | str | None]]:
-    with _gate_lock:
-        stats: dict[str, dict[str, int | str | None]] = {}
-        for model, gate in _gates.items():
-            stats[model] = {
-                "running": gate.running,
-                "queued": len(gate.queue),
-                "max": gate.max_concurrency,
-                "rateLimitedUntil": (
-                    None
-                    if gate.rate_limited_until is None
-                    else time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(gate.rate_limited_until))
-                ),
-            }
-        return stats
-
-
-def reset_all() -> None:
-    with _gate_lock:
-        for gate in _gates.values():
-            for item in gate.queue:
-                item.error = SemaphoreError("Semaphore reset", "RESET")
-                item.event.set()
-        _gates.clear()

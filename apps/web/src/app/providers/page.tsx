@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+import { readAdminSession, writeAdminSession } from "@/lib/api/adminSession";
 import { apiFetch, BROWSER_API_PREFIX, isApiError } from "@/lib/api/client";
 import { PageContainer } from "@/components/ui/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -29,27 +30,9 @@ type AddBody = {
   outcome?: string;
 };
 
-const ADMIN_KEY = "openvault.admin";
-
 function scrub(text: string, hidden: string): string {
   if (!hidden || !text.includes(hidden)) return text;
   return text.split(hidden).join("");
-}
-
-function readAdmin(): string {
-  try {
-    return sessionStorage.getItem(ADMIN_KEY) ?? "";
-  } catch {
-    return "";
-  }
-}
-
-function writeAdmin(value: string): void {
-  try {
-    sessionStorage.setItem(ADMIN_KEY, value);
-  } catch {
-    /* session storage unavailable; the field still holds it in memory */
-  }
 }
 
 function CardForm({
@@ -149,7 +132,8 @@ export default function ProvidersPage() {
   const [admin, setAdmin] = useState("");
 
   useEffect(() => {
-    setAdmin(readAdmin());
+    // sessionStorage key openvault.admin, shared with the vault gate.
+    setAdmin(readAdminSession());
     const ac = new AbortController();
     apiFetch<CardsPayload>("/api/providers/cards", { signal: ac.signal })
       .then((data) => setSections(data.sections ?? []))
@@ -162,7 +146,7 @@ export default function ProvidersPage() {
 
   function onAdmin(value: string) {
     setAdmin(value);
-    writeAdmin(value);
+    writeAdminSession(value);
   }
 
   return (

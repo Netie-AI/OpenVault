@@ -21,7 +21,7 @@ Ship order: contract §7. Do **not** build `/api/keys/ingest` until AirGPT calls
 
 ## A1 — ClipDrop paste/drop (OpenVault)
 
-Done: hero zone, infer → dialog, Add & open Proxy, pulse + provider chip.
+Done: hero zone, infer → dialog, Add & open FreeRoute, pulse + provider chip.
 
 ## A2 — Register memory
 
@@ -33,7 +33,7 @@ Done: catch zone only; no role 0/0.
 
 ## A4 — Wire after add
 
-Done: navigate to `/proxy` (product surface, not a settings dump).
+Done: navigate to `/freeroute` (the one FreeRoute surface, not a settings dump).
 
 ## Electron clipboard
 
