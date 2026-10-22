@@ -102,19 +102,52 @@ FreeRoute and FreeBuild.
   hosting works (apps/email restored). Stores not moved: docker-registry auth,
   GitHub App identity, SSH keys (per-host file paths), SMTP relay creds, Stripe
   billing key (already disabled), user sessions, deployment env vars.
-- Known gap: ~650 internal-identifier lines in MCP descriptions and config files
-  not swept (requires per-line review at scale; MCP-client-visible strings were
-  prioritized and finished).
+- Kept: `X-Openship-Signature-256` is sent alongside its FreeBuild-named twin so
+  existing webhook receivers keep verifying; receivers see both names.
+
+## Seams
+
+Two FreeRoutes run on one box. They do not compete for keys.
+
+| | Python FreeRoute (`OpenMW`, `:5000`) | Node FreeRoute (`apps/router`, `:3020`) |
+|---|---|---|
+| Role | Custody gateway and the metered seat: issues `ov_` keys, meters usage, packs, parks, quota-aware health | Client-facing OpenAI-compatible router: many providers, MCP, A2A, combos, IDE tool configs |
+| Keys | Owns the vault | Reads pooled keys over loopback with the admin token; never stores one (`keys_managed_by_openvault` on every write path) |
+| Clients | Cortex, DMS, AirGPT through `CORTEX_FREEROUTE_TOKEN` | Cursor, Claude Code, Codex and other tools through an `ov_` token OpenVault issued |
+| Client auth | `HttpGuard` | `POST /api/apikeys/verify` on OpenVault (admin or allowlisted service Bearer, 60 verify calls a minute per caller); the router caches a verdict 60 s per token and fails closed on 429 or any error |
+| Bind | `127.0.0.1` only (HUMAN_STOP on `:5000`) | `127.0.0.1` by default; `HOST` or `OMNIROUTE_HOSTNAME` overrides |
+| Usage ledger | `usage_events` in `keys.db` | Its own SQLite; not yet written back to OpenVault's ledger. Open seam. |
+
+FreeBuild (`apps/ship`, `:3030` API, `:3031` dashboard) and the Python `ship/` hosts
+overlap the same way: the Python `ship/` is CORE (founder 2026-10-06) and stays; FreeBuild
+reads its Cloudflare token from the vault and keeps nothing local. Which one the console
+calls for a deploy is not decided here. Open seam.
+
+### Parking-lot unlock
+
+`PARKING_LOT.md` parked these trees on 2026-10-06 with the unlock "the founder re-asks
+with a plan that keeps KeyVault as the only key store and does not bind `:5000` on a
+public interface". The founder re-asked on 2026-10-22. The plan is this record: every
+fork path that would persist a provider key answers 501 `keys_managed_by_openvault`
+(proven live by `apps/router/netie/e2e-openvault.mjs` and
+`apps/ship/netie/e2e-openvault.mjs`, which also grep the forks' data directories for the
+vault secret), and neither fork binds `:5000`; OpenVault's own bind rule is unchanged.
+A second credential store is the one thing DR-0003 feared, and it is the one thing the
+forks are built not to have.
 
 ## Consequences
 
 - Good: two working products instead of two partial rebuilds.
 - Bad: two large Node trees to keep building, and an upstream to track by hand.
-- Bad: the Python FreeRoute (`/v1/chat/completions` on :5000) and the Node FreeRoute
-  overlap. See "Seams".
+- Bad: two FreeRoutes and two ship engines. The seams above name what is still open.
+- Verify rate: OpenVault admits 60 verify calls a minute per caller. With the router's
+  60 s cache that is 60 distinct client tokens a minute before a legitimate client sees
+  a transient 401. Raise the tier before a team passes that.
 
 ## Confirmation
 
-- `OpenMW/tests/test_apikeys_verify.py` (verify route, loopback gate)
-- `apps/router/netie/smoke.test.mjs` (starts, named 501s)
-- `apps/ship/netie/smoke.test.mjs` (starts, named 501s)
+- `OpenMW/tests/test_apikeys_verify.py` (verify route: admin or service Bearer, never loopback alone)
+- `apps/router/netie/keyvault.test.mjs` (admin token, named 503s, pooled-only, no custom-key borrowing)
+- `apps/router/netie/smoke.test.mjs` and `apps/ship/netie/smoke.test.mjs` (starts, named 501s)
+- `apps/router/netie/e2e-openvault.mjs` and `apps/ship/netie/e2e-openvault.mjs` (real OpenVault, vault key reaches the provider, secret absent from the fork's disk)
+- `apps/ship/netie/notice-check.mjs --check` (Apache change notices and NOTICE)

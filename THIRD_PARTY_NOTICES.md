@@ -82,7 +82,8 @@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.```
+SOFTWARE.
+```
 
 ---
 
@@ -96,13 +97,19 @@ SOFTWARE.```
 | Change notices | Modified files carry `Modified by Netie AI, 2026`; files without a comment syntax are listed in `apps/ship/NOTICE` |
 | History | Imported as one squashed snapshot (commit `import(ship): ...` on this repo). Upstream history is not carried; see the upstream repo at the commit above. |
 
-Left out of the import (not shipped here): `apps/web`,
-`apps/desktop`, `apps/cli`, `apps/edge`, `packages/db-email`,
-`packages/openship`, `docs/`, `fixtures/`, `docker/`, `bun.lock`, upstream
-agent files, and the MaxMind GeoLite2 country database
+Left out of the import (not shipped here): `apps/desktop`, `apps/cli`,
+`packages/db-email`, `packages/openship`, `docs/`, `.github/`, `.githooks/`,
+`.claude/`, `bun.lock`, `openship.code-workspace`, `release-advisories.json`,
+`TODO.md`, and the MaxMind GeoLite2 country database
 (`apps/api/assets/geoip/GeoLite2-Country.mmdb`, which has its own license and is
-not redistributed here). `apps/email` is included, minus ten onboarding and
-pricing images over 500 KB under `apps/email/client/public/`.
+not redistributed here). Kept with omissions: `apps/email` minus ten onboarding
+and pricing images over 500 KB and its non-English message files;
+`apps/dashboard` minus its non-English locale files and the upstream icon
+set; `apps/web` as one restored MCP guide only. `apps/edge`, `fixtures/` and
+`docker/` are present. The exact per-file list is generated into
+`apps/ship/NOTICE` by `apps/ship/netie/notice-check.mjs --notice`, which
+compares the tree against the pristine upstream commit; that file is the
+source of truth when this paragraph and it disagree.
 
 ---
 
