@@ -15,6 +15,7 @@ import { NextRequest } from "next/server";
 import { runAuthzPipeline } from "./pipeline.ts";
 import {
   applyLoopbackAdminHeader,
+  hostHeaderIsLoopback,
   isLoopbackVaultBootstrap,
   localAdminTokenPath,
   readLocalAdminToken,
@@ -70,8 +71,25 @@ async function withTokenFile(
   }
 }
 
+/**
+ * A real client always sends Host, and it names what the client dialed. The
+ * default follows the URL so existing cases keep meaning "a console request";
+ * a case that wants a different Host passes `host` itself.
+ */
 function call(url: string, method = "GET", headers: Record<string, string> = {}) {
-  return runAuthzPipeline(new NextRequest(url, { method, headers }), { enforce: true });
+  const withHost = { host: new URL(url).host, ...headers };
+  return runAuthzPipeline(new NextRequest(url, { method, headers: withHost }), {
+    enforce: true,
+  });
+}
+
+/** What `next start -H 127.0.0.1 --port 3010` hands the middleware for ANY Host. */
+const BOUND_URL = "http://127.0.0.1:3010";
+
+function assertTokenNowhere(res: Response, token: string): void {
+  for (const [, value] of res.headers) {
+    assert.equal(value.includes(token), false);
+  }
 }
 
 test("bootstrap paths are exact", () => {
@@ -123,6 +141,7 @@ test("apply refuses a non-loopback host and a mutation", () => {
       method: "GET",
       pathname: "/ov-api/api/vault/status",
       urlHost: "203.0.113.10",
+      hostHeader: "127.0.0.1:3010",
       token: TOKEN,
     }),
     false,
@@ -133,6 +152,7 @@ test("apply refuses a non-loopback host and a mutation", () => {
       method: "POST",
       pathname: "/ov-api/api/keys",
       urlHost: "127.0.0.1",
+      hostHeader: "127.0.0.1:3010",
       token: TOKEN,
     }),
     false,
@@ -143,6 +163,7 @@ test("apply refuses a non-loopback host and a mutation", () => {
       method: "GET",
       pathname: "/ov-api/api/keys",
       urlHost: "127.0.0.1",
+      hostHeader: "127.0.0.1:3010",
       token: TOKEN,
     }),
     true,
@@ -272,5 +293,190 @@ test("unseal without a loopback origin does not attach", async () => {
     assert.equal(res.status, 403);
     assert.equal(upstreamAdmin(res), null);
     await assertTokenNotInBody(res, TOKEN);
+  });
+});
+
+test("Host header parser accepts only loopback names, port optional", () => {
+  for (const ok of [
+    "127.0.0.1",
+    "127.0.0.1:3010",
+    "localhost",
+    "localhost:3010",
+    "LocalHost:3010",
+    "[::1]",
+    "[::1]:3010",
+    "::1",
+  ]) {
+    assert.equal(hostHeaderIsLoopback(ok), true, ok);
+  }
+  for (const bad of [
+    null,
+    undefined,
+    "",
+    " ",
+    "evil.example",
+    "evil.example:3010",
+    "127.0.0.1.evil.example",
+    "127.0.0.1.evil.example:3010",
+    "localhost.evil.example:3010",
+    "evil.example.127.0.0.1",
+    // A trailing-dot FQDN is a different DNS name. Refused on purpose.
+    "localhost.",
+    "localhost.:3010",
+    "127.0.0.1.:3010",
+    "127.0.0.1@evil.example",
+    "evil.example@127.0.0.1:3010",
+    "127.0.0.1:3010, evil.example",
+    "evil.example, 127.0.0.1:3010",
+    "127.0.0.1:3010 evil.example",
+    "127.0.0.1 ",
+    " 127.0.0.1",
+    "127.0.0.1\t",
+    "127.0.0.1\u0000",
+    "127.0.0.1:",
+    "127.0.0.1:abc",
+    "127.0.0.1:3010:3010",
+    "127.0.0.1:123456",
+    "127.1",
+    "0.0.0.0:3010",
+    "[::1",
+    "[::1]x",
+    "[::1]:",
+    "[::1]:abc",
+    "[::2]:3010",
+    "[::ffff:127.0.0.1]:3010",
+    "::ffff:127.0.0.1",
+    "::1:3010",
+    "[evil.example]:3010",
+  ]) {
+    assert.equal(hostHeaderIsLoopback(bad), false, JSON.stringify(bad));
+  }
+});
+
+test("apply needs a loopback Host header as well as a loopback URL host", () => {
+  const route = { method: "GET", pathname: "/ov-api/api/keys", urlHost: "127.0.0.1" };
+  for (const hostHeader of [
+    null,
+    "",
+    "evil.example:3010",
+    "127.0.0.1.evil.example",
+    "localhost.:3010",
+    "127.0.0.1:3010, evil.example",
+  ]) {
+    const headers = new Headers();
+    assert.equal(
+      applyLoopbackAdminHeader(headers, { ...route, hostHeader, token: TOKEN }),
+      false,
+      String(hostHeader),
+    );
+    assert.equal(headers.get("x-openvault-admin"), null);
+  }
+  for (const hostHeader of ["127.0.0.1:3010", "localhost:3010", "[::1]:3010"]) {
+    const headers = new Headers();
+    assert.equal(
+      applyLoopbackAdminHeader(headers, { ...route, hostHeader, token: TOKEN }),
+      true,
+      hostHeader,
+    );
+    assert.equal(headers.get("x-openvault-admin"), TOKEN);
+  }
+});
+
+/**
+ * DNS rebinding (#123 review). `next start -H 127.0.0.1` builds the middleware
+ * URL from the bind address, so the URL is loopback for every request and only
+ * the Host header carries what the browser dialed. These requests use the URL
+ * the real server produces.
+ */
+test("a non-loopback Host on the bound URL never gets the admin header", async () => {
+  await withTokenFile("token", async () => {
+    const hostile = [
+      "evil.example:3010",
+      "127.0.0.1.evil.example",
+      "127.0.0.1.evil.example:3010",
+      "localhost.evil.example:3010",
+      "127.0.0.1:3010, evil.example:3010",
+      "",
+    ];
+    // A forged loopback Origin satisfies the CSRF origin check, so these POSTs
+    // reach the attach step and only the Host gate can refuse them.
+    const forged = { origin: BOUND_URL, "content-type": "application/json" };
+    const routes: Array<[string, string]> = [
+      ["GET", "/ov-api/api/vault/status"],
+      ["POST", "/ov-api/api/vault/unseal"],
+      ["POST", "/ov-api/api/vault/webauthn/unseal/begin"],
+      ["POST", "/ov-api/api/vault/webauthn/unseal/finish"],
+      ["GET", "/ov-api/api/keys"],
+    ];
+    assert.equal(routes.length, 5);
+
+    for (const host of hostile) {
+      for (const [method, route] of routes) {
+        const res = await call(
+          `${BOUND_URL}${route}`,
+          method,
+          method === "GET" ? { host } : { ...forged, host },
+        );
+        assert.equal(upstreamAdmin(res), null, `${method} ${route} host=${host}`);
+        assertTokenNowhere(res, TOKEN);
+        await assertTokenNotInBody(res, TOKEN);
+      }
+    }
+
+    // The attacker page's own Origin is not loopback, so CSRF refuses its POSTs
+    // before the attach is considered.
+    const evilOrigin = await call(`${BOUND_URL}/ov-api/api/vault/unseal`, "POST", {
+      host: "evil.example:3010",
+      origin: "http://evil.example:3010",
+    });
+    assert.equal(evilOrigin.status, 403);
+    assert.equal(upstreamAdmin(evilOrigin), null);
+  });
+});
+
+test("a request with no Host header never gets the admin header", async () => {
+  await withTokenFile("token", async () => {
+    for (const route of ["/ov-api/api/vault/status", "/ov-api/api/keys"]) {
+      const res = await runAuthzPipeline(new NextRequest(`${BOUND_URL}${route}`), {
+        enforce: true,
+      });
+      assert.equal(upstreamAdmin(res), null, route);
+      assertTokenNowhere(res, TOKEN);
+    }
+    const post = await runAuthzPipeline(
+      new NextRequest(`${BOUND_URL}/ov-api/api/vault/unseal`, {
+        method: "POST",
+        headers: { origin: BOUND_URL },
+      }),
+      { enforce: true },
+    );
+    assert.equal(upstreamAdmin(post), null);
+  });
+});
+
+test("a loopback Host on the bound URL attaches for all five bootstrap routes", async () => {
+  await withTokenFile("token", async () => {
+    for (const host of ["127.0.0.1:3010", "localhost:3010", "[::1]:3010", "LOCALHOST:3010"]) {
+      const post = { host, origin: BOUND_URL, "content-type": "application/json" };
+      const cases: Array<[string, string, Record<string, string>]> = [
+        ["GET", "/ov-api/api/vault/status", { host }],
+        ["POST", "/ov-api/api/vault/unseal", post],
+        ["POST", "/ov-api/api/vault/webauthn/unseal/begin", post],
+        ["POST", "/ov-api/api/vault/webauthn/unseal/finish", post],
+        ["GET", "/ov-api/api/keys", { host }],
+      ];
+      for (const [method, route, headers] of cases) {
+        const res = await call(`${BOUND_URL}${route}`, method, headers);
+        assert.equal(upstreamAdmin(res), TOKEN, `${method} ${route} host=${host}`);
+        assertTokenOnlyOnRewrite(res, TOKEN);
+      }
+    }
+  });
+});
+
+test("localhost with a trailing dot is refused (documented fail-closed choice)", async () => {
+  await withTokenFile("token", async () => {
+    const res = await call(`${BOUND_URL}/ov-api/api/keys`, "GET", { host: "localhost.:3010" });
+    assert.equal(upstreamAdmin(res), null);
   });
 });

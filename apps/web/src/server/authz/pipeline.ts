@@ -12,6 +12,7 @@ import {
 } from "./headers";
 import {
   applyLoopbackAdminHeader,
+  hostHeaderIsLoopback,
   isLoopbackVaultBootstrap,
   readLocalAdminToken,
 } from "./loopbackVaultAdmin";
@@ -156,12 +157,21 @@ export async function runAuthzPipeline(
   requestHeaders.set(AUTHZ_HEADER_REQUEST_ID, requestId);
   requestHeaders.set(AUTHZ_HEADER_PEER_LOCALITY, peerLocality);
 
-  // URL host only. A spoofed X-Forwarded-For must not load the admin file.
-  if (isLoopbackHost(request.nextUrl.hostname) && isLoopbackVaultBootstrap(method, pathname)) {
+  // The URL host alone is not a gate: `next start -H 127.0.0.1` builds it from
+  // the bind address, so it is loopback for a DNS-rebinding request too. The raw
+  // Host header must also be loopback. A spoofed X-Forwarded-For must not load
+  // the admin file.
+  const hostHeader = request.headers.get("host");
+  if (
+    isLoopbackHost(request.nextUrl.hostname) &&
+    hostHeaderIsLoopback(hostHeader) &&
+    isLoopbackVaultBootstrap(method, pathname)
+  ) {
     applyLoopbackAdminHeader(requestHeaders, {
       method,
       pathname,
       urlHost: request.nextUrl.hostname,
+      hostHeader,
       token: readLocalAdminToken(),
     });
   }

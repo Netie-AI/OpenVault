@@ -4,9 +4,9 @@ Append-only. Never edited, only added to. Newest first.
 
 ## 2026-10-29 - Localhost unseal without an admin paste (OpenVault #123)
 
-- On a loopback URL host the :3010 console attaches `X-OpenVault-Admin` from the local admin token file for vault status, passphrase unseal, Hello unseal, and `GET /api/keys`. The token is not written into the page. Next strips it from the browser response.
+- When the request `Host` header is loopback (`127.0.0.1`, `localhost`, `[::1]`, any port) and the middleware URL host is loopback, the :3010 console attaches `X-OpenVault-Admin` from the local admin token file for vault status, passphrase unseal, Hello unseal, and `GET /api/keys`. The token is not written into the page. Next strips it from the browser response.
 - The unseal gate no longer asks for an admin token. Overview shows the same Unseal / Hello control as `/vault`.
-- A non-loopback host does not get that header. Other vault and key mutations still require it and stay 401 without it. The API guard is unchanged. Refs #123.
+- A request whose `Host` header is missing, empty, repeated, or not loopback does not get that header, and the token file is not read for it. The middleware URL host cannot decide this alone: `next start -H 127.0.0.1` builds it from the bind address, so it is loopback for every request, including a DNS-rebinding page sending `Host: evil.example:3010`. A trailing-dot `localhost.` is refused. Other vault and key mutations still require the header and stay 401 without it. The API guard is unchanged. Refs #123.
 
 ## 2026-10-09 - Space credentials are admin plus loopback (Refs #160)
 
