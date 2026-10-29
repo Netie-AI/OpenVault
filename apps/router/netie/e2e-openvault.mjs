@@ -48,9 +48,10 @@ import {
 import { networkInterfaces, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { randomBytes } from "node:crypto";
+import { fileURLToPath } from "node:url";
 import { setTimeout as sleep } from "node:timers/promises";
 
-const ROOT = resolve(new URL("..", import.meta.url).pathname);
+const ROOT = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const OPENMW_DIR = resolve(process.env.OPENVAULT_OPENMW_DIR || join(ROOT, "..", "..", "OpenMW"));
 
 const PROVIDER_SECRET = `sk-e2e-vault-secret-${randomBytes(12).toString("hex")}`;

@@ -31,9 +31,10 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { networkInterfaces, tmpdir } from "node:os";
 import { join } from "node:path";
 import { randomBytes } from "node:crypto";
+import { fileURLToPath } from "node:url";
 import { setTimeout as sleep } from "node:timers/promises";
 
-const ROOT = new URL("..", import.meta.url).pathname;
+const ROOT = fileURLToPath(new URL("..", import.meta.url));
 
 const MANAGEMENT_API_KEY = `sk-smoke-mgmt-${randomBytes(16).toString("hex")}`;
 const OPENVAULT_VALID_TOKEN = `ovtok_smoke_${randomBytes(16).toString("hex")}`;
