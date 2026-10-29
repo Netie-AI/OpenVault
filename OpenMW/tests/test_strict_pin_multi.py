@@ -229,13 +229,22 @@ def _assert_sse(response: Any, raw: bytes, provider: str, model: str) -> None:
     assert frames[0]["served_local"] is False
 
 
-def _assert_unavailable(payload: dict[str, Any], model: str, reason: str) -> None:
+def _assert_unavailable(
+    payload: dict[str, Any],
+    model: str,
+    reason: str,
+    *,
+    provider: str | None,
+) -> None:
     assert payload == {
         "error": {
             "message": "pinned model has no healthy hop",
             "type": PIN_UNAVAILABLE,
             "model": model,
             "reason": reason,
+            "provider": provider,
+            "park_reason": None,
+            "retry_after_s": None,
         },
         "served_provider": None,
         "served_model": None,
@@ -341,7 +350,7 @@ def test_strict_gemini_other_provider_alone_is_no_hop(vault: KeyVault) -> None:
 
     assert status == 503
     assert isinstance(payload, dict)
-    _assert_unavailable(payload, _GEMINI, "no_hop")
+    _assert_unavailable(payload, _GEMINI, "no_hop", provider="google")
     assert upstream.urls == []
 
 
@@ -430,7 +439,7 @@ def test_strict_gemma_other_provider_alone_is_no_hop(vault: KeyVault) -> None:
 
     assert status == 503
     assert isinstance(payload, dict)
-    _assert_unavailable(payload, _GEMMA, "no_hop")
+    _assert_unavailable(payload, _GEMMA, "no_hop", provider="openrouter")
     assert upstream.urls == []
 
 
@@ -462,7 +471,7 @@ def test_strict_unknown_model_is_not_in_catalog(vault: KeyVault) -> None:
 
     assert status == 503
     assert isinstance(payload, dict)
-    _assert_unavailable(payload, "not-a-catalog-id", "not_in_catalog")
+    _assert_unavailable(payload, "not-a-catalog-id", "not_in_catalog", provider=None)
     assert upstream.urls == []
 
 
