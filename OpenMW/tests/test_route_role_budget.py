@@ -866,3 +866,426 @@ def test_old_db_gains_route_spend_and_usage_events_keeps_18_columns(tmp_path: Pa
     assert store.spend_usd(vault_key_id="vk", since=0) == 0.0
     assert store.spend_usd(since=0) == 0.0
     assert [r["est_cost_usd"] for r in store.spend_events()] == [0.25, None]
+
+
+# --- PR #154 review: completions, output bound, lost ledger row, 503 detail --------
+
+_CAP_ID = "cortex"
+#: Worst case for one default-sized completion on the priced test model, in USD.
+_ONE_COMPLETION = (3 * 0.15 + 1024 * 0.6) / 1e6
+
+
+def _capped_paid(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, daily_usd: float, *, priced: bool = True
+) -> None:
+    _paid_sql(
+        tmp_path,
+        monkeypatch,
+        caps={"callers": {_CAP_ID: {"daily_usd": daily_usd}}},
+        priced=priced,
+    )
+
+
+class _NoLedger:
+    def spend_usd(
+        self, *, vault_key_id: str | None = None, service_id: str | None = None, since: float
+    ) -> float:
+        return 0.0
+
+
+def _unit_guard(daily_usd: float) -> SpendGuard:
+    policy = load_route_policy()
+    policy = type(policy)(
+        roles=policy.roles,
+        models=((f"openai/{_PAID}", ModelPrice(False, 1.0, 1.0)), *policy.models),
+        key_caps={},
+        caller_caps={_CAP_ID: SpendCap(daily_usd=daily_usd)},
+        max_tokens_per_request=None,
+    )
+    return SpendGuard(policy=policy, ledger=_NoLedger(), caller_id=_CAP_ID, route_role="sql")
+
+
+def _stream_client(sent: list[dict[str, Any]], chunks: list[bytes]) -> Any:
+    class _Resp:
+        status_code = 200
+        headers: ClassVar[dict[str, str]] = {"content-type": "text/event-stream"}
+
+        async def aiter_bytes(self) -> AsyncIterator[bytes]:
+            for c in chunks:
+                yield c
+
+        async def aclose(self) -> None:
+            return None
+
+    class _Client:
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            pass
+
+        def build_request(self, *args: Any, **kwargs: Any) -> object:
+            sent.append(json.loads(json.dumps(kwargs.get("json") or {})))
+            return object()
+
+        async def send(self, request: object, *, stream: bool = False) -> _Resp:
+            return _Resp()
+
+        async def aclose(self) -> None:
+            return None
+
+    return _Client
+
+
+_USAGE_FRAME = (
+    b'data: {"id":"1","choices":[],"usage":{"prompt_tokens":9,"completion_tokens":4,'
+    b'"total_tokens":13}}\n\n'
+)
+_STREAM = [
+    b'data: {"id":"1","choices":[{"delta":{"content":"hi"}}]}\n\n',
+    _USAGE_FRAME,
+    b"data: [DONE]\n\n",
+]
+_STREAM_NO_USAGE = [_STREAM[0], _STREAM[2]]
+
+
+def _stream_post(
+    client: TestClient, sent: list[dict[str, Any]], chunks: list[bytes], body: dict[str, Any]
+) -> Any:
+    payload = {"messages": [{"role": "user", "content": "hello"}], "stream": True, **body}
+    with patch("openmw.openvault.vault.proxy.httpx.AsyncClient", _stream_client(sent, chunks)):
+        return client.post("/v1/chat/completions", json=payload)
+
+
+def test_requested_completions_is_n_times_best_of() -> None:
+    from openmw.openvault.vault.route_policy import MAX_COMPLETIONS, requested_completions
+
+    assert requested_completions({}) == 1
+    assert requested_completions({"n": None, "best_of": None}) == 1
+    assert requested_completions({"n": 1}) == 1
+    assert requested_completions({"n": 3}) == 3
+    assert requested_completions({"best_of": 4}) == 4
+    assert requested_completions({"n": 3, "best_of": 4}) == 12
+    assert requested_completions({"n": MAX_COMPLETIONS}) == MAX_COMPLETIONS
+    for bad in (0, -1, MAX_COMPLETIONS + 1, True, False, "2", 2.0, 2.5, [2], {"n": 2}):
+        assert requested_completions({"n": bad}) is None, bad
+        assert requested_completions({"best_of": bad}) is None, bad
+    assert requested_completions({"n": 2, "best_of": 0}) is None
+
+
+def test_admit_reserves_output_cost_for_every_completion() -> None:
+    hop = {"provider": "openai", "model": _PAID, "key_id": "k", "prompt_tokens": 0}
+    one = _unit_guard(1.0)
+    assert one.admit(**hop, max_output=1000) is None
+    assert one.held_usd == pytest.approx(0.001)
+    one.release()
+
+    many = _unit_guard(1.0)
+    assert many.admit(**hop, max_output=1000, completions=12) is None
+    assert many.held_usd == pytest.approx(0.012)
+    assert many.holding
+    many.release()
+    assert not many.holding
+
+    # 12 completions of 1000 tokens does not fit a 0.005 cap that one would.
+    tight = _unit_guard(0.005)
+    assert tight.admit(**hop, max_output=1000, completions=1) is None
+    tight.release()
+    refused = tight.admit(**hop, max_output=1000, completions=12)
+    assert refused is not None
+    assert refused.requested == pytest.approx(0.012)
+    assert not tight.holding
+
+    unbounded = _unit_guard(1.0)
+    blocked = unbounded.admit(**hop, max_output=1000, completions=None)
+    assert blocked is not None
+    assert blocked.cap == "request.completions"
+    assert blocked.to_body()["error"]["cap_detail"]["unit"] == "completions"
+    assert not unbounded.holding
+
+
+def test_n_128_on_a_capped_paid_hop_is_reserved_at_n_times_and_refused(
+    vault: KeyVault, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _key(vault, "openai")
+    # One completion fits with room to spare. 128 of them are about 0.079 USD.
+    _capped_paid(tmp_path, monkeypatch, 0.01)
+    rec = _Recorder()
+    resp = _post(_client(vault), rec, {"role": "sql", "service_id": _CAP_ID, "n": 128})
+
+    assert resp.status_code == 402, resp.text
+    assert rec.urls == []
+    err = resp.json()["error"]
+    assert err["cap"] == "caller.daily_usd"
+    assert err["cap_detail"]["requested"] == pytest.approx(128 * _ONE_COMPLETION, rel=0.01)
+    assert _ledger().spend_events()[-1]["est_cost_usd"] == 0.0
+
+
+def test_n_and_best_of_multiply_the_reservation_that_is_admitted(
+    vault: KeyVault, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _key(vault, "openai")
+    # Room for 3 completions (~0.0018) but not 4 (~0.0025).
+    _capped_paid(tmp_path, monkeypatch, 0.002)
+    client = _client(vault)
+
+    over = _post(client, _Recorder(), {"role": "sql", "service_id": _CAP_ID, "n": 2, "best_of": 2})
+    assert over.status_code == 402, over.text
+    assert over.json()["error"]["cap_detail"]["requested"] == pytest.approx(
+        4 * _ONE_COMPLETION, rel=0.01
+    )
+
+    rec = _Recorder(_ok(_PAID))
+    fits = _post(client, rec, {"role": "sql", "service_id": _CAP_ID, "n": 3})
+    assert fits.status_code == 200, fits.text
+    assert rec.bodies[0]["n"] == 3
+
+
+@pytest.mark.parametrize("bad", [0, -1, 129, "2", 2.0, True, [2]])
+@pytest.mark.parametrize("field", ["n", "best_of"])
+def test_unbounded_completion_count_is_refused_on_a_capped_paid_hop(
+    vault: KeyVault, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, field: str, bad: Any
+) -> None:
+    _key(vault, "openai")
+    _capped_paid(tmp_path, monkeypatch, 100.0)
+    rec = _Recorder()
+    resp = _post(_client(vault), rec, {"role": "sql", "service_id": _CAP_ID, field: bad})
+
+    assert resp.status_code == 402, resp.text
+    assert rec.urls == []
+    err = resp.json()["error"]
+    assert err["reason"] == BUDGET_EXCEEDED
+    assert err["cap"] == "request.completions"
+    assert err["cap_detail"]["limit"] == 128
+    assert err["cap_detail"]["unit"] == "completions"
+    assert "traceback" not in resp.text.lower()
+
+
+def test_free_hop_body_is_unchanged_by_the_spend_bounds(vault: KeyVault) -> None:
+    _key(vault, "groq")
+    first = load_route_policy().hops_for("sql")[0]
+    rec = _Recorder(_ok(first.model))
+    resp = _post(
+        _client(vault),
+        rec,
+        {"role": "sql", "n": 128, "best_of": "x", "stream_options": {"include_obfuscation": False}},
+    )
+    assert resp.status_code == 200, resp.text
+    body = rec.bodies[0]
+    assert body["n"] == 128
+    assert body["best_of"] == "x"
+    assert "max_tokens" not in body
+    assert "max_completion_tokens" not in body
+    assert body["stream_options"] == {"include_obfuscation": False}
+
+
+def test_pool_walk_without_a_cap_is_unchanged(vault: KeyVault) -> None:
+    _key(vault, "openai")
+    rec = _Recorder(_ok(_PAID))
+    resp = _post(_client(vault), rec, {"n": 128})
+    assert resp.status_code == 200, resp.text
+    body = rec.bodies[0]
+    assert body["n"] == 128
+    assert "max_tokens" not in body
+
+
+def test_capped_paid_hop_forwards_the_output_bound_it_reserved(
+    vault: KeyVault, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from openmw.openvault.vault.ratelimit import DEFAULT_MAX_OUTPUT_TOKENS
+
+    _key(vault, "openai")
+    _capped_paid(tmp_path, monkeypatch, 100.0)
+    client = _client(vault)
+    ask = {"role": "sql", "service_id": _CAP_ID}
+
+    none_named = _Recorder(_ok(_PAID))
+    assert _post(client, none_named, ask).status_code == 200
+    assert none_named.bodies[0]["max_tokens"] == DEFAULT_MAX_OUTPUT_TOKENS
+    assert "max_completion_tokens" not in none_named.bodies[0]
+
+    named = _Recorder(_ok(_PAID))
+    assert _post(client, named, {**ask, "max_tokens": 50}).status_code == 200
+    assert named.bodies[0]["max_tokens"] == 50
+
+    # The field name the caller chose is the one that is written, as
+    # prepare_hop_body does. No max_tokens is invented beside it.
+    completion = _Recorder(_ok(_PAID))
+    assert _post(client, completion, {**ask, "max_completion_tokens": 300}).status_code == 200
+    assert completion.bodies[0]["max_completion_tokens"] == 300
+    assert "max_tokens" not in completion.bodies[0]
+
+    # An invalid budget is deleted by prepare_hop_body, so the reservation falls
+    # back to the default and that is what goes upstream.
+    invalid = _Recorder(_ok(_PAID))
+    assert _post(client, invalid, {**ask, "max_tokens": 0}).status_code == 200
+    assert invalid.bodies[0]["max_tokens"] == DEFAULT_MAX_OUTPUT_TOKENS
+
+
+def test_bound_to_reservation_caps_a_field_above_the_hold() -> None:
+    from openmw.openvault.vault.proxy import _bound_to_reservation
+
+    above = {"max_tokens": 5000, "model": "m"}
+    _bound_to_reservation(above, 1024, stream=False)
+    assert above == {"max_tokens": 1024, "model": "m"}
+
+    both = {"max_tokens": 5000, "max_completion_tokens": 7000}
+    _bound_to_reservation(both, 64, stream=False)
+    assert both == {"max_tokens": 64, "max_completion_tokens": 64}
+
+    # A Responses-style field the chat endpoint ignores does not bound anything.
+    ignored = {"max_output_tokens": 50}
+    _bound_to_reservation(ignored, 50, stream=False)
+    assert ignored["max_tokens"] == 50
+    assert "stream_options" not in ignored
+
+
+def test_stream_options_merge_and_the_callers_dict_is_not_mutated() -> None:
+    from openmw.openvault.vault.proxy import _bound_to_reservation
+
+    theirs = {"include_usage": False, "include_obfuscation": False}
+    body: dict[str, Any] = {"stream_options": theirs}
+    _bound_to_reservation(body, 100, stream=True)
+    assert body["stream_options"] == {"include_usage": True, "include_obfuscation": False}
+    assert theirs == {"include_usage": False, "include_obfuscation": False}
+
+    for junk in ("yes", 3, None, ["include_usage"]):
+        odd: dict[str, Any] = {"stream_options": junk}
+        _bound_to_reservation(odd, 100, stream=True)
+        assert odd["stream_options"] == {"include_usage": True}
+
+
+def test_streamed_paid_hop_asks_for_usage_and_the_ledger_records_it(
+    vault: KeyVault, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from openmw.openvault.vault.ratelimit import DEFAULT_MAX_OUTPUT_TOKENS
+
+    _key(vault, "openai")
+    _capped_paid(tmp_path, monkeypatch, 100.0)
+    sent: list[dict[str, Any]] = []
+    resp = _stream_post(
+        _client(vault),
+        sent,
+        _STREAM,
+        {"role": "sql", "service_id": _CAP_ID, "stream_options": {"include_obfuscation": False}},
+    )
+    assert resp.status_code == 200, resp.text
+    assert sent[0]["stream_options"] == {"include_obfuscation": False, "include_usage": True}
+    assert sent[0]["max_tokens"] == DEFAULT_MAX_OUTPUT_TOKENS
+
+    # The client never asked for usage, and the row is the measured one, not the hold.
+    measured = (9 * 0.15 + 4 * 0.6) / 1e6
+    row = _ledger().spend_events()[-1]
+    assert row["est_cost_usd"] == pytest.approx(measured)
+    event = _ledger().events()[-1]
+    assert (event["prompt_tokens"], event["completion_tokens"]) == (9, 4)
+    assert not event["estimated"]
+
+
+def test_streamed_free_hop_body_is_unchanged(vault: KeyVault) -> None:
+    _key(vault, "groq")
+    sent: list[dict[str, Any]] = []
+    resp = _stream_post(_client(vault), sent, _STREAM_NO_USAGE, {"role": "sql"})
+    assert resp.status_code == 200, resp.text
+    assert "stream_options" not in sent[0]
+    assert "max_tokens" not in sent[0]
+
+
+def test_lost_ledger_row_keeps_the_hold_so_the_cap_still_binds(
+    vault: KeyVault, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _key(vault, "openai")
+    # One reservation (~0.0006) fits. Two do not, and a measured 40+10 would not
+    # use the cap up, so only a surviving hold can refuse the second request.
+    _capped_paid(tmp_path, monkeypatch, 0.001)
+    client = _client(vault)
+    ask = {"role": "sql", "service_id": _CAP_ID}
+
+    with patch.object(UsageStore, "record", side_effect=sqlite3.OperationalError("disk I/O")):
+        first = _post(client, _Recorder(_ok(_PAID)), ask)
+    assert first.status_code == 200, first.text
+    assert first.json()["provider"] == "openai"
+
+    rec = _Recorder()
+    second = _post(client, rec, ask)
+    assert second.status_code == 402, second.text
+    assert rec.urls == []
+    err = second.json()["error"]
+    assert err["cap"] == "caller.daily_usd"
+    assert err["cap_detail"]["spent"] == pytest.approx(_ONE_COMPLETION, rel=0.01)
+
+
+def test_written_ledger_row_still_releases_the_hold(
+    vault: KeyVault, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _key(vault, "openai")
+    _capped_paid(tmp_path, monkeypatch, 0.001)
+    client = _client(vault)
+    ask = {"role": "sql", "service_id": _CAP_ID}
+
+    assert _post(client, _Recorder(_ok(_PAID)), ask).status_code == 200
+    again = _post(client, _Recorder(_ok(_PAID)), ask)
+    assert again.status_code == 200, again.text
+
+
+def test_lost_ledger_row_logs_an_error_without_key_material(
+    vault: KeyVault, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from structlog.testing import capture_logs
+
+    record = _key(vault, "openai")
+    _capped_paid(tmp_path, monkeypatch, 0.001)
+    with (
+        capture_logs() as logs,
+        patch.object(UsageStore, "record", side_effect=sqlite3.OperationalError("disk I/O")),
+    ):
+        resp = _post(_client(vault), _Recorder(_ok(_PAID)), {"role": "sql", "service_id": _CAP_ID})
+    assert resp.status_code == 200, resp.text
+
+    kept = [e for e in logs if e["event"] == "usage_ledger_write_failed_hold_kept"]
+    assert len(kept) == 1
+    assert kept[0]["log_level"] == "error"
+    assert kept[0]["provider"] == "openai"
+    assert kept[0]["held_usd"] == pytest.approx(_ONE_COMPLETION, rel=0.01)
+    dump = json.dumps(logs, default=str)
+    assert "placeholder-openai" not in dump
+    assert record.id not in dump
+
+
+def test_lost_ledger_row_for_a_hop_that_served_nothing_does_not_leak_a_hold(
+    vault: KeyVault, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _key(vault, "openai")
+    _capped_paid(tmp_path, monkeypatch, 0.001)
+    client = _client(vault)
+    ask = {"role": "sql", "service_id": _CAP_ID}
+
+    with patch.object(UsageStore, "record", side_effect=sqlite3.OperationalError("disk I/O")):
+        failed = _post(client, _Recorder(_fail(503)), ask)
+    assert failed.status_code >= 500
+
+    # Nothing was served, so nothing was spent and nothing may stay held.
+    ok = _post(client, _Recorder(_ok(_PAID)), ask)
+    assert ok.status_code == 200, ok.text
+
+
+def test_unreadable_policy_503_does_not_echo_the_path(
+    vault: KeyVault, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from structlog.testing import capture_logs
+
+    _key(vault, "groq")
+    secret_dir = tmp_path / "operator-private-dir"
+    missing = secret_dir / "policy-that-is-not-there.json"
+    monkeypatch.setenv(POLICY_ENV, str(missing))
+
+    with capture_logs() as logs:
+        resp = _post(_client(vault), _Recorder(), {"role": "sql"})
+    assert resp.status_code == 503
+    err = resp.json()["error"]
+    assert err["type"] == "openvault_route_policy_invalid"
+    assert err["message"] == "cannot read route policy policy-that-is-not-there.json"
+    assert "operator-private-dir" not in resp.text
+    assert str(tmp_path) not in resp.text
+    assert "Errno" not in resp.text
+
+    detail = [e for e in logs if e["event"] == "route_policy_unreadable"]
+    assert detail
+    assert "operator-private-dir" in detail[0]["path"]

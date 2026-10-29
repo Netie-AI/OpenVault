@@ -2,6 +2,13 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-29 - Spend caps cannot be outrun on a paid hop (Refs #148)
+
+- `n` and `best_of` count. A capped paid hop reserves `n` times `best_of` completions (each defaults to 1, each must be a whole number from 1 to 128). A value outside that is refused on that hop as `request.completions` (402, `unit: "completions"`) and nothing goes upstream. Before, `n: 128` reserved one completion and could spend about 128 times the cap.
+- A capped paid hop now sends the output budget it reserved: `max_tokens` (or `max_completion_tokens`, if that is the field the caller used) at the 1024 default when the caller named none. A streamed one also sends `stream_options.include_usage: true`, merged with any other `stream_options`, so the ledger records the usage frame and not the hold. The client receives that frame. Free hops and pool-walk hops with no cap on them are sent unchanged.
+- A failed ledger write for a paid hop that served no longer releases its hold. The hold keeps counting against the caps for the life of the process and `usage_ledger_write_failed_hold_kept` is logged at error level, with no message or key material. The response is unchanged.
+- An unreadable route policy file returns 503 with the file name only. The path and OS error are logged as `route_policy_unreadable`. Routing order, role lists, strict pin and the shipped `route_policy.json` are untouched. Refs #148.
+
 ## 2026-10-29 - FreeRoute role routing, hard spend caps, cost stamps (Refs #148)
 
 - `POST /v1/chat/completions` accepts `role` = `sql` | `tool` | `reason` | `summarize`. Each role walks an ordered model list from `OpenMW/openmw/openvault/vault/route_policy.json`, free first, overridable with `OPENVAULT_ROUTE_POLICY`. A provider failure falls back to the next entry in order. No `role` keeps the pool walk. Any other value is 422 `openvault_unknown_role`. `role` with `strict` or `local_only` is 422 `openvault_role_conflict`. Defaults use only NVIDIA NIM, Groq, OpenRouter, SambaNova, Gemini, and SEA-LION, with no DeepSeek or China-hosted model names.

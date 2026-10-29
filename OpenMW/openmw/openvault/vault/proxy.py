@@ -53,6 +53,7 @@ from openmw.openvault.vault.route_policy import (
     BUDGET_ERROR_TYPE,
     BudgetBlock,
     SpendGuard,
+    requested_completions,
     usage_pair,
 )
 from openmw.openvault.vault.store import KeyRecord, KeyVault
@@ -887,23 +888,53 @@ def _role_models(
     return tuple(m for m in role_models if _hop_serves(provider, m, multimodal=True))
 
 
+def _bound_to_reservation(hop_body: dict[str, Any], reserved: int, *, stream: bool) -> None:
+    """Make a reserved hop unable to bill more than its hold covers.
+
+    The reservation assumed ``reserved`` output tokens per completion, but a
+    caller who named none sent nothing upstream, so the provider was free to
+    emit more. Name it. The field is the one ``prepare_hop_body`` writes: the
+    ones the caller sent, else ``max_tokens``. A stream also asks for the usage
+    frame, so the ledger records what was served instead of the hold. Other
+    ``stream_options`` keys survive, and the caller's own dict is not mutated.
+    """
+    named = [f for f in ("max_tokens", "max_completion_tokens") if f in hop_body]
+    for name in named or ["max_tokens"]:
+        hop_body[name] = reserved
+    if stream:
+        options = hop_body.get("stream_options")
+        hop_body["stream_options"] = {
+            **(options if isinstance(options, dict) else {}),
+            "include_usage": True,
+        }
+
+
 def _admit_hop(
     spend: SpendGuard | None,
     cand: ProxyCandidate,
     model: str,
     hop_body: dict[str, Any],
     prompt_tokens: int,
+    *,
+    stream: bool = False,
 ) -> BudgetBlock | None:
     if spend is None:
         return None
     sent, _present, _invalid = resolve_requested_budget(hop_body)
-    return spend.admit(
+    reserved = sent if sent is not None else DEFAULT_MAX_OUTPUT_TOKENS
+    blocked = spend.admit(
         provider=cand.provider,
         model=model,
         key_id="" if cand.served_local else cand.key_id,
         prompt_tokens=prompt_tokens,
-        max_output=sent if sent is not None else DEFAULT_MAX_OUTPUT_TOKENS,
+        max_output=reserved,
+        completions=requested_completions(hop_body),
     )
+    # Only a hop that took a hold is bounded. A free hop, or a pool-walk hop with
+    # no cap on it, goes upstream exactly as the caller sent it.
+    if blocked is None and spend.holding:
+        _bound_to_reservation(hop_body, reserved, stream=stream)
+    return blocked
 
 
 def _sse_stamp(
@@ -1476,7 +1507,7 @@ async def prepare_chat_stream(
                     continue
                 hop_payload = decision.body
                 hop_payload["stream"] = True
-                blocked = _admit_hop(spend, cand, model, hop_payload, prompt_estimate)
+                blocked = _admit_hop(spend, cand, model, hop_payload, prompt_estimate, stream=True)
                 if blocked is not None:
                     other_skips += 1
                     errors.append(f"{cand.label}: {blocked.cap} refuses {model}")

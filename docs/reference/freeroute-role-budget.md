@@ -60,7 +60,8 @@ moves on to a paid model to find room.
 ```
 
 `cap` is one of `key.daily_usd`, `key.monthly_usd`, `caller.daily_usd`,
-`caller.monthly_usd`, `request.max_tokens_per_request` (`unit: "tokens"`), or
+`caller.monthly_usd`, `request.max_tokens_per_request` (`unit: "tokens"`),
+`request.completions` (`unit: "completions"`, see Cap rules), or
 `paid_default`. `paid_default` means a role walk reached a paid model and no USD
 cap is set for that vault key or caller. For a key cap, `id` is the first 8
 characters of the vault key id. `requested: null` means the paid model has no
@@ -118,7 +119,19 @@ model priced at 0 never moves a cap.
   paid pooled key still serves it when no cap applies.
 - Each applicable cap is checked before the hop: spent in the window, plus
   in-flight holds in this process, plus this hop's worst case (prompt estimate
-  plus the output budget actually sent). Windows are UTC day and UTC month.
+  plus the output budget actually sent, once per completion). Windows are UTC
+  day and UTC month.
+- Completions: a capped paid hop reserves `n` times `best_of` completions
+  (each defaults to 1). Each must be a whole number from 1 to 128. Anything
+  else (a string, float, bool, zero, negative, over 128) cannot be bounded, so
+  that hop is refused as `request.completions` and no upstream call is made.
+- Output bound: a capped paid hop always sends the output budget it reserved.
+  A caller who named none gets `max_tokens` set to the 1024 default, or
+  `max_completion_tokens` if that is the field they used. A streamed one also
+  gets `stream_options.include_usage: true` (other `stream_options` keys are
+  kept), so the ledger records the usage frame instead of the hold, and the
+  client receives that frame. Free hops, and pool-walk hops with no cap on
+  them, are sent exactly as the caller wrote them.
 - Spend persists in keys.db table `route_spend`. It sits beside `usage_events`
   and uses the same `event_id`. There is no new store.
 - `max_tokens_per_request` is the smaller of the global and the per-caller
@@ -127,3 +140,9 @@ model priced at 0 never moves a cap.
   than the cap is skipped.
 - Holds are per process. Two gateway processes that share one keys.db can each
   admit one hop past a cap before the other's row lands.
+- If the ledger write fails for a paid hop that served, the response is
+  unchanged but the hold is not released: it keeps counting against the caps
+  until the process restarts, and an error `usage_ledger_write_failed_hold_kept`
+  is logged. A hop that served nothing releases its hold as usual.
+- An unreadable policy file returns 503 with the file name only. The full path
+  and the OS error go to the log (`route_policy_unreadable`).

@@ -28,7 +28,7 @@ import math
 import os
 import threading
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from fnmatch import fnmatchcase
@@ -51,6 +51,11 @@ POLICY_INVALID_TYPE = "openvault_route_policy_invalid"
 
 _SCOPE_KEY = "key"
 _SCOPE_CALLER = "caller"
+
+#: Largest ``n`` or ``best_of`` a capped paid hop will reserve for. OpenAI's own
+#: ``n`` ceiling; anything above it is refused rather than guessed at.
+MAX_COMPLETIONS = 128
+_COMPLETION_FIELDS = ("n", "best_of")
 
 
 class RoutePolicyError(ValueError):
@@ -215,7 +220,10 @@ def _read_layer(path: Path) -> dict[str, Any]:
     try:
         raw = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:
-        raise RoutePolicyError(f"cannot read route policy {path.name}: {exc}") from exc
+        # The caller sees only the file name. An OSError string carries the full
+        # path, which is nobody's business but the operator's log.
+        log.error("route_policy_unreadable", path=str(path), error=str(exc))
+        raise RoutePolicyError(f"cannot read route policy {path.name}") from exc
     if not isinstance(raw, dict):
         raise RoutePolicyError(f"route policy {path.name} must be a JSON object")
     return raw
@@ -312,9 +320,10 @@ def empty_stamps() -> dict[str, Any]:
 class BudgetBlock:
     """Which cap refused the request, and by how much."""
 
-    #: ``key`` | ``caller`` | ``request`` | ``paid_default``
+    #: ``key`` | ``caller`` | ``request`` (tokens or completions) | ``paid_default``
     scope: str
-    #: ``daily_usd`` | ``monthly_usd`` | ``max_tokens_per_request`` | ``paid_requires_cap``
+    #: ``daily_usd`` | ``monthly_usd`` | ``max_tokens_per_request`` | ``completions`` |
+    #: ``paid_requires_cap``
     limit_name: str
     limit: float | int
     spent: float | int | None
@@ -335,6 +344,11 @@ class BudgetBlock:
             return (
                 f"{self.provider}/{self.model} is a paid model and no USD cap is set for "
                 "this key or caller; paid models stay off until one is"
+            )
+        if self.scope == "request" and self.limit_name == "completions":
+            return (
+                f"{self.provider}/{self.model} is a capped paid model; n and best_of must each "
+                f"be a whole number from 1 to {self.limit} so the reservation can cover them"
             )
         if self.scope == "request":
             return f"request asks for {self.requested} output tokens; the cap is {self.limit}"
@@ -362,7 +376,13 @@ class BudgetBlock:
                     "limit": self.limit,
                     "spent": self.spent,
                     "requested": self.requested,
-                    "unit": "tokens" if self.scope == "request" else "usd",
+                    "unit": (
+                        "completions"
+                        if self.limit_name == "completions"
+                        else "tokens"
+                        if self.scope == "request"
+                        else "usd"
+                    ),
                     "provider": self.provider or None,
                     "model": self.model or None,
                 },
@@ -388,6 +408,27 @@ def day_start(now: float) -> float:
 def month_start(now: float) -> float:
     current = datetime.fromtimestamp(now, timezone.utc)
     return current.replace(day=1, hour=0, minute=0, second=0, microsecond=0).timestamp()
+
+
+def requested_completions(body: Mapping[str, object]) -> int | None:
+    """How many completions one call bills for: ``n`` times ``best_of``.
+
+    Each defaults to 1 when absent or null. ``None`` means the count cannot be
+    bounded: a field that is present but is not a whole number from 1 to
+    ``MAX_COMPLETIONS`` (a bool, string, float, zero, negative, or oversized
+    value). Callers refuse a capped paid hop on ``None`` rather than guess.
+    """
+    total = 1
+    for name in _COMPLETION_FIELDS:
+        value = body.get(name)
+        if value is None:
+            continue
+        if isinstance(value, bool) or not isinstance(value, int):
+            return None
+        if not 1 <= value <= MAX_COMPLETIONS:
+            return None
+        total *= value
+    return total
 
 
 _PENDING_LOCK = threading.Lock()
@@ -454,6 +495,15 @@ class SpendGuard:
             return self.ledger.spend_usd(vault_key_id=ident, since=since)
         return self.ledger.spend_usd(service_id=ident, since=since)
 
+    @property
+    def holding(self) -> bool:
+        """True while this guard holds a reservation for a capped paid hop."""
+        return self._held
+
+    @property
+    def held_usd(self) -> float:
+        return self._held_usd
+
     def admit(
         self,
         *,
@@ -462,8 +512,14 @@ class SpendGuard:
         key_id: str,
         prompt_tokens: int,
         max_output: int,
+        completions: int | None = 1,
     ) -> BudgetBlock | None:
-        """Reserve this hop's worst-case cost, or say which cap refuses it."""
+        """Reserve this hop's worst-case cost, or say which cap refuses it.
+
+        ``max_output`` is per completion. The reservation covers ``completions``
+        of them (``requested_completions``); ``None`` is refused on a capped
+        paid hop because the spend could not be bounded.
+        """
         self.release()
         price = self.policy.price_for(provider, model)
         if price.free:
@@ -483,7 +539,19 @@ class SpendGuard:
             )
             self.blocks.append(block)
             return block
-        estimate = price.cost(prompt_tokens, max_output)
+        if completions is None:
+            block = BudgetBlock(
+                scope="request",
+                limit_name="completions",
+                limit=MAX_COMPLETIONS,
+                spent=None,
+                requested=None,
+                provider=provider,
+                model=model,
+            )
+            self.blocks.append(block)
+            return block
+        estimate = price.cost(prompt_tokens, max_output * completions)
         now = self.clock()
         with _PENDING_LOCK:
             for scope, ident, shown, cap in caps:
@@ -583,6 +651,7 @@ __all__ = [
     "BUDGET_ERROR_TYPE",
     "BUDGET_EXCEEDED",
     "DEFAULT_POLICY_PATH",
+    "MAX_COMPLETIONS",
     "POLICY_ENV",
     "POLICY_INVALID_TYPE",
     "ROLE_CONFLICT_TYPE",
@@ -600,6 +669,7 @@ __all__ = [
     "load_route_policy",
     "parse_route_role",
     "policy_invalid_body",
+    "requested_completions",
     "reset_pending",
     "role_conflict_body",
     "unknown_role_body",

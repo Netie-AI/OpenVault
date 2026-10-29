@@ -3605,6 +3605,7 @@ def create_app(
             tokens_out: int | None = None,
         ) -> None:
             """One ledger row per request. Never fails the request it describes."""
+            keep_hold = False
             try:
                 state_usage.record(
                     UsageEvent(
@@ -3632,10 +3633,25 @@ def create_app(
                     )
                 )
             except Exception as exc:  # pragma: no cover - ledger must not 500 a good call
-                log.warning("usage_ledger_write_failed", error=str(exc))
+                # A served paid hop whose row is lost has only its hold left to
+                # count against the caps. Keep it for this process lifetime
+                # rather than let the spend vanish. No message: nothing from the
+                # request belongs in this event.
+                keep_hold = spend.holding and bool(trace.provider)
+                if keep_hold:
+                    log.error(
+                        "usage_ledger_write_failed_hold_kept",
+                        provider=trace.provider,
+                        model=trace.model_served,
+                        held_usd=spend.held_usd,
+                        error_type=type(exc).__name__,
+                    )
+                else:
+                    log.warning("usage_ledger_write_failed", error=str(exc))
             finally:
                 # The row now carries this spend; the in-flight hold must go.
-                spend.release()
+                if not keep_hold:
+                    spend.release()
 
         def _stamped(
             result: dict[str, Any], *, tokens_in: int | None = None, tokens_out: int | None = None
@@ -3727,9 +3743,11 @@ def create_app(
                 )
 
             # Only settle from real usage when the client asked for it. Otherwise
-            # keep the reservation (never invent / under-charge silently).
+            # keep the reservation (never invent / under-charge silently). A paid
+            # hop that holds a reservation was sent include_usage by the proxy, so
+            # its frame is read whether or not the client asked.
             so = payload.get("stream_options")
-            want_usage = isinstance(so, dict) and bool(so.get("include_usage"))
+            want_usage = (isinstance(so, dict) and bool(so.get("include_usage"))) or spend.holding
 
             async def _stream() -> Any:
                 # TestClient/ASGI can run generator cleanup more than once; settle
