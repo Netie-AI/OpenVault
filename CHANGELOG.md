@@ -2,6 +2,15 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-29 - Site passwords and TOTP seeds are secrets, not LLM hops (Refs #63, #64, #65, #66)
+
+- `POST /api/vault/migrate-site-passwords` moves `SITE_*` and `*PASSWORD` rows (`provider=custom`, empty base URL) out of the key vault and into `/api/secrets` as passwords, then deletes the hop row. It needs `X-OpenVault-Admin`, a loopback peer, and an unsealed vault. A secret with the same label already present is counted as `already_in_secrets` and the hop row is still deleted. A passphrase unseal runs the same sweep once, and `openvault secret list` and `secret get` call it first.
+- Hop surfaces now refuse and hide that shape. `PATCH /api/keys` refuses it with 400 like `POST`, and the env upsert refuses it too. `GET /api/keys`, the AirGPT key-vault snapshot, the FreeRoute candidate walk, precheck, and the proxy hop loop skip it. The web hop list, Add key, and BYOK refuse it too.
+- `POST /api/secrets/totp` stores a TOTP seed sealed (raw base32 or `otpauth://`, 6 or 8 digits, SHA1, SHA256, or SHA512). `GET /api/secrets/{id}/current-code` returns the RFC 6238 digits behind the reveal header and never the seed. `GET /reveal` on a TOTP is 409 and rotate is refused. The CLI adds `openvault secret list` and `secret get --kind totp`, and agents can list only passwords and TOTP. Cards stay denied. The vault page can add a TOTP and show its current code.
+- LiteLLM stays an optional `:4000` slot. It is seeded disabled, is not in the FreeRoute spendable list, shows Off on the vault page, and its precheck says `LiteLLM proxy not running on :4000` instead of a connect error. The FreeRoute page shows `—` and Loading until its status call returns.
+- Ship host adapters read Cloudflare, Netlify, Coolify, Spaceship FTP, and VPS credentials from vault rows labelled with the env name (`vault_host_env`), with process env as the fallback. Those host credentials are never forwarded as the deployed app's environment.
+- The web shell restarts `next start` when `:3010` is unreachable. A compiling or stalled listener never triggers a second copy. The CLI starts the web app detached on Windows.
+
 ## 2026-10-09 - Space credentials are admin plus loopback (Refs #160)
 
 - Creating or rotating a `dms:<space>` service id on `POST /keys/services` needs both `X-OpenVault-Admin` and a loopback socket peer. The services allowlist (including `10.128.0.3`), a reveal header, and any service Bearer, including that Space's own Bearer, do not qualify. Plain service ids (`dms`, `cortex`, and the rest) keep the previous peer and rotation rules. #166 is this gate.
