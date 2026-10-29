@@ -385,7 +385,7 @@ def test_service_registration_allows_loopback(home: Path, host: str) -> None:
     assert registered.json()["token"]
 
 
-@pytest.mark.parametrize("host", ["10.128.0.3", "34.30.222.22", "::ffff:10.128.0.3"])
+@pytest.mark.parametrize("host", ["10.128.0.3", "::ffff:10.128.0.3"])
 def test_service_registration_allows_default_prove_peers(home: Path, host: str) -> None:
     headers = _issued()
     client = _client(host=host)
@@ -394,6 +394,24 @@ def test_service_registration_allows_default_prove_peers(home: Path, host: str) 
     )
     assert registered.status_code == 200, registered.text
     assert registered.json()["service_id"] == "dms"
+
+
+def test_public_prove_ip_registration_needs_services_allow(
+    home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Reveal from 34.30.222.22 is denied until OPENVAULT_SERVICES_ALLOW lists it."""
+    monkeypatch.delenv("OPENVAULT_SERVICES_ALLOW", raising=False)
+    denied = _client(host="34.30.222.22").post(
+        "/keys/services", json={"service_id": "dms"}, headers=INTENT
+    )
+    assert denied.status_code == 401
+    monkeypatch.setenv("OPENVAULT_SERVICES_ALLOW", "34.30.222.22")
+    allowed = _client(host="34.30.222.22").post(
+        "/keys/services", json={"service_id": "dms"}, headers=INTENT
+    )
+    assert allowed.status_code == 200, allowed.text
+    assert allowed.json()["service_id"] == "dms"
+    assert allowed.json()["token"]
 
 
 def test_service_registration_allows_env_cidr(home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -445,11 +463,16 @@ def test_allowlisted_peer_cannot_issue_intermediate(home: Path) -> None:
     assert token not in issued.text
 
 
-def test_default_prove_peers_are_the_founder_go_addresses() -> None:
-    assert _DEFAULT_SERVICES_ALLOW == ("10.128.0.3", "34.30.222.22")
+def test_default_prove_peer_is_the_private_vpc_address(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Public 34.30.222.22 is env-only. The private prove peer stays built in."""
+    monkeypatch.delenv("OPENVAULT_SERVICES_ALLOW", raising=False)
+    assert _DEFAULT_SERVICES_ALLOW == ("10.128.0.3",)
     assert _host_in_services_allow("127.0.0.1") is True
     assert _host_in_services_allow("10.128.0.3") is True
-    assert _host_in_services_allow("34.30.222.22") is True
+    assert _host_in_services_allow("34.30.222.22") is False
+    assert _host_in_services_allow("::ffff:34.30.222.22") is False
     assert _host_in_services_allow("10.0.0.9") is False
 
 

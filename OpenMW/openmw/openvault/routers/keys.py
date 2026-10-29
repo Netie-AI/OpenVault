@@ -26,6 +26,10 @@ The HTTP guard does not require ``X-OpenVault-Admin`` on ``POST /keys/services``
 ``POST /keys/intermediate``, or ``POST /keys/intermediate/{kid}/revoke``.
 Those three keep the checks in this file. Other ``/keys`` methods stay on
 the admin gate. ``GET`` / ``HEAD`` / ``OPTIONS`` ``/keys/jwks`` stay public.
+A ``dms:<space>`` registration is stricter than a plain service id: both the
+first mint and a later rotation need ``X-OpenVault-Admin`` and a loopback
+socket. The services allowlist does not qualify. DMS sends the Space in
+lowercase. There is no HTTP route that revokes a service credential.
 """
 
 from __future__ import annotations
@@ -40,9 +44,12 @@ from openmw.openvault.vault.admin_token import ADMIN_HEADER, admin_token_matches
 from openmw.openvault.vault.crypto import VaultSealedError
 from openmw.openvault.vault.trust import (
     DEFAULT_INTERMEDIATE_TTL_S,
+    DMS_SPACE_INVALID,
     MAX_INTERMEDIATE_TTL_S,
     TrustError,
     TrustStore,
+    dms_space_attempt,
+    dms_space_canonical,
 )
 
 router = APIRouter(tags=["keys"])
@@ -64,6 +71,39 @@ def _guards() -> tuple[Any, Any, Any]:
     from openmw.openvault.app import _audit_custody, _require_loopback, _require_reveal_intent
 
     return _require_loopback, _require_reveal_intent, _audit_custody
+
+
+def _named(status: int, code: str) -> JSONResponse:
+    return JSONResponse(
+        status_code=status,
+        content={"error": {"message": code, "type": code}},
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+def _register_dms_space(service_id: str, request: Request) -> JSONResponse | dict[str, Any]:
+    """Create or rotate ``dms:<space>``. Admin and loopback, both required.
+
+    Checked before the plain-service peer allowlist. A reveal header and a
+    service Bearer, including this Space's own Bearer, do not qualify.
+    """
+    if not dms_space_canonical(service_id):
+        return _named(422, DMS_SPACE_INVALID)
+    from openmw.openvault.vault.http_guard import peer_is_loopback
+
+    host = request.client.host if request.client is not None else ""
+    if not peer_is_loopback(host):
+        return _named(403, "dms_space_loopback_only")
+    if not _admin_credential_ok(request):
+        return _named(401, "dms_space_admin_required")
+    _peer, _intent, audit = _service_registration_guards()
+    store = _store(request)
+    try:
+        token = store.register_service(service_id)
+    except TrustError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    audit("signing_service_registered", request, service_id=service_id)
+    return {"service_id": service_id, "token": token}
 
 
 def _service_registration_guards() -> tuple[Any, Any, Any]:
@@ -170,8 +210,8 @@ def keys_root(request: Request) -> JSONResponse:
     return JSONResponse(content=_store(request).root_document(), headers=_JWKS_HEADERS)
 
 
-@router.post("/keys/services")
-def register_service(body: ServiceRegistration, request: Request) -> dict[str, str]:
+@router.post("/keys/services", response_model=None)
+def register_service(body: ServiceRegistration, request: Request) -> dict[str, str] | JSONResponse:
     """Register a service and return its bearer token — once.
 
     This is the first authenticator in this application; everything else is
@@ -183,7 +223,16 @@ def register_service(body: ServiceRegistration, request: Request) -> dict[str, s
     Only the token's SHA-256 is kept. The first registration returns the token.
     Re-registering the same service_id rotates it only when the caller presents
     that service's current Bearer or ``X-OpenVault-Admin``.
+
+    A ``dms:<space>`` id is not that path. Creating it and rotating it both
+    require ``X-OpenVault-Admin`` and a loopback socket peer. The services
+    allowlist, a reveal header, and any service Bearer do not qualify. The
+    Space must already be lowercase (``dms:[a-z0-9][a-z0-9-]{0,62}``). DMS
+    normalises before it calls. There is no HTTP route that revokes a service
+    credential.
     """
+    if dms_space_attempt(body.service_id):
+        return _register_dms_space(body.service_id, request)
     require_peer, require_intent, audit = _service_registration_guards()
     require_peer(request, "signing service registration")
     require_intent(request)

@@ -334,6 +334,7 @@ def _on_model_outcome(
                 outcome.cooldown_ms,
                 outcome.reason or "rate_limited",
                 error_text=error_text,
+                honor_cooldown=outcome.honor_cooldown,
             )
         return "next_model"
     if outcome.attempt_class == "model_unavailable":
@@ -352,13 +353,20 @@ def _park_key_if_every_model_limited(
     cooldown_ms: int,
     reason: str,
     error_text: str = "",
+    honor_cooldown: bool = False,
 ) -> None:
     """Park the key only when every model on this hop came back 429."""
     if cand.served_local or not models or limited <= 0:
         return
     if limited + already_parked != len(models):
         return
-    fallback.record_park(cand.key_id, cooldown_ms, reason, error_text=error_text)
+    fallback.record_park(
+        cand.key_id,
+        cooldown_ms,
+        reason,
+        error_text=error_text,
+        honor_cooldown=honor_cooldown,
+    )
 
 
 def _non_retryable(
@@ -527,6 +535,7 @@ def _apply_outcome(
             outcome.cooldown_ms,
             outcome.reason or error,
             error_text=error_text,
+            honor_cooldown=outcome.honor_cooldown,
         )
         return
 
@@ -595,20 +604,28 @@ def _strict_hop_serves(provider: str, pin: str, *, multimodal: bool) -> bool:
     return _hop_serves(provider, pin, multimodal=multimodal)
 
 
-def _retry_seconds(cooldown_ms: int) -> int | None:
-    if cooldown_ms <= 0:
-        return None
-    return max(1, math.ceil(cooldown_ms / 1000))
+def _pin_unavailable_body(
+    model: str,
+    reason: str,
+    *,
+    provider: str | None = None,
+    park_reason: str | None = None,
+    retry_after_s: int | None = None,
+) -> dict[str, Any]:
+    """Nothing served. ``model`` is the pin that failed, not a served id.
 
-
-def _pin_unavailable_body(model: str, reason: str) -> dict[str, Any]:
-    """Nothing served. ``model`` is the pin that failed, not a served id."""
+    ``provider`` is the pinned provider. ``park_reason`` and ``retry_after_s``
+    are set only for a park. No key id and no secret.
+    """
     return {
         "error": {
             "message": "pinned model has no healthy hop",
             "type": PIN_UNAVAILABLE,
             "model": model,
             "reason": reason,
+            "provider": provider,
+            "park_reason": park_reason,
+            "retry_after_s": retry_after_s,
         },
         "served_provider": None,
         "served_model": None,
@@ -620,12 +637,28 @@ def _pin_unavailable_body(model: str, reason: str) -> dict[str, Any]:
 class _PinFail:
     reason: str = _PIN_NO_HOP
     retry_after_s: int | None = None
+    park_reason: str | None = None
+    provider: str | None = None
 
 
-def _remember_circuit(pin_fail: _PinFail | None) -> None:
+@dataclass
+class _PinBlock:
+    reason: str
+    retry_after_s: int | None = None
+    park_reason: str | None = None
+    provider: str | None = None
+
+
+def _bound_provider(pin: str) -> str | None:
+    return _STRICT_PIN_PROVIDER.get(pin)
+
+
+def _remember_circuit(pin_fail: _PinFail | None, provider: str | None = None) -> None:
     if pin_fail is None or pin_fail.reason in _PIN_PARK_REASONS:
         return
     pin_fail.reason = _PIN_CIRCUIT
+    if provider is not None and pin_fail.provider is None:
+        pin_fail.provider = provider
 
 
 def _remember_pin_failure(pin_fail: _PinFail | None, outcome: AttemptOutcome) -> None:
@@ -633,18 +666,57 @@ def _remember_pin_failure(pin_fail: _PinFail | None, outcome: AttemptOutcome) ->
         return
     if outcome.attempt_class == "quota_exhausted":
         pin_fail.reason = _PIN_QUOTA
-        pin_fail.retry_after_s = _retry_seconds(outcome.cooldown_ms)
+        pin_fail.park_reason = outcome.reason or "credits_exhausted"
         return
     if outcome.candidate == "park":
         pin_fail.reason = _PIN_PARKED
-        pin_fail.retry_after_s = _retry_seconds(outcome.cooldown_ms)
+        pin_fail.park_reason = outcome.reason or "rate_limited"
+
+
+def _stamp_pin_wait(
+    pin_fail: _PinFail | None,
+    fallback: FallbackManager,
+    *,
+    key_id: str,
+    model: str,
+    provider: str,
+) -> None:
+    """Copy the park that was just stored. The wait is the real park, not the raw cooldown."""
+    if pin_fail is None or pin_fail.reason not in _PIN_PARK_REASONS:
+        return
+    pin_fail.provider = provider
+    pin_fail.retry_after_s = fallback.park_retry_after_s(key_id, model)
 
 
 def _finish_pin(trace: HopTrace, pin: str, pin_fail: _PinFail) -> tuple[int, dict[str, Any]]:
-    retry = pin_fail.retry_after_s if pin_fail.reason in _PIN_PARK_REASONS else None
+    parked = pin_fail.reason in _PIN_PARK_REASONS
+    retry = pin_fail.retry_after_s if parked else None
     trace.error_type = PIN_UNAVAILABLE
     trace.retry_after_s = retry
-    return 503, _pin_unavailable_body(pin, pin_fail.reason)
+    return 503, _pin_unavailable_body(
+        pin,
+        pin_fail.reason,
+        provider=pin_fail.provider or _bound_provider(pin),
+        park_reason=pin_fail.park_reason if parked else None,
+        retry_after_s=retry,
+    )
+
+
+def _sooner(
+    current: tuple[int | None, str, str] | None,
+    retry: int | None,
+    park_reason: str,
+    provider: str,
+) -> tuple[int | None, str, str]:
+    """Keep the hop whose wait is shortest. ``retry`` None does not replace one."""
+    if current is None:
+        return (retry, park_reason, provider)
+    if retry is None:
+        return current
+    old = current[0]
+    if old is None or retry < old:
+        return (retry, park_reason, provider)
+    return current
 
 
 def _why_pin_blocked(
@@ -653,13 +725,17 @@ def _why_pin_blocked(
     pin: str,
     *,
     multimodal: bool,
-) -> tuple[str, int | None]:
+) -> _PinBlock:
     """Why no healthy hop can serve ``pin``. Retry seconds only for a park."""
     saw_park = False
     saw_quota = False
     saw_circuit = False
     saw_hop = False
     retries: list[int] = []
+    park: tuple[int | None, str, str] | None = None
+    quota: tuple[int | None, str, str] | None = None
+    circuit_provider: str | None = None
+    bound = _bound_provider(pin)
     for record in vault.pooled_ordered():
         if record.custody != "pooled" or not record.enabled:
             continue
@@ -669,38 +745,48 @@ def _why_pin_blocked(
             continue
         saw_hop = True
         retry = fallback.park_retry_after_s(record.id, pin)
-        if (
-            fallback.key_is_parked(record.id)
-            and fallback.key_park_reason(record.id) == "credits_exhausted"
-        ):
+        key_reason = fallback.key_park_reason(record.id)
+        if key_reason == "credits_exhausted":
             saw_quota = True
             if retry is not None:
                 retries.append(retry)
+            quota = _sooner(quota, retry, "credits_exhausted", record.provider)
             continue
-        if fallback.key_is_parked(record.id) or fallback.model_is_parked(record.id, pin):
+        model_parked = fallback.model_is_parked(record.id, pin)
+        model_reason = fallback.model_park_reason(record.id, pin) if model_parked else None
+        if fallback.key_is_parked(record.id) or model_parked:
             saw_park = True
             if retry is not None:
                 retries.append(retry)
+            park = _sooner(
+                park,
+                retry,
+                key_reason or model_reason or "rate_limited",
+                record.provider,
+            )
             continue
         if quota_blocks(record.provider, vault.db_path):
             saw_quota = True
             quota_retry = quota_retry_after_s(record.provider)
             if quota_retry is not None:
                 retries.append(quota_retry)
+            quota = _sooner(quota, quota_retry, "quota_exhausted", record.provider)
             continue
         breaker_open = not get_circuit_breaker(record.id).can_execute()
         if fallback.hop_circuit_is_open(record.id) or breaker_open:
             saw_circuit = True
+            if circuit_provider is None:
+                circuit_provider = record.provider
     if not saw_hop:
-        return _PIN_NO_HOP, None
+        return _PinBlock(_PIN_NO_HOP, provider=bound)
     retry_after = min(retries) if retries else None
-    if saw_park:
-        return _PIN_PARKED, retry_after
-    if saw_quota:
-        return _PIN_QUOTA, retry_after
+    if saw_park and park is not None:
+        return _PinBlock(_PIN_PARKED, retry_after, park[1], park[2])
+    if saw_quota and quota is not None:
+        return _PinBlock(_PIN_QUOTA, retry_after, quota[1], quota[2])
     if saw_circuit:
-        return _PIN_CIRCUIT, None
-    return _PIN_NO_HOP, None
+        return _PinBlock(_PIN_CIRCUIT, provider=circuit_provider or bound)
+    return _PinBlock(_PIN_NO_HOP, provider=bound)
 
 
 def _strict_candidates(
@@ -713,7 +799,14 @@ def _strict_candidates(
 ) -> tuple[list[ProxyCandidate], tuple[int, dict[str, Any]] | None, int | None]:
     """Hops that serve ``pin`` exactly, or a fast ``pin_unavailable`` refusal."""
     if not catalog_contains_model(pin, multimodal=multimodal):
-        return [], (503, _pin_unavailable_body(pin, _PIN_NOT_IN_CATALOG)), None
+        return (
+            [],
+            (
+                503,
+                _pin_unavailable_body(pin, _PIN_NOT_IN_CATALOG, provider=_bound_provider(pin)),
+            ),
+            None,
+        )
     healthy: list[ProxyCandidate] = []
     for cand in candidates:
         if not _strict_hop_serves(cand.provider, pin, multimodal=multimodal):
@@ -725,8 +818,17 @@ def _strict_candidates(
         healthy.append(cand)
     if healthy:
         return healthy, None, None
-    reason, retry = _why_pin_blocked(vault, fallback, pin, multimodal=multimodal)
-    return [], (503, _pin_unavailable_body(pin, reason)), retry
+    block = _why_pin_blocked(vault, fallback, pin, multimodal=multimodal)
+    parked = block.reason in _PIN_PARK_REASONS
+    retry = block.retry_after_s if parked else None
+    body = _pin_unavailable_body(
+        pin,
+        block.reason,
+        provider=block.provider or _bound_provider(pin),
+        park_reason=block.park_reason if parked else None,
+        retry_after_s=retry,
+    )
+    return [], (503, body), retry
 
 
 def _models_to_send(
@@ -895,7 +997,7 @@ async def chat_completions(
             breaker = _hop_breaker(cand)
             if not breaker.acquire_probe_slot():
                 errors.append(f"{cand.label}: key circuit open")
-                _remember_circuit(pin_fail)
+                _remember_circuit(pin_fail, cand.provider)
                 continue
 
             try:
@@ -944,6 +1046,7 @@ async def chat_completions(
             limit_cooldown = 0
             limit_reason = "rate_limited"
             limit_error = ""
+            limit_honor = False
             sent_any = False
             context_skips = 0
             other_skips = 0
@@ -1037,6 +1140,13 @@ async def chat_completions(
                     vault, fallback, cand, outcome, err, model, error_text=snippet
                 )
                 _remember_pin_failure(pin_fail, outcome)
+                _stamp_pin_wait(
+                    pin_fail,
+                    fallback,
+                    key_id=cand.key_id,
+                    model=model,
+                    provider=cand.provider,
+                )
                 if cand.served_local and status_code >= 400:
                     local_fail_reason = _local_fail_reason(status_code, body_text, model)
                 if step == "served":
@@ -1073,6 +1183,7 @@ async def chat_completions(
                         limit_cooldown = outcome.cooldown_ms
                         limit_reason = outcome.reason or "rate_limited"
                         limit_error = snippet
+                        limit_honor = outcome.honor_cooldown
                     continue
                 leave_hop = True
                 break
@@ -1095,6 +1206,7 @@ async def chat_completions(
                     cooldown_ms=limit_cooldown,
                     reason=limit_reason,
                     error_text=limit_error,
+                    honor_cooldown=limit_honor,
                 )
 
     if local_only:
@@ -1164,7 +1276,7 @@ async def prepare_chat_stream(
             breaker = _hop_breaker(cand)
             if not breaker.acquire_probe_slot():
                 errors.append(f"{cand.label}: key circuit open")
-                _remember_circuit(pin_fail)
+                _remember_circuit(pin_fail, cand.provider)
                 continue
 
             try:
@@ -1219,6 +1331,7 @@ async def prepare_chat_stream(
             limit_cooldown = 0
             limit_reason = "rate_limited"
             limit_error = ""
+            limit_honor = False
             sent_any = False
             context_skips = 0
             other_skips = 0
@@ -1312,6 +1425,13 @@ async def prepare_chat_stream(
                         vault, fallback, cand, outcome, err, model, error_text=snippet
                     )
                     _remember_pin_failure(pin_fail, outcome)
+                    _stamp_pin_wait(
+                        pin_fail,
+                        fallback,
+                        key_id=cand.key_id,
+                        model=model,
+                        provider=cand.provider,
+                    )
                     if cand.served_local:
                         local_fail_reason = _local_fail_reason(resp.status_code, body_text, model)
                     if step == "dead":
@@ -1331,6 +1451,7 @@ async def prepare_chat_stream(
                             limit_cooldown = outcome.cooldown_ms
                             limit_reason = outcome.reason or "rate_limited"
                             limit_error = snippet
+                            limit_honor = outcome.honor_cooldown
                         continue
                     leave_hop = True
                     break
@@ -1401,6 +1522,7 @@ async def prepare_chat_stream(
                     cooldown_ms=limit_cooldown,
                     reason=limit_reason,
                     error_text=limit_error,
+                    honor_cooldown=limit_honor,
                 )
     except Exception:
         await _close_client()

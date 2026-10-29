@@ -9,7 +9,7 @@ true, the guard still runs.
 
 Key and secret management routes, and ``/keys`` routes, also require the
 separate admin credential in ``X-OpenVault-Admin``. Loopback does not skip
-that check. The admin token is not an ``ov_`` key. Two exceptions:
+that check. The admin token is not an ``ov_`` key. Exceptions:
 
 * ``GET``, ``HEAD``, and ``OPTIONS`` on the exact path ``/keys/jwks`` are
   public, same as ``/.well-known/jwks.json``.
@@ -34,6 +34,22 @@ the admin token or a Bearer that passes ``verify_service`` for a service_id
 listed in ``OPENVAULT_VERIFY_SERVICES``. The list defaults to empty, so a
 service Bearer is refused until an operator sets it. Loopback alone is not
 enough. No other ``/api/apikeys`` path accepts a service Bearer.
+
+``POST /api/keys/leases`` and ``POST /api/keys/leases/redeem`` are the lease
+exception. Exact path, POST only. Other methods stay on the admin gate.
+Admission is a Bearer that ``verify_service`` accepts. ``X-OpenVault-Admin``
+does not admit these two POSTs, alone or instead of that Bearer. The peer
+must be loopback, or the ASGI scheme must be https while
+``LEASE_TLS_VERIFY`` is on. ``LEASE_TLS_VERIFY`` is not an env flag.
+Forwarded headers are not a scheme and not a peer.
+
+The path compared here is the path Starlette routes, not ``request.url.path``.
+``root_path`` is stripped the same way ``starlette._utils.get_route_path``
+strips it. A prefix on ``scope["path"]`` used to miss ``/api`` and ``/keys``
+while the router still served the route. That helper is private. If it cannot
+be imported, this guard returns 401. It does not skip auth, and the import
+is not at module load, so startup still succeeds. The verify admission uses
+that same routed path. A missing helper is 401 there too.
 """
 
 from __future__ import annotations
@@ -54,6 +70,7 @@ from openmw.openvault.vault.admin_token import (
 )
 from openmw.openvault.vault.api_keys import TOKEN_PREFIX
 from openmw.openvault.vault.auth import bearer_token
+from openmw.openvault.vault.lease import LEASE_MINT_PATH, LEASE_REDEEM_PATH
 
 #: The only unauthenticated ``/api/*`` path. Length 1 is a contract test.
 AUTH_ALLOWLIST: frozenset[str] = frozenset({"/api/healthz"})
@@ -61,16 +78,19 @@ AUTH_ALLOWLIST: frozenset[str] = frozenset({"/api/healthz"})
 _GUARDED_PREFIXES: tuple[str, ...] = ("/api/", "/keys/")
 _DOCS_TRUTH = frozenset({"1", "true", "yes", "on"})
 _LOOPBACK_PEERS: frozenset[str] = frozenset({"127.0.0.1", "::1"})
-# Published jwks_alt. Equality on request.url.path. Not a prefix and not a regex.
+# Published jwks_alt. Equality on the routed path. Not a prefix and not a regex.
 _PUBLIC_JWKS_PATH = "/keys/jwks"
 _PUBLIC_JWKS_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
-# Signing mint (#126). Equality on request.url.path, POST only. Not a prefix.
+# Signing mint (#126). Equality on the routed path, POST only. Not a prefix.
 _SERVICES_MINT_PATH = "/keys/services"
 _INTERMEDIATE_MINT_PATH = "/keys/intermediate"
 _REVOKE_MINT_PATH = re.compile(r"/keys/intermediate/[^/]+/revoke\Z")
 # Exact path. Not a prefix. Other methods stay on the admin gate.
 _APIKEY_VERIFY_PATH = "/api/apikeys/verify"
 VERIFY_SERVICES_ENV = "OPENVAULT_VERIFY_SERVICES"
+#: Non-loopback lease calls are https only, and only while this stays true.
+#: Not read from the environment. There is no verify=False client on this path.
+LEASE_TLS_VERIFY = True
 
 log = structlog.get_logger()
 
@@ -117,12 +137,39 @@ def path_is_guarded(path: str) -> bool:
     return path.startswith(_GUARDED_PREFIXES)
 
 
+def _load_get_route_path() -> Any:
+    """The router helper. ImportError if Starlette moves this private name."""
+    from starlette._utils import get_route_path
+
+    return get_route_path
+
+
+def route_path(request: Request) -> str | None:
+    """Path the router matches, or None when that helper cannot be loaded.
+
+    Same strip as ``starlette.routing`` (``get_route_path``). ``request.url.path``
+    keeps a ``root_path`` prefix, so ``/mounted/api/keys`` with ``root_path``
+    ``/mounted`` used to skip this guard and still hit ``GET /api/keys``.
+    No unquote and no slash collapse beyond that strip. None fails closed.
+    """
+    try:
+        get_route_path = _load_get_route_path()
+    except ImportError:
+        log.warning("route_path_helper_missing")
+        return None
+    routed = get_route_path(request.scope)
+    if not isinstance(routed, str):
+        log.warning("route_path_helper_bad")
+        return None
+    return routed
+
+
 def signing_mint_kind(method: str, path: str) -> str:
     """``services``, ``intermediate``, ``revoke``, or empty.
 
-    ``path`` is ``request.url.path`` with no further normalisation. POST only.
-    A trailing slash, an extra segment, a different method, or a different
-    case is not a mint route and stays on the admin gate.
+    ``path`` is the routed path (see ``route_path``) with no further
+    normalisation. POST only. A trailing slash, an extra segment, a different
+    method, or a different case is not a mint route and stays on the admin gate.
     """
     if method.upper() != "POST":
         return ""
@@ -150,11 +197,41 @@ def _socket_peer_may_mint_service(host: str) -> bool:
     return bool(_host_in_services_allow(host))
 
 
+def lease_post(method: str, path: str) -> str:
+    """``mint``, ``redeem``, or empty.
+
+    Exact POST only. A trailing slash, another method, or an extra segment
+    stays on the admin gate. The kid and the ref are not part of ``path``.
+    """
+    if method.upper() != "POST":
+        return ""
+    if path == LEASE_MINT_PATH:
+        return "mint"
+    if path == LEASE_REDEEM_PATH:
+        return "redeem"
+    return ""
+
+
+def lease_transport_allowed(host: str, scheme: str) -> bool:
+    """Loopback, or https with certificate verification locked on.
+
+    ``host`` is the socket peer. ``scheme`` is the ASGI scheme. An empty
+    peer is refused. ``X-Forwarded-Proto`` is not consulted.
+    """
+    if peer_is_loopback(host):
+        return True
+    if not (host or "").strip() or not LEASE_TLS_VERIFY:
+        return False
+    return (scheme or "").lower() == "https"
+
+
 def apikey_verify_post(method: str, path: str) -> bool:
     """True only for exact ``POST /api/apikeys/verify``.
 
-    ``path`` is ``request.url.path`` with no further normalisation. A trailing
-    slash, a different method, or a different case stays on the admin gate.
+    ``path`` is the routed path from ``route_path`` (``get_route_path``), not
+    ``request.url.path``. Callers that cannot load that helper must fail closed
+    before this returns true. A trailing slash, a different method, or a
+    different case stays on the admin gate.
     """
     return method.upper() == "POST" and path == _APIKEY_VERIFY_PATH
 
@@ -249,6 +326,35 @@ def decide_apikey_verify(request: Request) -> ApikeyVerifyDecision:
     return ApikeyVerifyDecision(True, 200, f"service:{service_id}")
 
 
+def _refuse_lease(request: Request) -> JSONResponse | None:
+    """Admit a verified service Bearer. Admin is not a substitute.
+
+    Transport is checked first so a remote plaintext caller learns nothing
+    about the bearer. No bearer, or a bearer ``verify_service`` rejects, is
+    401 even when ``X-OpenVault-Admin`` matches.
+    """
+    client = request.client
+    host = client.host if client is not None else ""
+    scheme = request.scope.get("scheme")
+    if not isinstance(scheme, str):
+        scheme = ""
+    if not lease_transport_allowed(host, scheme):
+        log.info("lease_rejected", reason="transport")
+        return _bad()
+    token = _presented_service_bearer(request)
+    if not token:
+        log.info("lease_rejected", reason="credential")
+        return _missing()
+    from openmw.openvault.vault.trust import TrustStore
+
+    seal = getattr(request.app.state, "seal", None)
+    service_id = TrustStore(seal=seal).service_id_for_active_bearer(token)
+    if not service_id:
+        log.info("lease_rejected", reason="service")
+        return _missing()
+    return None
+
+
 def _refuse_apikey_verify(request: Request) -> JSONResponse | None:
     decision = decide_apikey_verify(request)
     if decision.admitted:
@@ -261,9 +367,10 @@ def _refuse_apikey_verify(request: Request) -> JSONResponse | None:
 def _public_jwks_read(method: str, path: str) -> bool:
     """True only for the published JWKS alt.
 
-    ``path`` is ``request.url.path`` with no further normalisation. HEAD and
-    OPTIONS stay on this side so they match ``/.well-known/jwks.json``. Any
-    other method stays on the admin gate and answers 401 before a 405.
+    ``path`` is the routed path (see ``route_path``) with no further
+    normalisation. HEAD and OPTIONS stay on this side so they match
+    ``/.well-known/jwks.json``. Any other method stays on the admin gate and
+    answers 401 before a 405.
     """
     return method.upper() in _PUBLIC_JWKS_METHODS and path == _PUBLIC_JWKS_PATH
 
@@ -294,17 +401,23 @@ def refuse_if_unauthorised(request: Request, *, api_keys: _KeyStore) -> JSONResp
     """Return a 401/403 response to send, or None to let the request through.
 
     Method is ignored on every path except the public JWKS alt (GET, HEAD,
-    OPTIONS on exact ``/keys/jwks``), the three POST signing-mint routes, and
-    exact ``POST /api/apikeys/verify``. Other methods, including
-    POST/PUT/DELETE on ``/keys/jwks`` and every other ``/api/apikeys`` path,
-    are guarded the same way as every other admin route.
+    OPTIONS on exact ``/keys/jwks``), the three POST signing-mint routes,
+    exact ``POST /api/apikeys/verify``, and the two POST lease routes.
+    Other methods, including GET on the lease paths, POST/PUT/DELETE on
+    ``/keys/jwks``, and every other ``/api/apikeys`` path, are guarded the
+    same way as every other admin route.
     """
-    path = request.url.path
+    path = route_path(request)
+    # Missing the private router helper must not skip auth and must not 500.
+    if path is None:
+        return _missing()
     # Same path string as the admin check below. Do not unquote or casefold.
     if _public_jwks_read(request.method, path):
         return None
     if apikey_verify_post(request.method, path):
         return _refuse_apikey_verify(request)
+    if lease_post(request.method, path):
+        return _refuse_lease(request)
 
     mint = signing_mint_kind(request.method, path)
     if not mint and path_needs_admin(path):
@@ -357,16 +470,20 @@ class HttpGuardMiddleware:
 
 __all__ = [
     "AUTH_ALLOWLIST",
+    "LEASE_TLS_VERIFY",
     "VERIFY_SERVICES_ENV",
     "ApikeyVerifyDecision",
     "HttpGuardMiddleware",
     "apikey_verify_post",
     "decide_apikey_verify",
     "dev_docs_enabled",
+    "lease_post",
+    "lease_transport_allowed",
     "path_is_guarded",
     "path_needs_admin",
     "peer_is_loopback",
     "refuse_if_unauthorised",
+    "route_path",
     "signing_mint_kind",
     "verify_service_allowlist",
 ]
