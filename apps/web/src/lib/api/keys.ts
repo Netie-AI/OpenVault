@@ -181,6 +181,8 @@ export function precheckAll(): Promise<unknown> {
 /** Sweep leftover SITE_/password hops into SecretStore. Loopback + unsealed. */
 export function migrateSitePasswords(signal?: AbortSignal): Promise<{
   remaining_site_keys?: number;
+  /** Revoked / rotated / compromised hops left in place, not migrated. */
+  skipped_inactive?: number;
 }> {
   return apiPost("/api/vault/migrate-site-passwords", {}, { signal });
 }

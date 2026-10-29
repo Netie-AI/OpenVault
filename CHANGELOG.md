@@ -2,6 +2,10 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-29 - PR #170 security review fixes (Refs #63, #65)
+
+- `POST /api/vault/migrate-site-passwords` now migrates only `lifecycle == active` hops. A revoked, rotated or compromised `SITE_*` / `*PASSWORD` hop is not decrypted, not copied into secrets and not deleted, so a dead password never becomes an active secret under its label and the audit-retained encrypted row survives. They are reported as `skipped_inactive` in the response, the `openvault_site_password_migrate` log event and the `site_password_migrate` audit line. `remaining_site_keys` still counts every site-shaped row left in the key vault, so it now includes the skipped ones and `ok` can be true with `remaining_site_keys > 0`.
+
 ## 2026-10-29 - Site passwords and TOTP seeds are secrets, not LLM hops (Refs #63, #64, #65, #66)
 
 - `POST /api/vault/migrate-site-passwords` moves `SITE_*` and `*PASSWORD` rows (`provider=custom`, empty base URL) out of the key vault and into `/api/secrets` as passwords, then deletes the hop row. It needs `X-OpenVault-Admin`, a loopback peer, and an unsealed vault. A secret with the same label already present is counted as `already_in_secrets` and the hop row is still deleted. A passphrase unseal runs the same sweep once, and `openvault secret list` and `secret get` call it first.

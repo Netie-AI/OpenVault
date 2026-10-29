@@ -3332,6 +3332,7 @@ def create_app(
             migrated=result["migrated"],
             already_in_secrets=result["already_in_secrets"],
             failed=result["failed"],
+            skipped_inactive=result["skipped_inactive"],
             remaining_site_keys=result["remaining_site_keys"],
         )
         return result

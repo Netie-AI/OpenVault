@@ -29,6 +29,17 @@ def migrate_site_password_keys(vault: KeyVault, secrets: SecretStore) -> dict[st
 
     Fail closed when sealed: no decrypt, no silent skip that leaves hops.
     Duplicate secret labels skip a second write and still delete the hop.
+
+    Only ``lifecycle == "active"`` hops migrate. A revoked, rotated or
+    compromised hop is retained encrypted for audit and may hold a dead or
+    leaked password; copying it would mint an ACTIVE secret under its label and
+    deleting it would destroy the audit row. Those hops are never decrypted,
+    never written, never deleted, and are counted as ``skipped_inactive``.
+
+    ``remaining_site_keys`` still counts every password-shaped row left in
+    KeyVault, so it now includes the ``skipped_inactive`` hops: ``ok`` can be
+    True with ``remaining_site_keys > 0``. ``ok`` means "no failures", not "no
+    rows left".
     """
     if vault.seal.is_sealed:
         raise VaultSealedError(
@@ -43,6 +54,7 @@ def migrate_site_password_keys(vault: KeyVault, secrets: SecretStore) -> dict[st
     migrated = 0
     already = 0
     failed = 0
+    skipped_inactive = 0
     for record in list(vault.list_keys()):
         if not looks_like_site_password_key(
             label=record.label,
@@ -51,6 +63,14 @@ def migrate_site_password_keys(vault: KeyVault, secrets: SecretStore) -> dict[st
         ):
             continue
         ref = _key_ref(record.id)
+        if record.lifecycle != "active":
+            skipped_inactive += 1
+            log.info(
+                "openvault_site_password_migrate_skipped_inactive",
+                key_ref=ref,
+                lifecycle=record.lifecycle,
+            )
+            continue
         try:
             password = vault.get_secret(record.id)
         except VaultSealedError:
@@ -96,6 +116,7 @@ def migrate_site_password_keys(vault: KeyVault, secrets: SecretStore) -> dict[st
         migrated=migrated,
         already_in_secrets=already,
         failed=failed,
+        skipped_inactive=skipped_inactive,
         remaining_site_keys=remaining,
     )
     return {
@@ -103,5 +124,6 @@ def migrate_site_password_keys(vault: KeyVault, secrets: SecretStore) -> dict[st
         "migrated": migrated,
         "already_in_secrets": already,
         "failed": failed,
+        "skipped_inactive": skipped_inactive,
         "remaining_site_keys": remaining,
     }
