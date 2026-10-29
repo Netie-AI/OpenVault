@@ -30,9 +30,7 @@ def _client(home: Path) -> TestClient:
     vault = KeyVault(db_path=home / "keys.db", seal=seal)
     secrets = SecretStore(db_path=vault.db_path, seal=seal)
     return TestClient(
-        create_app(
-            vault=vault, secrets=secrets, mock_health=True, enable_precheck_loop=False
-        ),
+        create_app(vault=vault, secrets=secrets, mock_health=True, enable_precheck_loop=False),
         client=("127.0.0.1", 5555),
     )
 
@@ -89,9 +87,7 @@ def test_agent_retrieve_totp_not_seed(tmp_path: Path, monkeypatch: pytest.Monkey
         create_app(mock_health=True, enable_precheck_loop=False),
         client=("127.0.0.1", 5555),
     )
-    row = client.post(
-        "/api/secrets/totp", json={"label": "GitHub", "seed": RFC_SEED}
-    ).json()
+    row = client.post("/api/secrets/totp", json={"label": "GitHub", "seed": RFC_SEED}).json()
 
     def http(method: str, url: str, headers: dict | None, _body: bytes | None):
         from urllib.parse import urlparse
@@ -101,9 +97,7 @@ def test_agent_retrieve_totp_not_seed(tmp_path: Path, monkeypatch: pytest.Monkey
         payload = resp.json() if resp.content else {}
         return int(resp.status_code), payload if isinstance(payload, dict) else {}, resp.text
 
-    got = module.retrieve_secret(
-        "http://127.0.0.1:5000", row["id"], kind_hint="totp", http=http
-    )
+    got = module.retrieve_secret("http://127.0.0.1:5000", row["id"], kind_hint="totp", http=http)
     assert got["kind"] == "totp"
     assert got["code"].isdigit()
     assert RFC_SEED not in str(got)

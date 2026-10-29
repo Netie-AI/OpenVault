@@ -627,9 +627,7 @@ def spendable_for_freeroute() -> list[dict[str, Any]]:
     return [
         (_with_runtime_local(spec) if spec.local_hop else spec).to_dict()
         for spec in PROVIDER_CATALOG
-        if spec.openai_compatible
-        and spec.chat_models
-        and spec.id != "litellm"
+        if spec.openai_compatible and spec.chat_models and spec.id != "litellm"
     ]
 
 

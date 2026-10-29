@@ -39,9 +39,7 @@ def test_vault_host_env_matches_labels_only(tmp_path: Path) -> None:
     assert "GROQ_API_KEY" not in env
 
 
-def test_cloudflare_deploy_uses_ship_env(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_cloudflare_deploy_uses_ship_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("CLOUDFLARE_API_TOKEN", raising=False)
     monkeypatch.delenv("CLOUDFLARE_ACCOUNT_ID", raising=False)
     project = tmp_path / "light"
@@ -52,8 +50,8 @@ def test_cloudflare_deploy_uses_ship_env(
     seen: dict[str, str] = {}
 
     def fake_deploy(self: object, artifact_dir: Path, *, project: str) -> DeployResult:
-        seen["token"] = getattr(self, "_token")
-        seen["account"] = getattr(self, "_account")
+        seen["token"] = self._token
+        seen["account"] = self._account
         assert (artifact_dir / "index.html").is_file()
         return DeployResult(ok=True, url="https://light.pages.dev", detail="uploaded")
 
@@ -84,7 +82,7 @@ def test_host_credentials_are_not_forwarded_as_app_env(
     def fake_deploy(
         self: object, artifact_dir: Path, *, project: str, env: object = None
     ) -> DeployResult:
-        seen["host"] = getattr(self, "_host")
+        seen["host"] = self._host
         seen["env"] = dict(env or {})  # type: ignore[call-overload]
         return DeployResult(ok=True, url="https://light.example", detail="uploaded")
 
@@ -179,9 +177,7 @@ def test_tenant_only_row_supplies_nothing(tmp_path: Path, monkeypatch: pytest.Mo
     assert opened == []
 
 
-def test_account_bound_row_is_never_chosen(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_account_bound_row_is_never_chosen(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     vault = _vault(tmp_path)
     plain = vault.create(
         label="CLOUDFLARE_API_TOKEN", provider="custom", secret=POOLED_TOKEN, role="primary"

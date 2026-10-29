@@ -42,14 +42,10 @@ def migrate_site_password_keys(vault: KeyVault, secrets: SecretStore) -> dict[st
     rows left".
     """
     if vault.seal.is_sealed:
-        raise VaultSealedError(
-            "vault is sealed; POST /api/vault/unseal with the passphrase first"
-        )
+        raise VaultSealedError("vault is sealed; POST /api/vault/unseal with the passphrase first")
 
     existing = {
-        row.label
-        for row in secrets.list_secrets(kind="password")
-        if row.lifecycle == "active"
+        row.label for row in secrets.list_secrets(kind="password") if row.lifecycle == "active"
     }
     migrated = 0
     already = 0

@@ -56,9 +56,7 @@ def _client(vault: KeyVault, secrets: SecretStore, host: str = "127.0.0.1") -> T
     )
 
 
-def test_migrate_moves_site_rows_and_leaves_llm_keys(
-    vault: KeyVault, secrets: SecretStore
-) -> None:
+def test_migrate_moves_site_rows_and_leaves_llm_keys(vault: KeyVault, secrets: SecretStore) -> None:
     site = vault.create(
         label="SITE_accounts_google_com_test",
         provider="custom",
@@ -333,9 +331,7 @@ def test_migrate_skips_revoked_rotated_and_compromised_hops(
         assert dead not in revealed
 
 
-def test_migrate_inactive_skip_is_stable_across_runs(
-    vault: KeyVault, secrets: SecretStore
-) -> None:
+def test_migrate_inactive_skip_is_stable_across_runs(vault: KeyVault, secrets: SecretStore) -> None:
     _inactive_fixture(vault)
     migrate_site_password_keys(vault, secrets)
     again = migrate_site_password_keys(vault, secrets)

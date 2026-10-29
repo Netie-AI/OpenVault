@@ -255,9 +255,7 @@ def upsert_env_secret(
     custody: KeyCustody = "tenant" if custody_raw == "tenant" else "pooled"
 
     label = (label or env_key or provider).strip()[:80]
-    if looks_like_site_password_key(
-        label=label, provider=provider, base_url=resolved_base
-    ):
+    if looks_like_site_password_key(label=label, provider=provider, base_url=resolved_base):
         return {
             "ok": False,
             "error": "site passwords go to POST /api/secrets/passwords, not /api/keys",

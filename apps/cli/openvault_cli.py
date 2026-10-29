@@ -308,7 +308,13 @@ def _start_web(
     # told to run `openvault doctor` - which did not check for a build either.
     log_path = Path(env["OPENVAULT_HOME"]) / "logs" / "web.up.log"
     print(f"Web app log -> {log_path} ({script})")
-    return _popen([_npm(), "run", script], WEB, {**env, "PORT": str(WEB_PORT)}, log_path=log_path, detach=True)
+    return _popen(
+        [_npm(), "run", script],
+        WEB,
+        {**env, "PORT": str(WEB_PORT)},
+        log_path=log_path,
+        detach=True,
+    )
 
 
 def _base_env() -> dict[str, str]:
@@ -780,7 +786,9 @@ def main() -> int:
     secret_get = secret_sub.add_parser(
         "get", help="Reveal one API key or site password via loopback"
     )
-    secret_get.add_argument("target", help="secret/key id, exact label, or unique url/label substring")
+    secret_get.add_argument(
+        "target", help="secret/key id, exact label, or unique url/label substring"
+    )
     secret_get.add_argument(
         "--kind",
         choices=("password", "key", "totp"),

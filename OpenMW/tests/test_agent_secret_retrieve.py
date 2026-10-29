@@ -171,7 +171,9 @@ def test_sealed_fails_closed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) ->
         retrieve.retrieve_secret("http://127.0.0.1:5000", key["id"], kind_hint="key", http=http)
 
 
-def test_unique_substring_get_and_list_query(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_unique_substring_get_and_list_query(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     retrieve = _load_retrieve()
     client = _client(tmp_path, monkeypatch)
     client.post(
@@ -184,7 +186,11 @@ def test_unique_substring_get_and_list_query(tmp_path: Path, monkeypatch: pytest
     )
     client.post(
         "/api/secrets/passwords",
-        json={"label": "SITE_github_com", "password": "other-site-login", "url": "https://github.com"},
+        json={
+            "label": "SITE_github_com",
+            "password": "other-site-login",
+            "url": "https://github.com",
+        },
     )
     client.post(
         "/api/secrets/totp",
@@ -243,4 +249,3 @@ def test_site_target_does_not_fall_through_to_leftover_hop(
         retrieve.retrieve_secret(
             "http://127.0.0.1:5000", "SITE_PASSWORD", kind_hint="key", http=http
         )
-

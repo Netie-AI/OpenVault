@@ -2006,9 +2006,7 @@ def create_app(
         label = body.label if body.label is not None else current.label
         provider = body.provider if body.provider is not None else current.provider
         base_url = body.base_url if body.base_url is not None else current.base_url
-        if looks_like_site_password_key(
-            label=label, provider=provider, base_url=base_url or ""
-        ):
+        if looks_like_site_password_key(label=label, provider=provider, base_url=base_url or ""):
             raise HTTPException(
                 status_code=400,
                 detail="site passwords go to POST /api/secrets/passwords, not /api/keys",

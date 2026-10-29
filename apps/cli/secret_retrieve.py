@@ -180,7 +180,8 @@ def list_secrets(
             continue
         if wanted and kind != wanted:
             continue
-        if needle and needle not in _row_search_blob(row) and needle not in str(row.get("id") or "").casefold():
+        row_id = str(row.get("id") or "").casefold()
+        if needle and needle not in _row_search_blob(row) and needle not in row_id:
             continue
         rows.append(
             {
