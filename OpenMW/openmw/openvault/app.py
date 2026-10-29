@@ -1290,9 +1290,11 @@ def create_app(
     from openmw.openvault.routers.route import router as route_router
     from openmw.openvault.routers.sentinel import router as sentinel_router
     from openmw.openvault.routers.ship import router as ship_router
+    from openmw.openvault.routers.superapp import build_superapp_router
     from openmw.openvault.routers.system import build_system_router
 
     app.include_router(ship_router)
+    app.include_router(build_superapp_router(state_vault))
     app.include_router(sentinel_router)
     app.include_router(route_router)
     app.include_router(keys_router)
