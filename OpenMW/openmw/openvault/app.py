@@ -90,7 +90,13 @@ from openmw.openvault.ship.github_auth import (
     save_pat,
     start_gh_login,
 )
-from openmw.openvault.ship.inject import InjectError, ShipEnvRef, resolve_ship_env, scrub_mapping
+from openmw.openvault.ship.inject import (
+    InjectError,
+    ShipEnvRef,
+    resolve_ship_env,
+    scrub_mapping,
+    vault_host_env,
+)
 from openmw.openvault.ship.library import (
     create_upload_session,
     inspect_folder,
@@ -2935,6 +2941,9 @@ def create_app(
             secrets=state_secrets,
             request=request,
         )
+        host_env = vault_host_env(state_vault)
+        host_env.update(ship_env)
+        ship_env = host_env
         try:
             payload = run_ship_engine(
                 target=body.target,

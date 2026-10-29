@@ -30,6 +30,7 @@ from openmw.openvault.ship.cloud_targets import (
 )
 from openmw.openvault.ship.detect import detect_project
 from openmw.openvault.ship.domain_guide import build_domain_guide
+from openmw.openvault.ship.inject import HOST_ENV_LABELS
 from openmw.openvault.ship.library import ensure_local_clone, inspect_folder, inspect_github_url
 
 log = structlog.get_logger()
@@ -267,12 +268,27 @@ def _run_build(commands: list[str], cwd: Path) -> tuple[bool, str]:
     return proc.returncode == 0, detail[:4000] or f"exit={proc.returncode}"
 
 
+def _from_env(
+    host_env: Mapping[str, str] | None, name: str, default: str | None = None
+) -> str | None:
+    """Vault-held host credential wins. Process env is the fallback. Never logs the value."""
+    if host_env is not None:
+        raw = host_env.get(name)
+        if raw is not None and str(raw).strip():
+            return str(raw).strip()
+    value = os.environ.get(name)
+    if value is not None and value.strip():
+        return value.strip()
+    return default
+
+
 def _host_cloudflare_pages(
     *,
     work_path: Path,
     stack: Any,
     hostname: str,
     run_build: bool,
+    host_env: Mapping[str, str] | None = None,
 ) -> tuple[EngineStep, str]:
     """Publish to the user's Cloudflare account. Returns (step, public_url).
 
@@ -311,8 +327,8 @@ def _host_cloudflare_pages(
     artifact = work_path / root / output_dir
     project = hostname.split(".")[0] if hostname else work_path.name
 
-    token = os.environ.get("CLOUDFLARE_API_TOKEN")
-    account = os.environ.get("CLOUDFLARE_ACCOUNT_ID")
+    token = _from_env(host_env, "CLOUDFLARE_API_TOKEN")
+    account = _from_env(host_env, "CLOUDFLARE_ACCOUNT_ID")
     adapter = CloudflarePagesAdapter(api_token=token, account_id=account)
 
     result = adapter.deploy(artifact, project=project)
@@ -344,6 +360,7 @@ def _host_spaceship_ftp(
     stack: Any,
     hostname: str,
     ship_env: Mapping[str, str] | None,
+    host_env: Mapping[str, str] | None = None,
 ) -> tuple[EngineStep, str]:
     """Publish static files to the existing Spaceship FTP account.
 
@@ -357,12 +374,12 @@ def _host_spaceship_ftp(
     artifact = work_path / root / output_dir
     project = hostname.split(".")[0] if hostname else work_path.name
     adapter = SpaceshipFtpAdapter(
-        host=os.environ.get("SPACESHIP_FTP_HOST"),
-        user=os.environ.get("SPACESHIP_FTP_USER"),
-        password=os.environ.get("SPACESHIP_FTP_PASS"),
-        remote_dir=os.environ.get("SPACESHIP_FTP_DIR"),
-        public_url=os.environ.get("SPACESHIP_PUBLIC_URL"),
-        env_dir=os.environ.get("SPACESHIP_FTP_ENV_DIR"),
+        host=_from_env(host_env, "SPACESHIP_FTP_HOST"),
+        user=_from_env(host_env, "SPACESHIP_FTP_USER"),
+        password=_from_env(host_env, "SPACESHIP_FTP_PASS"),
+        remote_dir=_from_env(host_env, "SPACESHIP_FTP_DIR"),
+        public_url=_from_env(host_env, "SPACESHIP_PUBLIC_URL"),
+        env_dir=_from_env(host_env, "SPACESHIP_FTP_ENV_DIR"),
     )
     result = adapter.deploy(artifact, project=project, env=dict(ship_env or {}))
     if not result.ok:
@@ -374,6 +391,7 @@ def _host_coolify(
     *,
     work_path: Path,
     hostname: str,
+    host_env: Mapping[str, str] | None = None,
 ) -> tuple[EngineStep, str]:
     """Trigger redeploy on the user's Coolify instance. Returns (step, public_url).
 
@@ -383,9 +401,9 @@ def _host_coolify(
 
     project = hostname.split(".")[0] if hostname else work_path.name
     adapter = CoolifyAdapter(
-        base_url=os.environ.get("COOLIFY_URL"),
-        api_token=os.environ.get("COOLIFY_TOKEN"),
-        app_uuid=os.environ.get("COOLIFY_APP_UUID"),
+        base_url=_from_env(host_env, "COOLIFY_URL"),
+        api_token=_from_env(host_env, "COOLIFY_TOKEN"),
+        app_uuid=_from_env(host_env, "COOLIFY_APP_UUID"),
     )
     # Artifact path unused by Coolify; pass work_path for protocol symmetry.
     result = adapter.deploy(work_path, project=project)
@@ -412,6 +430,7 @@ def _host_netlify(
     stack: Any,
     hostname: str,
     run_build: bool,
+    host_env: Mapping[str, str] | None = None,
 ) -> tuple[EngineStep, str]:
     """Publish to the user's Netlify account. Returns (step, public_url).
 
@@ -450,8 +469,8 @@ def _host_netlify(
     project = hostname.split(".")[0] if hostname else work_path.name
 
     adapter = NetlifyAdapter(
-        api_token=os.environ.get("NETLIFY_AUTH_TOKEN"),
-        site_id=os.environ.get("NETLIFY_SITE_ID"),
+        api_token=_from_env(host_env, "NETLIFY_AUTH_TOKEN"),
+        site_id=_from_env(host_env, "NETLIFY_SITE_ID"),
     )
     result = adapter.deploy(artifact, project=project)
     if not result.ok:
@@ -478,6 +497,7 @@ def _host_vps_ssh(
     hostname: str,
     vps_host: str,
     ship_env: Mapping[str, str] | None = None,
+    host_env: Mapping[str, str] | None = None,
 ) -> tuple[EngineStep, str]:
     """Run the project on the user's own box. Returns (step, public_url).
 
@@ -504,11 +524,11 @@ def _host_vps_ssh(
     project = remote_project_name(hostname=hostname, project_path=str(work_path))
     adapter = VpsSshAdapter(
         host=vps_host,
-        user=os.environ.get("OPENVAULT_VPS_USER", "root"),
-        port=int(os.environ.get("OPENVAULT_VPS_PORT", "22") or 22),
-        key_path=os.environ.get("OPENVAULT_VPS_KEY", ""),
+        user=_from_env(host_env, "OPENVAULT_VPS_USER", "root") or "root",
+        port=int(_from_env(host_env, "OPENVAULT_VPS_PORT", "22") or "22"),
+        key_path=_from_env(host_env, "OPENVAULT_VPS_KEY", "") or "",
         stack=stack,
-        replicas=int(os.environ.get("OPENVAULT_VPS_REPLICAS", "2") or 2),
+        replicas=int(_from_env(host_env, "OPENVAULT_VPS_REPLICAS", "2") or "2"),
     )
     result = adapter.deploy(
         work_path,
@@ -592,6 +612,10 @@ def _run_ship_engine_locked(
     ship_env: Mapping[str, str] | None = None,
 ) -> dict[str, Any]:
     """The engine proper. Only ``run_ship_engine`` may call this — it holds the lock."""
+    # Host credentials (Cloudflare token, FTP password, VPS key) authenticate
+    # the deploy. They never ride along as the deployed app's environment.
+    host_env = {k: v for k, v in (ship_env or {}).items() if k in HOST_ENV_LABELS}
+    ship_env = {k: v for k, v in (ship_env or {}).items() if k not in HOST_ENV_LABELS}
     budget = load_bill_budget()
     if monthly_cap_usd is not None:
         from openmw.openvault.ship.cloud_targets import BillBudget, save_bill_budget
@@ -742,7 +766,8 @@ def _run_ship_engine_locked(
             work_path=Path(work_path),
             stack=stack,
             hostname=hostname,
-            ship_env=ship_env or {},
+            ship_env=ship_env,
+            host_env=host_env,
         )
         steps.append(step)
         if step.status == "pass" and public:
@@ -762,6 +787,7 @@ def _run_ship_engine_locked(
             stack=stack,
             hostname=hostname,
             run_build=build_here,
+            host_env=host_env,
         )
         steps.append(step)
         if step.status == "pass" and public:
@@ -779,6 +805,7 @@ def _run_ship_engine_locked(
         step, public = _host_coolify(
             work_path=Path(work_path),
             hostname=hostname,
+            host_env=host_env,
         )
         steps.append(step)
         if step.status == "pass" and public:
@@ -797,6 +824,7 @@ def _run_ship_engine_locked(
             stack=stack,
             hostname=hostname,
             run_build=build_here,
+            host_env=host_env,
         )
         steps.append(step)
         if step.status == "pass" and public:
@@ -815,7 +843,8 @@ def _run_ship_engine_locked(
             stack=stack,
             hostname=hostname,
             vps_host=vps_host,
-            ship_env=ship_env or {},
+            ship_env=ship_env,
+            host_env=host_env,
         )
         steps.append(step)
         if step.status == "pass" and public:

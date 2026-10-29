@@ -203,3 +203,54 @@ def resolve_ship_env(
             raise InjectError(str(exc), status_code=403) from exc
 
     return InjectResult(env=env, names=list(env.keys()), sources=sources)
+
+
+# Labels that are also the env names the host adapters read. A matching vault
+# row is the credential. Process env remains the fallback inside the engine.
+HOST_ENV_LABELS = frozenset(
+    {
+        "CLOUDFLARE_API_TOKEN",
+        "CF_API_TOKEN",
+        "CLOUDFLARE_ACCOUNT_ID",
+        "NETLIFY_AUTH_TOKEN",
+        "NETLIFY_SITE_ID",
+        "COOLIFY_URL",
+        "COOLIFY_TOKEN",
+        "COOLIFY_APP_UUID",
+        "SPACESHIP_FTP_HOST",
+        "SPACESHIP_FTP_USER",
+        "SPACESHIP_FTP_PASS",
+        "SPACESHIP_FTP_DIR",
+        "SPACESHIP_PUBLIC_URL",
+        "SPACESHIP_FTP_ENV_DIR",
+        "OPENVAULT_VPS_USER",
+        "OPENVAULT_VPS_PORT",
+        "OPENVAULT_VPS_KEY",
+        "OPENVAULT_VPS_REPLICAS",
+    }
+)
+
+
+def vault_host_env(vault: KeyVault) -> dict[str, str]:
+    """Copy host credentials out of the vault by label. Empty when sealed.
+
+    Values are plaintext for the deploy call only. Callers must scrub them
+    from any response. This function does not log them.
+    """
+    if vault.seal.is_sealed:
+        return {}
+    found: dict[str, str] = {}
+    for key in vault.list_keys():
+        if not key.enabled or key.lifecycle != "active":
+            continue
+        if key.label not in HOST_ENV_LABELS:
+            continue
+        try:
+            secret = vault.get_secret(key.id)
+        except VaultSealedError:
+            return {}
+        if secret:
+            found[key.label] = secret
+    if "CLOUDFLARE_API_TOKEN" not in found and found.get("CF_API_TOKEN"):
+        found["CLOUDFLARE_API_TOKEN"] = found["CF_API_TOKEN"]
+    return found
