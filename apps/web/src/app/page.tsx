@@ -38,6 +38,12 @@ const LINKS = [
     icon: KeyRound,
   },
   {
+    href: "/super",
+    title: "Super",
+    body: "Auto-detect a model route and a cloud ship, including light apps. Both can run together.",
+    icon: Rocket,
+  },
+  {
     href: "/freeroute",
     title: "FreeRoute",
     body: "Pooled spend hops, JWKS bind kids, register deep-links.",

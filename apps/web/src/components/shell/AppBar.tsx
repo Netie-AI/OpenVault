@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Activity,
+  AppWindow,
   Boxes,
   GitBranch,
   KeyRound,
@@ -33,6 +34,7 @@ const NAV = [
   { href: "/vault", label: "Vault", icon: KeyRound },
   { href: "/keys", label: "Keys", icon: KeySquare },
   { href: "/freeroute", label: "FreeRoute", icon: Waypoints },
+  { href: "/super", label: "Super", icon: AppWindow },
   { href: "/providers", label: "Providers", icon: Boxes },
   { href: "/engine", label: "Engine", icon: Server },
   { href: "/ship", label: "Ship", icon: Rocket },
