@@ -181,10 +181,19 @@ def _popen(
     env: dict | None = None,
     *,
     log_path: Path | None = None,
+    detach: bool = False,
 ) -> subprocess.Popen:
     e = os.environ.copy()
     if env:
         e.update(env)
+    creationflags = 0
+    if detach and os.name == "nt":
+        # Cursor/agent shells die and take children with them. A new process
+        # group keeps `next start` serving after the launcher is torn down.
+        creationflags = subprocess.CREATE_NEW_PROCESS_GROUP | getattr(
+            subprocess, "DETACHED_PROCESS", 0
+        )
+    extra: dict = {"creationflags": creationflags} if creationflags else {}
     if log_path is not None:
         log_path.parent.mkdir(parents=True, exist_ok=True)
         log_f = open(log_path, "w", encoding="utf-8")  # noqa: SIM115
@@ -194,6 +203,7 @@ def _popen(
             env=e,
             stdout=log_f,
             stderr=subprocess.STDOUT,
+            **extra,
         )
     return subprocess.Popen(
         args,
@@ -201,6 +211,7 @@ def _popen(
         env=e,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
+        **extra,
     )
 
 
@@ -297,7 +308,7 @@ def _start_web(
     # told to run `openvault doctor` - which did not check for a build either.
     log_path = Path(env["OPENVAULT_HOME"]) / "logs" / "web.up.log"
     print(f"Web app log -> {log_path} ({script})")
-    return _popen([_npm(), "run", script], WEB, {**env, "PORT": str(WEB_PORT)}, log_path=log_path)
+    return _popen([_npm(), "run", script], WEB, {**env, "PORT": str(WEB_PORT)}, log_path=log_path, detach=True)
 
 
 def _base_env() -> dict[str, str]:
