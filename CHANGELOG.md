@@ -5,6 +5,9 @@ Append-only. Never edited, only added to. Newest first.
 ## 2026-10-29 - PR #170 security review fixes (Refs #63, #65)
 
 - `POST /api/vault/migrate-site-passwords` now migrates only `lifecycle == active` hops. A revoked, rotated or compromised `SITE_*` / `*PASSWORD` hop is not decrypted, not copied into secrets and not deleted, so a dead password never becomes an active secret under its label and the audit-retained encrypted row survives. They are reported as `skipped_inactive` in the response, the `openvault_site_password_migrate` log event and the `site_password_migrate` audit line. `remaining_site_keys` still counts every site-shaped row left in the key vault, so it now includes the skipped ones and `ok` can be true with `remaining_site_keys > 0`.
+- Ship host credentials from the vault (`vault_host_env`) now come only from rows that are `custody == pooled`, have no `account_id`, are enabled and `lifecycle == active` (DR-0009: a tenant row of the same label can no longer shadow the pooled one). When more than one row matches a label the most recently created wins (`created_at`, then row id), and only that row is decrypted.
+- `POST /api/ship/engine` decrypts vault host credentials only for a target that leaves the machine (`spaceship_ftp`, `cloudflare_pages`, `coolify`, `netlify`, `vps_ssh`). `local_demo` and `aws_guide` decrypt nothing. Each decrypted host credential writes one `ship_host_credential` line to `secret_audit.jsonl` with the target, label and an 8-character key ref, never the value.
+- A request secret binding can no longer override a host label the vault supplies (`COOLIFY_URL`, `SPACESHIP_FTP_HOST` and the rest of `HOST_ENV_LABELS`). The vault value wins; a binding for a host label the vault does not hold is still used as the fallback, and every binding value is scrubbed from the response.
 
 ## 2026-10-29 - Site passwords and TOTP seeds are secrets, not LLM hops (Refs #63, #64, #65, #66)
 

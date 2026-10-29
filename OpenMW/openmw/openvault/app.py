@@ -510,6 +510,43 @@ def _resolve_ship_inject(
     return result.env, summary
 
 
+def _merge_ship_host_env(
+    target: str,
+    request_env: dict[str, str],
+    *,
+    vault: KeyVault,
+    request: Request,
+) -> dict[str, str]:
+    """Ship env for the engine: request bindings, then vault host credentials on top.
+
+    Vault host rows are decrypted only for a target that leaves the machine
+    (``_mutates_remote_host``). ``local_demo`` and ``aws_guide`` never use a host
+    credential, so they decrypt nothing and write no audit line. For a remote
+    target each decrypted credential gets one ``ship_host_credential`` secret-audit
+    line carrying the label and an 8-char key ref, never the value.
+
+    The vault wins over a request binding of the same host label. Otherwise a
+    caller could bind ``COOLIFY_URL`` or ``SPACESHIP_FTP_HOST`` to an address it
+    controls and have the vault-held token or password sent there. A binding for
+    a host label the vault does not hold still passes through as the fallback.
+    """
+    merged = dict(request_env)
+    if not _mutates_remote_host(target):
+        return merged
+
+    def _audit_host_credential(label: str, key_ref: str) -> None:
+        _audit_custody(
+            "ship_host_credential",
+            request,
+            target=target,
+            label=label,
+            key_ref=key_ref,
+        )
+
+    merged.update(vault_host_env(vault, on_decrypt=_audit_host_credential))
+    return merged
+
+
 def _audit_secret_reveal(key_id: str, client_host: str, user_agent: str) -> None:
     _write_secret_audit(
         {
@@ -2941,9 +2978,13 @@ def create_app(
             secrets=state_secrets,
             request=request,
         )
-        host_env = vault_host_env(state_vault)
-        host_env.update(ship_env)
-        ship_env = host_env
+        request_env = ship_env
+        ship_env = _merge_ship_host_env(
+            body.target,
+            request_env,
+            vault=state_vault,
+            request=request,
+        )
         try:
             payload = run_ship_engine(
                 target=body.target,
@@ -2970,8 +3011,10 @@ def create_app(
                     "since": exc.since,
                 },
             ) from exc
-        if ship_env:
-            payload = scrub_mapping(payload, list(ship_env.values()))
+        if ship_env or request_env:
+            # Scrub the request bindings too: a binding the vault overrode is
+            # not sent to the host but is still a secret the caller selected.
+            payload = scrub_mapping(payload, [*ship_env.values(), *request_env.values()])
         if inject_summary.get("count"):
             payload["secrets_injected"] = inject_summary
         return payload
