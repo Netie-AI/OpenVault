@@ -111,7 +111,10 @@ export default function FreeRoutePage() {
 
   const kids = status?.kids ?? [];
   const hops = status?.hops ?? [];
-  const spendable = status?.spendable ?? [];
+  const spendable = (status?.spendable ?? []).filter((p) => {
+    if (p.id !== "litellm") return true;
+    return hops.some((h) => h.provider === "litellm" && h.precheck_status === "ok");
+  });
 
   return (
     <PageContainer>
@@ -130,10 +133,19 @@ export default function FreeRoutePage() {
       {err ? <p className="mb-4 text-sm text-destructive">{err}</p> : null}
 
       <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Stat label="Vault" value={vault?.sealed || status?.sealed ? "sealed" : "unsealed"} />
-        <Stat label="JWKS kids" value={String(status?.kid_count ?? kids.length)} />
-        <Stat label="Pooled keys" value={String(status?.pooled_key_count ?? 0)} />
-        <Stat label="Usage $/unit" value={status?.usage_unit_status ?? "NEEDS-YOU"} />
+        <Stat
+          label="Vault"
+          value={
+            status == null
+              ? "—"
+              : vault?.sealed || status.sealed
+                ? "sealed"
+                : "unsealed"
+          }
+        />
+        <Stat label="JWKS kids" value={status == null ? "—" : String(status.kid_count ?? kids.length)} />
+        <Stat label="Pooled keys" value={status == null ? "—" : String(status.pooled_key_count ?? 0)} />
+        <Stat label="Usage $/unit" value={status?.usage_unit_status ?? (status == null ? "—" : "NEEDS-YOU")} />
       </div>
 
       <section className="mb-6 rounded-2xl border border-border bg-card p-5">
@@ -167,7 +179,9 @@ export default function FreeRoutePage() {
           Public pin document at {status?.jwks_uri || "/.well-known/jwks.json"}. Mint stays
           loopback. Never paste an ov_ token into chat, PRs, or logs.
         </p>
-        {kids.length ? (
+        {status == null ? (
+          <p className="mt-3 text-sm text-muted-foreground">Loading bind kids…</p>
+        ) : kids.length ? (
           <ul className="mt-3 space-y-1 font-mono text-xs text-muted-foreground">
             {kids.map((kid) => (
               <li key={kid}>{kid}</li>
@@ -209,7 +223,9 @@ export default function FreeRoutePage() {
 
       <section>
         <h2 className="mb-3 text-sm font-semibold text-foreground">Fallback hops</h2>
-        {hops.length === 0 ? (
+        {status == null ? (
+          <p className="text-sm text-muted-foreground">Loading hops…</p>
+        ) : hops.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             No pooled hops yet. Register a free key, or the vault is sealed.
           </p>
