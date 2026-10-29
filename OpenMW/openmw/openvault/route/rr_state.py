@@ -6,8 +6,6 @@ import random
 import threading
 from dataclasses import dataclass
 
-MAX_RR_COUNTERS = 500
-
 
 @dataclass
 class _Deck:

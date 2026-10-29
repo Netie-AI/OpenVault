@@ -57,11 +57,6 @@ def set_targets(targets: list[RouteTarget]) -> list[RouteTarget]:
         return _state.targets
 
 
-def record_target_result(execution_key: str, *, success: bool, latency_ms: float) -> None:
-    with _lock:
-        _state.metrics.record(execution_key, success=success, latency_ms=latency_ms)
-
-
 def reset_route_state() -> None:
     global _state
     with _lock:

@@ -2,11 +2,85 @@
 
 Append-only. Never edited, only added to. Newest first.
 
-## 2026-10-05 - Localhost unseal without an admin paste (OpenVault #123)
+## 2026-10-29 - Localhost unseal without an admin paste (OpenVault #123)
 
 - On a loopback URL host the :3010 console attaches `X-OpenVault-Admin` from the local admin token file for vault status, passphrase unseal, Hello unseal, and `GET /api/keys`. The token is not written into the page. Next strips it from the browser response.
 - The unseal gate no longer asks for an admin token. Overview shows the same Unseal / Hello control as `/vault`.
 - A non-loopback host does not get that header. Other vault and key mutations still require it and stay 401 without it. The API guard is unchanged. Refs #123.
+
+## 2026-10-09 - Space credentials are admin plus loopback (Refs #160)
+
+- Creating or rotating a `dms:<space>` service id on `POST /keys/services` needs both `X-OpenVault-Admin` and a loopback socket peer. The services allowlist (including `10.128.0.3`), a reveal header, and any service Bearer, including that Space's own Bearer, do not qualify. Plain service ids (`dms`, `cortex`, and the rest) keep the previous peer and rotation rules. #166 is this gate.
+- The Space must already be lowercase and match `^dms:[a-z0-9][a-z0-9-]{0,62}$`. Anything else that is trying to be a `dms:` credential is `dms_space_invalid` (422). DMS normalises the Space to lowercase before it calls. There is no HTTP route that revokes a service credential. That gap stays on #164.
+
+## 2026-10-09 - Gemini per-minute 429 is a short park (Refs #162)
+
+- Only an explicit per-minute Gemini `quotaId` parks as `rate_limited` for `RetryInfo.retryDelay`. The delay is capped at the lesser of 3600s and the time until Google's daily reset. A missing or rejected delay uses about 60s. A non-finite delay, or a parse error, falls back to the old text tables. A plain-text 429 with no structured details, a per-day quota id, and an unrecognized quota id still park until midnight Pacific.
+- Strict `503 pin_unavailable` keeps its fields and adds `provider`, `park_reason`, and `retry_after_s`. A park also sets `Retry-After`. The body has no key id and no secret. A strict pin still does not call another provider or model.
+
+## 2026-10-09 - Credential-bound Space and fail-closed redeem audit (Refs #160)
+
+- A Space credential is `dms:<space>`. It is minted once with `POST /keys/services` and reused. Lease mint and redeem do not mint or refresh it. The service id charset accepts that form: the Space is 1 to 64 of `A-Za-z0-9._-`, and a colon is allowed only in `dms:<space>`.
+- The kid is owned by that `dms:<space>` service through admin `POST /api/keys/owner`. `owner_tenant` stays on the binding. Mint and redeem derive the Space from the Bearer. The tenant is the binding, not the body. A body `space` or `tenant` that disagrees is `lease_space_mismatch` or `lease_tenant_mismatch`, and redeem does not consume the lease. A Bearer that is not `dms:<space>` is `lease_space_credential`. This is credential-bound Space. #165 is this behavior.
+- A successful redeem writes `lease_redeem` (kid, space, service_id, expires_at, owner_tenant) before the consume commits. If that write fails, the response is `lease_audit_failed`, the secret is not returned, and the lease stays redeemable. A refused redeem writes `lease_redeem_refused` with the reason, key_id when known, space, and service_id. Neither line contains the ref or the secret. Rate limit and purge of expired rows stay on #164.
+- A ref placed in the query string is refused (`lease_ref_in_url`) and is not redeemed, but uvicorn still records that request line on the access log.
+
+## 2026-10-09 - Lease Space and tenant binding (Refs #160)
+
+- `POST /api/keys/owner` stores `owner_space` and `owner_tenant` beside `owner_service_id`. The columns are additive and stay NULL until that assign. An empty `service_id` clears all three. A tenant that disagrees with a set `account_id` is `lease_tenant_mismatch` and is not written.
+- Mint refuses `lease_space_unbound` when the kid has no Space, `lease_space_mismatch` when the requested Space differs, and `lease_tenant_mismatch` when the tenant differs from `owner_tenant` or from `account_id`. Redeem re-checks the same and does not consume the lease on those mismatches.
+- A successful redeem appends `lease_redeem` to `secret_audit.jsonl` through the secret-reveal writer, with `key_id`, `space`, `service_id`, and `expires_at`. The ref and the secret are not written.
+- A ref placed in the query string is refused (`lease_ref_in_url`) and is not redeemed, but uvicorn still records that request line on the access log.
+
+## 2026-10-08 - Single-kid connector lease (Refs #160)
+
+- `KeyRecord.owner_service_id` is NULL on existing rows and on new rows. Nothing is backfilled to a service. `POST /api/keys/owner` with `X-OpenVault-Admin` assigns `{kid, service_id}` for a service already registered with `POST /keys/services`. An empty `service_id` clears it. The kid is not in the path. Rotation does not copy ownership.
+- `POST /api/keys/leases` mints one lease: one tenant-custody kid, one `space`, TTL default 60s and max 120s, single use. `POST /api/keys/leases/redeem` returns the plaintext once. Both are JSON bodies. The service id is `verify_service` on the Bearer via `service_id_for_active_bearer`. A `service_id` in the body is ignored. `X-OpenVault-Admin` does not open these two POSTs.
+- The ref is `ovlease_` plus a random token. Only the SHA-256 is stored. `AKIA`, `ghp_`, `sk-ant`, `xoxb`, and long plain strings are `lease_raw_secret_ref`. A query string is `lease_ref_in_url` and is not redeemed. There is no route with the ref in the path.
+- HttpGuard admits only those two exact POSTs. GET and every other method on those paths stay on the admin gate. Loopback is allowed. Any other peer needs https, and `LEASE_TLS_VERIFY` stays true with no env switch. Forwarded headers are not a peer or a scheme.
+- Every lease row has `tenant_key`, `ttl_s`, and `owner_service_id` before insert. There is no feature flag that skips them. A non-owned kid is `lease_kid_not_owned`. Expired is `lease_expired`. A second redeem is `lease_reused`. This is not a query broker. No public `:5000` bind change.
+
+## 2026-10-06 - Public prove IP is not a default services peer (OpenVault #133)
+
+- `POST /keys/services` defaults stay loopback and the private peer `10.128.0.3`. `34.30.222.22` is no longer built in. `OPENVAULT_SERVICES_ALLOW` is the only way to admit it. Unset, that peer plus `X-OpenVault-Reveal: intentional` is 401. Set to include it, the first mint is still 200, and the dms service Bearer on loopback `POST /keys/intermediate` is still 200. `HttpGuard` uses the path Starlette routes. A `root_path` prefix, a doubled slash under `root_path` `/`, or a trailing slash on that prefixed path is 401, the same as the unprefixed path. `POST /api/apikeys/verify` uses that same routed path. Behind a `root_path` prefix a good caller is still admitted and a bad caller is still rejected. A missing route helper on that path is 401. `GET`/`HEAD`/`OPTIONS` `/keys/jwks` and `/api/healthz` stay public. If `starlette._utils.get_route_path` cannot be imported, the guard returns 401 and does not skip auth. Loopback first mint is unchanged. No public `:5000` bind change.
+
+## 2026-10-06 - Dead route symbols with zero callers (Refs #137)
+
+- Removed nine symbols in `OpenMW/openmw/openvault/route/` whose only `git grep -n -w` hits were the definition, a package re-export, or a design-doc mention: `registry_size_for_tests`, `CircuitBreakerOpenError`, `parse_delay_string`, `set_custom_banned_signals`, `MAX_RR_COUNTERS`, `semaphore.mark_rate_limited`, `semaphore.get_stats`, `semaphore.reset_all`, and `record_target_result`. Classify, breaker trips, FreeRoute, auth, HttpGuard, keys, and unseal are unchanged. `key_rotator` and `route/access.py` were not edited.
+
+## 2026-10-06 - Verify lookup always compares the digest (Refs #135)
+
+- `POST /api/apikeys/verify` calls `ApiKeyStore.match_issued`. Every input, including an unknown or empty token, hashes the body, runs the same digest lookup, and calls `hmac.compare_digest` once. A miss compares a fixed 64-character dummy. The raw token is not compared. `ApiKeyStore.verify` is unchanged and is still the auth-path check.
+
+## 2026-10-06 - Verify an issued key for an allowlisted service (Refs #135)
+
+- `POST /api/apikeys/verify` reads `{"token": "..."}` and looks the key up by hash. A live key returns `{"ok": true, "valid": true, "key_id", "tier"}`. Unknown, revoked, disabled, and malformed keys return `{"ok": true, "valid": false}` and nothing else. The raw key is not logged or returned.
+- The caller presents `X-OpenVault-Admin`, or an `Authorization: Bearer` that passes `verify_service` for a service_id in `OPENVAULT_VERIFY_SERVICES` (comma-separated, default empty, so only admin works). No credential is 401. A wrong, revoked, or unlisted service is 401. Loopback alone is not enough.
+- The socket peer must be loopback or the services allowlist. `X-Forwarded-For` and `Host` are not a peer. Every other `/api/apikeys` route still requires admin.
+- Each admitted caller is capped at 60 verify requests a minute by an in-process token-budget limiter that is not the chat limiter. A full bucket is 429.
+
+## 2026-10-06 - SEA-LION key import accepts sea_lion (Refs #134)
+
+- `POST /api/keys` and env ingest accept catalog id `sea_lion`. `SEA_LION_API_KEY` and `SEALION_API_KEY` store as `sea_lion`, with the catalog base URL. An unknown provider stays 422.
+- FreeRoute already lists the catalog row. A vaulted `sea_lion` key is selected like other OpenAI-compatible hops. SEA-Guard and the embedding model stay out of chat hops. Chat-probe low-cap handling is unchanged.
+
+## 2026-10-06 - Intermediate revoke is limited to the issuing service (Refs #132)
+
+- A service Bearer on `POST /keys/intermediate/{kid}/revoke` can revoke only a kid that service issued. Another service's kid stays active and the response is 403.
+- `X-OpenVault-Admin` can still revoke any kid. Loopback with no credential stays 401. Non-loopback revoke stays denied.
+- `POST /keys/intermediate` with the dms service Bearer is unchanged. The first `POST /keys/services` from an allowlisted peer plus `X-OpenVault-Reveal: intentional` stays 200 and does not need an admin token.
+
+## 2026-10-05 - Revoke and service rotation need a credential (OpenVault #128)
+
+- Supersedes the #126 line that said intermediate revoke keeps a Bearer gate. After that change, loopback `POST /keys/intermediate/{kid}/revoke` with no credential returned 200. Revoke now requires a Bearer that passes the same `verify_service` check as issue, or `X-OpenVault-Admin`. Loopback alone is 401. Non-loopback revoke stays denied.
+- First `POST /keys/services` is unchanged: loopback or an `OPENVAULT_SERVICES_ALLOW` peer (default `10.128.0.3`, `34.30.222.22`) plus `X-OpenVault-Reveal: intentional`. That first mint does not need admin.
+- Re-registering an existing service_id rotates the token only with that service's current Bearer or `X-OpenVault-Admin`. Reveal alone does not rotate. An allowlisted peer can send the current service Bearer. A presented `ov_` key is still verified. No public `:5000` bind change.
+
+## 2026-10-05 - Signing mint is not an admin route (OpenVault #126)
+
+- `POST /keys/services`, `POST /keys/intermediate`, and `POST /keys/intermediate/{kid}/revoke` no longer require `X-OpenVault-Admin`. Loopback prove was 401 `openvault_unauthenticated` before the #52 peer allowlist and reveal check ran.
+- `POST /keys/services` still requires a socket peer on loopback or `OPENVAULT_SERVICES_ALLOW` (default `10.128.0.3`, `34.30.222.22`) plus `X-OpenVault-Reveal: intentional`. An allowlisted peer with no `ov_` key reaches that gate. An unlisted remote with no credential stays 401. `X-Forwarded-For` and `Host` are not a peer.
+- Intermediate issue and revoke keep their loopback and Bearer service-token gates. `/api/keys`, `/api/vault`, secrets, and apikeys still require admin. `GET`/`HEAD`/`OPTIONS` `/keys/jwks` stay public.
 
 ## 2026-10-05 - One FreeRoute seat; vendor OpenShip client cut (Refs #99)
 

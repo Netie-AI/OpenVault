@@ -83,7 +83,6 @@ chunk_size  = 128 KiB  # NVMe page alignment default
 | Strategy | Source paper | OpenMW module | Dependency |
 |----------|--------------|---------------|------------|
 | Sequential disk prefetch | LMCache baseline | `prefetch_naive.py` | Done |
-| Heuristic overlay | Internal | `prefetch_heuristic.py` | Done |
 | Flash window | LLM-in-a-Flash | `prefetch_flash.py` (PART 3) | numpy only |
 | Neuron sparsity | PowerInfer | `prefetch_sparsity.py` (PART 3) | numpy calibration |
 
@@ -124,4 +123,4 @@ Explicit `FlashWindowConfig.window_size` overrides profile-derived value.
 - **Real calibration data**: tests use synthetic activations; production needs model-weight–specific calibration token stream.
 - **Chunk ↔ neuron mapping**: sparsity prefetch returns neuron ids; PART 4 must map neurons to NVMe byte ranges in weight tensors.
 - **Strategy selection**: `ModelRouter` does not yet pick flash vs sparsity vs heuristic; needs offload-tier policy.
-- **IORing overlap**: Windows `windows_ioring_spike` is exploratory; flash-window async I/O may need OS-specific backend.
+- **IORing overlap**: a Windows IoRing probe is not in the tree; flash-window async I/O may need an OS-specific backend.

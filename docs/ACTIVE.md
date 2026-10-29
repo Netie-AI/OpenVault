@@ -20,7 +20,6 @@ What exists in this repo and where. Update when structure changes, not when stat
 | `docs/decisions/` | `DR-####-kebab-title.md` (MADR, see `DR-0001`). [`DR-0012`](decisions/DR-0012-skills-kb-crew-wiring.md) skills/KB/crew. [`DR-0013`](decisions/DR-0013-control-plane-locked-rates.md) locked display SKUs. [`DR-0014`](decisions/DR-0014-jwks-verify-pin.md) JWKS pin kids. [`DR-0015`](decisions/DR-0015-what-belongs-in-the-vault.md) vault line. [`DR-0016`](decisions/DR-0016-experience-route-packs.md) experience packs. [`DR-0017`](decisions/DR-0017-passkeys-vault-unseal.md) passkey unseal |
 | `scripts/windows/` | `Start-OpenVaultDemo.ps1`, `Start-NetieStack.ps1`, `Start-LocalMesh.ps1` |
 | `scripts/` | `start_local_mesh.sh` (Linux/macOS mesh bring-up: custody API `:5000`, approve Cortex + OpenIDE, demo shell when AirGPT is absent) · `airgpt_demo_shell.py` (stdlib AirGPT/OpenIDE stand-in on `:8765`) |
-| `bin/` | Quarantine — dead/orphaned files pending the founder's final review and removal |
 
 ## OpenVault app tiers (`OpenMW/openmw/openvault/`)
 
@@ -28,7 +27,7 @@ What exists in this repo and where. Update when structure changes, not when stat
 |------|---------|------|
 | Health | `health/` | Laptop device inventory |
 | Observe | `observe/` | PathTrace hops + severity (`hot` = red) |
-| Vault | `vault/` | Encrypted keys, accounts, proxy, FreeRoute gateway. Metering trio: `api_keys.py` (issued `ov_` credentials) · `auth.py` (who is calling — never a header) · `usage_store.py` (one durable row per request) · `budget.py` (output ceiling + context refusal) · `system_plane.py` (SYSTEM control plane; usage $/unit stays NEEDS-YOU) · `trust.py` (JWKS pin kids; mint stays loopback) · `route_packs.py` (experience credit, DR-0016) · `app_grants.py` (loopback app Grant) · `webauthn_unlock.py` (passkey unseal, DR-0017) · `local_hop.py` (LOCAL-1 `local_qwen` loopback hop, no cloud key) · `key_add.py` (`openvault add`: 1-token chat, HMAC dedupe) · `provider_cards.py` (catalog cards, POST `/api/keys/cards`) · `hop_attempts.py` (per-hop attempt ledger) · `chat_probe.py` (per-key chat probe, own schedule) · GET `/api/keys/quota` |
+| Vault | `vault/` | Encrypted keys, accounts, proxy, FreeRoute gateway. Metering trio: `api_keys.py` (issued `ov_` credentials) · `auth.py` (who is calling — never a header) · `usage_store.py` (one durable row per request) · `budget.py` (output ceiling + context refusal) · `system_plane.py` (SYSTEM control plane; usage $/unit stays NEEDS-YOU) · `trust.py` (JWKS pin kids; mint stays loopback) · `lease.py` (single-kid connector lease, service Bearer, no broker) · `route_packs.py` (experience credit, DR-0016) · `app_grants.py` (loopback app Grant) · `webauthn_unlock.py` (passkey unseal, DR-0017) · `local_hop.py` (LOCAL-1 `local_qwen` loopback hop, no cloud key) · `key_add.py` (`openvault add`: 1-token chat, HMAC dedupe) · `provider_cards.py` (catalog cards, POST `/api/keys/cards`) · `hop_attempts.py` (per-hop attempt ledger) · `chat_probe.py` (per-key chat probe, own schedule) · GET `/api/keys/quota` |
 | Ship | `ship/` (+ `ship/hosts/`) | Deploy / FreeBuild / email gates |
 | Mesh | `mesh/` | Local mesh + Cortex client + `/api/slots` |
 | Control | `control/` | GPU/CPU/fan remediation (dry_run default) — not the billing control plane (`/api/system/*`) |

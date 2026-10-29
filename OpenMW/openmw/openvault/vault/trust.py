@@ -34,6 +34,7 @@ import contextlib
 import hashlib
 import hmac
 import json
+import re
 import secrets
 import sqlite3
 import time
@@ -59,6 +60,60 @@ KeyLifecycle = Literal["active", "revoked", "rotated", "expired"]
 #: is a signing key someone can steal and reuse.
 DEFAULT_INTERMEDIATE_TTL_S = 900
 MAX_INTERMEDIATE_TTL_S = 3600
+
+#: Canonical Space credential. DMS must normalise the Space to lowercase.
+#: One to 63 of ``a-z``, ``0-9``, and ``-``. No uppercase, dot, or underscore.
+_DMS_SPACE_SERVICE = re.compile(r"^dms:([a-z0-9][a-z0-9-]{0,62})\Z")
+#: Any other service id. A colon is not allowed here.
+_PLAIN_SERVICE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}\Z")
+DMS_SPACE_INVALID = "dms_space_invalid"
+
+
+def dms_space_attempt(service_id: str) -> bool:
+    """True when the id is trying to be a ``dms:<space>`` credential.
+
+    The check is the prefix before the colon, compared case-insensitively.
+    ``dms:SPACE-B`` and ``DMS:space`` are attempts. ``cortex`` and ``foo:bar``
+    are not.
+    """
+    text = service_id.strip()
+    prefix, sep, _rest = text.partition(":")
+    if not sep:
+        return False
+    return prefix.lower() == "dms"
+
+
+def dms_space_canonical(service_id: str) -> bool:
+    """True only for lowercase ``dms:<space>`` with a bounded Space.
+
+    Surrounding whitespace and uppercase are not repaired. DMS must send the
+    Space already in lowercase.
+    """
+    return _DMS_SPACE_SERVICE.fullmatch(service_id) is not None
+
+
+def service_id_allowed(service_id: str) -> bool:
+    """True for a bounded service id, including canonical ``dms:<space>``.
+
+    Plain ids are letters, digits, ``.``, ``_``, and ``-``, at most 128
+    characters, and they may contain uppercase. A Space credential must
+    match ``dms_space_canonical``. Any other colon form is refused.
+    """
+    if any(ord(ch) < 33 for ch in service_id):
+        return False
+    if dms_space_canonical(service_id):
+        return True
+    if ":" in service_id:
+        return False
+    return _PLAIN_SERVICE.fullmatch(service_id.strip()) is not None
+
+
+def space_from_service_id(service_id: str) -> str:
+    """Space bound to a canonical ``dms:<space>`` credential, or empty."""
+    match = _DMS_SPACE_SERVICE.fullmatch(service_id)
+    if match is None:
+        return ""
+    return match.group(1)
 
 
 class TrustError(RuntimeError):
@@ -176,10 +231,17 @@ class TrustStore:
                   not_after REAL,
                   lifecycle TEXT NOT NULL DEFAULT 'active',
                   created_at REAL NOT NULL,
-                  revoked_reason TEXT
+                  revoked_reason TEXT,
+                  owner_service_id TEXT
                 )
                 """
             )
+            # Rows minted before ownership have a NULL owner. A service bearer
+            # cannot revoke those; admin still can. Intermediates expire within
+            # MAX_INTERMEDIATE_TTL_S, so the unowned window is bounded.
+            cols = {row[1] for row in conn.execute("PRAGMA table_info(signing_keys)").fetchall()}
+            if "owner_service_id" not in cols:
+                conn.execute("ALTER TABLE signing_keys ADD COLUMN owner_service_id TEXT")
             conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS signing_services (
@@ -280,9 +342,13 @@ class TrustStore:
         Only the SHA-256 of the token is stored. There is nothing here to
         decrypt and nothing to hand back later, so a copy of ``keys.db`` does
         not yield a working credential — unlike sealing it, which would.
+        A Space credential is canonical ``dms:<space>`` and is minted here
+        once, then reused. This method does not check the caller. ``POST
+        /keys/services`` admits that form only for ``X-OpenVault-Admin`` on
+        a loopback socket. This method does not refresh a token on its own.
         """
-        if not service_id.strip():
-            raise TrustError("service_id is required")
+        if not service_id_allowed(service_id):
+            raise TrustError("service_id_invalid")
         token = secrets.token_urlsafe(32)
         digest = hashlib.sha256(token.encode("utf-8")).hexdigest()
         with contextlib.closing(self._connect()) as conn, conn:
@@ -310,6 +376,54 @@ class TrustStore:
         offered = hashlib.sha256(token.encode("utf-8")).hexdigest()
         return hmac.compare_digest(offered, row["token_sha256"])
 
+    def service_is_registered(self, service_id: str) -> bool:
+        """True when this service_id already has a row, active or revoked."""
+        sid = service_id.strip()
+        if not sid:
+            return False
+        with contextlib.closing(self._connect()) as conn, conn:
+            row = conn.execute(
+                "SELECT 1 FROM signing_services WHERE service_id=?",
+                (sid,),
+            ).fetchone()
+        return row is not None
+
+    def _matching_active_service_ids(self, token: str) -> list[str]:
+        """Active service_ids this bearer verifies.
+
+        No active rows still hashes once, matching a missing row in ``verify_service``.
+        """
+        with contextlib.closing(self._connect()) as conn, conn:
+            rows = conn.execute(
+                "SELECT service_id FROM signing_services WHERE lifecycle='active'"
+            ).fetchall()
+        if not rows:
+            hashlib.sha256(token.encode("utf-8")).hexdigest()
+            return []
+        matched: list[str] = []
+        for row in rows:
+            service_id = str(row["service_id"])
+            if self.verify_service(service_id, token):
+                matched.append(service_id)
+        return matched
+
+    def active_service_bearer(self, token: str) -> bool:
+        """True when ``token`` passes :meth:`verify_service` for an active service.
+
+        No active rows still hashes once, matching a missing row in ``verify_service``.
+        """
+        return bool(self._matching_active_service_ids(token))
+
+    def service_id_for_active_bearer(self, token: str) -> str:
+        """The single active service_id this bearer verifies, or empty.
+
+        More than one match is empty so revoke cannot pick an owner.
+        """
+        matched = self._matching_active_service_ids(token)
+        if len(matched) != 1:
+            return ""
+        return matched[0]
+
     def revoke_service(self, service_id: str) -> bool:
         with contextlib.closing(self._connect()) as conn, conn:
             cur = conn.execute(
@@ -322,12 +436,17 @@ class TrustStore:
     # -- intermediates -------------------------------------------------------
 
     def issue_intermediate(
-        self, subject: str, *, ttl_s: int = DEFAULT_INTERMEDIATE_TTL_S
+        self,
+        subject: str,
+        *,
+        ttl_s: int = DEFAULT_INTERMEDIATE_TTL_S,
+        service_id: str = "",
     ) -> IssuedIntermediate:
         """Mint a short-lived signing key chained to the root.
 
         The private half is returned and then dropped: the row keeps only the
-        public key, so nothing later can serve it again.
+        public key, so nothing later can serve it again. ``service_id`` is the
+        issuing service and is stored as the revoke owner. It is not the subject.
         """
         if not subject.strip():
             raise TrustError("subject is required")
@@ -354,6 +473,7 @@ class TrustStore:
             )
         )
 
+        owner = service_id.strip()
         record = SigningKeyRecord(
             kid=kid,
             kind="intermediate",
@@ -369,8 +489,9 @@ class TrustStore:
         with contextlib.closing(self._connect()) as conn, conn:
             conn.execute(
                 "INSERT INTO signing_keys (kid, kind, subject, public_key, private_blob, "
-                "parent_kid, chain_signature, not_before, not_after, lifecycle, created_at) "
-                "VALUES (?,?,?,?,NULL,?,?,?,?,?,?)",
+                "parent_kid, chain_signature, not_before, not_after, lifecycle, created_at, "
+                "owner_service_id) "
+                "VALUES (?,?,?,?,NULL,?,?,?,?,?,?,?)",
                 (
                     record.kid,
                     record.kind,
@@ -382,10 +503,22 @@ class TrustStore:
                     record.not_after,
                     record.lifecycle,
                     record.created_at,
+                    owner,
                 ),
             )
             conn.commit()
         return IssuedIntermediate(record=record, private_key=b64u(_raw_private(private)))
+
+    def intermediate_owner(self, kid: str) -> str | None:
+        """Issuing service_id, empty when the row has no owner, None if absent."""
+        with contextlib.closing(self._connect()) as conn, conn:
+            row = conn.execute(
+                "SELECT owner_service_id FROM signing_keys WHERE kid=? AND kind='intermediate'",
+                (kid,),
+            ).fetchone()
+        if row is None:
+            return None
+        return str(row["owner_service_id"] or "")
 
     def revoke_key(self, kid: str, *, reason: str = "operator_revoke") -> bool:
         with contextlib.closing(self._connect()) as conn, conn:

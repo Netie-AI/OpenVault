@@ -12,7 +12,6 @@ from openmw.openvault.route.attempt import (
 )
 from openmw.openvault.route.breaker import (
     CircuitBreaker,
-    CircuitBreakerOpenError,
     get_all_breaker_statuses,
     get_circuit_breaker,
     is_tripping_status,
@@ -37,7 +36,6 @@ from openmw.openvault.route.key_rotator import (
 )
 from openmw.openvault.route.registry import (
     get_route_state,
-    record_target_result,
     reset_route_state,
     set_strategy,
     set_targets,
@@ -75,7 +73,6 @@ __all__ = [
     "AttemptOutcome",
     "CandidateAction",
     "CircuitBreaker",
-    "CircuitBreakerOpenError",
     "ComboMetrics",
     "JobAction",
     "RateLimitWindow",
@@ -99,7 +96,6 @@ __all__ = [
     "parse_upstream_retry_hint_ms",
     "record_key_failure",
     "record_key_success",
-    "record_target_result",
     "reset_all_circuit_breakers",
     "reset_circuit_breaker",
     "reset_decks",

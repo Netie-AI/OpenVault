@@ -134,7 +134,7 @@ def train_cmd(
 ) -> None:
     """[Not yet implemented] Hardware-aware training launch via Unsloth bridge.
 
-    Blocked on training_router.py - see STATUS.md next priorities.
+    Blocked on training_router.py - see STATUS.md and PARKING_LOT.md.
     Today, training_config.py is static defaults with no DeviceProfile awareness.
     """
     typer.echo(

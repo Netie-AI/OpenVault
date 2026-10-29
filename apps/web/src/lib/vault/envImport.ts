@@ -2,9 +2,8 @@
  * Client-side .env import for known provider names.
  *
  * Parsing and masking happen in the browser. The preview never carries the
- * secret. One-click add posts each row to /api/keys. sea_lion is a catalog
- * id, but POST /api/keys only accepts ProviderKind, which has no sea_lion,
- * so that row is stored as custom with the public SEA-LION base URL.
+ * secret. One-click add posts each row to /api/keys. SEA_LION_API_KEY and
+ * SEALION_API_KEY both post as the catalog id sea_lion.
  */
 
 import { redactShown } from "../api/adminSession";
@@ -41,8 +40,6 @@ interface KnownEnv {
   baseUrl?: string;
 }
 
-const SEA_LION_BASE = "https://api.sea-lion.ai/v1";
-
 const KNOWN: Readonly<Record<string, KnownEnv>> = {
   NETIE_ENGINE_KEY: { provider: "cortex", postProvider: "cortex", role: "backup" },
   CURSOR_API_KEY: { provider: "custom", postProvider: "custom", role: "backup" },
@@ -58,12 +55,8 @@ const KNOWN: Readonly<Record<string, KnownEnv>> = {
   CLOUDFLARE_API_TOKEN: { provider: "custom", postProvider: "custom", role: "free" },
   CF_API_TOKEN: { provider: "custom", postProvider: "custom", role: "free" },
   DEEPSEEK_API_KEY: { provider: "deepseek", postProvider: "deepseek", role: "cheap" },
-  SEA_LION_API_KEY: {
-    provider: "sea_lion",
-    postProvider: "custom",
-    role: "free",
-    baseUrl: SEA_LION_BASE,
-  },
+  SEA_LION_API_KEY: { provider: "sea_lion", postProvider: "sea_lion", role: "free" },
+  SEALION_API_KEY: { provider: "sea_lion", postProvider: "sea_lion", role: "free" },
   CEREBRAS_API_KEY: { provider: "cerebras", postProvider: "cerebras", role: "free" },
   MISTRAL_API_KEY: { provider: "mistral", postProvider: "mistral", role: "free" },
   NVIDIA_API_KEY: { provider: "nvidia", postProvider: "nvidia", role: "free" },

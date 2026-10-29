@@ -120,7 +120,7 @@ Cursor should not:
 7. **Update continuity notes**
 
    Before ending substantial work, update the project memory anchors. In this repo that is
-   `STATUS.md` (current state / next priorities) and `PARKING_LOT.md` (deferred backlog).
+   `STATUS.md` (current state) and `PARKING_LOT.md` (deferred backlog).
    Record only evidence-backed state: completed work, commands run, artifacts produced,
    open risks, and next actions. Do not record guesses as facts.
 
@@ -135,11 +135,11 @@ Update `STATUS.md` when:
 - A milestone is completed, corrected, or invalidated.
 - Claude/Cursor made a decision future agents need to respect.
 - Verification evidence changes project status.
-- Next priorities change.
+- The status queue changes.
 
 Move long-horizon / research items into `PARKING_LOT.md` instead of bloating STATUS.
 
-Use this entry shape in STATUS (next priorities) or PARKINGLOT:
+Use this entry shape in STATUS or PARKING_LOT:
 
 ```markdown
 ### Open item #N — <title> (<date>, <status>)
@@ -322,7 +322,7 @@ Before accepting a change, check:
 When working in this repo:
 
 - Read `docs/reference/nvme-sentinel-spec.md` before coding (static spec; NVMe protocol refs in section 4).
-- Read `STATUS.md` for current state and next priorities; `PARKING_LOT.md` for deferred backlog.
+- Read `STATUS.md` for current state; `PARKING_LOT.md` for deferred backlog.
 - Update `STATUS.md` / `PARKING_LOT.md` when closing substantial work; if docs disagree with code, trust code and record the doc correction.
 - Use `uv run <cmd>` for tests, mypy, ruff, and CLI runs.
 - Do not use pip, poetry, or conda.
