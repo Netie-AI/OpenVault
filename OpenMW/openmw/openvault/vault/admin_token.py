@@ -62,6 +62,11 @@ def path_needs_admin(path: str) -> bool:
     ``/api/apikeys/verify`` stays classified here so GET and every near path
     still require the admin header. ``refuse_if_unauthorised`` admits an
     allowlisted service Bearer on exact ``POST /api/apikeys/verify`` only.
+
+    ``/api/keys/leases`` and ``/api/keys/leases/redeem`` stay classified here
+    so GET and every other method still require the admin header.
+    ``refuse_if_unauthorised`` admits a service Bearer on those two exact
+    POSTs only. The admin header does not admit them.
     """
     for root in _ADMIN_ROOTS:
         if path == root or path.startswith(root + "/"):

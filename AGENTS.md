@@ -9,7 +9,7 @@ Binding rules for every agent. Current truth: STATUS.md. The full-tier order bel
 3. Refs only. Agents close nothing. Write `Refs` and the issue. Never Closes, Fixes, or Resolves.
 4. Auth and key paths are full tier. Use the full-tier order below.
 5. Product boundaries: [PRODUCT_ROLES.md](PRODUCT_ROLES.md). Leave that file's content alone.
-6. CORE paths, founder 2026-10-06 11:59 MYT: `OpenMW/rust` (Rust console), `apps/shell` (Electron), `ship/` (FreeBuild hosting), and product-role code. They are CORE. Cleanup and dead-code work never remove or edit them. Only truly dead code is removed.
+6. CORE paths, founder 2026-10-06 11:59 MYT: `OpenMW/rust` (Rust console), `apps/shell` (Electron), `OpenMW/openmw/openvault/ship/` (FreeBuild hosting), and product-role code. They are CORE. Cleanup and dead-code work never remove or edit them. Only truly dead code is removed.
 7. Building the product comes before cleanup.
 8. GitHub issues are the ticket list. Do not keep a markdown backlog.
 9. A feature or defect you are told about goes to the PRD agent before it is built.

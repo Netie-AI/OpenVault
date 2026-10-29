@@ -6,7 +6,9 @@ is not enough. Other /api/apikeys routes stay admin-only.
 
 from __future__ import annotations
 
+import asyncio
 import hmac
+import json
 import logging
 import sqlite3
 from typing import Any
@@ -112,6 +114,55 @@ def _set_lifecycle(key_id: str, lifecycle: str) -> None:
 
 def _verify(client: TestClient, raw: str, headers: dict[str, str] | None = None) -> Any:
     return client.post("/api/apikeys/verify", json={"token": raw}, headers=headers)
+
+
+def _raw(
+    app: FastAPI,
+    method: str,
+    path: str,
+    *,
+    root_path: str = "",
+    host: str = "127.0.0.1",
+    headers: dict[str, str] | None = None,
+    payload: dict[str, str] | None = None,
+) -> tuple[int, bytes]:
+    """One ASGI call with an explicit ``root_path``. TestClient leaves that empty."""
+    sent: list[dict[str, Any]] = []
+    raw_body = b"" if payload is None else json.dumps(payload).encode("utf-8")
+    sent_body = False
+
+    async def receive() -> dict[str, Any]:
+        nonlocal sent_body
+        if sent_body:
+            return {"type": "http.request", "body": b"", "more_body": False}
+        sent_body = True
+        return {"type": "http.request", "body": raw_body, "more_body": False}
+
+    async def send(message: dict[str, Any]) -> None:
+        sent.append(message)
+
+    encoded = [
+        (key.lower().encode("latin-1"), value.encode("latin-1"))
+        for key, value in (headers or {}).items()
+    ]
+    scope: dict[str, Any] = {
+        "type": "http",
+        "asgi": {"version": "3.0"},
+        "http_version": "1.1",
+        "method": method,
+        "scheme": "http",
+        "path": path,
+        "raw_path": path.encode("ascii"),
+        "query_string": b"",
+        "headers": encoded,
+        "client": (host, 5555),
+        "server": ("testserver", 80),
+        "root_path": root_path,
+    }
+    asyncio.run(app(scope, receive, send))
+    status = next(int(item["status"]) for item in sent if item["type"] == "http.response.start")
+    body = b"".join(item.get("body", b"") for item in sent if item["type"] == "http.response.body")
+    return status, body
 
 
 def test_verify_classification_stays_admin_except_exact_post(
@@ -399,6 +450,127 @@ def test_route_lookup_does_not_use_auth_verify(
     missing = _verify(client, "ov_not-real", admin_headers())
     assert missing.status_code == 200, missing.status_code
     assert missing.json() == _NEGATIVE
+
+
+def test_verify_behind_root_path_matches_unprefixed(
+    app: FastAPI, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A mount prefix must not skip verify, and must not change who is admitted.
+
+    The guard compares ``route_path`` (``get_route_path``), so
+    ``/mounted/api/apikeys/verify`` with ``root_path`` ``/mounted`` is the same
+    POST as ``/api/apikeys/verify``. A missing helper is 401 for a caller that
+    would otherwise be admitted.
+    """
+    monkeypatch.setenv(VERIFY_SERVICES_ENV, "cortex")
+    local = _client(app)
+    service = _register(local, "cortex")
+    key_id, tier, raw = _issue(local)
+    expected = {"ok": True, "valid": True, "key_id": key_id, "tier": tier}
+    admin = {**admin_headers(), "content-type": "application/json"}
+    bearer = {**_bearer(service), "content-type": "application/json"}
+
+    plain = _verify(local, raw, admin_headers())
+    assert plain.status_code == 200, plain.status_code
+    mounted, mounted_body = _raw(
+        app,
+        "POST",
+        "/mounted/api/apikeys/verify",
+        root_path="/mounted",
+        headers=admin,
+        payload={"token": raw},
+    )
+    assert mounted == 200, mounted_body
+    assert json.loads(mounted_body) == expected
+    _assert_absent(raw, mounted_body.decode())
+
+    doubled, doubled_body = _raw(
+        app,
+        "POST",
+        "//api/apikeys/verify",
+        root_path="/",
+        headers=admin,
+        payload={"token": raw},
+    )
+    assert doubled == 200, doubled_body
+    assert json.loads(doubled_body) == expected
+
+    peer, peer_body = _raw(
+        app,
+        "POST",
+        "/mounted/api/apikeys/verify",
+        root_path="/mounted",
+        host=_ALLOWLISTED_PEER,
+        headers=bearer,
+        payload={"token": raw},
+    )
+    assert peer == 200, peer_body
+    assert json.loads(peer_body) == expected
+    _assert_absent(service, peer_body.decode())
+
+    anonymous, anonymous_body = _raw(
+        app,
+        "POST",
+        "/mounted/api/apikeys/verify",
+        root_path="/mounted",
+        headers={"content-type": "application/json"},
+        payload={"token": raw},
+    )
+    assert anonymous == 401, anonymous_body
+    assert json.loads(anonymous_body)["error"]["type"] == "openvault_unauthenticated"
+    _assert_absent(raw, anonymous_body.decode())
+
+    unknown, unknown_body = _raw(
+        app,
+        "POST",
+        "/mounted/api/apikeys/verify",
+        root_path="/mounted",
+        headers=admin,
+        payload={"token": "ov_not_a_real_key"},
+    )
+    assert unknown == 200, unknown_body
+    assert json.loads(unknown_body) == _NEGATIVE
+
+    remote, remote_body = _raw(
+        app,
+        "POST",
+        "/mounted/api/apikeys/verify",
+        root_path="/mounted",
+        host=_REMOTE,
+        headers=admin,
+        payload={"token": raw},
+    )
+    assert remote == 403, remote_body
+    assert json.loads(remote_body)["error"]["type"] == "openvault_forbidden"
+
+    # A trailing slash is not the verify POST. A service bearer stays on the
+    # admin gate, the same as POST /api/apikeys/verify/ with no mount prefix.
+    slashed, slashed_body = _raw(
+        app,
+        "POST",
+        "/mounted/api/apikeys/verify/",
+        root_path="/mounted",
+        headers=bearer,
+        payload={"token": raw},
+    )
+    assert slashed == 401, slashed_body
+    assert json.loads(slashed_body)["error"]["type"] == "openvault_unauthenticated"
+
+    def _missing() -> Any:
+        raise ImportError("starlette._utils.get_route_path")
+
+    monkeypatch.setattr("openmw.openvault.vault.http_guard._load_get_route_path", _missing)
+    closed, closed_body = _raw(
+        app,
+        "POST",
+        "/mounted/api/apikeys/verify",
+        root_path="/mounted",
+        headers=admin,
+        payload={"token": raw},
+    )
+    assert closed == 401, closed_body
+    assert json.loads(closed_body)["error"]["type"] == "openvault_unauthenticated"
+    _assert_absent(raw, closed_body.decode())
 
 
 def test_verify_rate_cap_is_429(app: FastAPI) -> None:
