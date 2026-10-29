@@ -9,14 +9,29 @@
  * mapping of the backend routes rather than hiding that inference.
  */
 
+import { looksLikeSitePasswordKey } from "@/lib/vault/inferProvider";
 import {
   apiDelete,
   apiFetch,
   apiGet,
   apiPatch,
   apiPost,
+  ApiError,
   LONG_TIMEOUT_MS,
 } from "./client";
+
+const SITE_HOP_REFUSE =
+  "site passwords go to POST /api/secrets/passwords, not /api/keys";
+
+function refuseSiteHop(method: string, url: string): never {
+  throw new ApiError({
+    kind: "http",
+    status: 400,
+    method,
+    url,
+    message: SITE_HOP_REFUSE,
+  });
+}
 
 export type KeyRole = "primary" | "backup" | "cheap" | "free";
 export const KEY_ROLES: readonly KeyRole[] = ["primary", "backup", "cheap", "free"];
@@ -73,7 +88,9 @@ export interface EnvCandidate {
 
 export async function listKeys(signal?: AbortSignal): Promise<KeyRow[]> {
   const data = await apiGet<{ keys?: KeyRow[] }>("/api/keys", { signal });
-  return data.keys ?? [];
+  return (data.keys ?? []).filter(
+    (key) => !looksLikeSitePasswordKey(key.label, key.provider, key.base_url || ""),
+  );
 }
 
 export interface KeyHealthSample {
@@ -116,10 +133,23 @@ export interface CreateKeyInput {
 }
 
 export function createKey(input: CreateKeyInput): Promise<KeyRow> {
+  if (looksLikeSitePasswordKey(input.label, input.provider, input.base_url || "")) {
+    refuseSiteHop("POST", "/api/keys");
+  }
   return apiPost<KeyRow>("/api/keys", input);
 }
 
 export function updateKey(id: string, patch: Partial<CreateKeyInput> & { enabled?: boolean }) {
+  if (
+    typeof patch.label === "string" &&
+    looksLikeSitePasswordKey(
+      patch.label,
+      patch.provider ?? "custom",
+      patch.base_url ?? "",
+    )
+  ) {
+    refuseSiteHop("PATCH", `/api/keys/${id}`);
+  }
   return apiPatch<KeyRow>(`/api/keys/${id}`, patch);
 }
 
@@ -146,6 +176,13 @@ export function precheckKey(id: string): Promise<{
 
 export function precheckAll(): Promise<unknown> {
   return apiPost("/api/keys/precheck-all", undefined, { timeoutMs: LONG_TIMEOUT_MS });
+}
+
+/** Sweep leftover SITE_/password hops into SecretStore. Loopback + unsealed. */
+export function migrateSitePasswords(signal?: AbortSignal): Promise<{
+  remaining_site_keys?: number;
+}> {
+  return apiPost("/api/vault/migrate-site-passwords", {}, { signal });
 }
 
 /**

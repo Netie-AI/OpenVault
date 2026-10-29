@@ -6,7 +6,7 @@
  */
 
 import assert from "node:assert";
-import { inferProvider } from "./inferProvider";
+import { inferProvider, looksLikeSitePasswordKey } from "./inferProvider";
 
 const CATALOG = new Set([
   "google",
@@ -41,5 +41,10 @@ assert.equal(inferProvider("", CATALOG).confidence, "none");
 const notInCatalog = inferProvider("AQ.Ab1Cd2Ef3Gh4Ij5Kl6Mn7Op8Qr9St0Uv", new Set(["openai"]));
 assert.equal(notInCatalog.providerId, null);
 assert.match(notInCatalog.reason, /not in the catalog/);
+
+assert.equal(looksLikeSitePasswordKey("SITE_accounts_google_com", "custom", ""), true);
+assert.equal(looksLikeSitePasswordKey("My OpenAI-compat hop", "custom", ""), false);
+assert.equal(looksLikeSitePasswordKey("SITE_x", "custom", "https://api.example.com/v1"), false);
+assert.equal(looksLikeSitePasswordKey("SITE_x", "groq", ""), false);
 
 console.log("inferProvider: all assertions passed");

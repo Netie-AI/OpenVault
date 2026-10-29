@@ -1,14 +1,16 @@
 /**
- * Passwords and payment cards — thin client for `/api/secrets*`.
+ * Passwords, cards, and TOTP — thin client for `/api/secrets*`.
  *
- * Mirrors `keys.ts`: list is masks-only; reveal requires an explicit gesture
- * and the `X-OpenVault-Reveal` header. Never invent routes; never send CVV
- * (backend refuses it with 400 — that refusal is the honesty check).
+ * Mirrors `keys.ts`: list is masks-only; reveal / current-code require an
+ * explicit gesture and the `X-OpenVault-Reveal` header. Never invent routes;
+ * never send CVV (backend refuses it with 400 — that refusal is the honesty
+ * check). Never call `/reveal` for totp — the seed is refuse-class; use
+ * `/current-code` and show digits only.
  */
 
 import { apiDelete, apiFetch, apiGet, apiPatch, apiPost } from "./client";
 
-export type SecretKind = "password" | "payment_card";
+export type SecretKind = "password" | "payment_card" | "totp";
 export type SecretLifecycle = "active" | "revoked" | "rotated" | "compromised";
 
 /** Public row — never contains plaintext password or full PAN. */
@@ -47,6 +49,21 @@ export interface CreateCardInput {
   exp_year: number;
   cardholder?: string;
   account_id?: string | null;
+}
+
+export interface CreateTotpInput {
+  label: string;
+  seed: string;
+  username?: string;
+  url?: string;
+  account_id?: string | null;
+}
+
+export interface TotpCurrentCode {
+  id: string;
+  kind: "totp";
+  code: string;
+  digits: number;
 }
 
 export interface SecretMetaPatch {
@@ -99,6 +116,10 @@ export function createCard(input: CreateCardInput): Promise<SecretRow> {
   return apiPost<SecretRow>("/api/secrets/cards", input);
 }
 
+export function createTotp(input: CreateTotpInput): Promise<SecretRow> {
+  return apiPost<SecretRow>("/api/secrets/totp", input);
+}
+
 export function updateSecret(id: string, patch: SecretMetaPatch): Promise<SecretRow> {
   return apiPatch<SecretRow>(`/api/secrets/${encodeURIComponent(id)}`, patch);
 }
@@ -126,6 +147,13 @@ export function revealSecretValue(
   id: string,
 ): Promise<{ id: string; kind: SecretKind; last4: string; brand: string; secret: string }> {
   return apiFetch(`/api/secrets/${encodeURIComponent(id)}/reveal`, {
+    headers: { "X-OpenVault-Reveal": "intentional" },
+  });
+}
+
+/** Current RFC 6238 digits. Never the seed. Same intent header as reveal. */
+export function fetchCurrentTotpCode(id: string): Promise<TotpCurrentCode> {
+  return apiFetch(`/api/secrets/${encodeURIComponent(id)}/current-code`, {
     headers: { "X-OpenVault-Reveal": "intentional" },
   });
 }
