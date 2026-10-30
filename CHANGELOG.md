@@ -2,6 +2,10 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-30 - OV-3a kept live sentinel, observe, health, and control (Refs #137)
+
+- `OpenMW/openmw/openvault/sentinel/`, `observe/`, `health/`, and `control/` stay. `app.py` and `routers/sentinel.py` import them, and the Detect page calls `/api/health/devices`, `/api/sentinel/devices`, and `/api/observe/path`. The web route guard lists `/api/control/action` and `/api/sentinel/`. `nvme_sentinel/` and CI job `test-nvme-sentinel` are untouched. No auth, key, or route change.
+
 ## 2026-10-09 - Lease logs omit the kid, ref, and secret (Refs #160)
 
 - Redeem still writes `lease_redeem` to `secret_audit.jsonl` with `key_id`. That id is not passed to `log.info`. Mint, redeem, redeem refusal, audit-failure, and owner-assign lines do not include the kid, the `ovlease_` ref, or the secret.
