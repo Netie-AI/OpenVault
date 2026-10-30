@@ -136,6 +136,7 @@ from openmw.openvault.vault.http_guard import (
     HttpGuardMiddleware,
     decide_apikey_verify,
     dev_docs_enabled,
+    install_lease_access_filter,
 )
 from openmw.openvault.vault.local_hop import served_response_headers
 from openmw.openvault.vault.pm_import import ingest_import_dir, ingest_pm_csv
@@ -203,6 +204,22 @@ class SecretAuditError(OSError):
     """The secret-audit file could not be written."""
 
 
+# Lease mint, redeem, and owner logs must not carry the kid, the ref, or the
+# secret. The jsonl row still keeps key_id. Other custody events are unchanged.
+_LEASE_LOG_EVENTS = frozenset({"lease_redeem", "lease_redeem_refused"})
+_LEASE_LOG_DROP = frozenset(
+    {"key_id", "kid", "tenant_key", "ref", "secret", "token", "user_agent", "ts", "event"}
+)
+_AUDIT_LOG_DROP = frozenset({"ts", "event", "user_agent"})
+
+
+def _secret_audit_log_fields(entry: dict[str, Any]) -> dict[str, Any]:
+    """Fields safe to pass to ``log.info``. The file write uses ``entry`` whole."""
+    event = str(entry.get("event", ""))
+    drop = _LEASE_LOG_DROP if event in _LEASE_LOG_EVENTS else _AUDIT_LOG_DROP
+    return {key: value for key, value in entry.items() if key not in drop}
+
+
 def _write_secret_audit(entry: dict[str, Any], *, required: bool = False) -> None:
     """Append one line to the secret-access audit log.
 
@@ -212,8 +229,9 @@ def _write_secret_audit(entry: dict[str, Any], *, required: bool = False) -> Non
     separate from control_audit.jsonl so custody access can be reviewed alone.
 
     Callers pass only identifiers and metadata. Nothing in ``entry`` may be
-    derived from a decrypted payload — the audit file is not a second place a
-    secret is allowed to exist, and tests pin that.
+    derived from a decrypted payload. The audit file is not a second place a
+    secret is allowed to exist, and tests pin that. A lease event still writes
+    ``key_id`` to the file. That field is not passed to ``log.info``.
     """
     import json
     from datetime import datetime, timezone
@@ -223,7 +241,7 @@ def _write_secret_audit(entry: dict[str, Any], *, required: bool = False) -> Non
     entry = {"ts": datetime.now(timezone.utc).isoformat(), **entry}
     log.info(
         str(entry.get("event", "secret_event")),
-        **{k: v for k, v in entry.items() if k not in ("ts", "event", "user_agent")},
+        **_secret_audit_log_fields(entry),
     )
     try:
         path = ensure_home() / "secret_audit.jsonl"
@@ -1148,6 +1166,7 @@ def create_app(
     rate_limiter: TokenBudgetLimiter | None = None,
 ) -> FastAPI:
     # First start mints the admin credential. The value is not logged.
+    install_lease_access_filter()
     ensure_admin_token()
     if cortex_url is None:
         cortex_url = cortex_base_url()
