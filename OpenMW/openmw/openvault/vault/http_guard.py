@@ -9,7 +9,10 @@ true, the guard still runs.
 
 Key and secret management routes, and ``/keys`` routes, also require the
 separate admin credential in ``X-OpenVault-Admin``. Loopback does not skip
-that check. The admin token is not an ``ov_`` key. Exceptions:
+that check. The :3010 console attaches the header for a loopback URL host
+on vault status, passphrase unseal, Hello unseal, and ``GET /api/keys``.
+This guard still requires the header on those routes. The admin token is
+not an ``ov_`` key. Exceptions:
 
 * ``GET``, ``HEAD``, and ``OPTIONS`` on the exact path ``/keys/jwks`` are
   public, same as ``/.well-known/jwks.json``.

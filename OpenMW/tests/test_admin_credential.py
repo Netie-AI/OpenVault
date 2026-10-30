@@ -71,6 +71,34 @@ def test_keyless_loopback_keys_is_401(home: Path) -> None:
     assert response.json()["error"]["message"] == "unauthorized"
 
 
+def test_loopback_vault_bootstrap_still_401_without_admin(home: Path) -> None:
+    """The API does not exempt loopback. The console attaches the header."""
+    client = _client()
+    status = client.get("/api/vault/status")
+    unseal = client.post("/api/vault/unseal", json={"passphrase": "not-used"})
+    hello = client.post("/api/vault/webauthn/unseal/begin")
+    listed = client.get("/api/keys")
+    created = client.post(
+        "/api/keys",
+        json={"label": "x", "provider": "groq", "secret": "y" * 24, "role": "free"},
+    )
+    for response in (status, unseal, hello, listed, created):
+        assert response.status_code == 401, response.text
+        assert ensure_admin_token() not in response.text
+
+
+def test_non_loopback_vault_bootstrap_is_401_without_admin(home: Path) -> None:
+    remote = _client("203.0.113.10")
+    status = remote.get("/api/vault/status")
+    unseal = remote.post("/api/vault/unseal", json={"passphrase": "not-used"})
+    hello = remote.post("/api/vault/webauthn/unseal/finish", json={})
+    listed = remote.get("/api/keys")
+    token = ensure_admin_token()
+    for response in (status, unseal, hello, listed):
+        assert response.status_code == 401, response.text
+        assert token not in response.text
+
+
 def test_wrong_admin_token_is_401(home: Path) -> None:
     response = _client().get("/api/keys", headers={ADMIN_HEADER: _WRONG})
     assert response.status_code == 401

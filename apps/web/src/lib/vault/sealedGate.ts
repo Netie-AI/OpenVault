@@ -27,7 +27,8 @@ export function sealChrome(sealed: boolean | undefined): SealChrome {
  * The gate blocks key add while the vault is sealed, or while status itself
  * is 401 (no admin session), until the user dismisses it.
  * A session already unsealed (passphrase cache or Windows Hello) keeps the gate closed.
- * A 401 still opens it so the admin token can be entered.
+ * A 401 still opens it so passphrase or Hello can be retried. The gate does not
+ * collect an admin token; the loopback console attaches that header.
  */
 export function sealedGateOpen(
   sealed: boolean | undefined,

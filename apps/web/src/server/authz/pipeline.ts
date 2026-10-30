@@ -10,8 +10,14 @@ import {
   AUTHZ_HEADER_ROUTE_CLASS,
   AUTHZ_TRUSTED_HEADERS,
 } from "./headers";
+import {
+  applyLoopbackAdminHeader,
+  hostHeaderIsLoopback,
+  isLoopbackVaultBootstrap,
+  readLocalAdminToken,
+} from "./loopbackVaultAdmin";
 import { classifyRequestPeerLocality } from "./peerStamp";
-import { isLocalOnlyPath } from "./routeGuard";
+import { isLocalOnlyPath, isLoopbackHost } from "./routeGuard";
 import type { AuthOutcome, RouteClassification } from "./types";
 
 export interface AuthzPipelineOptions {
@@ -150,6 +156,25 @@ export async function runAuthzPipeline(
   requestHeaders.set(AUTHZ_HEADER_ROUTE_CLASS, classification.routeClass);
   requestHeaders.set(AUTHZ_HEADER_REQUEST_ID, requestId);
   requestHeaders.set(AUTHZ_HEADER_PEER_LOCALITY, peerLocality);
+
+  // The URL host alone is not a gate: `next start -H 127.0.0.1` builds it from
+  // the bind address, so it is loopback for a DNS-rebinding request too. The raw
+  // Host header must also be loopback. A spoofed X-Forwarded-For must not load
+  // the admin file.
+  const hostHeader = request.headers.get("host");
+  if (
+    isLoopbackHost(request.nextUrl.hostname) &&
+    hostHeaderIsLoopback(hostHeader) &&
+    isLoopbackVaultBootstrap(method, pathname)
+  ) {
+    applyLoopbackAdminHeader(requestHeaders, {
+      method,
+      pathname,
+      urlHost: request.nextUrl.hostname,
+      hostHeader,
+      token: readLocalAdminToken(),
+    });
+  }
 
   const response = NextResponse.next({ request: { headers: requestHeaders } });
   applyCorsHeaders(response, request);
