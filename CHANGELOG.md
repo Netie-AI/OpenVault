@@ -2,6 +2,19 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-30 - Spend caps cannot be outrun on a paid hop (Refs #148)
+
+- `n` and `best_of` count. A capped paid hop reserves `n` times `best_of` completions (each defaults to 1, each must be a whole number from 1 to 128). A value outside that is refused on that hop as `request.completions` (402, `unit: "completions"`) and nothing goes upstream. Before, `n: 128` reserved one completion and could spend about 128 times the cap.
+- A capped paid hop now sends the output budget it reserved: `max_tokens` (or `max_completion_tokens`, if that is the field the caller used) at the 1024 default when the caller named none. A streamed one also sends `stream_options.include_usage: true`, merged with any other `stream_options`, so the ledger records the usage frame and not the hold. The client receives that frame. Free hops and pool-walk hops with no cap on them are sent unchanged.
+- A failed ledger write for a paid hop that served no longer releases its hold. The hold keeps counting against the caps for the life of the process and `usage_ledger_write_failed_hold_kept` is logged at error level, with no message or key material. The response is unchanged.
+- An unreadable route policy file returns 503 with the file name only. The path and OS error are logged as `route_policy_unreadable`. Routing order, role lists, strict pin and the shipped `route_policy.json` are untouched. Refs #148.
+
+## 2026-10-30 - FreeRoute role routing, hard spend caps, cost stamps (Refs #148)
+
+- `POST /v1/chat/completions` accepts `role` = `sql` | `tool` | `reason` | `summarize`. Each role walks an ordered model list from `OpenMW/openmw/openvault/vault/route_policy.json`, free first, overridable with `OPENVAULT_ROUTE_POLICY`. A provider failure falls back to the next entry in order. No `role` keeps the pool walk. Any other value is 422 `openvault_unknown_role`. `role` with `strict` or `local_only` is 422 `openvault_role_conflict`. Defaults use only NVIDIA NIM, Groq, OpenRouter, SambaNova, Gemini, and SEA-LION, with no DeepSeek or China-hosted model names.
+- Hard caps: daily and monthly USD per vault key and per caller, plus `max_tokens_per_request`. The caller is the issued key id, or `service_id` for loopback. Spend persists in keys.db table `route_spend`, so `usage_events` stays 18 columns. A cap that would be exceeded returns 402 with `reason: "budget_exceeded"` and names the cap. A model is paid unless the policy marks it free. A role walk never runs a paid model unless that key or caller has a USD cap (`cap: "paid_default"`). No paid prices ship.
+- Every gateway JSON response carries `model`, `provider`, `tokens_in`, `tokens_out`, and `est_cost_usd`, naming the hop that actually served. Free models cost 0. Streams carry them on chunks. HttpGuard, admin_token, and auth are unchanged. No public `:5000`. Contract: `docs/reference/freeroute-role-budget.md`.
+
 ## 2026-10-30 - OV-3a kept live sentinel, observe, health, and control (Refs #137)
 
 - `OpenMW/openmw/openvault/sentinel/`, `observe/`, `health/`, and `control/` stay. `app.py` and `routers/sentinel.py` import them, and the Detect page calls `/api/health/devices`, `/api/sentinel/devices`, and `/api/observe/path`. The web route guard lists `/api/control/action` and `/api/sentinel/`. `nvme_sentinel/` and CI job `test-nvme-sentinel` are untouched. No auth, key, or route change.
