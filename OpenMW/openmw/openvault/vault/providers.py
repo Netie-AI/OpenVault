@@ -10,6 +10,9 @@ import os
 from dataclasses import asdict, dataclass, replace
 from typing import Any, Literal
 
+from openmw.openvault.vault.anthropic_messages import CHAT_MODELS
+from openmw.openvault.vault.anthropic_messages import DEFAULT_MAX_TOKENS as ANTHROPIC_OUTPUT_FLOOR
+
 ProviderTier = Literal["free", "freemium", "paid", "local"]
 
 
@@ -131,6 +134,11 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
         openai_compatible=False,
         needed_by=("cortex", "airgpt", "openvault"),
         status_page="https://status.anthropic.com/",
+        # Listed for the catalog and for an operator-named role hop only. The
+        # provider is not OpenAI-compatible, so it is not "spendable", and the
+        # proxy serves it solely through anthropic_messages when the operator
+        # route policy names it (F110, BANK-03). No pool walk reaches it.
+        chat_models=CHAT_MODELS,
     ),
     ProviderSpec(
         id="openrouter",
@@ -828,12 +836,23 @@ def is_reasoning_model(provider: str, model: str) -> bool:
     return bool(spec and model in spec.reasoning_models)
 
 
+#: Providers whose replies truncate (finish_reason=length) below a floor, with
+#: or without a named budget. Claude's adaptive thinking draws from the same
+#: ``max_tokens`` as the answer, and the Messages API requires one, so a hop
+#: with none sent (or the 1024 a spend cap reserves by default) would cut off.
+PROVIDER_OUTPUT_FLOORS: dict[str, int] = {"anthropic": ANTHROPIC_OUTPUT_FLOOR}
+
+
 def budget_for(provider: str, model: str, requested: int | None) -> int | None:
     """Raise a too-small completion budget to the floor a reasoning model needs.
 
     Returns the budget to send, or None to leave the caller's body untouched. Never
-    lowers a budget - the caller may have a cost reason for a large one.
+    lowers a budget - the caller may have a cost reason for a large one. A provider
+    in ``PROVIDER_OUTPUT_FLOORS`` also gets the floor when no budget was named.
     """
+    provider_floor = PROVIDER_OUTPUT_FLOORS.get(provider)
+    if provider_floor is not None:
+        return provider_floor if requested is None or requested < provider_floor else None
     if requested is None or not is_reasoning_model(provider, model):
         return None
     if requested >= MIN_REASONING_BUDGET:

@@ -2,6 +2,12 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-30 - Claude is an opt-in escalation tier, off by default (F110)
+
+- `role: "escalate"` is accepted. The shipped policy lists no hops for it, so it serves nothing and returns 502 naming "opt-in tier is off". No shipped role list, price or cap names Anthropic.
+- An operator `OPENVAULT_ROUTE_POLICY` file can name an `anthropic` hop in `escalate` (`claude-opus-5-5`, `claude-sonnet-5-5`, `claude-haiku-5-5`). It serves only with a price, a USD cap, and a healthy pooled vault key for provider `anthropic`. A pool walk, a strict pin and `local_only` never reach it. A policy that marks an Anthropic model free does not load.
+- The hop goes through `vault/anthropic_messages.py`, non-streaming. Stream, tools, images and `n > 1` are a typed 400 `openvault_anthropic_unsupported` before any hold or upstream call. An Anthropic hop gets an output floor of 4096 so adaptive thinking cannot truncate the reply, and the hold reserves that floor. Stamps come from the mapped usage. `anthropic` lists its models in the catalog but stays not spendable and in no pool. Contract: `docs/reference/freeroute-role-budget.md`.
+
 ## 2026-10-30 - Localhost unseal without an admin paste (OpenVault #123)
 
 - When the request `Host` header is loopback (`127.0.0.1`, `localhost`, `[::1]`, any port) and the middleware URL host is loopback, the :3010 console attaches `X-OpenVault-Admin` from the local admin token file for vault status, passphrase unseal, Hello unseal, and `GET /api/keys`. The token is not written into the page. Next strips it from the browser response.

@@ -59,14 +59,14 @@ def test_text_only_provider_refuses_multimodal_instead_of_dropping_the_image() -
 def test_uncatalogued_provider_passes_a_concrete_id_through() -> None:
     """Providers without a catalogued pool still honour a caller-supplied id.
 
-    Skipping those outright would make the proxy unusable for anthropic (Messages
-    API, out of scope), speech-only entries, and every custom endpoint, so a
-    concrete id goes upstream untouched.
+    Skipping those outright would make the proxy unusable for speech-only entries
+    and every custom endpoint, so a concrete id goes upstream untouched. Anthropic
+    is no longer one of them: it lists its Claude models for the opt-in tier (F110).
     """
     assert resolve_model("openai", "gpt-4o-mini") == "gpt-4o-mini"
     assert resolve_model("deepseek", "deepseek-v4-flash") == "deepseek-v4-flash"
     assert resolve_model("deepseek", "any-model", multimodal=True) == "any-model"
-    assert resolve_model("anthropic", "claude-opus-4") == "claude-opus-4"
+    assert resolve_model("github_models", "some-model") == "some-model"
 
 
 def test_core_byok_auto_resolves_concrete_model() -> None:
@@ -90,7 +90,7 @@ def test_core_byok_auto_resolves_concrete_model() -> None:
 
 def test_alias_without_catalogued_pool_is_skipped_not_guessed() -> None:
     """ "auto" with nothing catalogued is exactly the case that 404'd upstream."""
-    assert resolve_model("anthropic", "auto") is None
+    assert resolve_model("github_models", "auto") is None
     assert resolve_model("github_models", "") is None
     assert resolve_model("together", "auto") == "Prism-ML/Ternary-Bonsai-27B"
     assert resolve_model("mistral", "auto") == "mistral-small-latest"

@@ -26,6 +26,7 @@ from openmw.openvault.vault.local_hop import inject_served_into_sse_chunk
 from openmw.openvault.vault.providers import models_for
 from openmw.openvault.vault.ratelimit import SseUsageCapture
 from openmw.openvault.vault.route_policy import (
+    ALL_ROLES,
     BUDGET_ERROR_TYPE,
     BUDGET_EXCEEDED,
     DEFAULT_POLICY_PATH,
@@ -400,7 +401,7 @@ def test_unknown_role_is_a_named_422(vault: KeyVault, bad: Any) -> None:
     assert resp.status_code == 422
     err = resp.json()["error"]
     assert err["type"] == "openvault_unknown_role"
-    assert err["allowed"] == list(ROUTE_ROLES)
+    assert err["allowed"] == list(ALL_ROLES)
     assert err["role"] == bad
     _assert_stamped(resp.json())
     assert rec.urls == []

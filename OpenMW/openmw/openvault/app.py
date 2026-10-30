@@ -170,8 +170,8 @@ from openmw.openvault.vault.route_packs import (
     parse_pack_id,
 )
 from openmw.openvault.vault.route_policy import (
+    ALL_ROLES,
     BUDGET_ERROR_TYPE,
-    ROUTE_ROLES,
     RoutePolicyError,
     SpendGuard,
     empty_stamps,
@@ -794,12 +794,13 @@ class ChatBody(BaseModel):
     role: Any = Field(
         default=None,
         description=(
-            "Route role: sql | tool | reason | summarize. Picks the ordered model list "
-            "from the route policy (free first) and falls back down it in order. "
+            "Route role: sql | tool | reason | summarize | escalate. Picks the ordered model "
+            "list from the route policy (free first) and falls back down it in order. "
+            "escalate is empty unless an operator route policy lists hops for it. "
             "Omit for the pre-role pool walk. Anything else is 422 openvault_unknown_role. "
             "Cannot be combined with strict or local_only (422 openvault_role_conflict)."
         ),
-        json_schema_extra={"enum": list(ROUTE_ROLES)},
+        json_schema_extra={"enum": list(ALL_ROLES)},
     )
     service_id: str | None = Field(
         default=None,
