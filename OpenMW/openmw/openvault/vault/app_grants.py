@@ -27,6 +27,7 @@ from pathlib import Path
 from typing import Any
 
 from openmw.openvault.paths import ensure_home
+from openmw.openvault.vault.api_keys import validate_label
 
 TTL_S = 900
 #: A 4-hex-char code is 65536 guesses, and loopback has no rate limit of its
@@ -133,14 +134,19 @@ def _get(grant_id: str) -> AppGrant | None:
 
 
 def start_grant(*, client_name: str, label: str = "") -> dict[str, Any]:
-    name = (client_name or "").strip()[:80]
+    name = (client_name or "").strip()
     if not name:
         raise ValueError("client_name is required")
+    # The label is what ``api_keys.issue`` will mint on Grant, so it must pass
+    # the same rule now. Refusing here (ApiKeyError is a ValueError, so the
+    # route answers 400) beats a pending grant the human can never approve.
+    # An empty label falls back to the client name, which then has to pass too.
+    clean_label = validate_label((label or "").strip() or name)
     now = time.time()
     grant = AppGrant(
         grant_id=uuid.uuid4().hex[:12],
-        client_name=name,
-        label=(label or name).strip()[:80] or name,
+        client_name=name[:80],
+        label=clean_label,
         user_code=secrets.token_hex(2).upper(),
         status="pending",
         created_at=now,
