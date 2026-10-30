@@ -97,7 +97,10 @@ def test_migrate_moves_site_rows_and_leaves_llm_keys(vault: KeyVault, secrets: S
 def test_migrate_skips_duplicate_secret_label_and_still_deletes_hop(
     vault: KeyVault, secrets: SecretStore
 ) -> None:
-    secrets.create_password(label="SITE_PASSWORD", password="already-stored-password")
+    # A true duplicate: the stored secret already holds this hop's password, so
+    # deleting the hop loses nothing. A different password under the same label
+    # is a conflict and is covered by the test below.
+    secrets.create_password(label="SITE_PASSWORD", password=FAKE_SITE_PW)
     vault.create(
         label="SITE_PASSWORD",
         provider="custom",
@@ -112,7 +115,74 @@ def test_migrate_skips_duplicate_secret_label_and_still_deletes_hop(
     assert vault.list_keys() == []
     rows = secrets.list_secrets(kind="password")
     assert len(rows) == 1
+    assert secrets.reveal(rows[0].id) == FAKE_SITE_PW
+
+
+def test_migrate_keeps_hop_when_same_label_holds_a_different_password(
+    vault: KeyVault, secrets: SecretStore
+) -> None:
+    secrets.create_password(label="SITE_PASSWORD", password="already-stored-password")
+    hop = vault.create(
+        label="SITE_PASSWORD",
+        provider="custom",
+        secret=FAKE_SITE_PW,
+        role="free",
+        base_url="",
+    )
+    with structlog.testing.capture_logs() as logs:
+        result = migrate_site_password_keys(vault, secrets)
+    assert result["ok"] is False
+    assert result["conflicts"] == 1
+    assert result["migrated"] == 0
+    assert result["already_in_secrets"] == 0
+    # Neither password is lost: the hop survives and the stored secret is unchanged.
+    assert vault.get(hop.id) is not None
+    assert vault.get_secret(hop.id) == FAKE_SITE_PW
+    rows = secrets.list_secrets(kind="password")
+    assert len(rows) == 1
     assert secrets.reveal(rows[0].id) == "already-stored-password"
+    blob = repr(logs)
+    assert FAKE_SITE_PW not in blob
+    assert "already-stored-password" not in blob
+    assert any(entry.get("event") == "openvault_site_password_migrate_conflict" for entry in logs)
+
+
+def test_password_compare_is_not_a_reveal(secrets: SecretStore) -> None:
+    row = secrets.create_password(label="SITE_X_PASSWORD", password=FAKE_SITE_PW)
+    assert secrets.active_password_matches("SITE_X_PASSWORD", FAKE_SITE_PW) is True
+    assert secrets.active_password_matches("SITE_X_PASSWORD", "something-else") is False
+    assert secrets.active_password_matches("SITE_NOT_THERE", FAKE_SITE_PW) is None
+    stored = secrets.get(row.id)
+    assert stored is not None
+    assert stored.last_revealed_at is None
+
+
+def test_concurrent_sweeps_write_one_secret(vault: KeyVault, secrets: SecretStore) -> None:
+    import threading
+
+    vault.create(
+        label="SITE_BANK_PASSWORD",
+        provider="custom",
+        secret=FAKE_SITE_PW,
+        role="free",
+        base_url="",
+    )
+    barrier = threading.Barrier(4)
+    results: list[dict[str, object]] = []
+
+    def sweep() -> None:
+        barrier.wait()
+        results.append(migrate_site_password_keys(vault, secrets))
+
+    threads = [threading.Thread(target=sweep) for _ in range(4)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=30)
+    assert len(results) == 4
+    rows = [r for r in secrets.list_secrets(kind="password") if r.label == "SITE_BANK_PASSWORD"]
+    assert len(rows) == 1
+    assert sum(int(str(r["migrated"])) for r in results) == 1
 
 
 def test_migrate_refuses_when_sealed(vault: KeyVault, secrets: SecretStore) -> None:

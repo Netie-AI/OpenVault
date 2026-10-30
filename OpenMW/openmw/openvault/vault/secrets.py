@@ -491,6 +491,28 @@ class SecretStore:
             conn.commit()
         return self._seal.decrypt(row["secret_blob"])
 
+    def active_password_matches(self, label: str, candidate: str) -> bool | None:
+        """Whether an active password secret labelled ``label`` holds ``candidate``.
+
+        The comparison happens inside this module, so no plaintext leaves it and
+        nothing is stamped as revealed: this is not a reveal. ``None`` when no
+        active password carries that label. Used by the site-password migration
+        to tell a true duplicate from a different password under the same label.
+        """
+        with contextlib.closing(self._connect()) as conn, conn:
+            rows = conn.execute(
+                "SELECT secret_blob FROM secrets "
+                "WHERE kind = 'password' AND label = ? AND lifecycle = 'active'",
+                (label,),
+            ).fetchall()
+        if not rows:
+            return None
+        want = candidate.encode("utf-8")
+        return any(
+            hmac.compare_digest(self._seal.decrypt(row["secret_blob"]).encode("utf-8"), want)
+            for row in rows
+        )
+
     # --- write ---
 
     def create_password(

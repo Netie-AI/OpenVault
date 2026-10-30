@@ -8,6 +8,7 @@ this module repairs the rows that got in before that gate. Real custom LLM hops
 
 from __future__ import annotations
 
+import threading
 from typing import Any
 
 import structlog
@@ -19,6 +20,10 @@ from openmw.openvault.vault.store import KeyVault
 
 log = structlog.get_logger()
 
+#: The sweep runs from the /vault page, the passphrase unseal hook and the CLI.
+#: Two at once could both write one label, so one sweep runs at a time.
+_MIGRATE_LOCK = threading.Lock()
+
 
 def _key_ref(key_id: str) -> str:
     return key_id[:8] if key_id else ""
@@ -28,7 +33,13 @@ def migrate_site_password_keys(vault: KeyVault, secrets: SecretStore) -> dict[st
     """Copy matching passwords into secrets, then delete those key rows.
 
     Fail closed when sealed: no decrypt, no silent skip that leaves hops.
-    Duplicate secret labels skip a second write and still delete the hop.
+    One sweep runs at a time in this process.
+
+    A hop whose label already exists as an active password secret is deleted
+    only when the stored secret holds the same password (a true duplicate). A
+    different password under the same label is a ``conflict``: the hop is kept
+    and nothing is overwritten, so no password is lost. ``ok`` is False while a
+    conflict or a failure remains.
 
     Only ``lifecycle == "active"`` hops migrate. A revoked, rotated or
     compromised hop is retained encrypted for audit and may hold a dead or
@@ -41,6 +52,11 @@ def migrate_site_password_keys(vault: KeyVault, secrets: SecretStore) -> dict[st
     True with ``remaining_site_keys > 0``. ``ok`` means "no failures", not "no
     rows left".
     """
+    with _MIGRATE_LOCK:
+        return _migrate(vault, secrets)
+
+
+def _migrate(vault: KeyVault, secrets: SecretStore) -> dict[str, Any]:
     if vault.seal.is_sealed:
         raise VaultSealedError("vault is sealed; POST /api/vault/unseal with the passphrase first")
 
@@ -50,6 +66,7 @@ def migrate_site_password_keys(vault: KeyVault, secrets: SecretStore) -> dict[st
     migrated = 0
     already = 0
     failed = 0
+    conflicts = 0
     skipped_inactive = 0
     for record in list(vault.list_keys()):
         if not looks_like_site_password_key(
@@ -92,6 +109,10 @@ def migrate_site_password_keys(vault: KeyVault, secrets: SecretStore) -> dict[st
                 continue
             existing.add(record.label)
             migrated += 1
+        elif secrets.active_password_matches(record.label, password) is False:
+            conflicts += 1
+            log.warning("openvault_site_password_migrate_conflict", key_ref=ref)
+            continue
         else:
             already += 1
         if not vault.delete(record.id):
@@ -112,14 +133,16 @@ def migrate_site_password_keys(vault: KeyVault, secrets: SecretStore) -> dict[st
         migrated=migrated,
         already_in_secrets=already,
         failed=failed,
+        conflicts=conflicts,
         skipped_inactive=skipped_inactive,
         remaining_site_keys=remaining,
     )
     return {
-        "ok": failed == 0,
+        "ok": failed == 0 and conflicts == 0,
         "migrated": migrated,
         "already_in_secrets": already,
         "failed": failed,
+        "conflicts": conflicts,
         "skipped_inactive": skipped_inactive,
         "remaining_site_keys": remaining,
     }
