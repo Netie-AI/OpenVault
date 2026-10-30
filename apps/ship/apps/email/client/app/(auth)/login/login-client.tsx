@@ -1,0 +1,228 @@
+/**
+ * Login page - IMAP-credential sign-in.
+ *
+ * Posts to `/auth/sign-in` which runs an IMAP LOGIN against the
+ * server's configured mail backend before issuing a session cookie.
+ *
+ * Host/port are deliberately NOT user-controllable - see
+ * apps/email/server/src/lib/schemas.ts for the trust rationale.
+ */
+// Modified by Netie AI, 2026: rebranded the footer's "Powered by" row — see below.
+
+import { useState } from 'react';
+import { Eye, EyeOff, Loader2, Lock, Mail } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import { signIn } from '@/lib/auth-client';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useTRPC } from '@/providers/query-provider';
+import { runtimeBranding } from '@/lib/runtime-branding';
+
+/** FreeBuild mark: the "FB" monogram square, matching the dashboard's `<Logo>`. */
+function BrandMark({ size = 44 }: { size?: number }) {
+  return (
+    <div
+      aria-hidden
+      className="flex shrink-0 items-center justify-center rounded-lg bg-foreground text-background"
+      style={{ width: size, height: size, fontSize: Math.round(size * 0.32), fontWeight: 700 }}
+    >
+      FB
+    </div>
+  );
+}
+
+const FALLBACK_BRANDING = {
+  loginHeading: 'FreeBuild Mail',
+  loginSubtext: 'Sign in with your mailbox credentials',
+  loginFooter: 'Self-hosted on your own mail server. No third parties.',
+};
+
+export function LoginClient() {
+  const trpc = useTRPC();
+  const { data: branding } = useQuery({
+    ...trpc.branding.get.queryOptions(),
+    staleTime: 60_000,
+  });
+  const heading = branding?.loginHeading ?? FALLBACK_BRANDING.loginHeading;
+  const subtext = branding?.loginSubtext ?? FALLBACK_BRANDING.loginSubtext;
+  const footer = branding?.loginFooter ?? FALLBACK_BRANDING.loginFooter;
+  // Seeded from the value the server embedded in this document, so the row is
+  // right on FIRST paint - the query result would arrive a beat later and flash
+  // the vendor row in or out. The live query still wins once it resolves, so a
+  // PATCH mid-session is picked up. Only an explicit `false` hides it.
+  const showPoweredBy = branding?.showPoweredBy ?? runtimeBranding().showPoweredBy;
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      const { error } = await signIn.email({ email, password });
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      toast.success('Welcome back');
+      // Hard navigate so root.tsx re-reads the active-id cookie just set
+      // by /auth/sign-in and mounts the QueryClient under this mailbox's
+      // namespaced IDB slot.
+      window.location.href = '/mail/inbox';
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Sign in failed');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="relative flex min-h-screen w-full flex-col overflow-hidden bg-white dark:bg-[#0a0a0a]">
+      {/* Background: three pastel gradient blobs. No overlays - the blobs
+          ARE the design. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -top-32 -left-32 h-[440px] w-[440px] rounded-full opacity-60 blur-3xl dark:opacity-30"
+        style={{ background: 'rgba(255, 213, 208, 1)' }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -bottom-40 -right-24 h-[500px] w-[500px] rounded-full opacity-60 blur-3xl dark:opacity-25"
+        style={{ background: 'rgba(226, 214, 255, 1)' }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute top-1/3 left-1/2 h-[380px] w-[380px] -translate-x-1/2 rounded-full opacity-50 blur-3xl dark:opacity-20"
+        style={{ background: 'rgba(219, 255, 228, 1)' }}
+      />
+
+      {/* Main */}
+      <main className="relative z-10 flex flex-1 flex-col items-center justify-center px-4 py-12">
+        <div className="w-full max-w-[440px]">
+          {/* Brand mark above the heading. */}
+          <div className="mb-10 flex flex-col items-center text-center">
+            <BrandMark size={44} />
+            <h1 className="mt-5 text-3xl font-semibold tracking-tight text-foreground sm:text-[34px]">
+              {heading}
+            </h1>
+            <p className="mt-3 max-w-[340px] text-[15px] leading-relaxed text-muted-foreground">
+              {subtext}
+            </p>
+          </div>
+
+          {/* Card - extra rounded, soft glass over the gradient blobs. */}
+          <form
+            onSubmit={onSubmit}
+            className="rounded-[28px] border border-black/[0.07] bg-white/75 p-8 shadow-[0_24px_56px_-20px_rgba(0,0,0,0.12),0_2px_4px_-2px_rgba(0,0,0,0.05)] backdrop-blur-2xl dark:border-white/[0.08] dark:bg-[#141414]/75 dark:shadow-[0_24px_56px_-20px_rgba(0,0,0,0.6)]"
+          >
+            <div className="space-y-5">
+              <div className="space-y-2">
+                <Label
+                  htmlFor="email"
+                  className="text-[13px] font-medium text-foreground/85"
+                >
+                  Email
+                </Label>
+                <div className="relative">
+                  <Mail
+                    aria-hidden
+                    className="pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-muted-foreground/60"
+                  />
+                  <Input
+                    id="email"
+                    type="email"
+                    autoComplete="email"
+                    required
+                    autoFocus
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    className="h-12 rounded-2xl border-black/[0.08] bg-white/80 pl-11 pr-4 text-[15px] transition-colors focus-visible:border-foreground/20 focus-visible:bg-white focus-visible:ring-1 focus-visible:ring-foreground/10 dark:border-white/[0.08] dark:bg-black/30 dark:focus-visible:border-white/20 dark:focus-visible:bg-black/50"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label
+                  htmlFor="password"
+                  className="text-[13px] font-medium text-foreground/85"
+                >
+                  Password
+                </Label>
+                <div className="relative">
+                  <Lock
+                    aria-hidden
+                    className="pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-muted-foreground/60"
+                  />
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter your password"
+                    className="h-12 rounded-2xl border-black/[0.08] bg-white/80 pl-11 pr-12 text-[15px] transition-colors focus-visible:border-foreground/20 focus-visible:bg-white focus-visible:ring-1 focus-visible:ring-foreground/10 dark:border-white/[0.08] dark:bg-black/30 dark:focus-visible:border-white/20 dark:focus-visible:bg-black/50"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    tabIndex={-1}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-muted-foreground/60 transition-colors hover:bg-foreground/5 hover:text-foreground"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-[18px] w-[18px]" />
+                    ) : (
+                      <Eye className="h-[18px] w-[18px]" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <Button
+              type="submit"
+              disabled={submitting}
+              className="mt-6 h-12 w-full rounded-2xl bg-foreground text-[15px] font-medium text-background shadow-[0_2px_10px_-2px_rgba(0,0,0,0.2)] transition-all hover:bg-foreground/90 disabled:opacity-60"
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Signing in
+                </>
+              ) : (
+                'Sign in'
+              )}
+            </Button>
+          </form>
+
+          <p className="mt-7 text-center text-[13px] leading-relaxed text-muted-foreground">
+            {footer}
+          </p>
+        </div>
+      </main>
+
+      {/* Footer - transparent, no border, no glass. Sits flush over the
+          gradient. Vendor chrome: hidden entirely when the operator has
+          branded this deployment (GH-568). */}
+      {showPoweredBy && (
+        <footer className="relative z-10">
+          <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-3 px-6 py-6 sm:flex-row">
+            {/* Modified by Netie AI, 2026: "OpenShip" -> "FreeBuild"; the
+                upstream Docs/Privacy/Terms and GitHub links are gone. The
+                upstream credit is shown only on the dashboard's About surface
+                (Settings > Instance). */}
+            <div className="flex items-center gap-2 text-[13px] text-muted-foreground">
+              <span>Powered by</span>
+              <span className="font-medium text-foreground">FreeBuild</span>
+            </div>
+          </div>
+        </footer>
+      )}
+    </div>
+  );
+}

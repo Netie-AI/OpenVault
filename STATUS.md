@@ -32,6 +32,15 @@ Building the product comes before cleanup.
 - GitHub is the queue: 46 open issues at this reconcile. Landed behavior is in CHANGELOG.md.
 - Usage $/unit is still NEEDS-YOU. Display SKUs stay locked (DR-0013).
 
+## Forks (DR-0018, draft #99)
+
+- `apps/router` ships as FreeRoute (`:3020`), from OmniRoute (MIT) @ `ae2ba35`. `apps/ship` ships as FreeBuild (`:3030`, `:3031`), from Openship (Apache-2.0) @ `aba12c8`. Both bind `127.0.0.1`. Root `THIRD_PARTY_NOTICES.md` and `apps/ship/NOTICE` carry the attribution.
+- Keys: the forks read pooled keys over loopback with `X-OpenVault-Admin` and store none. Every local key write answers 501 `keys_managed_by_openvault`. Client tokens verify on `POST /api/apikeys/verify`.
+- Not shipped (named 501): consumer subscription pooling, cookie/session relay, TLS or client fingerprint stealth, upstream updaters, the 9router sidecar, hosted cloud mode.
+- Proven live against a real OpenVault (2026-10-30): FreeRoute `npm run test:e2e` 39 steps, FreeBuild 35 steps, after a clean `npm ci` and a full build. Each run shows the vault key reaching the provider, the named 501/503s, and the secret absent from the fork's disk. `npm test`: FreeRoute policy 25, keyvault 42, notices 4, smoke 30; FreeBuild 9 workspaces. CI does not run the forks' tests yet.
+- `npm ci` needs no bun (the mail app's postinstall skips it); bun is needed only to test `apps/email`.
+- Open (DR-0018): router usage is not in OpenVault's ledger; the console does not choose between FreeBuild and the Python `ship/`; FreeBuild advises `freebuild up` but ships no CLI; router `db_backups` are not scrubbed; the Docker mail suites did not run (no daemon).
+
 ## Verify
 
 ```bash

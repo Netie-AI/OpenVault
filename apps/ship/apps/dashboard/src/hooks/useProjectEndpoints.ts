@@ -1,0 +1,698 @@
+"use client";
+
+/**
+ * Atomic per-endpoint hooks for the project page.
+ *
+ * Each hook owns one endpoint end-to-end:
+ *   - fires its own fetch in a useEffect keyed on `id`
+ *   - manages its own loading / data / error state
+ *   - returns the same { data, isLoading, error } shape
+ *
+ * There is NO shared state, NO context, NO useMemo soup, NO cross-coupling.
+ * For traffic stats + chart, call `useAnalyticsData(id)` (backed by a single
+ * /analytics/overview fetch) and gate your skeleton on its `isLoading` — a slow
+ * `getInfo` cannot affect you.
+ *
+ * Dedup across components: each endpoint has a module-level in-flight
+ * promise + resolved-result cache keyed by id, so OverviewTab and
+ * MonitoringTab fetching the same endpoint share one network request.
+ */
+
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { beginFetchState } from "./begin-fetch-state";
+import { api, ApiError, endpoints, projectsApi } from "@/lib/api";
+
+/**
+ * Sentinel error message emitted by `fetchProjectInfo` when the API returns
+ * 404 for the project. Consumers (notably `ProjectSettingsContext`) match
+ * on this exact string to drive the cold-load "project was deleted in
+ * another tab" → /projects redirect path, separate from generic load
+ * failures (5xx, network) which should keep the user on the page.
+ */
+export const PROJECT_INFO_NOT_FOUND = "PROJECT_INFO_NOT_FOUND";
+
+// ─── Shared types ──────────────────────────────────────────────────────────
+
+interface ProjectInfoData {
+  project: any;
+  environments?: any[];
+}
+
+export interface AnalyticsSummaryResponse {
+  totalRequests: number;
+  /** Non-static ("page") requests — NOT people. Five views from one browser = 5. */
+  pageRequests: number;
+  /**
+   * Genuinely distinct visitors, or null when this source can't tell.
+   *
+   * Non-null only where the source dedups (Oblien). The self-hosted edge dedups per
+   * DAY, which doesn't decompose into the minute buckets this summary is built
+   * from — so it's null there and the real number comes from `useAnalyticsGeo`.
+   * Null means "ask elsewhere", never "zero visitors".
+   */
+  uniqueVisitors: number | null;
+  bandwidthIn: number;
+  bandwidthOut: number;
+  avgResponseTimeMs: number;
+  lastUpdated: string | null;
+}
+
+export interface AnalyticsPeriodResponse {
+  from: string;
+  to: string;
+  requests: number;
+  uniqueVisitors: number;
+  bandwidthIn: number;
+  bandwidthOut: number;
+  avgResponseTimeMs: number;
+}
+
+/** /analytics/geo — the daily rollup behind the country map and top-paths list. */
+export interface AnalyticsGeoResponse {
+  total: number;
+  countries: { code: string; count: number; pct: number }[];
+  /**
+   * Distinct visitors summed PER DAY over the window, so a visitor returning on
+   * three days counts three. An UPPER bound on window-distinct visitors — the edge
+   * dedups within a day and per-day counts can't be merged without an HLL.
+   * Label it accordingly; don't render it as "visitors".
+   */
+  visitorDays: number;
+  /** Largest single day in the window — exact for that day, and a LOWER bound on
+   *  window-distinct visitors. Brackets the real number with `visitorDays`. */
+  peakDayVisitors: number;
+  topPaths: { path: string; count: number }[];
+  statuses: Record<string, number>;
+  /** False = the edge can't resolve countries at all, so an empty map is a FAULT
+   *  rather than "no visitors". Drives the advisory instead of a blank map. */
+  geoAvailable: boolean;
+  /** Visitor count may understate (edge visitor zone under eviction pressure). */
+  approximate: boolean;
+  source: "self-hosted" | "cloud" | "none";
+  /**
+   * Whether per-path aggregation is switched on for this project.
+   *
+   * "Off" and "on but nothing collected yet" both give an empty `topPaths` and need
+   * opposite UI — an Enable button versus a wait — so the two must be distinguishable.
+   * Always true for cloud, where Oblien's edge aggregates paths regardless.
+   */
+  pathsEnabled?: boolean;
+}
+
+/** /analytics/usage/history — persisted CPU/memory series from the resources:sample job. */
+export interface UsageHistoryResponse {
+  buckets: Array<{
+    minute: number;
+    cpuPercent: number;
+    memoryMb: number;
+    networkRxBytes: number;
+    networkTxBytes: number;
+    /** False when no sample landed here — render a GAP, never a zero. */
+    hasData: boolean;
+  }>;
+  services: Array<{ serviceKey: string; name: string }>;
+  granularityMinutes: number;
+  /** null = All (the per-bucket sum across services). */
+  serviceKey: string | null;
+}
+
+/** /analytics/overview — summary + periods from one server fetch (one cloud
+ *  round-trip), so the dashboard doesn't hit the SaaS twice per project view. */
+export interface AnalyticsOverviewResponse {
+  summary: AnalyticsSummaryResponse;
+  periods: AnalyticsPeriodResponse[];
+}
+
+/** Legacy combined shape used by display components. Derived from summary
+ *  + periods via `mapAnalyticsData`. */
+export interface AnalyticsData {
+  success: boolean;
+  domain: string;
+  summary: {
+    totalRequests: number;
+    /**
+     * @deprecated Never was unique IPs — it's the non-static request count, which
+     * `pageRequests` now names correctly. Kept only so OverviewTab's existing card
+     * keeps rendering; new surfaces should read `pageRequests` (page views) or
+     * `uniqueVisitors` / `useAnalyticsGeo().visitors` (people).
+     */
+    uniqueIPs: number;
+    /** Non-static ("page") requests. Honest name for the old `uniqueIPs`. */
+    pageRequests: number;
+    /** Real distinct visitors when the source dedups, else null — see the response
+     *  type. `useAnalyticsGeo().visitors` is the self-hosted answer. */
+    uniqueVisitors: number | null;
+    uniqueRequests: number;
+    totalIPs: number;
+    uniqueIPsPercentage: string;
+    firstRequest: string;
+    lastRequest: string;
+    timeRangeHours: number;
+    avgRequestsPerHour: number;
+  };
+  performance: {
+    avgResponseTime: number;
+    avgResponseTimeMs: number;
+    totalResponseTime: number;
+    minResponseTime: string;
+    maxResponseTime: string;
+  };
+  bandwidth: {
+    totalIn: number;
+    totalOut: number;
+    totalInFormatted: string;
+    totalOutFormatted: string;
+    avgRequestSize: number;
+    avgResponseSize: number;
+  };
+  topPaths: Array<{ path: string; count: number; percentage: string }>;
+  trafficByHour: Array<Pick<AnalyticsPeriodResponse, "from" | "to" | "requests">>;
+  limited: boolean;
+}
+
+interface AsyncState<T> {
+  data: T | null;
+  isLoading: boolean;
+  error: string | null;
+}
+
+// ─── Per-endpoint dedup caches ─────────────────────────────────────────────
+
+/**
+ * Each cache is a Map<id, entry> where entry holds either an in-flight
+ * promise (still loading) or a resolved value (loaded) — never an error.
+ * Errors are NOT cached: a transient 5xx shouldn't permanently brick the
+ * project page until reload. Failed fetches drop the entry entirely and
+ * the next mount/retry re-fires the request.
+ *
+ * Invalidation: call `invalidateProjectCaches(id)` after a mutation that
+ * could change the underlying data (e.g. after a domain save).
+ */
+type CacheEntry<T> =
+  | { kind: "loading"; promise: Promise<T> }
+  | { kind: "ready"; data: T; updatedAt: number };
+
+const infoCache = new Map<string, CacheEntry<ProjectInfoData>>();
+const overviewCache = new Map<string, CacheEntry<AnalyticsOverviewResponse>>();
+const geoCache = new Map<string, CacheEntry<AnalyticsGeoResponse>>();
+const usageHistoryCache = new Map<string, CacheEntry<UsageHistoryResponse>>();
+
+/** Mounts, polls and retries share one in-flight request for each scope. */
+function requestEndpoint<T>(
+  id: string,
+  cache: Map<string, CacheEntry<T>>,
+  fetcher: (id: string) => Promise<T>,
+): Promise<T> {
+  const current = cache.get(id);
+  if (current?.kind === "loading") return current.promise;
+  const promise = fetcher(id).then(
+    (data) => {
+      const entry = cache.get(id);
+      if (entry?.kind === "loading" && entry.promise === promise) {
+        cache.set(id, { kind: "ready", data, updatedAt: Date.now() });
+      }
+      return data;
+    },
+    (error: unknown) => {
+      const entry = cache.get(id);
+      if (entry?.kind === "loading" && entry.promise === promise) cache.delete(id);
+      throw error;
+    },
+  );
+  cache.set(id, { kind: "loading", promise });
+  return promise;
+}
+
+// ─── Revision store (drives live refresh on invalidation) ──────────────────
+//
+// Each project id has a revision counter. `invalidateProjectCaches(id)`
+// bumps the counter and notifies subscribed hooks. The hooks include the
+// current revision in their useEffect deps, so the bump re-runs the
+// effect and fires a fresh fetch — letting currently-mounted Overview /
+// Monitoring tabs update without remounting.
+const revisions = new Map<string, number>();
+const revisionListeners = new Map<string, Set<() => void>>();
+
+function getRevision(id: string): number {
+  return revisions.get(id) ?? 0;
+}
+
+function bumpRevision(id: string): void {
+  revisions.set(id, getRevision(id) + 1);
+  revisionListeners.get(id)?.forEach((cb) => cb());
+}
+
+function subscribeRevision(id: string, listener: () => void): () => void {
+  let set = revisionListeners.get(id);
+  if (!set) {
+    set = new Set();
+    revisionListeners.set(id, set);
+  }
+  set.add(listener);
+  return () => {
+    set?.delete(listener);
+    if (set && set.size === 0) revisionListeners.delete(id);
+  };
+}
+
+// ─── Internal generic hook ─────────────────────────────────────────────────
+
+function useEndpoint<T>(
+  id: string | null | undefined,
+  cache: Map<string, CacheEntry<T>>,
+  fetcher: (id: string) => Promise<T>,
+  // Identity whose revision counter drives invalidation. Defaults to `id`;
+  // pass the raw project id when `id` is a composite cache key (e.g. the
+  // domain-scoped analytics key) so invalidateProjectCaches(projectId) still
+  // notifies this hook.
+  revisionId?: string | null,
+  // When set, refetch on this interval. Used by series that grow server-side
+  // on their own clock (the sampled usage history) so a chart that mounted
+  // empty animates as new points land, without a page reload. 0/undefined = off.
+  pollMs?: number,
+): AsyncState<T> {
+  // Ref tracks the LATEST id from props at any moment. Combined with
+  // the `cancelled` flag, this prevents an in-flight fetch for project
+  // A from writing its result onto project B's state after the user
+  // navigates A→B. React's effect cleanup is supposed to fire before
+  // a stale `.then` resolves, but under concurrent rendering the
+  // exact ordering isn't guaranteed — the ref check is the defensive
+  // belt to the cancelled-flag suspenders.
+  const idRef = useRef(id);
+  idRef.current = id;
+
+  // Subscribe to this id's revision counter. When
+  // invalidateProjectCaches(id) is called, the counter bumps,
+  // useSyncExternalStore triggers a re-render, and the effect below
+  // re-runs (because `revision` is in its deps) — firing a fresh
+  // fetch so currently-mounted consumers see new data immediately.
+  const revKey = revisionId ?? id;
+  const revision = useSyncExternalStore(
+    (cb) => (revKey ? subscribeRevision(revKey, cb) : () => {}),
+    () => (revKey ? getRevision(revKey) : 0),
+    () => 0,
+  );
+
+  const [state, setState] = useState<AsyncState<T>>(() => {
+    if (!id) return { data: null, isLoading: false, error: null };
+    const cached = cache.get(id);
+    if (cached?.kind === "ready") {
+      return { data: cached.data, isLoading: false, error: null };
+    }
+    return { data: null, isLoading: true, error: null };
+  });
+
+  /**
+   * Which id the data currently on screen belongs to — the difference between a REFRESH and a
+   * NAVIGATION, which need opposite answers below.
+   *
+   * Same id: we are re-reading data the user is already looking at, so it must keep showing.
+   * Different id: whatever we hold is another project's, and reporting it as loaded would
+   * render project A's page under project B's URL.
+   */
+  const loadedIdRef = useRef<string | null>(id && cache.get(id)?.kind === "ready" ? id : null);
+
+  useEffect(() => {
+    if (!id) {
+      loadedIdRef.current = null;
+      setState({ data: null, isLoading: false, error: null });
+      return;
+    }
+
+    // A polled series can have changed while the tab was unmounted.
+    const cached = cache.get(id);
+    if (cached?.kind === "ready" && (!pollMs || Date.now() - cached.updatedAt < pollMs)) {
+      loadedIdRef.current = id;
+      setState({ data: cached.data, isLoading: false, error: null });
+      return;
+    }
+
+    let cancelled = false;
+    // Stale-while-revalidate: a REFRESH keeps what's on screen, a first load reports loading.
+    // Load-bearing rather than a nicety — see `beginFetchState`, which owns the reasoning and
+    // the infinite-loop regression it exists to prevent.
+    const loadedId = loadedIdRef.current;
+    setState((prev) => beginFetchState(prev, loadedId, id));
+
+    requestEndpoint(id, cache, fetcher)
+      .then((data) => {
+        // Guard: don't write A's result into B's state if id has
+        // changed since the effect started. Both flags together cover
+        // synchronous (cancelled) and racy (idRef mismatch) cases.
+        if (cancelled || idRef.current !== id || (revKey && getRevision(revKey) !== revision)) return;
+        loadedIdRef.current = id;
+        setState({ data, isLoading: false, error: null });
+      })
+      .catch((err: unknown) => {
+        // Errors are NOT cached — drop the entry so a future mount /
+        // refresh re-fires the request. Otherwise a transient 5xx
+        // permanently bricks the page until full reload.
+        if (cancelled || idRef.current !== id || (revKey && getRevision(revKey) !== revision)) return;
+        const message = err instanceof Error ? err.message : "Request failed";
+        // The data goes with the error, so the next revision must report loading again rather
+        // than revalidating something that is no longer on screen.
+        loadedIdRef.current = null;
+        setState({ data: null, isLoading: false, error: message });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+    // `revision` is intentionally in deps: bumping it via
+    // invalidateProjectCaches() retriggers the effect for already-
+    // mounted consumers, fetching fresh data without a remount.
+  }, [id, cache, fetcher, revision, pollMs]);
+
+  // Poll: re-fire the fetcher on an interval, bypassing the ready-cache
+  // short-circuit above. A transient failure keeps the last-good data on
+  // screen rather than blanking the chart — the next tick retries.
+  useEffect(() => {
+    if (!id || !pollMs || pollMs <= 0) return;
+    let cancelled = false;
+    const refresh = () => {
+      if (document.visibilityState === "hidden") return;
+      const current = cache.get(id);
+      if (current?.kind === "ready" && Date.now() - current.updatedAt < pollMs) {
+        // Another subscriber may have just refreshed the shared result.
+        loadedIdRef.current = id;
+        setState((prev) => prev.data === current.data && !prev.error
+          ? prev
+          : { data: current.data, isLoading: false, error: null });
+        return;
+      }
+      const startedRevision = revKey ? getRevision(revKey) : 0;
+      requestEndpoint(id, cache, fetcher)
+        .then((data) => {
+          if (cancelled || idRef.current !== id ||
+            (revKey && getRevision(revKey) !== startedRevision)) return;
+          loadedIdRef.current = id;
+          setState({ data, isLoading: false, error: null });
+        })
+        .catch((error: unknown) => {
+          if (cancelled || idRef.current !== id ||
+            (revKey && getRevision(revKey) !== startedRevision)) return;
+          setState((prev) => ({
+            ...prev,
+            isLoading: false,
+            error: error instanceof Error ? error.message : "Request failed",
+          }));
+        });
+    };
+    const handle = setInterval(refresh, pollMs);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      cancelled = true;
+      clearInterval(handle);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [id, cache, fetcher, pollMs, revKey]);
+
+  return state;
+}
+
+// ─── Fetcher functions ─────────────────────────────────────────────────────
+
+async function fetchProjectInfo(id: string): Promise<ProjectInfoData> {
+  let response;
+  try {
+    response = await projectsApi.getInfo(id);
+  } catch (err) {
+    // 404 → the project was deleted (in another tab, by a force flow,
+    // direct DB intervention). Surface a sentinel so the context can
+    // redirect to /projects instead of rendering a half-empty layout.
+    if (err instanceof ApiError && err.status === 404) {
+      throw new Error(PROJECT_INFO_NOT_FOUND);
+    }
+    throw err;
+  }
+  if (!response.success) {
+    throw new Error(response.error || "Failed to load project info");
+  }
+  return response.data;
+}
+
+// Analytics are cached per (project, domain). The cache key encodes the
+// domain so switching the overview domain refetches instead of returning the
+// first domain's cached numbers; `fetchOverview` splits it back apart.
+const OVERVIEW_KEY_SEP = "::";
+
+/** Analytics overview aggregates traffic server-side; high-traffic projects can exceed the 15s default. */
+const ANALYTICS_OVERVIEW_TIMEOUT_MS = 60_000;
+const ANALYTICS_POLL_MS = 60_000;
+
+function overviewCacheKey(id: string, domain?: string | null): string {
+  return domain ? `${id}${OVERVIEW_KEY_SEP}${domain}` : id;
+}
+
+async function fetchOverview(key: string): Promise<AnalyticsOverviewResponse> {
+  const sepIndex = key.indexOf(OVERVIEW_KEY_SEP);
+  const projectId = sepIndex === -1 ? key : key.slice(0, sepIndex);
+  const domain = sepIndex === -1 ? undefined : key.slice(sepIndex + OVERVIEW_KEY_SEP.length);
+  const response = await api.get<{
+    data: AnalyticsOverviewResponse;
+    success?: boolean;
+    error?: string;
+  }>(endpoints.analytics.overview, {
+    params: { projectId, ...(domain ? { domain } : {}) },
+    timeout: ANALYTICS_OVERVIEW_TIMEOUT_MS,
+  });
+  if (response.success === false || !response.data) {
+    throw new Error(response.error || "Failed to load analytics");
+  }
+  return {
+    summary: response.data.summary,
+    periods: response.data.periods ?? [],
+  };
+}
+
+async function fetchGeo(key: string): Promise<AnalyticsGeoResponse> {
+  const sepIndex = key.indexOf(OVERVIEW_KEY_SEP);
+  const projectId = sepIndex === -1 ? key : key.slice(0, sepIndex);
+  const domain = sepIndex === -1 ? undefined : key.slice(sepIndex + OVERVIEW_KEY_SEP.length);
+  const response = await api.get<{ data: AnalyticsGeoResponse; success?: boolean; error?: string }>(
+    endpoints.analytics.geo,
+    { params: { projectId, ...(domain ? { domain } : {}) } },
+  );
+  if (response.success === false || !response.data) {
+    throw new Error(response.error || "Failed to load visitor geography");
+  }
+  return response.data;
+}
+
+/**
+ * Cache key for the history read. Encodes the SERIES as well as the project, so
+ * switching All ⇄ a service refetches instead of returning the previous series'
+ * numbers under the new label.
+ */
+const HISTORY_SEP = "##";
+
+async function fetchUsageHistory(key: string): Promise<UsageHistoryResponse> {
+  const [projectId, serviceKey] = key.split(HISTORY_SEP);
+  const response = await api.get<{ data: UsageHistoryResponse; success?: boolean; error?: string }>(
+    endpoints.analytics.usageHistory,
+    { params: { projectId, ...(serviceKey ? { serviceKey } : {}) } },
+  );
+  if (response.success === false || !response.data) {
+    throw new Error(response.error || "Failed to load usage history");
+  }
+  return response.data;
+}
+
+// ─── Public hooks — one per endpoint ───────────────────────────────────────
+
+/**
+ * Fetches /projects/:id/info. Owns the Infrastructure + Source & CI/CD card
+ * skeletons on the overview page. `data` is `null` while loading or on error.
+ *
+ * To force a refetch (e.g. after a mutation), call
+ * `invalidateProjectCaches(id)` and the next mount of this hook will refetch.
+ */
+export function useProjectInfo(id: string | null | undefined) {
+  const state = useEndpoint(id, infoCache, fetchProjectInfo);
+  // When the project has been deleted (404 → sentinel), keep `isLoading`
+  // true for consumers. The redirect lands within a tick — pretending
+  // we're still loading keeps the page skeleton on screen instead of
+  // flashing the "no project" empty layout in between.
+  if (state.error === PROJECT_INFO_NOT_FOUND) {
+    return { ...state, isLoading: true };
+  }
+  return state;
+}
+
+/**
+ * Fetches /analytics/overview — summary + periods in ONE request (one cloud
+ * round-trip server-side). The single source for the Overview / Monitoring
+ * tabs; no separate /summary + /periods double-fetch.
+ */
+export function useAnalyticsOverview(id: string | null | undefined, domain?: string | null) {
+  const key = id ? overviewCacheKey(id, domain) : id;
+  return useEndpoint(key, overviewCache, fetchOverview, id, ANALYTICS_POLL_MS);
+}
+
+/**
+ * Fetches /analytics/geo — the daily rollup: requests per country, real distinct
+ * visitors, top paths, status mix.
+ *
+ * Separate from /analytics/overview because the two have different shapes in the
+ * edge's shared memory: overview groups minute counters into hours, this
+ * is per-DAY aggregates. Countries, visitors and paths are only kept daily —
+ * holding them per minute would multiply the edge's key cardinality by ~1440 and
+ * evict the counters they annotate.
+ */
+export function useAnalyticsGeo(id: string | null | undefined, domain?: string | null) {
+  const key = id ? overviewCacheKey(id, domain) : id;
+  return useEndpoint(key, geoCache, fetchGeo, id, ANALYTICS_POLL_MS);
+}
+
+/**
+ * Fetches /analytics/usage/history — the persisted CPU/memory series.
+ *
+ * Separate from the live SSE stream on purpose: the stream answers "right now" at 5s
+ * and keeps nothing, this answers "what happened overnight" from the sampled buckets.
+ */
+export function useProjectUsageHistory(
+  id: string | null | undefined,
+  serviceKey?: string | null,
+  // Poll interval (ms). The server samples every 5 min, so a mounted chart only
+  // sees new points if it re-reads — pass this on platforms that sample (VPS/cloud)
+  // and omit it where nothing is sampled (desktop) to avoid a pointless timer.
+  pollMs?: number,
+) {
+  const key = id ? `${id}${HISTORY_SEP}${serviceKey ?? ""}` : id;
+  return useEndpoint(key, usageHistoryCache, fetchUsageHistory, id, pollMs);
+}
+
+/**
+ * Composite hook — returns summary + periods combined into one AnalyticsData
+ * object. Backed by a SINGLE /analytics/overview fetch, so a project view makes
+ * one analytics request (one cloud round-trip) instead of two. The
+ * isLoadingSummary/isLoadingPeriods fields are kept for API compatibility but
+ * now reflect the one shared load.
+ */
+export function useAnalyticsData(id: string | null | undefined, domain?: string | null) {
+  const overview = useAnalyticsOverview(id, domain);
+  const summary = overview.data?.summary ?? null;
+  const periods = overview.data?.periods ?? null;
+  const data = summary ? mapAnalyticsData(summary, periods ?? [], domain ?? "") : null;
+  return {
+    data,
+    summary,
+    periods,
+    isLoading: overview.isLoading,
+    isLoadingSummary: overview.isLoading,
+    isLoadingPeriods: overview.isLoading,
+    error: overview.error,
+  };
+}
+
+function formatBytes(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let value = bytes;
+  let unitIndex = 0;
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex += 1;
+  }
+  const decimals = value >= 10 || unitIndex === 0 ? 0 : 1;
+  return `${value.toFixed(decimals)} ${units[unitIndex]}`;
+}
+
+export function mapAnalyticsData(
+  summary: AnalyticsSummaryResponse,
+  periods: AnalyticsPeriodResponse[],
+  domain: string,
+): AnalyticsData | null {
+  if (summary.totalRequests <= 0 && periods.length === 0) return null;
+  const chronological = [...periods].sort((a, b) => Date.parse(a.from) - Date.parse(b.from));
+  const firstPeriod = chronological[0] ?? null;
+  const lastPeriod = chronological[chronological.length - 1] ?? null;
+  const firstRequest = firstPeriod?.from ?? summary.lastUpdated ?? new Date().toISOString();
+  const lastRequest = lastPeriod?.to ?? summary.lastUpdated ?? firstRequest;
+  const timeRangeHours = Math.max(
+    1,
+    Math.ceil((new Date(lastRequest).getTime() - new Date(firstRequest).getTime()) / 3_600_000),
+  );
+  // Legacy `uniqueIPs` = page requests, which is what it always actually was.
+  // Preserved (rather than switched to the real visitor count) so OverviewTab's
+  // existing card keeps showing the same number it always showed instead of
+  // silently changing meaning; only its LABEL was ever wrong.
+  const pageRequests = summary.pageRequests ?? 0;
+  const totalRequests = summary.totalRequests;
+  return {
+    success: true,
+    domain,
+    summary: {
+      totalRequests,
+      uniqueIPs: pageRequests,
+      pageRequests,
+      uniqueVisitors: summary.uniqueVisitors ?? null,
+      uniqueRequests: totalRequests,
+      totalIPs: totalRequests,
+      uniqueIPsPercentage:
+        totalRequests > 0 ? ((pageRequests / totalRequests) * 100).toFixed(1) : "0.0",
+      firstRequest,
+      lastRequest,
+      timeRangeHours,
+      avgRequestsPerHour: Math.round(totalRequests / timeRangeHours),
+    },
+    performance: {
+      avgResponseTime: summary.avgResponseTimeMs / 1000,
+      avgResponseTimeMs: summary.avgResponseTimeMs,
+      totalResponseTime: summary.avgResponseTimeMs * totalRequests,
+      minResponseTime: `${summary.avgResponseTimeMs.toFixed(0)}ms`,
+      maxResponseTime: `${summary.avgResponseTimeMs.toFixed(0)}ms`,
+    },
+    bandwidth: {
+      totalIn: summary.bandwidthIn,
+      totalOut: summary.bandwidthOut,
+      totalInFormatted: formatBytes(summary.bandwidthIn),
+      totalOutFormatted: formatBytes(summary.bandwidthOut),
+      avgRequestSize: totalRequests > 0 ? summary.bandwidthIn / totalRequests : 0,
+      avgResponseSize: totalRequests > 0 ? summary.bandwidthOut / totalRequests : 0,
+    },
+    topPaths: [],
+    trafficByHour: chronological.map((period) => ({
+      from: period.from,
+      to: period.to,
+      requests: period.requests,
+    })),
+    limited: false,
+  };
+}
+
+// ─── Cache invalidation (exported for force-refresh patterns) ─────────────
+
+/**
+ * Drop ALL caches for an id AND notify subscribed hooks to refetch.
+ * Use after a mutation that could change the data (e.g. domain save,
+ * redeploy). Mounted consumers will receive fresh data on the next
+ * tick — no remount required.
+ */
+export function invalidateProjectCaches(id: string) {
+  infoCache.delete(id);
+  // Overview AND geo share the `id` / `id::domain` key format — drop every
+  // domain-scoped entry for this project from both, not just the aggregate key.
+  const domainPrefix = `${id}${OVERVIEW_KEY_SEP}`;
+  for (const key of overviewCache.keys()) {
+    if (key === id || key.startsWith(domainPrefix)) overviewCache.delete(key);
+  }
+  for (const key of geoCache.keys()) {
+    if (key === id || key.startsWith(domainPrefix)) geoCache.delete(key);
+  }
+  // Usage-history entries are keyed `id##serviceKey`. Without this the chart kept a
+  // stale empty series after the first sample landed — the revision bump re-ran the
+  // effect but the cached `{kind:"ready"}` short-circuited it back to the old data.
+  const historyPrefix = `${id}${HISTORY_SEP}`;
+  for (const key of usageHistoryCache.keys()) {
+    if (key === id || key.startsWith(historyPrefix)) usageHistoryCache.delete(key);
+  }
+  bumpRevision(id);
+}
+
+/** Invalidate a shared environment-list mutation once for every affected project. */
+export function invalidateProjectCachesFor(ids: Iterable<string>) {
+  for (const id of new Set(ids)) {
+    if (id) invalidateProjectCaches(id);
+  }
+}

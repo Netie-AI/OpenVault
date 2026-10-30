@@ -1,0 +1,714 @@
+/**
+ * High-level SSE Connection Hooks
+ * 
+ * These hooks provide complete SSE streaming solutions:
+ * - Connection management (auth, tokens, URLs)
+ * - Message processing
+ * - State management
+ * 
+ * Clean entry points - no need to call connection helpers directly!
+ */
+
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { SSEMessage, useSSEStream } from './useSSEStream';
+import { createLogMessageProcessor, createBuildMessageProcessor, LogMessageCallbacks, BuildMessageCallbacks } from '@/lib/sseMessageProcessors';
+import { getApiBaseUrl } from '@/lib/api';
+import type { Terminal } from '@xterm/xterm';
+
+const BUILD_RECONNECT_BASE_DELAY_MS = 1000;
+const BUILD_RECONNECT_MAX_DELAY_MS = 15000;
+const BUILD_STREAM_IDLE_TIMEOUT_MS = 60000;
+
+// ============================================================================
+// LIVE LOGS CONNECTION HOOK
+// ============================================================================
+
+export interface UseLogStreamOptions {
+  // Terminal integration (optional)
+  terminalRef?: React.MutableRefObject<Terminal | null>;
+  autoWriteToTerminal?: boolean;
+  
+  // Callbacks
+  callbacks?: LogMessageCallbacks;
+  
+  // Lifecycle
+  onConnect?: () => void;
+  onDisconnect?: () => void;
+  onError?: (error: Error) => void;
+}
+
+export interface UseLogStreamReturn {
+  connect: (target: string) => Promise<void>;
+  disconnect: () => void;
+  isConnected: boolean;
+  isConnecting: boolean;
+  error: Error | null;
+}
+
+/**
+ * Hook for live container/server logs
+ * 
+ * Usage:
+ * ```tsx
+ * const logs = useLogStream({
+ *   terminalRef,
+ *   callbacks: {
+ *     onLog: (message, text) => console.log(text),
+ *     onError: (msg) => showToast(msg, 'error'),
+ *   },
+ * });
+ * 
+ * // Connect
+ * logs.connect(projectId);
+ * 
+ * // Disconnect
+ * logs.disconnect();
+ * ```
+ */
+export const useLogStream = (options: UseLogStreamOptions = {}): UseLogStreamReturn => {
+  const {
+    terminalRef,
+    autoWriteToTerminal = true,
+    callbacks = {},
+    onConnect,
+    onDisconnect,
+    onError,
+  } = options;
+
+  const [isConnected, setIsConnected] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const activeTargetRef = useRef<string | null>(null);
+  const connectionGenerationRef = useRef(0);
+  // Consumers keep these controls in effect dependencies. Keep their identity
+  // stable while exposing current state, rather than getters over the first render.
+  const stateRef = useRef({ isConnected, isConnecting, error });
+  stateRef.current = { isConnected, isConnecting, error };
+  const callbacksRef = useRef(callbacks);
+  const onConnectRef = useRef(onConnect);
+  const onDisconnectRef = useRef(onDisconnect);
+  const onErrorRef = useRef(onError);
+
+  useEffect(() => {
+    callbacksRef.current = callbacks;
+    onConnectRef.current = onConnect;
+    onDisconnectRef.current = onDisconnect;
+    onErrorRef.current = onError;
+  }, [callbacks, onConnect, onDisconnect, onError]);
+
+  // Create message processor
+  const messageProcessor = useMemo(() => createLogMessageProcessor({
+    onLog: (message, rawText, rawBytes) => {
+      callbacksRef.current.onLog?.(message, rawText, rawBytes);
+    },
+    onError: (message) => {
+      callbacksRef.current.onError?.(message);
+    },
+    onContainerExit: (exitCode, message) => {
+      callbacksRef.current.onContainerExit?.(exitCode, message);
+    },
+  }), []);
+
+  const handleConnect = useCallback(() => {
+    setIsConnected(true);
+    setIsConnecting(false);
+    setError(null);
+    onConnectRef.current?.();
+  }, []);
+
+  const handleDisconnect = useCallback(() => {
+    setIsConnected(false);
+    setIsConnecting(false);
+    onDisconnectRef.current?.();
+  }, []);
+
+  const handleError = useCallback((err: Error) => {
+    setError(err);
+    setIsConnected(false);
+    setIsConnecting(false);
+    onErrorRef.current?.(err);
+  }, []);
+
+  // Initialize SSE stream
+  const sseStream = useSSEStream({
+    terminalRef,
+    autoWriteToTerminal,
+    messageProcessor,
+    onConnect: handleConnect,
+    onDisconnect: handleDisconnect,
+    onError: handleError,
+  });
+
+  /**
+   * Connect to live logs stream
+   */
+
+  const connect = useCallback(async (target: string) => {
+    if (activeTargetRef.current === target) return;
+    const generation = ++connectionGenerationRef.current;
+    activeTargetRef.current = target;
+    try {
+      setIsConnecting(true);
+      setError(null);
+
+      // Connect to runtime logs stream via local API
+      const baseUrl = getApiBaseUrl();
+      const url = /^https?:\/\//.test(target)
+        ? target
+        : target.includes("/")
+          ? `${baseUrl}${target}`
+          : `${baseUrl}projects/${target}/logs/stream`;
+      
+      await sseStream.connect(url, {
+        method: 'GET',
+        connectTimeoutMs: 60_000,
+        headers: {
+          'Accept': 'text/event-stream',
+        },
+      });
+    } catch (err: any) {
+      if (connectionGenerationRef.current !== generation) return;
+      console.error('[useLogStream] Connection error:', err);
+      setError(err);
+      onErrorRef.current?.(err);
+      throw err;
+    } finally {
+      if (connectionGenerationRef.current === generation) {
+        activeTargetRef.current = null;
+        setIsConnecting(false);
+      }
+    }
+  }, [sseStream]);
+
+  /**
+   * Disconnect from stream
+   */
+  const disconnect = useCallback(() => {
+    connectionGenerationRef.current += 1;
+    activeTargetRef.current = null;
+    sseStream.disconnect();
+    setIsConnected(false);
+    setIsConnecting(false);
+  }, [sseStream]);
+
+  useEffect(() => () => disconnect(), [disconnect]);
+
+  return useMemo(() => ({
+    connect,
+    disconnect,
+    get isConnected() { return stateRef.current.isConnected; },
+    get isConnecting() { return stateRef.current.isConnecting; },
+    get error() { return stateRef.current.error; },
+  }), [connect, disconnect]);
+};
+
+// ============================================================================
+// BUILD STREAM CONNECTION HOOK
+// ============================================================================
+
+export interface UseBuildStreamOptions {
+  // Terminal integration (optional)
+  terminalRef?: React.MutableRefObject<Terminal | null>;
+  autoWriteToTerminal?: boolean;
+  
+  // Callbacks
+  callbacks?: BuildMessageCallbacks;
+  
+  // Lifecycle
+  onConnect?: () => void;
+  onDisconnect?: () => void;
+  onError?: (error: Error) => void;
+}
+
+export interface UseBuildStreamReturn {
+  connect: (deploymentId: string, startBuild?: boolean, sinceSeq?: number) => Promise<void>;
+  disconnect: () => void;
+  isConnected: boolean;
+  isConnecting: boolean;
+  isReconnecting: boolean;
+  reconnectAttempts: number;
+  error: Error | null;
+}
+
+/**
+ * Hook for build logs
+ * 
+ * Usage:
+ * ```tsx
+ * const build = useBuildStream({
+ *   terminalRef,
+ *   callbacks: {
+ *     onLog: (message, text) => console.log(text),
+ *     onPhaseChange: (phase) => setPhase(phase),
+ *     onProgress: (step, progress) => setProgress(progress),
+ *     onSuccess: () => showToast('Build succeeded!', 'success'),
+ *     onFailure: (msg) => showToast(msg, 'error'),
+ *   },
+ * });
+ * 
+ * // Start new build
+ * build.connect(buildToken, true);
+ * 
+ * // Attach to existing build
+ * build.connect(buildToken, false);
+ * ```
+ */
+export const useBuildStream = (options: UseBuildStreamOptions = {}): UseBuildStreamReturn => {
+  const {
+    terminalRef,
+    autoWriteToTerminal = true,
+    callbacks = {},
+    onConnect,
+    onDisconnect,
+    onError,
+  } = options;
+
+  const [isConnected, setIsConnected] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [isReconnecting, setIsReconnecting] = useState(false);
+  const [reconnectAttempts, setReconnectAttempts] = useState(0);
+  const [error, setError] = useState<Error | null>(null);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reconnectAttemptsRef = useRef(0);
+  const activeDeploymentIdRef = useRef<string | null>(null);
+  const hasConnectedRef = useRef(false);
+  const isConnectedRef = useRef(false);
+  const isReconnectingRef = useRef(false);
+  const terminalStateRef = useRef(false);
+  const manualDisconnectRef = useRef(false);
+  const connectionGenerationRef = useRef(0);
+  const lastStartBuildRef = useRef(true);
+  // Highest seq received from the history snapshot or live stream. Sent as
+  // ?since= so the server replays only newer events instead of the whole buffer.
+  const sinceSeqRef = useRef<number | undefined>(undefined);
+  const callbacksRef = useRef(callbacks);
+  const onConnectRef = useRef(onConnect);
+  const onDisconnectRef = useRef(onDisconnect);
+  const onErrorRef = useRef(onError);
+
+  useEffect(() => {
+    callbacksRef.current = callbacks;
+    onConnectRef.current = onConnect;
+    onDisconnectRef.current = onDisconnect;
+    onErrorRef.current = onError;
+  }, [callbacks, onConnect, onDisconnect, onError]);
+
+  const clearReconnectTimer = useCallback(() => {
+    if (reconnectTimerRef.current) {
+      clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
+  }, []);
+
+  const stopReconnects = useCallback(() => {
+    terminalStateRef.current = true;
+    clearReconnectTimer();
+    isReconnectingRef.current = false;
+    setIsReconnecting(false);
+  }, [clearReconnectTimer]);
+
+  // Create message processor
+  const messageProcessor = useMemo<ReturnType<typeof createBuildMessageProcessor>>(() => {
+    const processor = createBuildMessageProcessor({
+      onLog: (...args) => callbacksRef.current.onLog?.(...args),
+      onPhaseChange: (...args) => callbacksRef.current.onPhaseChange?.(...args),
+      onProgress: (...args) => callbacksRef.current.onProgress?.(...args),
+      onReconnected: (...args) => callbacksRef.current.onReconnected?.(...args),
+      onContainerExit: (...args) => callbacksRef.current.onContainerExit?.(...args),
+      onPrompt: (...args) => callbacksRef.current.onPrompt?.(...args),
+      onServiceStatus: (...args) => callbacksRef.current.onServiceStatus?.(...args),
+      onInstallPhase: (...args) => callbacksRef.current.onInstallPhase?.(...args),
+      onSuccess: (...args) => {
+        stopReconnects();
+        callbacksRef.current.onSuccess?.(...args);
+      },
+      onFailure: (...args) => {
+        stopReconnects();
+        callbacksRef.current.onFailure?.(...args);
+      },
+      onCanceled: (...args) => {
+        stopReconnects();
+        callbacksRef.current.onCanceled?.(...args);
+      },
+    });
+    return {
+      ...processor,
+      handleMessage(message, context) {
+        const eventId = message.eventId;
+        if (typeof eventId === "number" && Number.isSafeInteger(eventId) && eventId >= 0) {
+          if (sinceSeqRef.current !== undefined && eventId <= sinceSeqRef.current) return;
+          sinceSeqRef.current = eventId;
+        }
+        // Filter replay before the processor writes bytes or calls the viewer.
+        return processor.handleMessage(message, context);
+      },
+    };
+  }, [stopReconnects]);
+
+  // Initialize SSE stream
+  const sseStream = useSSEStream({
+    terminalRef,
+    autoWriteToTerminal,
+    messageProcessor,
+    onConnect: () => {
+      const wasReconnecting = isReconnectingRef.current;
+      hasConnectedRef.current = true;
+      isConnectedRef.current = true;
+      reconnectAttemptsRef.current = 0;
+      isReconnectingRef.current = false;
+      setReconnectAttempts(0);
+      setIsReconnecting(false);
+      setIsConnected(true);
+      setIsConnecting(false);
+      setError(null);
+      onConnectRef.current?.();
+      if (wasReconnecting) {
+        callbacksRef.current.onReconnected?.();
+      }
+    },
+    onDisconnect: () => {
+      isConnectedRef.current = false;
+      setIsConnected(false);
+      setIsConnecting(false);
+      onDisconnectRef.current?.();
+    },
+    onError: (err) => {
+      isConnectedRef.current = false;
+      setError(err);
+      setIsConnected(false);
+      setIsConnecting(false);
+      onErrorRef.current?.(err);
+      if (shouldStopReconnect(err)) stopReconnects();
+    },
+  });
+  const disconnectSSE = sseStream.disconnect;
+
+  useEffect(() => {
+    return () => {
+      connectionGenerationRef.current += 1;
+      manualDisconnectRef.current = true;
+      activeDeploymentIdRef.current = null;
+      isConnectedRef.current = false;
+      clearReconnectTimer();
+      disconnectSSE();
+    };
+  }, [clearReconnectTimer, disconnectSSE]);
+
+  const connectingRef = useRef(false);
+
+  const openStream = useCallback(async (deploymentId: string, startBuild: boolean, reconnecting = false) => {
+    if (connectingRef.current) return;
+    const generation = ++connectionGenerationRef.current;
+    connectingRef.current = true;
+    lastStartBuildRef.current = startBuild;
+
+    try {
+      setIsConnecting(!reconnecting);
+      setError(null);
+
+      const baseUrl = getApiBaseUrl();
+
+      if (startBuild) {
+        await sseStream.connect(`${baseUrl}deployments/${deploymentId}/build`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          idleTimeoutMs: BUILD_STREAM_IDLE_TIMEOUT_MS,
+          connectTimeoutMs: BUILD_STREAM_IDLE_TIMEOUT_MS,
+        });
+      } else {
+        const since = sinceSeqRef.current;
+        const streamUrl =
+          typeof since === "number" && Number.isFinite(since)
+            ? `${baseUrl}deployments/${deploymentId}/stream?since=${since}`
+            : `${baseUrl}deployments/${deploymentId}/stream`;
+        await sseStream.connect(streamUrl, {
+          method: 'GET',
+          headers: {
+            'Accept': 'text/event-stream',
+          },
+          idleTimeoutMs: BUILD_STREAM_IDLE_TIMEOUT_MS,
+          connectTimeoutMs: BUILD_STREAM_IDLE_TIMEOUT_MS,
+        });
+      }
+    } finally {
+      // connect() owns the whole stream, including its end callbacks. Retry only
+      // after releasing that attempt; a replaced stream cannot alter its successor.
+      if (connectionGenerationRef.current === generation) {
+        connectingRef.current = false;
+        setIsConnecting(false);
+        scheduleReconnect();
+      }
+    }
+  }, [sseStream]);
+
+  function shouldStopReconnect(error: Error) {
+    const status = (error as Error & { status?: number }).status;
+    const message = error.message.toLowerCase();
+    // Only permission failures are truly terminal. A transient "not found" can
+    // happen while the session is briefly unavailable mid-deploy (reconnect gap,
+    // proxied/promoted deploy); keep retrying and let the getBuildStatus poll own
+    // terminal detection — otherwise the stream gives up while the deploy is live.
+    return (
+      status === 401 || status === 403 ||
+      message.includes('unauthorized') ||
+      message.includes('forbidden')
+    );
+  }
+
+  function scheduleReconnect() {
+    if (connectingRef.current) return;
+
+    const deploymentId = activeDeploymentIdRef.current;
+    const canReconnect =
+      deploymentId &&
+      !manualDisconnectRef.current &&
+      !terminalStateRef.current &&
+      (hasConnectedRef.current || !lastStartBuildRef.current);
+
+    if (!canReconnect || reconnectTimerRef.current) return;
+
+    const nextAttempt = reconnectAttemptsRef.current + 1;
+    reconnectAttemptsRef.current = nextAttempt;
+    isReconnectingRef.current = true;
+    setReconnectAttempts(nextAttempt);
+    setIsReconnecting(true);
+
+    const delay = Math.min(
+      BUILD_RECONNECT_BASE_DELAY_MS * 2 ** Math.min(nextAttempt - 1, 4),
+      BUILD_RECONNECT_MAX_DELAY_MS,
+    );
+
+    reconnectTimerRef.current = setTimeout(() => {
+      reconnectTimerRef.current = null;
+      if (
+        !activeDeploymentIdRef.current ||
+        manualDisconnectRef.current ||
+        terminalStateRef.current
+      ) {
+        isReconnectingRef.current = false;
+        setIsReconnecting(false);
+        return;
+      }
+
+      void openStream(activeDeploymentIdRef.current, false, true);
+    }, delay);
+  }
+
+  /**
+   * Connect to build stream
+   */
+  const connect = useCallback(async (deploymentId: string, startBuild: boolean = true, sinceSeq?: number) => {
+    if (
+      activeDeploymentIdRef.current === deploymentId &&
+      (connectingRef.current || isConnectedRef.current || isReconnectingRef.current)
+    ) {
+      return;
+    }
+
+    // Cursor for the resume (GET) path; retained across reconnects so a blip
+    // doesn't re-request the whole buffer. Ignored on a startBuild (POST).
+    sinceSeqRef.current = sinceSeq;
+
+    // Switching to a DIFFERENT deployment (redeploy/retry navigation via
+    // router.push): tear the old stream down first so the new one takes over
+    // cleanly. Without this the stale/terminal connection blocks the new logs
+    // until a full page reload. Force-clears the in-flight guard so a mid-flight
+    // connect to the OLD id can't suppress the switch.
+    const previousId = activeDeploymentIdRef.current;
+    if (previousId !== null && previousId !== deploymentId) {
+      clearReconnectTimer();
+      sseStream.disconnect();
+      connectingRef.current = false;
+      isConnectedRef.current = false;
+      isReconnectingRef.current = false;
+    } else if (connectingRef.current) {
+      // Duplicate concurrent connect to the SAME deployment (double-click / remount race).
+      return;
+    }
+
+    clearReconnectTimer();
+    manualDisconnectRef.current = false;
+    terminalStateRef.current = false;
+    activeDeploymentIdRef.current = deploymentId;
+    hasConnectedRef.current = false;
+    isReconnectingRef.current = false;
+    reconnectAttemptsRef.current = 0;
+    setReconnectAttempts(0);
+    setIsReconnecting(false);
+
+    await openStream(deploymentId, startBuild);
+  }, [clearReconnectTimer, openStream, sseStream]);
+
+  /**
+   * Disconnect from stream
+   */
+  const disconnect = useCallback(() => {
+    connectionGenerationRef.current += 1;
+    manualDisconnectRef.current = true;
+    connectingRef.current = false;
+    activeDeploymentIdRef.current = null;
+    hasConnectedRef.current = false;
+    isConnectedRef.current = false;
+    isReconnectingRef.current = false;
+    reconnectAttemptsRef.current = 0;
+    clearReconnectTimer();
+    sseStream.disconnect();
+    setIsConnected(false);
+    setIsConnecting(false);
+    setIsReconnecting(false);
+    setReconnectAttempts(0);
+  }, [clearReconnectTimer, sseStream]);
+
+  return {
+    connect,
+    disconnect,
+    isConnected,
+    isConnecting,
+    isReconnecting,
+    reconnectAttempts,
+    error,
+  };
+};
+
+// ============================================================================
+// GENERIC SSE CONNECTION HOOK
+// ============================================================================
+
+export interface UseSSEConnectionOptions<T = any> {
+  // Connection details
+  url: string;
+  method?: 'GET' | 'POST';
+  headers?: Record<string, string>;
+  body?: any;
+  
+  // Terminal integration (optional)
+  terminalRef?: React.MutableRefObject<Terminal | null>;
+  autoWriteToTerminal?: boolean;
+  
+  // Message handling
+  onMessage?: (message: T, rawText?: string, rawBytes?: Uint8Array) => void;
+  
+  // Lifecycle
+  onConnect?: () => void;
+  onDisconnect?: () => void;
+  onError?: (error: Error) => void;
+}
+
+export interface UseSSEConnectionReturn {
+  connect: () => Promise<void>;
+  disconnect: () => void;
+  isConnected: boolean;
+  isConnecting: boolean;
+  error: Error | null;
+}
+
+/**
+ * Generic SSE connection hook for custom use cases
+ * 
+ * Usage:
+ * ```tsx
+ * const sse = useSSEConnection({
+ *   url: 'https://api.example.com/stream',
+ *   headers: { Authorization: 'Bearer token' },
+ *   onMessage: (message) => console.log(message),
+ * });
+ * 
+ * sse.connect();
+ * ```
+ */
+export const useSSEConnection = <T = any>(
+  options: UseSSEConnectionOptions<T>
+): UseSSEConnectionReturn => {
+  const {
+    url,
+    method = 'GET',
+    headers = {},
+    body,
+    terminalRef,
+    autoWriteToTerminal = false,
+    onMessage,
+    onConnect,
+    onDisconnect,
+    onError,
+  } = options;
+
+  const [isConnected, setIsConnected] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Initialize SSE stream
+  const sseStream = useSSEStream({
+    terminalRef,
+    autoWriteToTerminal,
+    onRawMessage: onMessage as (message: SSEMessage, rawText?: string, rawBytes?: Uint8Array) => void,
+    onConnect: () => {
+      setIsConnected(true);
+      setIsConnecting(false);
+      setError(null);
+      onConnect?.();
+    },
+    onDisconnect: () => {
+      setIsConnected(false);
+      setIsConnecting(false);
+      onDisconnect?.();
+    },
+    onError: (err) => {
+      setError(err);
+      setIsConnected(false);
+      setIsConnecting(false);
+      onError?.(err);
+    },
+  });
+
+  /**
+   * Connect to SSE stream
+   */
+  const connect = useCallback(async () => {
+    try {
+      setIsConnecting(true);
+      setError(null);
+
+      // Create abort controller
+      abortControllerRef.current = new AbortController();
+
+      await sseStream.connect(url, {
+        method,
+        headers: {
+          'Accept': 'text/event-stream',
+          ...headers,
+        },
+        body,
+      });
+    } catch (err: any) {
+      console.error('[useSSEConnection] Connection error:', err);
+      setError(err);
+      setIsConnecting(false);
+      onError?.(err);
+      throw err;
+    }
+  }, [url, method, headers, body, sseStream, onError]);
+
+  /**
+   * Disconnect from stream
+   */
+  const disconnect = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    sseStream.disconnect();
+    setIsConnected(false);
+    setIsConnecting(false);
+  }, [sseStream]);
+
+  return {
+    connect,
+    disconnect,
+    isConnected,
+    isConnecting,
+    error,
+  };
+};

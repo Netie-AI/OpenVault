@@ -1,0 +1,79 @@
+--
+-- MariaDB 5.5 on CentOS 7 does not support `ADD COLUMN IF EXISTS`, so here is
+-- an alternative way to add it without error.
+--
+-- Add columns in `vmail.mailbox`:
+--
+--  - first_name
+--  - last_name
+--  - mobile
+--  - telephone
+--  - birthday
+--  - recovery_email
+--
+-- Add columns in `vmail.deleted_mailboxes`:
+--
+--  - bytes
+--  - messages
+--
+-- Old MariaDB may use `COMPAT` row format, it causes error like
+--
+-- "Row size too large. The maximum row size for the used table type, not counting BLOBs,
+-- is 8126. This includes storage overhead, check the manual. You have to change some
+-- columns to TEXT or BLOBs"
+--
+-- DYNAMIC is default innodb row format in MariaDB for years, it is safe to
+-- switch.
+
+SET @row_format = (SELECT ROW_FORMAT FROM INFORMATION_SCHEMA.TABLES
+                  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'mailbox');
+
+SET @sql = IF(@row_format != 'Dynamic',
+             CONCAT('ALTER TABLE mailbox ROW_FORMAT=DYNAMIC;'),
+             'SELECT "Row format is already Dynamic" AS Message;');
+
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+drop procedure if exists irm173_schema_change;
+
+delimiter ';;'
+create procedure irm173_schema_change() begin
+    if not exists (select * from information_schema.columns where table_schema = 'vmail' and table_name = 'mailbox' and column_name = 'first_name') then
+         ALTER TABLE mailbox ADD COLUMN `first_name` VARCHAR(255) NOT NULL DEFAULT '';
+     end if;
+
+     if not exists (select * from information_schema.columns where table_schema = 'vmail' and table_name = 'mailbox' and column_name = 'last_name') then
+         ALTER TABLE mailbox ADD COLUMN `last_name` VARCHAR(255) NOT NULL DEFAULT '';
+     end if;
+
+     if not exists (select * from information_schema.columns where table_schema = 'vmail' and table_name = 'mailbox' and column_name = 'mobile') then
+         ALTER TABLE mailbox ADD COLUMN `mobile` VARCHAR(255) NOT NULL DEFAULT '';
+     end if;
+
+     if not exists (select * from information_schema.columns where table_schema = 'vmail' and table_name = 'mailbox' and column_name = 'telephone') then
+         ALTER TABLE mailbox ADD COLUMN `telephone` VARCHAR(255) NOT NULL DEFAULT '';
+     end if;
+
+     if not exists (select * from information_schema.columns where table_schema = 'vmail' and table_name = 'mailbox' and column_name = 'birthday') then
+         ALTER TABLE mailbox ADD COLUMN `birthday` DATE NOT NULL DEFAULT '0001-01-01';
+     end if;
+
+    if not exists (select * from information_schema.columns where table_schema = 'vmail' and table_name = 'mailbox' and column_name = 'recovery_email') then
+        ALTER TABLE mailbox ADD COLUMN `recovery_email` VARCHAR(255) NOT NULL DEFAULT '';
+    end if;
+
+    if not exists (select * from information_schema.columns where table_schema = 'vmail' and table_name = 'deleted_mailboxes' and column_name = 'bytes') then
+        ALTER TABLE deleted_mailboxes ADD COLUMN `bytes` BIGINT NOT NULL DEFAULT 0;
+    end if;
+
+    if not exists (select * from information_schema.columns where table_schema = 'vmail' and table_name = 'deleted_mailboxes' and column_name = 'messages') then
+        ALTER TABLE deleted_mailboxes ADD COLUMN `messages` BIGINT NOT NULL DEFAULT 0;
+    end if;
+end;;
+
+delimiter ';'
+call irm173_schema_change();
+
+drop procedure if exists irm173_schema_change;

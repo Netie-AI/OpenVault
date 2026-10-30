@@ -37,6 +37,9 @@ packages = ["nvme_sentinel"]
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+# Forked Node apps (DR-0018) vendor upstream Python helpers (iRedMail tools in
+# apps/ship/apps/email). They stay byte-identical to upstream, so ruff skips them.
+extend-exclude = ["apps/router", "apps/ship"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "UP", "B", "SIM", "TID", "RUF"]

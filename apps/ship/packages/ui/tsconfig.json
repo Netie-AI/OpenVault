@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "jsx": "preserve",
+    "outDir": "dist",
+    "paths": {
+      "@repo/core": ["../core/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["node_modules", "dist"]
+}

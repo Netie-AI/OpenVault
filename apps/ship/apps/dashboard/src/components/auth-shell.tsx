@@ -1,0 +1,82 @@
+"use client";
+
+import { Icon as UiIcon } from "@repo/ui/icons";
+
+import { useTheme } from "@/components/theme-provider";
+import { ThemeIcon } from "@/components/theme-icon";
+import { useBrandName, useI18n } from "@/components/i18n-provider";
+import { Logo } from "@/components/logo";
+import { Button } from "@/components/ui/button";
+
+/**
+ * Shared wrapper for auth pages (login, register, forgot-password, etc.).
+ * Provides centered layout, brand, and theme toggle.
+ */
+export function AuthShell({
+  children,
+  maxWidth = "max-w-[400px]",
+  align = "center",
+  onBack,
+}: {
+  children: React.ReactNode;
+  maxWidth?: string;
+  /**
+   * Vertical placement. `center` is right for a short form. Pass `start` for
+   * anything tall: centering a page taller than the viewport pushes its top ABOVE
+   * the scroll origin (unreachable), and it breaks `lg:sticky` children, which
+   * need a normal-flow top edge to stick against.
+   */
+  align?: "center" | "start";
+  /** When provided, renders a back button in the top bar */
+  onBack?: () => void;
+}) {
+  const { toggle } = useTheme();
+  const { t } = useI18n();
+  const brand = useBrandName();
+
+  return (
+    <div
+      className={`flex min-h-dvh flex-col items-center px-4 ${
+        align === "start" ? "justify-start pb-12 pt-20" : "justify-center py-12"
+      }`}
+    >
+      {/* Top bar - logo left, controls right */}
+      <div
+        data-app-topinset
+        className="fixed inset-x-0 top-0 flex items-center justify-between px-5 py-4"
+      >
+        <div className="flex items-center gap-2.5">
+          {onBack && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onBack}
+              aria-label={t.auth.back ?? "Back"}
+              className="me-1"
+            >
+              <UiIcon name="arrow-left" className="size-4 rtl:rotate-180" />
+            </Button>
+          )}
+          <Logo size={24} />
+          <span className="text-[16px] font-semibold tracking-tight text-foreground">
+            {brand}
+          </span>
+        </div>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggle}
+            aria-label={t.auth.toggleTheme}
+          >
+            <ThemeIcon />
+          </Button>
+        </div>
+      </div>
+
+      <div className={`w-full ${maxWidth}`}>
+        {children}
+      </div>
+    </div>
+  );
+}

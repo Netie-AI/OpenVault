@@ -1,0 +1,117 @@
+/**
+ * System layer barrel exports.
+ */
+
+export type {
+  DistroFamily,
+  EnvironmentProfile,
+  LinuxDistro,
+  SystemArch,
+  SystemFirewall,
+  SystemLibc,
+  SystemOs,
+  SystemPackageManager,
+  SystemSelinux,
+  SystemServiceManager,
+} from "./environment";
+export {
+  ENVIRONMENT_PROFILE_TTL_MS,
+  invalidateEnvironment,
+  resolveEnvironment,
+} from "./environment";
+export type { EnvOps, HostCommands, HostFacts, Op, PackageVariants, ReleaseArch } from "./environment-ops";
+export { envOps, HOST_STATE_DIR, opScript } from "./environment-ops";
+export {
+  invalidateLocalEnvironment,
+  resolveLocalEnvironmentSync,
+} from "./environment-local";
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+export type {
+  ComponentStatus,
+  EdgeClassification,
+  EdgeOccupant,
+  EdgePolicy,
+  EdgeStatus,
+  EdgeStopTarget,
+  Feature,
+  FeatureReadiness,
+  InstallerConfig,
+  InstallResult,
+  PrerequisiteRule,
+  ProxyKind,
+  RuntimeMode,
+  SetupResult,
+  SystemCheckResult,
+  SystemLog,
+  SystemLogCallback,
+} from "./types";
+
+// ─── Edge preflight + takeover ──────────────────────────────────────────────────
+export {
+  classifyProxy,
+  EdgeConflictError,
+  EdgeMigrateRequested,
+  freeEdgeTargets,
+  ourEdgeContainerRunning,
+  probeEdge,
+  stopTargetsForStatus,
+} from "./proxy/detect";
+export type { EdgeConflictDetails, ImportedSite, ProxyScanResult } from "./types";
+export { scanImportableSites, canImportProxy } from "./proxy/import";
+export {
+  runEdgeTakeover,
+  type EdgeTakeoverOptions,
+  type EdgeTakeoverResult,
+} from "./proxy/takeover";
+export {
+  recoverInterruptedTakeover,
+  beginEdgeTakeover,
+  rollbackEdgeTakeover,
+  completeEdgeTakeover,
+} from "./proxy/takeover-journal";
+// The consolidated reverse-proxy / edge facade (single point for the chain).
+export { detectEdge, importSites, takeoverOnMigrate, foreignProxyOnEdge, ensureEdge } from "./proxy";
+
+// ─── State ───────────────────────────────────────────────────────────────────
+export type { SetupState, SetupStateStore, ComponentState } from "./state";
+export { FileStateStore } from "./state";
+
+// ─── Executor ────────────────────────────────────────────────────────────────
+export { LocalExecutor, SshExecutor, SystemSshExecutor, createExecutor } from "./executor";
+// Privilege elevation for non-root SSH users (component installs use it; the
+// broader remote-exec surface can adopt it as a follow-up — see #84).
+export { elevatedExecutor, elevateCommand } from "./elevated-executor";
+export type { Privileged, RootChecked } from "./privilege";
+export { privilegedExecutor, rootChecked, rootOrDegrade } from "./privilege";
+
+// ─── Checks ──────────────────────────────────────────────────────────────────
+export {
+  checkAll,
+  checkComponents,
+  checkDocker,
+  needsDockerGroupRefresh,
+  checkGit,
+  checkEdge,
+  checkRsync,
+  COMPONENT_CHECKS,
+} from "./checks";
+export {
+  REMOTE_SERVER_REQUIRED_COMPONENTS,
+  resolveSystemComponentInstallPlan,
+} from "./requirements";
+
+// ─── Installers ───────────────────────────────────────────────────────────────
+export {
+  COMPONENT_INSTALLERS,
+  COMPONENT_UNINSTALLERS,
+  getRemovalSupport,
+  installDocker,
+  installGit,
+  installRsync,
+  uninstallEdge,
+  uninstallRsync,
+} from "./installer";
+
+// ─── Manager ─────────────────────────────────────────────────────────────────
+export { SystemManager, type SystemManagerOptions } from "./setup";

@@ -13,7 +13,7 @@ Review diffs, plan the next gate, and prioritize [PARKING_LOT.md](PARKING_LOT.md
 ## Code rules
 
 - Three `uv sync` roots: the repo root, `OpenMW/`, and `Profiler/`. Use `uv run` and `uv add`. Do not use pip, poetry, or conda.
-- `npm` only, in `apps/web` and `apps/shell`.
+- `npm` only, in `apps/web`, `apps/shell`, `apps/router` and `apps/ship` (the last two are forks, DR-0018).
 - Do not delete a test to make a build pass. If a test is wrong, explain why and ask.
 - On a HIGH_RISK task, name the file paths first and wait for confirmation.
 - Do not rename a public API silently.
