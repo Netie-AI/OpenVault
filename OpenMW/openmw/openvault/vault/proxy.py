@@ -16,6 +16,7 @@ import structlog
 
 from openmw.openvault.route.attempt import AttemptOutcome, classify_attempt
 from openmw.openvault.route.breaker import CircuitBreaker, get_circuit_breaker
+from openmw.openvault.vault import anthropic_messages
 from openmw.openvault.vault.budget import (
     BudgetDecision,
     estimate_tokens_for_body,
@@ -74,10 +75,22 @@ def _sealed_refusal() -> tuple[int, dict[str, Any]]:
     }
 
 
-def _compat_skip(label: str, provider: str) -> str | None:
-    """Why this hop cannot go through the OpenAI-compat /v1 spend path."""
-    if provider == "anthropic":
-        return f"{label}: anthropic chat not via /v1 proxy yet"
+ANTHROPIC = "anthropic"
+ANTHROPIC_UNSUPPORTED = "openvault_anthropic_unsupported"
+
+
+def _compat_skip(label: str, provider: str, *, role_step: bool = False) -> str | None:
+    """Why this hop cannot go through the OpenAI-compat /v1 spend path.
+
+    Anthropic is the one provider with its own dispatch (``anthropic_messages``),
+    and only for a ``role_step``: a hop the operator route policy names. The shipped
+    policy names none, and a pool walk (no ``role``), a strict pin or a local-only
+    request never carries a role step, so none of them can reach it (BANK-03).
+    """
+    if provider == ANTHROPIC:
+        if role_step:
+            return None
+        return f"{label}: anthropic is opt-in; it serves only a role hop the route policy names"
     spec = get_provider(provider)
     if spec is not None and not spec.openai_compatible:
         return f"{label}: {spec.name} is not on the OpenAI-compat /v1 spend path"
@@ -863,6 +876,45 @@ def _models_to_send(
 _PlanStep = tuple[ProxyCandidate, tuple[str, ...] | None]
 
 
+def _role_walk_notes(candidates: list[ProxyCandidate], spend: SpendGuard | None) -> list[str]:
+    """Name why a role's listed hops cannot run at all, so the 502 says so.
+
+    An empty list is the shipped state of the opt-in ``escalate`` role. An
+    Anthropic hop with no healthy pooled key would otherwise vanish from the walk
+    without a trace, because the plan only visits hops that have a key.
+    """
+    if spend is None or spend.route_role is None:
+        return []
+    role = spend.route_role
+    hops = spend.policy.hops_for(role)
+    if not hops:
+        return [f"role {role}: the route policy lists no hops for it (opt-in tier is off)"]
+    keyed = {cand.provider for cand in candidates}
+    return [
+        f"{hop.provider}/{hop.model}: no healthy vault key for provider {hop.provider}"
+        for hop in hops
+        if hop.provider == ANTHROPIC and hop.provider not in keyed
+    ]
+
+
+async def _anthropic_send(
+    client: httpx.AsyncClient, secret: str, hop_body: dict[str, Any]
+) -> httpx.Response:
+    """One non-streaming Anthropic hop, returned as the response the walk expects.
+
+    The adapter hands back an OpenAI-shaped body or an error already mapped to a
+    status the classifier understands, so wrapping it lets the existing outcome,
+    ledger and stamping code run unchanged. The URL is the adapter's fixed
+    ``api.anthropic.com``: the key is never sent to a base_url stored on a record.
+    """
+    status, payload = await anthropic_messages.call(client, lambda: secret, hop_body)
+    headers: dict[str, str] = {}
+    err = payload.get("error")
+    if isinstance(err, dict) and err.get("retry_after_s") is not None:
+        headers["retry-after"] = str(err["retry_after_s"])
+    return httpx.Response(status, json=payload, headers=headers)
+
+
 def _walk_plan(candidates: list[ProxyCandidate], spend: SpendGuard | None) -> list[_PlanStep]:
     """Role order when the caller sent ``role``; otherwise today's pool order.
 
@@ -1121,6 +1173,7 @@ async def chat_completions(
     context_blocked = 0
     considered = 0
     local_fail_reason = REASON_UNREACHABLE
+    errors.extend(_role_walk_notes(candidates, spend))
     async with httpx.AsyncClient(timeout=timeout_s) as client:
         for cand, role_models in _walk_plan(candidates, spend):
             considered += 1
@@ -1150,7 +1203,7 @@ async def chat_completions(
 
             url = f"{base}/chat/completions"
             headers = {"Authorization": f"Bearer {secret}", "Content-Type": "application/json"}
-            skip = _compat_skip(cand.label, cand.provider)
+            skip = _compat_skip(cand.label, cand.provider, role_step=role_models is not None)
             if skip is not None:
                 errors.append(skip)
                 continue
@@ -1174,6 +1227,13 @@ async def chat_completions(
                 why = "no vision model" if wants_images else "no catalogued model"
                 errors.append(f"{cand.label}: {why} for provider {cand.provider}")
                 continue
+            if cand.provider == ANTHROPIC:
+                # Stream, tools, images and n > 1 do not map. Say so with a typed 400
+                # before any hold, key use or upstream call.
+                refused = anthropic_messages.refusal_for(work)
+                if refused is not None:
+                    trace.error_type = ANTHROPIC_UNSUPPORTED
+                    return refused
 
             limited = 0
             already_parked = 0
@@ -1219,7 +1279,10 @@ async def chat_completions(
                 _remember_key_use(cand)
                 started = time.perf_counter()
                 try:
-                    resp = await client.post(url, headers=headers, json=hop_body)
+                    if cand.provider == ANTHROPIC:
+                        resp = await _anthropic_send(client, secret, hop_body)
+                    else:
+                        resp = await client.post(url, headers=headers, json=hop_body)
                 except httpx.TimeoutException:
                     outcome = classify_attempt(None, "timeout")
                     _ledger_attempt(
@@ -1416,6 +1479,7 @@ async def prepare_chat_stream(
     async def _close_client() -> None:
         await client.aclose()
 
+    errors.extend(_role_walk_notes(candidates, spend))
     try:
         for cand, role_models in _walk_plan(candidates, spend):
             considered += 1
@@ -1444,7 +1508,7 @@ async def prepare_chat_stream(
                 errors.append(f"{cand.label}: missing base_url")
                 continue
 
-            skip = _compat_skip(cand.label, cand.provider)
+            skip = _compat_skip(cand.label, cand.provider, role_step=role_models is not None)
             if skip is not None:
                 errors.append(skip)
                 continue
@@ -1475,6 +1539,13 @@ async def prepare_chat_stream(
                 why = "no vision model" if wants_images else "no catalogued model"
                 errors.append(f"{cand.label}: {why} for provider {cand.provider}")
                 continue
+            if cand.provider == ANTHROPIC:
+                # The adapter is non-streaming: a stream request is a typed 400.
+                refused = anthropic_messages.refusal_for(payload)
+                if refused is not None:
+                    await _close_client()
+                    trace.error_type = ANTHROPIC_UNSUPPORTED
+                    return refused
 
             limited = 0
             already_parked = 0

@@ -8,9 +8,9 @@ Contract for Cortex #303/#304 on `POST /v1/chat/completions`. Code:
 
 | Field | Values | Behaviour |
 |---|---|---|
-| `role` | `sql` \| `tool` \| `reason` \| `summarize` | Walks that role's ordered model list from the policy. Free models come first. On a provider failure the walk moves to the next entry in order. `model` is not used to pick the hop. |
+| `role` | `sql` \| `tool` \| `reason` \| `summarize` \| `escalate` | Walks that role's ordered model list from the policy. Free models come first. On a provider failure the walk moves to the next entry in order. `model` is not used to pick the hop. |
 | `role` omitted or `null` | - | Unchanged: the pre-role pool walk. Configured caps still apply. |
-| `role` anything else (`""`, `"SQL"`, `"chat"`, `7`) | - | **422** `openvault_unknown_role`, with `allowed: ["sql","tool","reason","summarize"]`. No upstream call. |
+| `role` anything else (`""`, `"SQL"`, `"chat"`, `7`) | - | **422** `openvault_unknown_role`, with `allowed: ["sql","tool","reason","summarize","escalate"]`. No upstream call. |
 | `role` with `strict` (or `X-OpenVault-Strict`) or `local_only` | - | **422** `openvault_role_conflict`, with `conflicts_with`. |
 | `service_id` | string, max 128 | Budget scope for a loopback caller, e.g. `cortex`. An issued `ov_` key is always its own scope (its key id), and this field is ignored for keyed callers. Default: the loopback host. |
 
@@ -146,3 +146,86 @@ model priced at 0 never moves a cap.
   is logged. A hop that served nothing releases its hold as usual.
 - An unreadable policy file returns 503 with the file name only. The full path
   and the OS error go to the log (`route_policy_unreadable`).
+
+## Claude as an opt-in escalation tier (F110)
+
+Founder decision 2026-10-29: Claude is the "stronger model via OpenVault"
+escalation rung. It is **off by default** (BANK-03: outside and paid models are
+off by default). The free pins stay the default for every role.
+
+Nothing here is a new config key. The gate is the mechanism above: a role list,
+the `models` price table, and a cap.
+
+**Shipped default.** No role list names Anthropic, no `anthropic/*` or `claude-*`
+entry is in `route_policy.json`, and `escalate` is an accepted role whose shipped
+list is empty. `role: "escalate"` with the shipped policy returns **502**
+`openvault_fallback_exhausted` with `details` containing `role escalate: the route
+policy lists no hops for it (opt-in tier is off)`. No upstream call is made.
+
+**Turning it on takes all four of these.** Remove any one and nothing is sent to
+Anthropic:
+
+1. An operator `OPENVAULT_ROUTE_POLICY` file whose `roles.escalate` names an
+   `anthropic` hop (models: `claude-opus-5-5`, `claude-sonnet-5-5`,
+   `claude-haiku-5-5`; Sonnet is the default escalation rung).
+2. A price for that model in the file's `models`. Without one the hop is refused
+   (402, `requested: null`, "has no price in the route policy"). A file that marks an
+   Anthropic model `free` does not load (503 `openvault_route_policy_invalid`).
+3. A USD cap that applies: `caps.keys.<vault key id>` or `caps.callers.<id>`
+   with `daily_usd` or `monthly_usd`. Without one the hop is refused as `paid_default`.
+4. A healthy **pooled** vault key whose provider is `anthropic`. Without one the hop
+   is skipped and `details` names it: `anthropic/<model>: no healthy vault key for
+   provider anthropic`.
+
+The caller then sends `role: "escalate"` (and `service_id` when loopback).
+
+Example operator file. Replace each `<...>` with Anthropic's own published rate for
+that model; the file will not load until you do.
+
+```text
+{
+  "roles": {
+    "escalate": [
+      {"provider": "anthropic", "model": "claude-sonnet-5-5"},
+      {"provider": "anthropic", "model": "claude-opus-5-5"}
+    ]
+  },
+  "models": {
+    "anthropic/claude-opus-5-5":   {"usd_per_1m_in": <in>, "usd_per_1m_out": <out>},
+    "anthropic/claude-sonnet-5-5": {"usd_per_1m_in": <in>, "usd_per_1m_out": <out>},
+    "anthropic/claude-haiku-5-5":  {"usd_per_1m_in": <in>, "usd_per_1m_out": <out>}
+  },
+  "caps": {
+    "max_tokens_per_request": 8192,
+    "keys": {"<vault key id of the anthropic key>": {"daily_usd": 5, "monthly_usd": 50}}
+  }
+}
+```
+
+Behaviour that differs from the OpenAI-compatible hops:
+
+- **Only a role hop reaches it.** A request with no `role` (the pool walk), a strict
+  pin, or `local_only` never serves Anthropic, even with an Anthropic key in the vault
+  (that hop is skipped as "anthropic is opt-in"). The role's own list is what names it.
+  Putting Anthropic after free hops in a role list makes it a fallback; putting it
+  alone in `escalate` makes it an explicit upgrade.
+- **Dispatch.** Non-streaming only, through `vault/anthropic_messages.py`
+  (`POST https://api.anthropic.com/v1/messages`, `x-api-key`). The URL is fixed: the key
+  is never sent to a `base_url` stored on a vault record. Errors are mapped so the
+  existing walk classifies them (529 becomes a retryable 503).
+- **Typed 400 `openvault_anthropic_unsupported`** for `stream: true`, tools or
+  functions, image parts, and `n > 1`. It is returned before a spend hold is taken
+  and before the key is used. `temperature` and `top_p` are not forwarded.
+- **Output floor.** Anthropic hops get at least `max_tokens: 4096` (the adapter's
+  `DEFAULT_MAX_TOKENS`), also when the caller named none, so adaptive thinking cannot
+  use the whole budget and truncate the reply (`finish_reason: length`). The hold
+  reserves the floor, not the 1024 default. A named budget below the floor is raised
+  to it; a larger one is kept. If `max_tokens_per_request` is below the floor the hop
+  is skipped with "needs at least 4096 output tokens", so set that cap to 4096 or more.
+- **Stamps.** `model`, `provider` (`anthropic`), `tokens_in`, `tokens_out` and
+  `est_cost_usd` come from the mapped usage and the policy price. `tokens_in` includes
+  cache-write and cache-read input tokens at the plain input rate, so the estimate
+  never under-reports a cached call.
+- **Catalog.** `anthropic` lists the three models in `chat_models` for display. It
+  stays `openai_compatible: false` and `spendable: false`, and is in no default pool.
+  A key for it is still added through the existing precheck, not a chat probe.

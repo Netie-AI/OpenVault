@@ -40,6 +40,14 @@ import structlog
 log = structlog.get_logger()
 
 ROUTE_ROLES: tuple[str, ...] = ("sql", "tool", "reason", "summarize")
+#: Roles the shipped policy leaves EMPTY. They accept a request, but serve nothing
+#: until an operator's ``OPENVAULT_ROUTE_POLICY`` lists hops for them (BANK-03:
+#: outside and paid models are off by default). ``escalate`` is the stronger-model
+#: rung (F110); the only hop type it is meant for is a paid Anthropic one.
+OPT_IN_ROLES: tuple[str, ...] = ("escalate",)
+ALL_ROLES: tuple[str, ...] = ROUTE_ROLES + OPT_IN_ROLES
+#: Providers that are paid by nature. A policy may not mark one free.
+PAID_ONLY_PROVIDERS: tuple[str, ...] = ("anthropic",)
 POLICY_ENV = "OPENVAULT_ROUTE_POLICY"
 DEFAULT_POLICY_PATH = Path(__file__).with_name("route_policy.json")
 
@@ -150,8 +158,8 @@ def _parse_roles(raw: Any, where: str) -> dict[str, tuple[RoleHop, ...]]:
         raise RoutePolicyError(f"{where}.roles must be an object")
     out: dict[str, tuple[RoleHop, ...]] = {}
     for role, hops in raw.items():
-        if role not in ROUTE_ROLES:
-            raise RoutePolicyError(f"{where}.roles.{role} is not one of {list(ROUTE_ROLES)}")
+        if role not in ALL_ROLES:
+            raise RoutePolicyError(f"{where}.roles.{role} is not one of {list(ALL_ROLES)}")
         if not isinstance(hops, list):
             raise RoutePolicyError(f"{where}.roles.{role} must be a list")
         parsed: list[RoleHop] = []
@@ -256,7 +264,7 @@ def load_route_policy() -> RoutePolicy:
             max_tokens = _positive_int(
                 caps.get("max_tokens_per_request"), f"{where}.caps.max_tokens_per_request"
             )
-    return RoutePolicy(
+    policy = RoutePolicy(
         roles=roles,
         models=tuple(models),
         key_caps=key_caps,
@@ -264,13 +272,33 @@ def load_route_policy() -> RoutePolicy:
         max_tokens_per_request=max_tokens,
         sources=tuple(str(p) for p in paths),
     )
+    _refuse_free_paid_providers(policy)
+    return policy
+
+
+def _refuse_free_paid_providers(policy: RoutePolicy) -> None:
+    """A hop on a paid-only provider that the price table calls free is a lie.
+
+    Free skips every cap check, so ``anthropic/*`` marked ``"free": true`` (or a
+    ``*`` glob that happens to match) would spend with no cap and no price.
+    Refuse the file instead of trusting it.
+    """
+    for role, hops in policy.roles.items():
+        for hop in hops:
+            if hop.provider not in PAID_ONLY_PROVIDERS:
+                continue
+            if policy.price_for(hop.provider, hop.model).free:
+                raise RoutePolicyError(
+                    f"roles.{role}: {hop.provider}/{hop.model} is a paid model and "
+                    "cannot be marked free in the route policy"
+                )
 
 
 def parse_route_role(value: object) -> str | None:
     """``None`` keeps today's routing. Anything outside ROUTE_ROLES raises."""
     if value is None:
         return None
-    if isinstance(value, str) and value in ROUTE_ROLES:
+    if isinstance(value, str) and value in ALL_ROLES:
         return value
     raise ValueError(value)
 
@@ -278,10 +306,10 @@ def parse_route_role(value: object) -> str | None:
 def unknown_role_body(value: object) -> dict[str, Any]:
     return {
         "error": {
-            "message": f"role must be one of {', '.join(ROUTE_ROLES)}, or omitted",
+            "message": f"role must be one of {', '.join(ALL_ROLES)}, or omitted",
             "type": UNKNOWN_ROLE_TYPE,
             "role": value if isinstance(value, str | int | float | bool) else str(value),
-            "allowed": list(ROUTE_ROLES),
+            "allowed": list(ALL_ROLES),
         },
         **empty_stamps(),
     }
@@ -648,10 +676,13 @@ def usage_pair(usage: object) -> tuple[int | None, int | None]:
 
 
 __all__ = [
+    "ALL_ROLES",
     "BUDGET_ERROR_TYPE",
     "BUDGET_EXCEEDED",
     "DEFAULT_POLICY_PATH",
     "MAX_COMPLETIONS",
+    "OPT_IN_ROLES",
+    "PAID_ONLY_PROVIDERS",
     "POLICY_ENV",
     "POLICY_INVALID_TYPE",
     "ROLE_CONFLICT_TYPE",

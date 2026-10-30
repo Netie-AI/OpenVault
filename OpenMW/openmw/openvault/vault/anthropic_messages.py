@@ -323,6 +323,19 @@ def _unsupported_body(message: str) -> dict[str, Any]:
     }
 
 
+def refusal_for(body: dict[str, Any]) -> tuple[int, dict[str, Any]] | None:
+    """The typed 400 ``call`` would return for this body, or ``None`` if it maps.
+
+    Lets the proxy refuse a request this adapter cannot translate (stream,
+    tools, images, ``n > 1``) before it takes a spend hold or touches the key.
+    """
+    try:
+        to_anthropic_body(body)
+    except UnsupportedRequestError as exc:
+        return 400, _unsupported_body(str(exc))
+    return None
+
+
 # --------------------------------------------------------------------------
 # call
 

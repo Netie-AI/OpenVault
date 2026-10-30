@@ -209,7 +209,10 @@ def add_tested_key(
         result = AddResult(False, "", "", error=_unknown_provider_error(provider_id))
     elif not secret:
         result = AddResult(False, "", "", error="no key entered")
-    elif not spec.chat_models:
+    elif not spec.chat_models or spec.id == "anthropic":
+        # Anthropic chat is /v1/messages with x-api-key, not /chat/completions with
+        # a Bearer token. Its catalog lists models for the opt-in tier (F110), but a
+        # Bearer probe of this kind cannot test the key, so it still has no chat test.
         result = AddResult(False, spec.name, "", error="no catalog chat model to test")
     elif not spec.base_url.strip():
         result = AddResult(False, spec.name, "", error="no catalog base url to test")

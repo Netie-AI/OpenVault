@@ -52,13 +52,14 @@ def _body(**over: Any) -> dict[str, Any]:
     return base
 
 
-# -- off by default: the module is not reachable ----------------------------------
+# -- off by default: the wiring is in test_anthropic_optin_wire.py -----------------
 
 
-def test_module_is_not_imported_by_any_other_source_file() -> None:
+def test_only_the_proxy_and_providers_import_the_adapter() -> None:
+    """Dispatch lives in proxy.py and the catalog in providers.py. Nothing else."""
     root = Path(__file__).resolve().parents[1] / "openmw"
     me = Path(am.__file__).resolve()
-    offenders: list[str] = []
+    importers: set[str] = set()
     for path in root.rglob("*.py"):
         if path.resolve() == me:
             continue
@@ -70,19 +71,23 @@ def test_module_is_not_imported_by_any_other_source_file() -> None:
             elif isinstance(node, ast.Import):
                 names = [a.name for a in node.names]
             if any("anthropic_messages" in n for n in names):
-                offenders.append(str(path.relative_to(root)))
-    assert offenders == []
+                importers.add(path.name)
+    assert importers == {"proxy.py", "providers.py"}
 
 
-def test_provider_and_proxy_are_unchanged_so_nothing_is_served() -> None:
-    from openmw.openvault.vault.providers import get_provider
+def test_anthropic_is_catalogued_but_not_spendable_or_compat() -> None:
+    from openmw.openvault.vault.providers import get_provider, spendable_for_freeroute
     from openmw.openvault.vault.proxy import _compat_skip
 
     spec = get_provider("anthropic")
     assert spec is not None
     assert spec.openai_compatible is False
-    assert not spec.chat_models
+    assert spec.chat_models == am.CHAT_MODELS
+    assert spec.to_dict()["spendable"] is False
+    assert "anthropic" not in {row["id"] for row in spendable_for_freeroute()}
+    # Without a role step the pool walk still skips it.
     assert _compat_skip("A", "anthropic") is not None
+    assert _compat_skip("A", "anthropic", role_step=True) is None
 
 
 # -- request mapping ---------------------------------------------------------------
