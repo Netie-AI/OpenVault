@@ -794,7 +794,7 @@ class ChatBody(BaseModel):
     role: Any = Field(
         default=None,
         description=(
-            "Route role: sql | tool | reason | summarize. Picks the ordered model list "
+            "Route role: sql | tool | reason | summarize | grain | ontology. Picks the ordered model list "
             "from the route policy (free first) and falls back down it in order. "
             "Omit for the pre-role pool walk. Anything else is 422 openvault_unknown_role. "
             "Cannot be combined with strict or local_only (422 openvault_role_conflict)."

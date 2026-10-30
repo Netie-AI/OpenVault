@@ -88,7 +88,7 @@ class UsageEvent:
     latency_ms: int = 0
     #: Budget scope for caps: the issued key id, or a loopback ``service_id``.
     service_id: str = ""
-    #: ``sql`` | ``tool`` | ``reason`` | ``summarize``, or "" when not role-routed.
+    #: ``sql`` | ``tool`` | ``reason`` | ``summarize`` | ``grain`` | ``ontology``, or "" when not role-routed.
     route_role: str = ""
     #: From the route policy price table. None when a paid model has no price.
     est_cost_usd: float | None = 0.0
