@@ -2,18 +2,27 @@
 
 Append-only. Never edited, only added to. Newest first.
 
-## 2026-10-29 - Spend caps cannot be outrun on a paid hop (Refs #148)
+## 2026-10-30 - Spend caps cannot be outrun on a paid hop (Refs #148)
 
 - `n` and `best_of` count. A capped paid hop reserves `n` times `best_of` completions (each defaults to 1, each must be a whole number from 1 to 128). A value outside that is refused on that hop as `request.completions` (402, `unit: "completions"`) and nothing goes upstream. Before, `n: 128` reserved one completion and could spend about 128 times the cap.
 - A capped paid hop now sends the output budget it reserved: `max_tokens` (or `max_completion_tokens`, if that is the field the caller used) at the 1024 default when the caller named none. A streamed one also sends `stream_options.include_usage: true`, merged with any other `stream_options`, so the ledger records the usage frame and not the hold. The client receives that frame. Free hops and pool-walk hops with no cap on them are sent unchanged.
 - A failed ledger write for a paid hop that served no longer releases its hold. The hold keeps counting against the caps for the life of the process and `usage_ledger_write_failed_hold_kept` is logged at error level, with no message or key material. The response is unchanged.
 - An unreadable route policy file returns 503 with the file name only. The path and OS error are logged as `route_policy_unreadable`. Routing order, role lists, strict pin and the shipped `route_policy.json` are untouched. Refs #148.
 
-## 2026-10-29 - FreeRoute role routing, hard spend caps, cost stamps (Refs #148)
+## 2026-10-30 - FreeRoute role routing, hard spend caps, cost stamps (Refs #148)
 
 - `POST /v1/chat/completions` accepts `role` = `sql` | `tool` | `reason` | `summarize`. Each role walks an ordered model list from `OpenMW/openmw/openvault/vault/route_policy.json`, free first, overridable with `OPENVAULT_ROUTE_POLICY`. A provider failure falls back to the next entry in order. No `role` keeps the pool walk. Any other value is 422 `openvault_unknown_role`. `role` with `strict` or `local_only` is 422 `openvault_role_conflict`. Defaults use only NVIDIA NIM, Groq, OpenRouter, SambaNova, Gemini, and SEA-LION, with no DeepSeek or China-hosted model names.
 - Hard caps: daily and monthly USD per vault key and per caller, plus `max_tokens_per_request`. The caller is the issued key id, or `service_id` for loopback. Spend persists in keys.db table `route_spend`, so `usage_events` stays 18 columns. A cap that would be exceeded returns 402 with `reason: "budget_exceeded"` and names the cap. A model is paid unless the policy marks it free. A role walk never runs a paid model unless that key or caller has a USD cap (`cap: "paid_default"`). No paid prices ship.
 - Every gateway JSON response carries `model`, `provider`, `tokens_in`, `tokens_out`, and `est_cost_usd`, naming the hop that actually served. Free models cost 0. Streams carry them on chunks. HttpGuard, admin_token, and auth are unchanged. No public `:5000`. Contract: `docs/reference/freeroute-role-budget.md`.
+
+## 2026-10-30 - OV-3a kept live sentinel, observe, health, and control (Refs #137)
+
+- `OpenMW/openmw/openvault/sentinel/`, `observe/`, `health/`, and `control/` stay. `app.py` and `routers/sentinel.py` import them, and the Detect page calls `/api/health/devices`, `/api/sentinel/devices`, and `/api/observe/path`. The web route guard lists `/api/control/action` and `/api/sentinel/`. `nvme_sentinel/` and CI job `test-nvme-sentinel` are untouched. No auth, key, or route change.
+
+## 2026-10-09 - Lease logs omit the kid, ref, and secret (Refs #160)
+
+- Redeem still writes `lease_redeem` to `secret_audit.jsonl` with `key_id`. That id is not passed to `log.info`. Mint, redeem, redeem refusal, audit-failure, and owner-assign lines do not include the kid, the `ovlease_` ref, or the secret.
+- Uvicorn access lines for `POST /api/keys/leases`, `POST /api/keys/leases/redeem`, and `POST /api/keys/owner` drop the query string. A ref in that query is refused and is not on the access line.
 
 ## 2026-10-09 - Space credentials are admin plus loopback (Refs #160)
 
@@ -27,7 +36,7 @@ Append-only. Never edited, only added to. Newest first.
 
 ## 2026-10-09 - Credential-bound Space and fail-closed redeem audit (Refs #160)
 
-- A Space credential is `dms:<space>`. It is minted once with `POST /keys/services` and reused. Lease mint and redeem do not mint or refresh it. The service id charset accepts that form: the Space is 1 to 64 of `A-Za-z0-9._-`, and a colon is allowed only in `dms:<space>`.
+- A Space credential is `dms:<space>`. It is minted once with `POST /keys/services` and reused. Lease mint and redeem do not mint or refresh it. The Space must match `^dms:[a-z0-9][a-z0-9-]{0,62}$`. A plain id is letters, digits, `.`, `_`, and `-`. `foo:bar` is 400 because that colon form was refused at `2204ce8c`. Main before that commit accepted it.
 - The kid is owned by that `dms:<space>` service through admin `POST /api/keys/owner`. `owner_tenant` stays on the binding. Mint and redeem derive the Space from the Bearer. The tenant is the binding, not the body. A body `space` or `tenant` that disagrees is `lease_space_mismatch` or `lease_tenant_mismatch`, and redeem does not consume the lease. A Bearer that is not `dms:<space>` is `lease_space_credential`. This is credential-bound Space. #165 is this behavior.
 - A successful redeem writes `lease_redeem` (kid, space, service_id, expires_at, owner_tenant) before the consume commits. If that write fails, the response is `lease_audit_failed`, the secret is not returned, and the lease stays redeemable. A refused redeem writes `lease_redeem_refused` with the reason, key_id when known, space, and service_id. Neither line contains the ref or the secret. Rate limit and purge of expired rows stay on #164.
 - A ref placed in the query string is refused (`lease_ref_in_url`) and is not redeemed, but uvicorn still records that request line on the access log.

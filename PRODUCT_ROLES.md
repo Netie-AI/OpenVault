@@ -24,7 +24,7 @@ from the OpenAPI schema and are pinned by `tests/test_access_routing.py`.
 
 **Deliberately not renamed** — these are storage and wire identifiers, and
 changing them breaks live installs: Python modules (`openmw.openvault.ship`,
-`ship/openship.py`), class names (`OpenShipPlan`, `OpenShipClient`), env vars
+`OpenMW/openmw/openvault/ship/openship.py`), class names (`OpenShipPlan`, `OpenShipClient`), env vars
 (`OPENSHIP_API_TOKEN`, `OMNIROUTE_API_KEY`, `OPENVAULT_HOME`, `OPENVAULT_URL`),
 the data directory `~/.openvault`, and the reveal header `X-OpenVault-Reveal`.
 OmniRoute stays as attribution — FreeRoute is OmniRoute-inspired, not a rename
