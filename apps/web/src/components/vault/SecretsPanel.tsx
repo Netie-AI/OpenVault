@@ -1,9 +1,10 @@
 "use client";
 
 /**
- * Passwords and payment cards over `/api/secrets*`.
+ * Passwords, cards, and TOTP over `/api/secrets*`.
  *
- * Masks in the list; reveal only on click (cleared after a short window).
+ * Masks in the list; reveal / current-code only on click (cleared after a
+ * short window). TOTP never calls `/reveal` — that path refuses the seed.
  * No CVV field — backend refuses CVV with 400 and that refusal must stay visible.
  * Sealed vault: parent shows VaultSealBar; this panel only disables mutate.
  */
@@ -17,7 +18,9 @@ import { isApiError } from "@/lib/api/client";
 import {
   createCard,
   createPassword,
+  createTotp,
   deleteSecret,
+  fetchCurrentTotpCode,
   listSecrets,
   revealSecretValue,
   revokeSecret,
@@ -27,11 +30,18 @@ import {
 
 const REVEAL_TTL_MS = 15_000;
 
-type CreateMode = "password" | "card" | null;
+type CreateMode = "password" | "card" | "totp" | null;
 type RotateTarget = { row: SecretRow } | null;
 
-export function SecretsPanel({ sealed }: { sealed: boolean }) {
+export function SecretsPanel({
+  sealed,
+  mutateLocked,
+}: {
+  sealed: boolean;
+  mutateLocked?: boolean;
+}) {
   const [secrets, setSecrets] = useState<SecretRow[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [revealed, setRevealed] = useState<Record<string, string>>({});
@@ -44,6 +54,13 @@ export function SecretsPanel({ sealed }: { sealed: boolean }) {
   const [pwUrl, setPwUrl] = useState("");
   const [pwSecret, setPwSecret] = useState("");
 
+  // TOTP form — seed is never listed after save
+  const [totpLabel, setTotpLabel] = useState("");
+  const [totpUser, setTotpUser] = useState("");
+  const [totpUrl, setTotpUrl] = useState("");
+  const [totpSeed, setTotpSeed] = useState("");
+  const [filter, setFilter] = useState("");
+
   // Card form — no CVV
   const [cardLabel, setCardLabel] = useState("");
   const [cardPan, setCardPan] = useState("");
@@ -55,6 +72,8 @@ export function SecretsPanel({ sealed }: { sealed: boolean }) {
   const [rotateValue, setRotateValue] = useState("");
   const [rotateMonth, setRotateMonth] = useState("");
   const [rotateYear, setRotateYear] = useState("");
+
+  const lockMutate = mutateLocked ?? sealed;
 
   const refresh = useCallback(async (signal?: AbortSignal) => {
     setSecrets(await listSecrets({ signal }));
@@ -69,6 +88,8 @@ export function SecretsPanel({ sealed }: { sealed: boolean }) {
         if (!ac.signal.aborted) {
           setNotice(isApiError(err) ? err.message : "Could not load passwords/cards");
         }
+      } finally {
+        if (!ac.signal.aborted) setLoaded(true);
       }
     })();
     return () => ac.abort();
@@ -119,8 +140,13 @@ export function SecretsPanel({ sealed }: { sealed: boolean }) {
     setBusy(`reveal-${row.id}`);
     setNotice("");
     try {
-      const { secret } = await revealSecretValue(row.id);
-      setRevealed((r) => ({ ...r, [row.id]: secret }));
+      if (row.kind === "totp") {
+        const { code } = await fetchCurrentTotpCode(row.id);
+        setRevealed((r) => ({ ...r, [row.id]: code }));
+      } else {
+        const { secret } = await revealSecretValue(row.id);
+        setRevealed((r) => ({ ...r, [row.id]: secret }));
+      }
     } catch (err) {
       setNotice(isApiError(err) ? err.message : "Could not reveal");
     } finally {
@@ -133,6 +159,10 @@ export function SecretsPanel({ sealed }: { sealed: boolean }) {
     setPwUser("");
     setPwUrl("");
     setPwSecret("");
+    setTotpLabel("");
+    setTotpUser("");
+    setTotpUrl("");
+    setTotpSeed("");
     setCardLabel("");
     setCardPan("");
     setCardHolder("");
@@ -156,6 +186,27 @@ export function SecretsPanel({ sealed }: { sealed: boolean }) {
       setNotice("Password stored");
     } catch (err) {
       setNotice(isApiError(err) ? err.message : "Could not store password");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function submitTotp() {
+    setBusy("create-totp");
+    setNotice("");
+    try {
+      await createTotp({
+        label: totpLabel.trim(),
+        seed: totpSeed,
+        username: totpUser.trim() || undefined,
+        url: totpUrl.trim() || undefined,
+      });
+      resetCreateForms();
+      setCreateMode(null);
+      await refresh();
+      setNotice("TOTP stored");
+    } catch (err) {
+      setNotice(isApiError(err) ? err.message : "Could not store TOTP");
     } finally {
       setBusy(null);
     }
@@ -191,12 +242,14 @@ export function SecretsPanel({ sealed }: { sealed: boolean }) {
     try {
       if (row.kind === "password") {
         await rotateSecret(row.id, { new_password: rotateValue });
-      } else {
+      } else if (row.kind === "payment_card") {
         await rotateSecret(row.id, {
           new_pan: rotateValue.trim(),
           exp_month: rotateMonth ? Number(rotateMonth) : undefined,
           exp_year: rotateYear ? Number(rotateYear) : undefined,
         });
+      } else {
+        throw new Error("TOTP is replaced by storing a new seed, not rotate");
       }
       setRotateTarget(null);
       setRotateValue("");
@@ -211,23 +264,28 @@ export function SecretsPanel({ sealed }: { sealed: boolean }) {
     }
   }
 
-  const passwords = secrets.filter((s) => s.kind === "password");
-  const cards = secrets.filter((s) => s.kind === "payment_card");
+  const q = filter.trim().toLowerCase();
+  const match = (s: SecretRow) =>
+    !q ||
+    [s.label, s.username, s.url].some((v) => (v || "").toLowerCase().includes(q));
+  const passwords = secrets.filter((s) => s.kind === "password" && match(s));
+  const totps = secrets.filter((s) => s.kind === "totp" && match(s));
+  const cards = secrets.filter((s) => s.kind === "payment_card" && match(s));
 
   return (
     <section className="mt-8 space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-base font-semibold text-foreground">Passwords & cards</h2>
+          <h2 className="text-base font-semibold text-foreground">Passwords, cards & TOTP</h2>
           <p className="text-sm text-muted-foreground">
-            Same custody as keys — masks in the list, reveal only on purpose.
+            Same custody as keys — masks in the list, codes only on purpose.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"
             size="sm"
-            disabled={sealed}
+            disabled={lockMutate}
             onClick={() => setCreateMode("password")}
           >
             Add password
@@ -235,7 +293,15 @@ export function SecretsPanel({ sealed }: { sealed: boolean }) {
           <Button
             variant="outline"
             size="sm"
-            disabled={sealed}
+            disabled={lockMutate}
+            onClick={() => setCreateMode("totp")}
+          >
+            Add TOTP
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={lockMutate}
             onClick={() => setCreateMode("card")}
           >
             Add card
@@ -243,15 +309,47 @@ export function SecretsPanel({ sealed }: { sealed: boolean }) {
         </div>
       </div>
 
+      {sealed ? (
+        <p className="text-sm text-warning">
+          Unseal the vault to add or reveal passwords and TOTP codes.
+        </p>
+      ) : null}
+
+      {secrets.length > 8 ? (
+        <Input
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          placeholder="Filter passwords, TOTP, cards"
+          autoComplete="off"
+        />
+      ) : null}
+
       {notice ? <p className="text-sm text-muted-foreground">{notice}</p> : null}
 
       <SecretGroup
+        title="TOTP"
+        empty={loaded ? "No TOTP seeds yet." : "Loading…"}
+        rows={totps}
+        revealed={revealed}
+        busy={busy}
+        sealed={lockMutate}
+        onReveal={(row) => void toggleReveal(row)}
+        onRevoke={(row) =>
+          void run(row.id, () => revokeSecret(row.id), "Revoked")
+        }
+        onDelete={(row) =>
+          void run(row.id, () => deleteSecret(row.id), "Deleted")
+        }
+        onRotate={() => undefined}
+      />
+
+      <SecretGroup
         title="Passwords"
-        empty="No passwords yet."
+        empty={loaded ? "No passwords yet." : "Loading…"}
         rows={passwords}
         revealed={revealed}
         busy={busy}
-        sealed={sealed}
+        sealed={lockMutate}
         onReveal={(row) => void toggleReveal(row)}
         onRevoke={(row) =>
           void run(row.id, () => revokeSecret(row.id), "Revoked")
@@ -269,11 +367,11 @@ export function SecretsPanel({ sealed }: { sealed: boolean }) {
 
       <SecretGroup
         title="Payment cards"
-        empty="No cards yet."
+        empty={loaded ? "No cards yet." : "Loading…"}
         rows={cards}
         revealed={revealed}
         busy={busy}
-        sealed={sealed}
+        sealed={lockMutate}
         onReveal={(row) => void toggleReveal(row)}
         onRevoke={(row) =>
           void run(row.id, () => revokeSecret(row.id), "Revoked")
@@ -319,6 +417,45 @@ export function SecretsPanel({ sealed }: { sealed: boolean }) {
               onClick={() => void submitPassword()}
             >
               {busy === "create-pw" ? "Saving…" : "Save"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={createMode === "totp"}
+        onClose={() => {
+          setCreateMode(null);
+          resetCreateForms();
+        }}
+        maxWidth="28rem"
+        minWidth="20rem"
+      >
+        <div className="space-y-4 p-1">
+          <h3 className="text-sm font-semibold text-foreground">Add TOTP</h3>
+          <p className="text-xs text-muted-foreground">
+            Paste the authenticator seed or an otpauth:// URI. The seed is
+            never shown after save.
+          </p>
+          <Field label="Label" value={totpLabel} onChange={setTotpLabel} required />
+          <Field label="Username" value={totpUser} onChange={setTotpUser} />
+          <Field label="URL" value={totpUrl} onChange={setTotpUrl} />
+          <Field
+            label="Seed"
+            value={totpSeed}
+            onChange={setTotpSeed}
+            type="password"
+            required
+          />
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setCreateMode(null)}>
+              Cancel
+            </Button>
+            <Button
+              disabled={busy === "create-totp" || !totpLabel.trim() || !totpSeed.trim()}
+              onClick={() => void submitTotp()}
+            >
+              {busy === "create-totp" ? "Saving…" : "Save"}
             </Button>
           </div>
         </div>
@@ -399,7 +536,7 @@ export function SecretsPanel({ sealed }: { sealed: boolean }) {
                 type="password"
                 required
               />
-            ) : (
+            ) : rotateTarget.row.kind === "payment_card" ? (
               <>
                 <Field
                   label="New card number"
@@ -412,7 +549,7 @@ export function SecretsPanel({ sealed }: { sealed: boolean }) {
                   <Field label="Exp year" value={rotateYear} onChange={setRotateYear} />
                 </div>
               </>
-            )}
+            ) : null}
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setRotateTarget(null)}>
                 Cancel
@@ -518,12 +655,7 @@ function SecretGroup({
                   ) : null}
                 </p>
                 <p className="truncate text-xs text-muted-foreground">
-                  {row.kind === "password" ? (
-                    <>
-                      {row.username || "—"}
-                      {row.url ? ` · ${row.url}` : ""}
-                    </>
-                  ) : (
+                  {row.kind === "payment_card" ? (
                     <>
                       {row.brand || "card"}
                       {row.last4 ? ` · •••• ${row.last4}` : ""}
@@ -531,6 +663,11 @@ function SecretGroup({
                         ? ` · ${row.exp_month}/${row.exp_year}`
                         : ""}
                       {row.cardholder ? ` · ${row.cardholder}` : ""}
+                    </>
+                  ) : (
+                    <>
+                      {row.username || "—"}
+                      {row.url ? ` · ${row.url}` : ""}
                     </>
                   )}
                   {" · "}
@@ -546,16 +683,22 @@ function SecretGroup({
                   disabled={sealed || busy === `reveal-${row.id}`}
                   onClick={() => onReveal(row)}
                 >
-                  {revealed[row.id] ? "Hide" : "Reveal"}
+                  {revealed[row.id]
+                    ? "Hide"
+                    : row.kind === "totp"
+                      ? "Current code"
+                      : "Reveal"}
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  disabled={sealed || busy === row.id || row.lifecycle !== "active"}
-                  onClick={() => onRotate(row)}
-                >
-                  Rotate
-                </Button>
+                {row.kind === "totp" ? null : (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={sealed || busy === row.id || row.lifecycle !== "active"}
+                    onClick={() => onRotate(row)}
+                  >
+                    Rotate
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   size="sm"

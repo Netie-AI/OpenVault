@@ -17,7 +17,8 @@ def seed_essentials(
     """Ensure vault has a slot for every essential provider.
 
     Does **not** invent cloud secrets. Local providers (ollama/cortex/litellm)
-    get placeholder secrets so precheck/downtime can run immediately.
+    get placeholder secrets so precheck/downtime can run immediately. LiteLLM
+    is seeded disabled so FreeRoute does not probe :4000 until it is started.
     Cloud providers missing from the vault are listed with register links.
     """
     existing = {k.provider for k in vault.list_keys()}
@@ -38,6 +39,8 @@ def seed_essentials(
         if spec.tier == "local" and include_local_placeholders:
             kind = cast(ProviderKind, spec.id)
             role = cast(KeyRole, spec.default_role)
+            # LiteLLM is an optional :4000 proxy. Seed the catalog slot off so
+            # FreeRoute does not probe a dead hop until the operator starts it.
             record = vault.create(
                 label=f"{spec.name} (seeded)",
                 provider=kind,
@@ -45,6 +48,7 @@ def seed_essentials(
                 role=role,
                 base_url=spec.base_url,
                 priority=50 if spec.default_role == "primary" else 100,
+                enabled=spec.id != "litellm",
             )
             created.append({"id": record.id, "provider": spec.id, "label": record.label})
             existing.add(kind)

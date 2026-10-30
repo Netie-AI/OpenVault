@@ -222,9 +222,16 @@ async function waitForServer(url, timeoutMs = DEFAULT_TIMEOUT_MS, options = {}) 
   return result(false, stalledAttempts > 0 ? "stalled" : "unreachable");
 }
 
+function missingServerShouldStart(reason) {
+  // Only start a second copy when nothing is listening. Compiling and stalled
+  // already hold :3010; another `next start` just fails to bind.
+  return reason === "unreachable";
+}
+
 module.exports = {
   waitForServer,
   htmlVerdict,
+  missingServerShouldStart,
   DEFAULT_TIMEOUT_MS,
   DEFAULT_ATTEMPT_TIMEOUT_MS,
   DEFAULT_INTERVAL_MS,

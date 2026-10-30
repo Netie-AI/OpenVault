@@ -159,3 +159,11 @@ WebAuthn unseal remains the real passkey path.
   after accepting.
 - Rust console sandbox (does not decide this record): `cd OpenMW/rust/openvault-console
   && cargo test` - 2 passed 2026-09-06. Do not read that as identity SoT.
+
+## Amendment 2026-09-13 (F39)
+
+Founder unparked live TOTP as vault custody. Same reversibility test: the TOTP
+seed is a spare key to the account. Store the seed sealed. Issue the current
+code through a gated get (consume-code analog). Refuse seed reveal. Form-fill
+still cannot complete vault-sealed fields while sealed. Typing into sites is
+Pointer + Cortex, not this vault growing a browser driver. PANs stay refused.

@@ -24,6 +24,7 @@ from openmw.openvault.vault.budget import (
 )
 from openmw.openvault.vault.crypto import VaultCryptoError, VaultSealedError
 from openmw.openvault.vault.fallback import FallbackManager, note_key_used
+from openmw.openvault.vault.free_keys_onboard import looks_like_site_password_key
 from openmw.openvault.vault.hop_attempts import record_hop_attempt
 from openmw.openvault.vault.local_hop import (
     LOCAL_HOP_KEY_ID,
@@ -135,6 +136,10 @@ def _vault_candidates(
 ) -> list[ProxyCandidate]:
     hops: list[ProxyCandidate] = []
     for record in fallback.ordered_candidates(affinity_key=affinity_key_for(body, tenant=tenant)):
+        if looks_like_site_password_key(
+            label=record.label, provider=record.provider, base_url=record.base_url
+        ):
+            continue
         hops.append(
             ProxyCandidate(
                 label=record.label,

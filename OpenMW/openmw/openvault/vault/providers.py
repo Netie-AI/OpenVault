@@ -621,12 +621,13 @@ def spendable_for_freeroute() -> list[dict[str, Any]]:
 
     OmniRoute/9router list hundreds of names. We only list ids that are
     OpenAI-compatible *and* have a cited chat_models pool, so a vaulted key
-    is not skipped as 'no catalogued model'.
+    is not skipped as 'no catalogued model'. LiteLLM is an optional local
+    :4000 slot, not a pooled spend hop.
     """
     return [
         (_with_runtime_local(spec) if spec.local_hop else spec).to_dict()
         for spec in PROVIDER_CATALOG
-        if spec.openai_compatible and spec.chat_models
+        if spec.openai_compatible and spec.chat_models and spec.id != "litellm"
     ]
 
 

@@ -22,7 +22,7 @@ import {
   type KeyRow,
   type ProviderSpec,
 } from "@/lib/api/keys";
-import { inferProvider, suggestLabel } from "@/lib/vault/inferProvider";
+import { inferProvider, looksLikeSitePasswordKey, suggestLabel } from "@/lib/vault/inferProvider";
 import {
   clearRegisterIntent,
   formatRegisterAgo,
@@ -114,6 +114,10 @@ export function AddKeyDialog({
 
   async function store(andWire: boolean) {
     if (!canSubmit || !providerId) return;
+    if (looksLikeSitePasswordKey(label.trim(), providerId, spec?.base_url || "")) {
+      setError("Site passwords go under Passwords on this page, not as an LLM hop.");
+      return;
+    }
     setBusy(true);
     setError("");
     try {

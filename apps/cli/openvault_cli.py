@@ -181,10 +181,19 @@ def _popen(
     env: dict | None = None,
     *,
     log_path: Path | None = None,
+    detach: bool = False,
 ) -> subprocess.Popen:
     e = os.environ.copy()
     if env:
         e.update(env)
+    creationflags = 0
+    if detach and os.name == "nt":
+        # Cursor/agent shells die and take children with them. A new process
+        # group keeps `next start` serving after the launcher is torn down.
+        creationflags = subprocess.CREATE_NEW_PROCESS_GROUP | getattr(
+            subprocess, "DETACHED_PROCESS", 0
+        )
+    extra: dict = {"creationflags": creationflags} if creationflags else {}
     if log_path is not None:
         log_path.parent.mkdir(parents=True, exist_ok=True)
         log_f = open(log_path, "w", encoding="utf-8")  # noqa: SIM115
@@ -194,6 +203,7 @@ def _popen(
             env=e,
             stdout=log_f,
             stderr=subprocess.STDOUT,
+            **extra,
         )
     return subprocess.Popen(
         args,
@@ -201,6 +211,7 @@ def _popen(
         env=e,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
+        **extra,
     )
 
 
@@ -297,7 +308,13 @@ def _start_web(
     # told to run `openvault doctor` - which did not check for a build either.
     log_path = Path(env["OPENVAULT_HOME"]) / "logs" / "web.up.log"
     print(f"Web app log -> {log_path} ({script})")
-    return _popen([_npm(), "run", script], WEB, {**env, "PORT": str(WEB_PORT)}, log_path=log_path)
+    return _popen(
+        [_npm(), "run", script],
+        WEB,
+        {**env, "PORT": str(WEB_PORT)},
+        log_path=log_path,
+        detach=True,
+    )
 
 
 def _base_env() -> dict[str, str]:
@@ -579,6 +596,23 @@ def cmd_secret_get(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_secret_list(args: argparse.Namespace) -> int:
+    """Masked password/TOTP chooser. Never cards. Never decrypts."""
+    cli_dir = str(Path(__file__).resolve().parent)
+    if cli_dir not in sys.path:
+        sys.path.insert(0, cli_dir)
+    from secret_retrieve import RetrieveError, list_secrets
+
+    base = args.base_url or f"http://127.0.0.1:{API_PORT}"
+    try:
+        payload = list_secrets(base, kind_hint=args.kind, query=args.query)
+    except RetrieveError as exc:
+        print(str(exc), file=sys.stderr)
+        return int(exc.status) if exc.status else 1
+    print(json.dumps(payload, indent=2))
+    return 0
+
+
 def cmd_app(_: argparse.Namespace) -> int:
     if not (SHELL / "node_modules").is_dir():
         subprocess.check_call([_npm(), "install", "--no-audit", "--no-fund"], cwd=str(SHELL))
@@ -752,10 +786,12 @@ def main() -> int:
     secret_get = secret_sub.add_parser(
         "get", help="Reveal one API key or site password via loopback"
     )
-    secret_get.add_argument("target", help="secret/key id or label")
+    secret_get.add_argument(
+        "target", help="secret/key id, exact label, or unique url/label substring"
+    )
     secret_get.add_argument(
         "--kind",
-        choices=("password", "key"),
+        choices=("password", "key", "totp"),
         default=None,
         help="restrict lookup; payment_card is always denied",
     )
@@ -765,6 +801,27 @@ def main() -> int:
         help="custody API (default http://127.0.0.1:$OPENVAULT_API_PORT)",
     )
     secret_get.set_defaults(func=cmd_secret_get)
+
+    secret_list = secret_sub.add_parser(
+        "list", help="Masked site passwords and TOTP (never cards, never decrypts)"
+    )
+    secret_list.add_argument(
+        "--kind",
+        choices=("password", "totp"),
+        default=None,
+        help="restrict to one kind; payment_card is always omitted",
+    )
+    secret_list.add_argument(
+        "--query",
+        default=None,
+        help="filter masked list by label, username, or url substring",
+    )
+    secret_list.add_argument(
+        "--base-url",
+        default=None,
+        help="custody API (default http://127.0.0.1:$OPENVAULT_API_PORT)",
+    )
+    secret_list.set_defaults(func=cmd_secret_list)
 
     home_p = sub.add_parser("home", help="Carry a sealed vault home to another laptop you own")
     home_sub = home_p.add_subparsers(dest="home_cmd", required=True)
