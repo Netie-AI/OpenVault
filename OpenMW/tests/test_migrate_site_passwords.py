@@ -19,7 +19,7 @@ from openmw.openvault.vault.crypto import Seal, VaultSealedError
 from openmw.openvault.vault.fallback import FallbackManager
 from openmw.openvault.vault.migrate_passwords import migrate_site_password_keys
 from openmw.openvault.vault.precheck import SITE_PASSWORD_NOT_HOP, probe_key
-from openmw.openvault.vault.secrets import SecretStore
+from openmw.openvault.vault.secrets import SecretKind, SecretRecord, SecretStore
 from openmw.openvault.vault.store import KeyVault
 
 FAKE_SITE_PW = "site-login-not-an-api-key"
@@ -451,3 +451,59 @@ def test_migrate_api_reports_skipped_inactive(vault: KeyVault, secrets: SecretSt
     assert body["migrated"] == 1
     assert body["skipped_inactive"] == 1
     assert vault.get(dead.id) is not None
+
+
+def test_secret_revoked_mid_sweep_keeps_the_password(
+    vault: KeyVault, secrets: SecretStore, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The label is in the sweep's snapshot, then its secret is revoked before the compare."""
+    stale = secrets.create_password(label="SITE_PASSWORD", password="old-stored-password")
+    hop = vault.create(
+        label="SITE_PASSWORD",
+        provider="custom",
+        secret=FAKE_SITE_PW,
+        role="free",
+        base_url="",
+    )
+    snapshot = secrets.list_secrets(kind="password")
+    secrets.revoke(stale.id)
+    real_list = secrets.list_secrets
+
+    def list_from_snapshot(
+        *, kind: SecretKind | None = None, account_id: str | None = None
+    ) -> list[SecretRecord]:
+        if kind == "password" and account_id is None:
+            return list(snapshot)
+        return real_list(kind=kind, account_id=account_id)
+
+    monkeypatch.setattr(secrets, "list_secrets", list_from_snapshot)
+    result = migrate_site_password_keys(vault, secrets)
+    monkeypatch.setattr(secrets, "list_secrets", real_list)
+    assert result["ok"] is True
+    assert result["migrated"] == 1
+    assert vault.get(hop.id) is None
+    active = [
+        row
+        for row in secrets.list_secrets(kind="password")
+        if row.label == "SITE_PASSWORD" and row.lifecycle == "active"
+    ]
+    assert len(active) == 1
+    assert secrets.reveal(active[0].id) == FAKE_SITE_PW
+
+
+def test_same_password_other_account_is_a_conflict(vault: KeyVault, secrets: SecretStore) -> None:
+    secrets.create_password(label="SITE_PASSWORD", password=FAKE_SITE_PW, account_id=None)
+    hop = vault.create(
+        label="SITE_PASSWORD",
+        provider="custom",
+        secret=FAKE_SITE_PW,
+        role="free",
+        base_url="",
+        account_id="acct-one",
+    )
+    result = migrate_site_password_keys(vault, secrets)
+    assert result["conflicts"] == 1
+    assert result["ok"] is False
+    kept = vault.get(hop.id)
+    assert kept is not None
+    assert kept.account_id == "acct-one"

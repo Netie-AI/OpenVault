@@ -36,8 +36,9 @@ def migrate_site_password_keys(vault: KeyVault, secrets: SecretStore) -> dict[st
     One sweep runs at a time in this process.
 
     A hop whose label already exists as an active password secret is deleted
-    only when the stored secret holds the same password (a true duplicate). A
-    different password under the same label is a ``conflict``: the hop is kept
+    only when a stored secret holds the same password for the same account (a
+    true duplicate). A different password or account under that label is a
+    ``conflict``: the hop is kept
     and nothing is overwritten, so no password is lost. ``ok`` is False while a
     conflict or a failure remains.
 
@@ -96,7 +97,17 @@ def _migrate(vault: KeyVault, secrets: SecretStore) -> dict[str, Any]:
             failed += 1
             log.warning("openvault_site_password_migrate_empty", key_ref=ref)
             continue
-        if record.label not in existing:
+        # The hop is deleted only after a positive check: either this sweep just
+        # wrote its password, or an active secret already holds the same password
+        # for the same account. Anything else keeps the hop.
+        match = (
+            secrets.active_password_matches(record.label, password, account_id=record.account_id)
+            if record.label in existing
+            else None
+        )
+        if match is None:
+            # No active password carries this label (it may have been revoked
+            # since the sweep started), so write one.
             try:
                 secrets.create_password(
                     label=record.label,
@@ -109,7 +120,7 @@ def _migrate(vault: KeyVault, secrets: SecretStore) -> dict[str, Any]:
                 continue
             existing.add(record.label)
             migrated += 1
-        elif secrets.active_password_matches(record.label, password) is False:
+        elif match is False:
             conflicts += 1
             log.warning("openvault_site_password_migrate_conflict", key_ref=ref)
             continue
