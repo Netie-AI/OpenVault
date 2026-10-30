@@ -201,3 +201,89 @@ def test_non_ascii_code_is_refused_not_crashed(client: TestClient) -> None:
         f"/api/local/grants/{grant_id}/decide", json={"approve": True, "user_code": "éé"}
     )
     assert refused.status_code == 403, refused.text
+
+
+# --- The label rule is checked when the grant is asked for, not when it is granted ---
+#
+# ``api_keys.issue`` validates the label only at Grant time. A grant whose label
+# fails that rule used to be accepted, shown to the human as pending, and then
+# refused on the Grant click -- a request that could never be approved. "DMS
+# grade52 armed (local)" did exactly that: the parentheses are outside the rule.
+
+LABEL_RULE = "label may only contain letters, digits and . : @ / - _ space"
+
+
+def _pending_ids(client: TestClient) -> set[str]:
+    listed = client.get("/api/local/grants")
+    assert listed.status_code == 200, listed.text
+    return {row["grant_id"] for row in listed.json()["grants"]}
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        pytest.param({"client_name": "DMS", "label": "DMS grade52 armed (local)"}, id="parens"),
+        pytest.param({"client_name": "DMS", "label": "dms\nnewline"}, id="newline"),
+        pytest.param({"client_name": "DMS (local)"}, id="empty-label-bad-client-name"),
+        pytest.param({"client_name": "DMS (local)", "label": "   "}, id="blank-label-bad-name"),
+    ],
+)
+def test_grant_with_label_outside_the_rule_is_refused_at_start(
+    client: TestClient, body: dict[str, str]
+) -> None:
+    before = _pending_ids(client)
+    res = client.post("/api/local/grants", json=body)
+    assert res.status_code == 400, res.text
+    assert res.json()["detail"] == LABEL_RULE
+    assert "user_code" not in res.text
+    assert _pending_ids(client) == before
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        pytest.param({"client_name": "DMS", "label": "a" * 81}, id="label-81"),
+        pytest.param({"client_name": "b" * 81}, id="empty-label-client-name-81"),
+    ],
+)
+def test_grant_with_label_over_80_is_refused_not_truncated(
+    client: TestClient, body: dict[str, str]
+) -> None:
+    before = _pending_ids(client)
+    res = client.post("/api/local/grants", json=body)
+    assert res.status_code == 400, res.text
+    assert res.json()["detail"] == "label must be at most 80 characters"
+    assert _pending_ids(client) == before
+
+
+@pytest.mark.parametrize(
+    ("body", "expected_label"),
+    [
+        pytest.param(
+            {"client_name": "DMS", "label": "DMS grade52 armed local:v1@host/x-y_z"},
+            "DMS grade52 armed local:v1@host/x-y_z",
+            id="every-allowed-char",
+        ),
+        pytest.param({"client_name": "DMS", "label": "c" * 80}, "c" * 80, id="label-80"),
+        pytest.param({"client_name": "MyApp"}, "MyApp", id="empty-label-uses-client-name"),
+    ],
+)
+def test_valid_label_is_issued_exactly(
+    client: TestClient, body: dict[str, str], expected_label: str
+) -> None:
+    started = client.post("/api/local/grants", json=body)
+    assert started.status_code == 200, started.text
+    grant_id = started.json()["grant_id"]
+    assert started.json()["label"] == expected_label
+    assert grant_id in _pending_ids(client)
+    decided = client.post(
+        f"/api/local/grants/{grant_id}/decide",
+        json={"approve": True, "user_code": started.json()["user_code"]},
+    )
+    assert decided.status_code == 200, decided.text
+    polled = client.post(f"/api/local/grants/{grant_id}/poll").json()
+    assert polled["token"].startswith("ov_")
+    keys = client.get("/api/apikeys").json()["keys"]
+    issued = [k for k in keys if k["key_id"] == polled["api_key_id"]]
+    assert len(issued) == 1
+    assert issued[0]["label"] == expected_label
