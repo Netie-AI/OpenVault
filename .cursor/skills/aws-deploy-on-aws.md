@@ -14,4 +14,4 @@ Local path (full clone sparse):
 
 Cursor MCP (user-provided, enable in settings): `awsiac`, `awsknowledge`, `awspricing`.
 
-OpenVault `ship/aws_guide.py` + Ship target **AWS** consume these as the teach/IaC path until native adapter.
+OpenVault `OpenMW/openmw/openvault/ship/aws_guide.py` + Ship target **AWS** consume these as the teach/IaC path until native adapter.

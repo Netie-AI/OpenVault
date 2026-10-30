@@ -112,7 +112,7 @@ Verdict key: **Have** = we already do it · **Port** = mechanical, Cursor card �
 | Feature | Verdict | Note |
 |---|---|---|
 | `library`, `projects`, `apps` | **Have** | `/api/ship/library` + inspect + detect. |
-| `(deployment)`, `deployments` | **Have** (real for Pages) | Now genuinely deploys via `ship/hosts/cloudflare_pages.py`. |
+| `(deployment)`, `deployments` | **Have** (real for Pages) | Now genuinely deploys via `OpenMW/openmw/openvault/ship/hosts/cloudflare_pages.py`. |
 | `domains` | **Have** (partial) | `attach_domain` works; external-registrar records returned to paste. |
 | `servers` | **Skip** | Their model is "your VPS fleet". Ours is BYOC-serverless. Revisit only with the ECS adapter. |
 | `billing` | **Design** | §7. |
