@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { PageContainer } from "@/components/ui/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { VaultSealBar } from "@/components/vault/VaultSealBar";
 import { cn } from "@/lib/utils";
 
 const LINKS = [
@@ -82,6 +83,7 @@ export default function HomePage() {
         title="OpenVault"
         description="Custody · ship · gate · mesh. One app on :3010."
       />
+      <VaultSealBar />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {LINKS.map((item) => {

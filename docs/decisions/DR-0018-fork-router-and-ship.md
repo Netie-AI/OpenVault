@@ -1,8 +1,11 @@
 ---
-status: proposed
+status: accepted
 date: 2026-09-26
+accepted: 2026-10-30
 decision-makers: founder
 ---
+
+> Accepted 2026-10-30. The founder's merge go in the build session, in his words: "ensure working freeroute and openship" and "all merge". This record merged with #99.
 
 # DR-0018 - Fork OmniRoute and Openship into OpenVault as FreeRoute and FreeBuild
 

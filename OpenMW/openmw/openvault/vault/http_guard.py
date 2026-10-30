@@ -9,7 +9,10 @@ true, the guard still runs.
 
 Key and secret management routes, and ``/keys`` routes, also require the
 separate admin credential in ``X-OpenVault-Admin``. Loopback does not skip
-that check. The admin token is not an ``ov_`` key. Exceptions:
+that check. The :3010 console attaches the header for a loopback URL host
+on vault status, passphrase unseal, Hello unseal, and ``GET /api/keys``.
+This guard still requires the header on those routes. The admin token is
+not an ``ov_`` key. Exceptions:
 
 * ``GET``, ``HEAD``, and ``OPTIONS`` on the exact path ``/keys/jwks`` are
   public, same as ``/.well-known/jwks.json``.
@@ -54,6 +57,7 @@ that same routed path. A missing helper is 401 there too.
 
 from __future__ import annotations
 
+import logging
 import os
 import re
 from dataclasses import dataclass
@@ -70,7 +74,7 @@ from openmw.openvault.vault.admin_token import (
 )
 from openmw.openvault.vault.api_keys import TOKEN_PREFIX
 from openmw.openvault.vault.auth import bearer_token
-from openmw.openvault.vault.lease import LEASE_MINT_PATH, LEASE_REDEEM_PATH
+from openmw.openvault.vault.lease import LEASE_MINT_PATH, LEASE_REDEEM_PATH, OWNER_ASSIGN_PATH
 
 #: The only unauthenticated ``/api/*`` path. Length 1 is a contract test.
 AUTH_ALLOWLIST: frozenset[str] = frozenset({"/api/healthz"})
@@ -449,6 +453,33 @@ def refuse_if_unauthorised(request: Request, *, api_keys: _KeyStore) -> JSONResp
     return _missing()
 
 
+# Uvicorn's access line includes the query string. These three paths must not
+# put a kid, an ovlease_ ref, or a secret on that line.
+_LEASE_ACCESS_PATHS = frozenset({LEASE_MINT_PATH, LEASE_REDEEM_PATH, OWNER_ASSIGN_PATH})
+
+
+class LeaseAccessFilter(logging.Filter):
+    """Drop the query string on lease mint, redeem, and owner access lines."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        args = record.args
+        if not isinstance(args, tuple) or len(args) < 3 or not isinstance(args[2], str):
+            return True
+        path = args[2]
+        bare, sep, _query = path.partition("?")
+        if sep and bare in _LEASE_ACCESS_PATHS:
+            record.args = (*args[:2], bare, *args[3:])
+        return True
+
+
+def install_lease_access_filter() -> None:
+    """Attach the lease access filter once. Repeat calls do not stack it."""
+    logger = logging.getLogger("uvicorn.access")
+    if any(isinstance(item, LeaseAccessFilter) for item in logger.filters):
+        return
+    logger.addFilter(LeaseAccessFilter())
+
+
 class HttpGuardMiddleware:
     """Pure ASGI wrapper so streaming routes are not buffered."""
 
@@ -474,9 +505,11 @@ __all__ = [
     "VERIFY_SERVICES_ENV",
     "ApikeyVerifyDecision",
     "HttpGuardMiddleware",
+    "LeaseAccessFilter",
     "apikey_verify_post",
     "decide_apikey_verify",
     "dev_docs_enabled",
+    "install_lease_access_filter",
     "lease_post",
     "lease_transport_allowed",
     "path_is_guarded",
