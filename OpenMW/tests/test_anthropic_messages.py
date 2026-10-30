@@ -12,7 +12,7 @@ from typing import Any
 
 import httpx
 import pytest
-import structlog
+from structlog.testing import capture_logs
 
 from openmw.openvault.route.attempt import classify_attempt
 from openmw.openvault.vault import anthropic_messages as am
@@ -349,15 +349,10 @@ def test_429_carries_retry_after_and_proxy_classifies_the_mapped_statuses() -> N
 
 
 def test_key_never_reaches_logs_results_or_exceptions(caplog: pytest.LogCaptureFixture) -> None:
-    captured: list[dict[str, Any]] = []
-
-    def processor(_l: Any, _m: str, event: dict[str, Any]) -> dict[str, Any]:
-        captured.append(dict(event))
-        raise structlog.DropEvent
-
-    structlog.configure(processors=[processor])
     caplog.set_level(logging.DEBUG)
-    try:
+    # capture_logs restores the previous processors on exit; reset_defaults() here
+    # left structlog printing debug lines to stdout and broke test_cli's --json parse.
+    with capture_logs() as captured:
         # Upstream echoes the key back in its error text (some providers do).
         status, out = _run(lambda r: _err(401, f"invalid x-api-key {FAKE_KEY}"), _body())
         assert status == 401
@@ -375,8 +370,6 @@ def test_key_never_reaches_logs_results_or_exceptions(caplog: pytest.LogCaptureF
             "".join(traceback.format_exception(info.value)) + repr(info.value) + str(info.value)
         )
         assert FAKE_KEY not in rendered
-    finally:
-        structlog.reset_defaults()
 
     assert captured, "adapter logged nothing; the leak check would be vacuous"
     assert FAKE_KEY not in json.dumps(captured, default=str)
