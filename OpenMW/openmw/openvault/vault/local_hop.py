@@ -21,6 +21,7 @@ import json
 import os
 import socket
 import urllib.parse
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
@@ -188,8 +189,13 @@ def inject_served_into_sse_chunk(
     provider: str,
     model: str,
     served_local: bool,
+    stamp: Callable[[dict[str, Any]], dict[str, Any]] | None = None,
 ) -> bytes:
-    """Add served_* to complete SSE ``data: {...}`` lines. Pass incomplete tails through."""
+    """Add served_* to complete SSE ``data: {...}`` lines. Pass incomplete tails through.
+
+    ``stamp`` receives each chunk object and returns extra top-level fields
+    (the route policy's model / provider / token / cost stamps).
+    """
     if not chunk or b"data:" not in chunk:
         return chunk
     ends_nl = chunk.endswith(b"\n")
@@ -197,7 +203,9 @@ def inject_served_into_sse_chunk(
     keep_tail = None if ends_nl else parts[-1]
     iterable = parts if ends_nl else parts[:-1]
     rebuilt = [
-        _inject_sse_line(line, provider=provider, model=model, served_local=served_local)
+        _inject_sse_line(
+            line, provider=provider, model=model, served_local=served_local, stamp=stamp
+        )
         for line in iterable
     ]
     if keep_tail is not None:
@@ -211,6 +219,7 @@ def _inject_sse_line(
     provider: str,
     model: str,
     served_local: bool,
+    stamp: Callable[[dict[str, Any]], dict[str, Any]] | None = None,
 ) -> bytes:
     if not line.startswith(b"data: "):
         return line
@@ -226,6 +235,8 @@ def _inject_sse_line(
     obj["served_provider"] = provider
     obj["served_model"] = model
     obj["served_local"] = served_local
+    if stamp is not None:
+        obj.update(stamp(obj))
     return b"data: " + json.dumps(obj, separators=(",", ":")).encode("utf-8")
 
 

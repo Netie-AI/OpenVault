@@ -121,7 +121,7 @@ from openmw.openvault.vault.app_grants import (
     start_grant,
 )
 from openmw.openvault.vault.auth import AuthRefusedError, resolve_caller
-from openmw.openvault.vault.budget import configured_ceiling
+from openmw.openvault.vault.budget import configured_ceiling, resolve_requested_budget
 from openmw.openvault.vault.chat_probe import (
     ChatProbeLoop,
     chat_probe_interval_s,
@@ -136,6 +136,7 @@ from openmw.openvault.vault.http_guard import (
     HttpGuardMiddleware,
     decide_apikey_verify,
     dev_docs_enabled,
+    install_lease_access_filter,
 )
 from openmw.openvault.vault.local_hop import served_response_headers
 from openmw.openvault.vault.pm_import import ingest_import_dir, ingest_pm_csv
@@ -167,6 +168,19 @@ from openmw.openvault.vault.route_packs import (
     evaluate_pack,
     list_packs,
     parse_pack_id,
+)
+from openmw.openvault.vault.route_policy import (
+    BUDGET_ERROR_TYPE,
+    ROUTE_ROLES,
+    RoutePolicyError,
+    SpendGuard,
+    empty_stamps,
+    load_route_policy,
+    parse_route_role,
+    policy_invalid_body,
+    role_conflict_body,
+    unknown_role_body,
+    usage_pair,
 )
 from openmw.openvault.vault.secrets import (
     IdentityDocType,
@@ -203,6 +217,22 @@ class SecretAuditError(OSError):
     """The secret-audit file could not be written."""
 
 
+# Lease mint, redeem, and owner logs must not carry the kid, the ref, or the
+# secret. The jsonl row still keeps key_id. Other custody events are unchanged.
+_LEASE_LOG_EVENTS = frozenset({"lease_redeem", "lease_redeem_refused"})
+_LEASE_LOG_DROP = frozenset(
+    {"key_id", "kid", "tenant_key", "ref", "secret", "token", "user_agent", "ts", "event"}
+)
+_AUDIT_LOG_DROP = frozenset({"ts", "event", "user_agent"})
+
+
+def _secret_audit_log_fields(entry: dict[str, Any]) -> dict[str, Any]:
+    """Fields safe to pass to ``log.info``. The file write uses ``entry`` whole."""
+    event = str(entry.get("event", ""))
+    drop = _LEASE_LOG_DROP if event in _LEASE_LOG_EVENTS else _AUDIT_LOG_DROP
+    return {key: value for key, value in entry.items() if key not in drop}
+
+
 def _write_secret_audit(entry: dict[str, Any], *, required: bool = False) -> None:
     """Append one line to the secret-access audit log.
 
@@ -212,8 +242,9 @@ def _write_secret_audit(entry: dict[str, Any], *, required: bool = False) -> Non
     separate from control_audit.jsonl so custody access can be reviewed alone.
 
     Callers pass only identifiers and metadata. Nothing in ``entry`` may be
-    derived from a decrypted payload — the audit file is not a second place a
-    secret is allowed to exist, and tests pin that.
+    derived from a decrypted payload. The audit file is not a second place a
+    secret is allowed to exist, and tests pin that. A lease event still writes
+    ``key_id`` to the file. That field is not passed to ``log.info``.
     """
     import json
     from datetime import datetime, timezone
@@ -223,7 +254,7 @@ def _write_secret_audit(entry: dict[str, Any], *, required: bool = False) -> Non
     entry = {"ts": datetime.now(timezone.utc).isoformat(), **entry}
     log.info(
         str(entry.get("event", "secret_event")),
-        **{k: v for k, v in entry.items() if k not in ("ts", "event", "user_agent")},
+        **_secret_audit_log_fields(entry),
     )
     try:
         path = ensure_home() / "secret_audit.jsonl"
@@ -758,6 +789,26 @@ class ChatBody(BaseModel):
             "A park sets Retry-After. Omit or false to keep the fallback chain."
         ),
     )
+    # Any, not a Literal: a bad value must get the named 422 below, not
+    # pydantic's generic validation error.
+    role: Any = Field(
+        default=None,
+        description=(
+            "Route role: sql | tool | reason | summarize. Picks the ordered model list "
+            "from the route policy (free first) and falls back down it in order. "
+            "Omit for the pre-role pool walk. Anything else is 422 openvault_unknown_role. "
+            "Cannot be combined with strict or local_only (422 openvault_role_conflict)."
+        ),
+        json_schema_extra={"enum": list(ROUTE_ROLES)},
+    )
+    service_id: str | None = Field(
+        default=None,
+        max_length=128,
+        description=(
+            "Budget scope for a loopback caller (e.g. cortex). An issued API key is "
+            "always its own scope, so this field is ignored for keyed callers."
+        ),
+    )
 
 
 class DeployFromCortex(BaseModel):
@@ -1148,6 +1199,7 @@ def create_app(
     rate_limiter: TokenBudgetLimiter | None = None,
 ) -> FastAPI:
     # First start mints the admin credential. The value is not logged.
+    install_lease_access_filter()
     ensure_admin_token()
     if cortex_url is None:
         cortex_url = cortex_base_url()
@@ -3545,9 +3597,20 @@ def create_app(
                             "type": pack_gate.get("error_type"),
                             "next_steps": pack_gate.get("stuck_next_steps"),
                             "remaining_usd_estimated": pack_gate.get("remaining_usd_estimated"),
-                        }
+                        },
+                        **empty_stamps(),
                     },
                 )
+
+        try:
+            policy = load_route_policy()
+        except RoutePolicyError as exc:
+            # Fail closed: a cap file nobody can read is not "no caps".
+            log.warning("route_policy_invalid", error=str(exc))
+            return JSONResponse(status_code=503, content=policy_invalid_body(exc))
+        # An issued key is its own budget scope; only loopback names a service.
+        caller_id = caller.api_key_id or (body.service_id or "").strip() or identity
+        spend = SpendGuard(policy=policy, ledger=state_usage, caller_id=caller_id)
 
         def _record_usage(
             *,
@@ -3557,8 +3620,11 @@ def create_app(
             stream: bool,
             prompt_tokens_in: int = 0,
             completion_tokens_in: int = 0,
+            tokens_in: int | None = None,
+            tokens_out: int | None = None,
         ) -> None:
             """One ledger row per request. Never fails the request it describes."""
+            keep_hold = False
             try:
                 state_usage.record(
                     UsageEvent(
@@ -3578,10 +3644,71 @@ def create_app(
                         status=status,
                         error_type=trace.error_type,
                         latency_ms=int((time.time() - started_at) * 1000),
+                        service_id=caller_id,
+                        route_role=spend.route_role or "",
+                        est_cost_usd=spend.cost_for(
+                            trace.provider, trace.model_served, tokens_in, tokens_out
+                        ),
                     )
                 )
             except Exception as exc:  # pragma: no cover - ledger must not 500 a good call
-                log.warning("usage_ledger_write_failed", error=str(exc))
+                # A served paid hop whose row is lost has only its hold left to
+                # count against the caps. Keep it for this process lifetime
+                # rather than let the spend vanish. No message: nothing from the
+                # request belongs in this event.
+                keep_hold = spend.holding and bool(trace.provider)
+                if keep_hold:
+                    log.error(
+                        "usage_ledger_write_failed_hold_kept",
+                        provider=trace.provider,
+                        model=trace.model_served,
+                        held_usd=spend.held_usd,
+                        error_type=type(exc).__name__,
+                    )
+                else:
+                    log.warning("usage_ledger_write_failed", error=str(exc))
+            finally:
+                # The row now carries this spend; the in-flight hold must go.
+                if not keep_hold:
+                    spend.release()
+
+        def _stamped(
+            result: dict[str, Any], *, tokens_in: int | None = None, tokens_out: int | None = None
+        ) -> dict[str, Any]:
+            return {
+                **result,
+                **spend.stamps(
+                    provider=trace.provider,
+                    model=trace.model_served,
+                    tokens_in=tokens_in,
+                    tokens_out=tokens_out,
+                ),
+            }
+
+        try:
+            spend.route_role = parse_route_role(body.role)
+        except ValueError:
+            trace.error_type = "openvault_unknown_role"
+            _record_usage(status=422, total_tokens=0, estimated=False, stream=bool(body.stream))
+            return JSONResponse(status_code=422, content=unknown_role_body(body.role))
+        strict_requested = body.strict is True or strict_header_on(
+            request.headers.get(STRICT_PIN_HEADER)
+        )
+        if spend.route_role is not None and (strict_requested or body.local_only is True):
+            trace.error_type = "openvault_role_conflict"
+            _record_usage(status=422, total_tokens=0, estimated=False, stream=bool(body.stream))
+            flag = "strict" if strict_requested else "local_only"
+            return JSONResponse(status_code=422, content=role_conflict_body(flag))
+
+        payload = body.model_dump(exclude_none=True)
+        payload.pop("role", None)
+        payload.pop("service_id", None)
+        requested_out, _present, _invalid = resolve_requested_budget(payload)
+        token_block = spend.check_request_tokens(requested_out)
+        if token_block is not None:
+            trace.error_type = BUDGET_ERROR_TYPE
+            _record_usage(status=402, total_tokens=0, estimated=False, stream=bool(body.stream))
+            return JSONResponse(status_code=402, content=token_block.to_body())
 
         # Reserve request + (prompt + max_tokens) budget up front (denial-of-wallet guard).
         prompt_tokens = estimate_prompt_tokens(body.messages)
@@ -3589,9 +3716,9 @@ def create_app(
         # Reserve against what we will actually send, not what was asked for.
         # With an operator ceiling of 256, reserving a caller's 1,000,000 would
         # 429 them out of their own budget for tokens nobody could ever spend.
-        ceiling = configured_ceiling()
-        if ceiling is not None:
-            max_tokens = min(max_tokens, ceiling)
+        for ceiling in (configured_ceiling(), spend.max_tokens_cap):
+            if ceiling is not None:
+                max_tokens = min(max_tokens, ceiling)
         decision = limiter.reserve(
             identity, tier=tier, prompt_tokens=prompt_tokens, max_tokens=max_tokens
         )
@@ -3605,18 +3732,18 @@ def create_app(
                         "message": "FreeRoute token budget exceeded; retry later",
                         "type": "rate_limited",
                         "limited_by": decision.limited_by,
-                    }
+                    },
+                    **empty_stamps(),
                 },
                 headers=decision.headers(),
             )
-        payload = body.model_dump(exclude_none=True)
         if strict_header_on(request.headers.get(STRICT_PIN_HEADER)):
             payload["strict"] = True
         rate_headers = limiter.headers_for(identity, tier=tier)
 
         if body.stream:
             status, result = await prepare_chat_stream(
-                state_vault, fallback, payload, trace=trace, tenant=identity
+                state_vault, fallback, payload, trace=trace, tenant=identity, spend=spend
             )
             if isinstance(result, dict):
                 limiter.settle(
@@ -3626,17 +3753,20 @@ def create_app(
                     actual_tokens=0,
                     reservation_id=decision.reservation_id,
                 )
+                stamped_err = _stamped(result)
                 _record_usage(status=status, total_tokens=0, estimated=False, stream=True)
                 return JSONResponse(
                     status_code=status,
-                    content=result,
+                    content=stamped_err,
                     headers=_chat_result_headers(limiter.headers_for(identity, tier=tier), trace),
                 )
 
             # Only settle from real usage when the client asked for it. Otherwise
-            # keep the reservation (never invent / under-charge silently).
+            # keep the reservation (never invent / under-charge silently). A paid
+            # hop that holds a reservation was sent include_usage by the proxy, so
+            # its frame is read whether or not the client asked.
             so = payload.get("stream_options")
-            want_usage = isinstance(so, dict) and bool(so.get("include_usage"))
+            want_usage = (isinstance(so, dict) and bool(so.get("include_usage"))) or spend.holding
 
             async def _stream() -> Any:
                 # TestClient/ASGI can run generator cleanup more than once; settle
@@ -3670,6 +3800,10 @@ def create_app(
                         total_tokens=actual,
                         estimated=not measured,
                         stream=True,
+                        prompt_tokens_in=(capture.prompt_tokens or 0) if capture else 0,
+                        completion_tokens_in=(capture.completion_tokens or 0) if capture else 0,
+                        tokens_in=capture.prompt_tokens if capture else None,
+                        tokens_out=capture.completion_tokens if capture else None,
                     )
 
                 try:
@@ -3693,7 +3827,7 @@ def create_app(
 
         try:
             status, result = await chat_completions(
-                state_vault, fallback, payload, trace=trace, tenant=identity
+                state_vault, fallback, payload, trace=trace, tenant=identity, spend=spend
             )
         except VaultSealedError:
             limiter.settle(
@@ -3711,7 +3845,8 @@ def create_app(
                     "error": {
                         "message": _VAULT_SEALED_DETAIL,
                         "type": "openvault_vault_sealed",
-                    }
+                    },
+                    **empty_stamps(),
                 },
                 headers=rate_headers,
             )
@@ -3732,7 +3867,8 @@ def create_app(
                     "error": {
                         "message": "OpenVault gateway error",
                         "type": type(exc).__name__,
-                    }
+                    },
+                    **empty_stamps(),
                 },
                 headers=rate_headers,
             )
@@ -3747,6 +3883,9 @@ def create_app(
             reservation_id=decision.reservation_id,
         )
         usage_block = result.get("usage") if isinstance(result, dict) else None
+        tokens_in, tokens_out = usage_pair(usage_block)
+        if isinstance(result, dict):
+            result = _stamped(result, tokens_in=tokens_in, tokens_out=tokens_out)
         _record_usage(
             status=status,
             total_tokens=actual,
@@ -3754,6 +3893,8 @@ def create_app(
             stream=False,
             prompt_tokens_in=int((usage_block or {}).get("prompt_tokens") or 0),
             completion_tokens_in=int((usage_block or {}).get("completion_tokens") or 0),
+            tokens_in=tokens_in,
+            tokens_out=tokens_out,
         )
         return JSONResponse(
             status_code=status,

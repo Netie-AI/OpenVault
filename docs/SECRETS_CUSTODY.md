@@ -368,7 +368,7 @@ hold the value in memory only.
 Cards and passwords are custody-only. They are not routable credentials, so they
 never enter the proxy, fallback, or precheck paths, and nothing ships them
 upstream. Any future flow that would move a card off the machine goes through
-the OpenVault deploy/leave-machine gate (`ship/gate.py`), same as any other
+the OpenVault deploy/leave-machine gate (`OpenMW/openmw/openvault/ship/gate.py`), same as any other
 secret — PRODUCT_ROLES ownership lock 3.
 
 ---

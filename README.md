@@ -74,7 +74,7 @@ Full tier map (incl. `cloud/` `route/` `routers/` `sentinel/`): [`docs/ACTIVE.md
 |------|------|
 | `nvme_sentinel/` | NVMe HAL, SMART, BenchRunReport (library) |
 | `Profiler/` | PathTrace + capability probe (library) |
-| `OpenMW/openmw/openvault/` | App tiers: `health/` `observe/` `vault/` `ship/` `mesh/` `control/` + more, see `docs/ACTIVE.md` |
+| `OpenMW/openmw/openvault/` | App tiers: `health/` `observe/` `vault/` `OpenMW/openmw/openvault/ship/` `mesh/` `control/` + more, see `docs/ACTIVE.md` |
 | `OpenMW/` | Custody API on `:5000` (redirects `/` → app) |
 | `apps/web/` | **OpenVault UI** on `:3010` |
 | `docs/reference/` | Setup, design decisions, architecture diagram, NVMe protocol spec |

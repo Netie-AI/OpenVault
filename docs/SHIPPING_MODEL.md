@@ -49,11 +49,11 @@ one token.
 
 ## What is actually implemented
 
-`ship/hosts/` — the adapter seam. `base.py` defines `preflight()`,
+`OpenMW/openmw/openvault/ship/hosts/` — the adapter seam. `base.py` defines `preflight()`,
 `deploy(artifact_dir)` and `attach_domain()`. Adding a target is a module plus
 one line in `ADAPTERS`; the engine does not change.
 
-`ship/hosts/cloudflare_pages.py` — real. Verifies the token against
+`OpenMW/openmw/openvault/ship/hosts/cloudflare_pages.py` — real. Verifies the token against
 `/user/tokens/verify`, creates the Pages project idempotently, uploads via
 `wrangler pages deploy`, and attaches a custom domain through the Pages
 domains API.
