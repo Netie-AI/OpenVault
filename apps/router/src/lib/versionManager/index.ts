@@ -10,6 +10,7 @@ import { getLatestRelease, clearCache as clearReleaseCache } from "./releaseChec
 import { installVersion, getCurrentBinaryPath, rollbackVersion } from "./binaryManager.ts";
 import { startProcess, stopProcess, restartProcess, isProcessRunning } from "./processManager.ts";
 import { checkHealth, startMonitoring, stopMonitoring, isMonitoring } from "./healthMonitor.ts";
+import { assertServiceToolAllowed } from "@omniroute/open-sse/netie/policy.ts";
 
 export { getVersionManagerStatus, getVersionManagerTool } from "@/lib/db/versionManager";
 
@@ -22,6 +23,8 @@ export async function installTool(
   installedVersion: string;
   binaryPath: string;
 }> {
+  // FreeRoute: the cliproxy/dario sidecars are hard-disabled (open-sse/netie/policy.ts).
+  assertServiceToolAllowed(tool);
   const targetVersion = version || (await getLatestRelease()).version;
   const binaryPath = await installVersion(targetVersion);
 
@@ -40,6 +43,8 @@ export async function startTool(tool: string): Promise<{
   port: number;
   health?: Awaited<ReturnType<typeof checkHealth>>;
 }> {
+  // FreeRoute: the cliproxy/dario sidecars are hard-disabled (open-sse/netie/policy.ts).
+  assertServiceToolAllowed(tool);
   const info = await getVersionManagerTool(tool);
   const binaryPath = info?.binaryPath || (await getCurrentBinaryPath());
 
@@ -75,6 +80,8 @@ export async function restartTool(tool: string): Promise<{
   pid: number;
   port: number;
 }> {
+  // FreeRoute: the cliproxy/dario sidecars are hard-disabled (open-sse/netie/policy.ts).
+  assertServiceToolAllowed(tool);
   const info = await getVersionManagerTool(tool);
   const binaryPath = info?.binaryPath || (await getCurrentBinaryPath());
 
@@ -103,6 +110,8 @@ export async function checkForUpdates(tool: string): Promise<{
   latest: string;
   updateAvailable: boolean;
 }> {
+  // FreeRoute: the cliproxy/dario sidecars are hard-disabled (open-sse/netie/policy.ts).
+  assertServiceToolAllowed(tool);
   clearReleaseCache();
   const latest = (await getLatestRelease()).version;
   const info = await getVersionManagerTool(tool);

@@ -17,6 +17,7 @@ import { DATA_DIR } from "@/lib/db/core";
 import { upsertVersionManagerTool } from "@/lib/db/versionManager";
 import { getLatestRelease } from "@/lib/versionManager/releaseChecker.ts";
 import { installVersion, getCurrentBinaryPath } from "@/lib/versionManager/binaryManager.ts";
+import { assertServiceToolAllowed } from "@omniroute/open-sse/netie/policy.ts";
 
 export const CLIPROXY_DEFAULT_PORT = 8317;
 
@@ -66,6 +67,9 @@ export async function getLatestVersion(): Promise<string | null> {
  * Upserts the version_manager row with tool='cliproxy'.
  */
 export async function install(version = "latest"): Promise<InstallResult> {
+  // FreeRoute: the Claude-subscription pooling sidecars cannot be installed or
+  // spawned (open-sse/netie/policy.ts).
+  assertServiceToolAllowed("cliproxy");
   const startMs = Date.now();
 
   const targetVersion = version === "latest" ? (await getLatestRelease()).version : version;
@@ -102,6 +106,9 @@ export async function update(): Promise<InstallResult> {
  * async file I/O is not available here.
  */
 export function resolveSpawnArgs(port: number, managementKey?: string): SpawnArgs {
+  // FreeRoute: the Claude-subscription pooling sidecars cannot be installed or
+  // spawned (open-sse/netie/policy.ts).
+  assertServiceToolAllowed("cliproxy");
   // #11236 (bug 3 residual): runtime os.platform() read — a process.platform
   // literal here is constant-folded to the Linux build machine when the
   // published artifact is bundled, dropping the `.exe` suffix from the spawn

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Modified by Netie AI, 2026
 # Reconnect the mail daemons to the operator's mounted certificates before boot.
 # Optional path arguments allow the same reconciliation against an isolated root.
 set -euo pipefail
@@ -46,4 +47,4 @@ link_certificate() {
 
 link_certificate "$MAIL_CERT_DIR/fullchain.pem" "$MAIL_CERT_PATH"
 link_certificate "$MAIL_CERT_DIR/privkey.pem" "$MAIL_KEY_PATH"
-echo "[openship-mail] using TLS certificate for mail.$MAIL_BASE_DOMAIN from $MAIL_CERT_DIR"
+echo "[freebuild-mail] using TLS certificate for mail.$MAIL_BASE_DOMAIN from $MAIL_CERT_DIR"

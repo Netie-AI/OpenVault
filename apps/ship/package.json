@@ -19,8 +19,6 @@
     "dev:all": "turbo run dev --concurrency=20",
     "dev:api": "turbo run dev --filter=@repo/api...",
     "dev": "turbo run dev --filter=@repo/api --filter=@repo/dashboard --concurrency=10",
-    "dev:saas": "turbo run dev:saas --filter=@repo/api --filter=@repo/dashboard --concurrency=10",
-    "dev:local-saas": "turbo run dev:local-saas --filter=@repo/api --filter=@repo/dashboard --concurrency=10",
     "dev:dashboard": "turbo run dev --filter=@repo/dashboard",
     "dev:turbo": "turbo run dev",
     "clean": "ps -A -o pid,command 2>/dev/null | grep -E 'src/index\\.ts|next/dist/bin/next' | grep -v grep | awk '{print $1}' | xargs -I {} kill -9 {} 2>/dev/null; for p in 4000 4100 3001 3002; do pid=$(lsof -ti tcp:$p 2>/dev/null); [ -n \"$pid\" ] && kill -9 $pid 2>/dev/null; done; echo 'cleaned'",

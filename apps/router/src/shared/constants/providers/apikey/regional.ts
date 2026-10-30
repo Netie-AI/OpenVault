@@ -87,9 +87,8 @@ export const APIKEY_PROVIDERS_REGIONAL = {
     icon: "psychology",
     color: "#1E3A8A",
     textIcon: "KM",
-    // Kimi official-partnership aff link (2026-07) — see KIMI_PROVIDER_IDS in
-    // featuredProviders.ts. hiddenFromDashboard, so this rarely renders, but is
-    // kept in sync with moonshot's aff link for consistency.
+    // Kimi website link. hiddenFromDashboard, so this rarely renders, but is
+    // kept in sync with moonshot's link for consistency.
     website: "https://platform.kimi.ai",
     hiddenFromDashboard: true,
   },
@@ -193,11 +192,9 @@ export const APIKEY_PROVIDERS_REGIONAL = {
     alias: "moonshot",
     // Display name only — Kimi official-partnership rebrand (2026-07). The
     // catalog id/alias/routing stay "moonshot" (DB connections, combos, and
-    // /dashboard/providers/moonshot all address it by id, never by name) — see
-    // KIMI_PROVIDER_IDS in featuredProviders.ts for the full id list this
-    // touches. "Kimi (Legacy Moonshot API)" (id "kimi") and "Moonshot AI" in
-    // company-name mentions (e.g. README, kimiOfficialSupporterTooltip) are
-    // intentionally left as-is.
+    // /dashboard/providers/moonshot all address it by id, never by name).
+    // "Kimi (Legacy Moonshot API)" (id "kimi") and "Moonshot AI" in company-name
+    // mentions (e.g. README) are intentionally left as-is.
     name: "Kimi",
     icon: "rocket_launch",
     color: "#1E40AF",

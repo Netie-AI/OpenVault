@@ -4,10 +4,9 @@ import { getProviderNodesCount } from "@/lib/db/providers/nodes";
 import {
   OPENAI_COMPATIBLE_PREFIX,
   ANTHROPIC_COMPATIBLE_PREFIX,
-  CLAUDE_CODE_COMPATIBLE_PREFIX,
 } from "@/shared/constants/providers";
 import { generateId } from "@/shared/utils";
-import { isCcCompatibleProviderEnabled } from "@/shared/utils/featureFlags";
+import { DISABLED, renderDisabled } from "@omniroute/open-sse/netie/policy.ts";
 import { createProviderNodeSchema, paginationSchema } from "@/shared/validation/schemas";
 import { isValidationFailure, validateBody } from "@/shared/validation/helpers";
 import { validateProviderNodeBaseUrl } from "./urlGuard";
@@ -31,7 +30,7 @@ const VIBEPROXY_OPENAI_DEFAULTS = {
 
 /**
  * Normalize a caller-supplied VibeProxy base URL down to its `/v1` root,
- * mirroring `sanitizeAnthropicBaseUrl`/`sanitizeClaudeCodeCompatibleBaseUrl`:
+ * mirroring `sanitizeAnthropicBaseUrl`:
  * strip trailing slash + known OpenAI-compatible suffixes, then ensure the
  * result ends at `/v1` (append if absent, guard against double `/v1/v1`).
  */
@@ -76,13 +75,6 @@ function sanitizeAnthropicBaseUrl(baseUrl: string) {
     .replace(/\/messages(?:\?[^#]*)?$/i, "");
 }
 
-function sanitizeClaudeCodeCompatibleBaseUrl(baseUrl: string) {
-  return (baseUrl || "")
-    .trim()
-    .replace(/\/$/, "")
-    .replace(/\/(?:v\d+\/)?messages(?:\?[^#]*)?$/i, "");
-}
-
 export async function GET(request?: Request) {
   try {
     const url = new URL(request?.url ?? "http://localhost/api/provider-nodes");
@@ -105,7 +97,8 @@ export async function GET(request?: Request) {
     return NextResponse.json({
       nodes,
       total,
-      ccCompatibleProviderEnabled: isCcCompatibleProviderEnabled(),
+      // FreeRoute: the CC Compatible node type is never offered (tls_fingerprint_stealth_disabled).
+      ccCompatibleProviderEnabled: false,
     });
   } catch (error) {
     console.log("Error fetching provider nodes:", error);
@@ -206,29 +199,25 @@ export async function POST(request) {
     }
 
     if (nodeType === "anthropic-compatible") {
-      if (compatMode === "cc" && !isCcCompatibleProviderEnabled()) {
-        return NextResponse.json({ error: "CC Compatible provider is disabled" }, { status: 403 });
+      // FreeRoute: the CC Compatible node type impersonates the Claude Code client
+      // (open-sse/netie/policy.ts), whatever ENABLE_CC_COMPATIBLE_PROVIDER says.
+      if (compatMode === "cc") {
+        return renderDisabled(DISABLED.tlsStealth);
       }
 
       const rawBaseUrl = baseUrl || ANTHROPIC_COMPATIBLE_DEFAULTS.baseUrl;
-      const sanitizedBaseUrl =
-        compatMode === "cc"
-          ? sanitizeClaudeCodeCompatibleBaseUrl(rawBaseUrl)
-          : sanitizeAnthropicBaseUrl(rawBaseUrl);
+      const sanitizedBaseUrl = sanitizeAnthropicBaseUrl(rawBaseUrl);
       const baseUrlError = validateProviderNodeBaseUrl(sanitizedBaseUrl);
       if (baseUrlError) return baseUrlError;
 
       const node = await createProviderNode({
-        id:
-          compatMode === "cc"
-            ? `${CLAUDE_CODE_COMPATIBLE_PREFIX}${generateId()}`
-            : `${ANTHROPIC_COMPATIBLE_PREFIX}${generateId()}`,
+        id: `${ANTHROPIC_COMPATIBLE_PREFIX}${generateId()}`,
         type: "anthropic-compatible",
         prefix: (prefix || "").trim(),
         baseUrl: sanitizedBaseUrl,
         name: (name || "").trim(),
         chatPath: chatPath || null,
-        modelsPath: compatMode === "cc" ? null : modelsPath || null,
+        modelsPath: modelsPath || null,
         iconUrl: iconUrl?.trim() || null,
         customHeaders: customHeaders || null,
         dailyQuotaResetTimezone: dailyQuotaResetTimezone?.trim() || null,

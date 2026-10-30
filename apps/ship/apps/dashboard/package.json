@@ -5,8 +5,6 @@
   "private": true,
   "scripts": {
     "dev": "ENV_FILE=.env NODE_OPTIONS=\"$NODE_OPTIONS --import ./scripts/load-env.mjs\" next dev -p ${PORT:-3031} -H ${FREEBUILD_DASHBOARD_HOST:-127.0.0.1}",
-    "dev:saas": "ENV_FILE=.env.saas NODE_OPTIONS=\"$NODE_OPTIONS --import ./scripts/load-env.mjs\" next dev",
-    "dev:local-saas": "ENV_FILE=.env.local-saas NODE_OPTIONS=\"$NODE_OPTIONS --import ./scripts/load-env.mjs\" next dev",
     "dev:fresh": "rm -rf .next/cache && ENV_FILE=.env NODE_OPTIONS=\"$NODE_OPTIONS --import ./scripts/load-env.mjs\" next dev -p ${PORT:-3031} -H ${FREEBUILD_DASHBOARD_HOST:-127.0.0.1}",
     "build": "next build --webpack",
     "start": "ENV_FILE=.env NODE_OPTIONS=\"$NODE_OPTIONS --import ./scripts/load-env.mjs\" next start -p ${PORT:-3031} -H ${FREEBUILD_DASHBOARD_HOST:-127.0.0.1}",

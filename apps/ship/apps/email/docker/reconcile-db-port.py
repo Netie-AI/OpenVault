@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Modified by Netie AI, 2026
 """Reconcile SQL connection fields in the Debian mail image's daemon configs."""
 
 import os
@@ -93,12 +94,12 @@ def main():
         for cached in [settings.with_suffix(".pyc"), *(settings.parent / "__pycache__").glob("settings.*.pyc")]:
             if cached.resolve().is_relative_to(root):
                 cached.unlink(missing_ok=True)
-    print(f"[openship-mail] reconciled daemon SQL connections to port {port}")
+    print(f"[freebuild-mail] reconciled daemon SQL connections to port {port}")
 
 
 if __name__ == "__main__":
     try:
         main()
     except (OSError, ValueError) as error:
-        print(f"[openship-mail] FATAL: database port reconciliation failed: {error}", file=sys.stderr)
+        print(f"[freebuild-mail] FATAL: database port reconciliation failed: {error}", file=sys.stderr)
         sys.exit(1)

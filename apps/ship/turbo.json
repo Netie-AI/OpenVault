@@ -15,14 +15,6 @@
       "cache": false,
       "persistent": true
     },
-    "dev:saas": {
-      "cache": false,
-      "persistent": true
-    },
-    "dev:local-saas": {
-      "cache": false,
-      "persistent": true
-    },
     "lint": {
       "dependsOn": ["^build"]
     },

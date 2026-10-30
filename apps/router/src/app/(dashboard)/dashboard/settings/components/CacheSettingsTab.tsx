@@ -69,7 +69,6 @@ export default function CacheSettingsTab() {
   const [semModel, setSemModel] = useState("harrier-oss-v1-0.6b");
   const [semDimension, setSemDimension] = useState<number | undefined>(1024);
   const [semBaseUrl, setSemBaseUrl] = useState("");
-  const [semApiKey, setSemApiKey] = useState("");
   const [semRedisUrl, setSemRedisUrl] = useState("");
   const [semRedisPrefix, setSemRedisPrefix] = useState("omniroute:semcache:");
   const [semRequireZeroTemp, setSemRequireZeroTemp] = useState(true);
@@ -142,9 +141,6 @@ export default function CacheSettingsTab() {
         }
         if (typeof config.semanticCacheEmbeddingBaseUrl === "string") {
           setSemBaseUrl(config.semanticCacheEmbeddingBaseUrl);
-        }
-        if (typeof config.semanticCacheEmbeddingApiKey === "string") {
-          setSemApiKey(config.semanticCacheEmbeddingApiKey);
         }
         if (typeof config.semanticCacheRedisUrl === "string") {
           setSemRedisUrl(config.semanticCacheRedisUrl);
@@ -265,7 +261,8 @@ export default function CacheSettingsTab() {
       semanticCacheEmbeddingModel: semModel,
       semanticCacheEmbeddingDimension: semDimension ? Number(semDimension) : null,
       semanticCacheEmbeddingBaseUrl: semBaseUrl.trim() || selectedProviderOption?.baseUrl || null,
-      semanticCacheEmbeddingApiKey: semApiKey.trim() || null,
+      // The embedding provider's key is read from OpenVault; it is never sent or saved here.
+      semanticCacheEmbeddingApiKey: null,
       semanticCacheRedisUrl: semRedisUrl.trim() || null,
       semanticCacheRedisPrefix: semRedisPrefix.trim() || "omniroute:semcache:",
       semanticCacheRequireZeroTemp: semRequireZeroTemp,
@@ -302,7 +299,6 @@ export default function CacheSettingsTab() {
           provider: semProvider,
           model: semModel,
           baseUrl: semBaseUrl.trim() || selectedProviderOption?.baseUrl || undefined,
-          apiKey: semApiKey.trim() || undefined,
           dimensions: semDimension,
         }),
       });
@@ -604,15 +600,12 @@ export default function CacheSettingsTab() {
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-text-muted mb-1">
-                        Custom Embedding API Key
+                        Embedding API key
                       </label>
-                      <input
-                        type="password"
-                        placeholder="Bearer token or API key"
-                        value={semApiKey}
-                        onChange={(e) => setSemApiKey(e.target.value)}
-                        className="w-full px-3 py-1.5 rounded bg-surface-2 border border-border text-xs text-text-primary"
-                      />
+                      <p className="text-xs text-text-muted">
+                        The embedding provider&apos;s key is read from OpenVault. Add it at
+                        http://127.0.0.1:3010/keys.
+                      </p>
                     </div>
                   </div>
                 )}

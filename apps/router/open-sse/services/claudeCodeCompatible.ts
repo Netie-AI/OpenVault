@@ -21,7 +21,7 @@ import {
 import { applyClaudeCodeCompatibleThinkingDisplay } from "./claudeCodeCompatibleThinkingDisplay.ts";
 import { obfuscateInBody } from "./claudeCodeObfuscation.ts";
 import { applySystemTransformPipeline, PROVIDER_CC_BRIDGE } from "./systemTransforms.ts";
-import { usesCcWireImage } from "./ccWireImageBuiltins.ts";
+import { isCcWireImageEnabled, usesCcWireImage } from "./ccWireImageBuiltins.ts";
 import { collectClaudeMediaBlocks, convertOpenAiMediaBlock } from "./ccOpenAiMediaBlocks.ts";
 import {
   fixToolPairs,
@@ -92,6 +92,9 @@ function supportsClaudeXHighEffort(model: string | null | undefined): boolean {
 }
 
 export function isClaudeCodeCompatibleProvider(provider: string | null | undefined): boolean {
+  // FreeRoute: the Claude Code wire image is client impersonation and is off
+  // (open-sse/services/ccWireImageBuiltins.ts).
+  if (!isCcWireImageEnabled()) return false;
   return (
     (typeof provider === "string" && provider.startsWith(CLAUDE_CODE_COMPATIBLE_PREFIX)) ||
     // Built-in providers (e.g. agentrouter) that adopt the dynamic CC wire image

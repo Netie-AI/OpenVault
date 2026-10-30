@@ -31,6 +31,10 @@ import { getRegistryEntry } from "../config/providerRegistry.ts";
 // entry but are, per their own dashboard copy, a personal sign-in relayed or
 // refreshed on the operator's behalf).
 import { WEB_COOKIE_PROVIDERS } from "@/shared/constants/providers/web-cookie";
+// The dashboard catalog's alias table (every section: apikey, oauth, web-cookie,
+// search, audio-only, ...). It carries aliases that have no provider-registry row,
+// e.g. "firefly" for adobe-firefly and "poe" for poe-web.
+import { ALIAS_TO_ID } from "@/shared/constants/providers";
 
 /** Canonical 501 error codes for every hard-disabled feature family. */
 export const DISABLED = {
@@ -172,6 +176,18 @@ export interface ClassifiableProvider {
 // provider-issued API key.
 const WEB_SCRAPER_SUFFIX = /-web$/;
 
+// `anthropic-compatible-cc-*` custom nodes exist to reach relay gateways "that only
+// accept traffic which looks like the official Claude Code client": the Claude
+// Code user agent, Stainless client headers, the real client's header order and
+// the CCH billing signature (open-sse/services/claudeCodeCompatible.ts). That is
+// client impersonation, so the whole family answers tls_fingerprint_stealth_disabled.
+// A plain `anthropic-compatible-*` node (honest headers, its own x-api-key) stays.
+const CLAUDE_CODE_COMPATIBLE_NODE_PREFIX = "anthropic-compatible-cc-";
+
+function isClaudeCodeCompatibleNodeId(id: string): boolean {
+  return id.startsWith(CLAUDE_CODE_COMPATIBLE_NODE_PREFIX);
+}
+
 function isWebCookieProviderId(id: string): boolean {
   return Object.prototype.hasOwnProperty.call(WEB_COOKIE_PROVIDERS, id);
 }
@@ -228,6 +244,7 @@ export function classifyProvider(entry: ClassifiableProvider | null | undefined)
 
   const override = executorAuthOverride(id, executor);
   if (override) return override;
+  if (isClaudeCodeCompatibleNodeId(id)) return DISABLED.tlsStealth;
 
   // Subscription accounts authenticated through a real OAuth device/PKCE/
   // browser-callback flow: Claude Code, Codex, Cursor, GitHub/GHE Copilot,
@@ -290,21 +307,54 @@ const ORPHAN_ALIAS_OVERRIDES: Record<string, DisabledCode> = {
   ven: DISABLED.sessionRelay,
 };
 
-/**
- * Classify by provider id or alias, resolving through the live registry
- * first (covers every canonical id and every `RegistryEntry.alias`, which is
- * how the dashboard/model-routing layer actually addresses providers, see
- * `getRegistryEntry`). Falls back to the small orphan-alias table above, then
- * to the `-web` name-shape heuristic, so an executor-only alias with no
- * registry row still can't reach a pooling/scraping executor class.
- */
-export function classifyProviderId(providerId: string | null | undefined): DisabledCode | null {
-  if (!providerId) return null;
-  const id = providerId.trim().toLowerCase();
-  if (!id) return null;
+// Aliases that the executor map or a media registry accepts but that no
+// provider-registry row and no dashboard-catalog row resolves to their canonical
+// id. Resolved here so a gate that sees only the alias (e.g. the key validator
+// with provider "firefly") classifies it exactly like the canonical id. The walker
+// tests in open-sse/netie/__tests__/policy.test.mjs fail if an alias is missing
+// from every table and so classifies differently from its canonical id.
+//
+// Not listed on purpose: `v0`. The registry makes it the alias of the API-key
+// provider `v0-vercel`, while the executor map points it at the browser-session
+// `v0-vercel-web` executor. Classifying the spelling follows the registry (allowed);
+// getExecutor() refuses the session executor because it checks the provider the
+// loaded executor serves (open-sse/executors/index.ts).
+const ALIAS_TO_CANONICAL: Record<string, string> = {
+  // adobe-firefly: image/video/upscale registries and the executor map use "firefly".
+  firefly: "adobe-firefly",
+  // amazon-q: catalog alias "aq".
+  aq: "amazon-q",
+  // poe-web: catalog alias "poe".
+  poe: "poe-web",
+};
 
+/**
+ * Resolve a provider id or alias to its canonical id: the explicit alias table
+ * above first, then the provider registry (`RegistryEntry.alias`), then the
+ * dashboard catalog (`ALIAS_TO_ID`). Follows alias chains, lowercases and trims.
+ * An unknown id comes back unchanged.
+ */
+export function resolveCanonicalProviderId(providerId: string | null | undefined): string {
+  let current = String(providerId ?? "").trim().toLowerCase();
+  for (let hop = 0; hop < 4 && current; hop += 1) {
+    const next = (
+      ALIAS_TO_CANONICAL[current] ??
+      getRegistryEntry(current)?.id ??
+      ALIAS_TO_ID[current] ??
+      current
+    )
+      .trim()
+      .toLowerCase();
+    if (next === current) break;
+    current = next;
+  }
+  return current;
+}
+
+function classifyResolvedId(id: string): DisabledCode | null {
   const override = executorAuthOverride(id);
   if (override) return override;
+  if (isClaudeCodeCompatibleNodeId(id)) return DISABLED.tlsStealth;
 
   const entry = getRegistryEntry(id);
   if (entry) return classifyProvider(entry);
@@ -318,10 +368,54 @@ export function classifyProviderId(providerId: string | null | undefined): Disab
   return null;
 }
 
+/**
+ * Classify by provider id or alias. The id is first resolved to its canonical
+ * id (`resolveCanonicalProviderId`, which covers executor-map aliases, media
+ * registry aliases, `RegistryEntry.alias` and the dashboard catalog aliases),
+ * then classified through the live registry, the web-cookie catalog, the
+ * orphan-alias table above and the `-web` name-shape heuristic. The spelling
+ * given is classified too, and the stricter of the two wins, so an alias with no
+ * registry row still cannot reach a pooling or scraping executor class.
+ */
+export function classifyProviderId(providerId: string | null | undefined): DisabledCode | null {
+  if (!providerId) return null;
+  const id = providerId.trim().toLowerCase();
+  if (!id) return null;
+
+  const canonical = resolveCanonicalProviderId(id);
+  const byCanonical = classifyResolvedId(canonical);
+  if (byCanonical) return byCanonical;
+  return canonical === id ? null : classifyResolvedId(id);
+}
+
 /** Throws `NetieDisabledError` if `providerId` is hard-disabled; no-op otherwise. */
 export function assertProviderAllowed(providerId: string | null | undefined): void {
   const code = classifyProviderId(providerId);
   if (code) throw new NetieDisabledError(code);
+}
+
+// Managed sidecar services that exist only to pool a consumer subscription
+// login. dario.ts pools "the operator's own Claude Pro/Max subscription (Claude
+// Code OAuth)" and rebuilds every request into Claude Code's wire shape;
+// CLIProxyAPI does the same with multi-account rotation, CCH signing and uTLS.
+// Installing, starting or supervising either one is disabled at the lowest
+// layer (ServiceSupervisor, the installers, the version manager, the startup
+// bootstrap) so no route, CLI command, startup hook or scheduler can reach it.
+// The HTTP families are also blocked in `src/lib/netie/hardDisabledRoutes.ts`.
+// 9router is a different, named case (`upstream_service_not_included`).
+const DISABLED_SERVICE_TOOLS: ReadonlySet<string> = new Set(["dario", "cliproxy", "cliproxyapi"]);
+
+/** True when `tool` names a managed sidecar that is hard-disabled in this edition. */
+export function isServiceToolDisabled(tool: string | null | undefined): boolean {
+  if (!tool) return false;
+  return DISABLED_SERVICE_TOOLS.has(tool.trim().toLowerCase());
+}
+
+/** Throws `NetieDisabledError(consumer_subscription_pooling_disabled)` for a disabled sidecar. */
+export function assertServiceToolAllowed(tool: string | null | undefined): void {
+  if (isServiceToolDisabled(tool)) {
+    throw new NetieDisabledError(DISABLED.consumerSubscription);
+  }
 }
 
 /**

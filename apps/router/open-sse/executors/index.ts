@@ -222,7 +222,15 @@ export async function getExecutor(provider: string): Promise<BaseExecutor> {
   assertRuntimeProviderAvailable(provider);
   assertCommonChatGptWebProviderAvailable(provider);
   const loaded = await loadRegisteredExecutor(provider);
-  if (loaded) return loaded;
+  if (loaded) {
+    // FreeRoute: gate on what the executor serves, not only on the spelling it was
+    // asked for. An executor-map alias can shadow a registry alias of a different,
+    // allowed provider (the key `v0` is the API-key provider `v0-vercel` in the
+    // registry but the browser-session `v0-vercel-web` executor here), and an
+    // alias nobody listed would otherwise reach a disabled class.
+    assertProviderAllowed(loaded.getProvider());
+    return loaded;
+  }
   if (CHAT_UNSUPPORTED_CLOUD_AGENT_PROVIDERS.has(provider)) {
     const err = new Error(
       `Provider "${provider}" is a cloud-agent provider and does not support direct chat completions; use the Cloud Agents task API instead.`

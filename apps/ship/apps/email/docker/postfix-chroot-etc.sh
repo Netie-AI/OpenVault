@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Modified by Netie AI, 2026
 # Keep the DNS/NSS view used by chrooted Postfix services in sync with the
 # running container. /var/spool/postfix is a persistent bind mount, so the copy
 # made by iRedMail while the image is built is hidden at runtime (GH-686).
@@ -15,7 +16,7 @@ copy_atomic() { # <name> [required]
 
   if [ ! -r "$source" ]; then
     if [ "$required" = true ]; then
-      echo "[openship-mail] FATAL: Postfix chroot source $source is not readable" >&2
+      echo "[freebuild-mail] FATAL: Postfix chroot source $source is not readable" >&2
       return 1
     fi
     return 0
@@ -24,7 +25,7 @@ copy_atomic() { # <name> [required]
   temporary="$(mktemp "$chroot_etc/.${name}.XXXXXX")"
   if ! cat -- "$source" > "$temporary"; then
     rm -f -- "$temporary"
-    echo "[openship-mail] FATAL: could not copy $source into the Postfix chroot" >&2
+    echo "[freebuild-mail] FATAL: could not copy $source into the Postfix chroot" >&2
     return 1
   fi
   chmod 0644 "$temporary"
@@ -35,7 +36,7 @@ copy_atomic() { # <name> [required]
 # temporarily reject legitimate inbound mail. Fail before Postfix starts rather
 # than bringing up an SMTP server that rejects every sender.
 if [ ! -s "$source_etc/resolv.conf" ]; then
-  echo "[openship-mail] FATAL: $source_etc/resolv.conf is missing or empty; Postfix DNS would be unavailable" >&2
+  echo "[freebuild-mail] FATAL: $source_etc/resolv.conf is missing or empty; Postfix DNS would be unavailable" >&2
   exit 1
 fi
 copy_atomic resolv.conf true
@@ -46,4 +47,4 @@ for file in hosts nsswitch.conf services host.conf localtime; do
   copy_atomic "$file"
 done
 
-echo "[openship-mail] reconciled Postfix chroot DNS/NSS files in $chroot_etc"
+echo "[freebuild-mail] reconciled Postfix chroot DNS/NSS files in $chroot_etc"

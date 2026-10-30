@@ -6,6 +6,7 @@ import {
 } from "@/lib/db/databaseSettings";
 import { getSettings, updateSettings } from "@/lib/db/settings";
 import { isAuthenticated } from "@/shared/utils/apiAuth";
+import { renderKeysManagedByOpenVault } from "@omniroute/open-sse/netie/policy.ts";
 import { ensureSemanticCacheDbBridge } from "@/lib/cache/semanticCacheDbBridge";
 import { resetSemanticCacheManager } from "@omniroute/open-sse/services/cache/semanticCacheManager";
 import { getEmbeddingOptions } from "./embeddingOptions";
@@ -137,6 +138,16 @@ export async function PUT(request: NextRequest) {
     const updates: Partial<UserDatabaseSettings["cache"]> = {};
     const body = validation.data;
 
+    // FreeRoute: the embedding provider's key is never saved here. It comes from
+    // OpenVault when an embedding is requested. Clearing the field (empty or null)
+    // stays allowed so an operator can remove a value an older build left behind.
+    if (
+      typeof body.semanticCacheEmbeddingApiKey === "string" &&
+      body.semanticCacheEmbeddingApiKey.length > 0
+    ) {
+      return renderKeysManagedByOpenVault();
+    }
+
     if (body.semanticCacheEnabled !== undefined) {
       updates.semanticCacheEnabled = body.semanticCacheEnabled;
     }
@@ -168,7 +179,7 @@ export async function PUT(request: NextRequest) {
       updates.semanticCacheEmbeddingBaseUrl = body.semanticCacheEmbeddingBaseUrl ?? undefined;
     }
     if (body.semanticCacheEmbeddingApiKey !== undefined) {
-      updates.semanticCacheEmbeddingApiKey = body.semanticCacheEmbeddingApiKey ?? undefined;
+      updates.semanticCacheEmbeddingApiKey = "";
     }
     if (body.semanticCacheRedisUrl !== undefined) {
       updates.semanticCacheRedisUrl = body.semanticCacheRedisUrl ?? undefined;

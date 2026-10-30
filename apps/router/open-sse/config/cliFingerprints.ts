@@ -319,12 +319,21 @@ export function stripInternalBodyFields(
   return body;
 }
 
+// FreeRoute: re-ordering headers and body fields (and overriding the user agent)
+// to match a real client binary is client fingerprint impersonation, which is not
+// shipped (tls_fingerprint_stealth_disabled). `as boolean` keeps the code below
+// type-checkable; do not turn it on.
+const CLI_FINGERPRINT_IMPERSONATION_ENABLED = false as boolean;
+
 export function applyFingerprint(
   provider: string,
   headers: Record<string, string>,
   body: unknown
 ): { headers: Record<string, string>; bodyString: string } {
   body = stripInternalBodyFields(body);
+  if (!CLI_FINGERPRINT_IMPERSONATION_ENABLED) {
+    return { headers, bodyString: JSON.stringify(body) };
+  }
   const normalizedProvider = normalizeCliCompatProviderId(provider || "");
   const fingerprintKey = isClaudeCodeCompatible(provider)
     ? "claude-code-compatible"
@@ -391,6 +400,9 @@ export function getCliCompatProviders(): string[] {
  * Reads from: 1) Runtime cache (Settings UI), 2) Environment variables.
  */
 export function isCliCompatEnabled(provider: string): boolean {
+  // FreeRoute: never, whatever the Settings cache, CLI_COMPAT_<PROVIDER> or
+  // CLI_COMPAT_ALL say (see CLI_FINGERPRINT_IMPERSONATION_ENABLED above).
+  if (!CLI_FINGERPRINT_IMPERSONATION_ENABLED) return false;
   if (isClaudeCodeCompatible(provider)) return true;
 
   const key = provider?.toLowerCase().replace(/[^a-z0-9]/g, "_");

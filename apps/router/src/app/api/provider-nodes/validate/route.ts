@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
 import { getAuditRequestContext, logAuditEvent } from "@/lib/compliance/index";
-import { validateClaudeCodeCompatibleProvider } from "@/lib/providers/validation";
 import {
   SAFE_OUTBOUND_FETCH_PRESETS,
   SafeOutboundFetchError,
@@ -9,7 +8,7 @@ import {
   safeOutboundFetch,
 } from "@/shared/network/safeOutboundFetch";
 import { getProviderValidationGuard } from "@/shared/network/outboundUrlGuardPolicy";
-import { isCcCompatibleProviderEnabled } from "@/shared/utils/featureFlags";
+import { DISABLED, renderDisabled } from "@omniroute/open-sse/netie/policy.ts";
 import { providerNodeValidateSchema } from "@/shared/validation/schemas";
 import { isValidationFailure, validateBody } from "@/shared/validation/helpers";
 
@@ -60,13 +59,6 @@ function sanitizeAnthropicBaseUrl(baseUrl: string) {
     .trim()
     .replace(/\/$/, "")
     .replace(/\/messages(?:\?[^#]*)?$/i, "");
-}
-
-function sanitizeClaudeCodeCompatibleBaseUrl(baseUrl: string) {
-  return (baseUrl || "")
-    .trim()
-    .replace(/\/$/, "")
-    .replace(/\/(?:v\d+\/)?messages(?:\?[^#]*)?$/i, "");
 }
 
 // Status-specific error message for /models probe failures.
@@ -205,27 +197,9 @@ export async function POST(request) {
     // Anthropic Compatible Validation
     if (type === "anthropic-compatible") {
       if (compatMode === "cc") {
-        if (!isCcCompatibleProviderEnabled()) {
-          return NextResponse.json(
-            { valid: false, error: "CC Compatible provider is disabled" },
-            { status: 403 }
-          );
-        }
-
-        const result = await validateClaudeCodeCompatibleProvider({
-          apiKey,
-          providerSpecificData: {
-            baseUrl: sanitizeClaudeCodeCompatibleBaseUrl(baseUrl),
-            chatPath: chatPath || undefined,
-          },
-        });
-
-        return NextResponse.json({
-          valid: !!result.valid,
-          error: result.valid ? null : result.error || "Invalid API key",
-          warning: result.warning || null,
-          method: result.method || null,
-        });
+        // FreeRoute: the CC Compatible node type impersonates the Claude Code
+        // client (open-sse/netie/policy.ts), whatever the feature flag says.
+        return renderDisabled(DISABLED.tlsStealth);
       }
 
       // Robustly construct URL: remove trailing slash, and remove trailing /messages if user added it

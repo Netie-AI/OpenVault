@@ -249,6 +249,12 @@ export function getUserDatabaseSettings(): UserDatabaseSettings {
   mergeRuntimeLogSettings(settings, mainSettings);
   normalizeOptimizationSettings(settings);
 
+  // FreeRoute: the semantic-cache embedding API key is never read back from the
+  // settings table, so a value left there by an older build or an import is not
+  // used, shown, or carried into the next write (updateDatabaseSettings rewrites
+  // every key of the section, which overwrites it with an empty string).
+  settings.cache.semanticCacheEmbeddingApiKey = "";
+
   return settings;
 }
 
@@ -290,6 +296,9 @@ export function updateDatabaseSettings(
     }
   }
   normalizeOptimizationSettings(nextSettings);
+  // FreeRoute: whatever a caller passes, the embedding key is stored as "" (the
+  // key lives in OpenVault; see getUserDatabaseSettings above).
+  nextSettings.cache.semanticCacheEmbeddingApiKey = "";
 
   const db = getDbInstance();
   const insert = db.prepare(

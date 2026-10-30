@@ -291,8 +291,7 @@ const GENERIC_PROVIDER_IDS = new Set([
 
 const THEMED_SVGS: Record<string, { light: string; dark: string }> = {
   // Kimi (Moonshot AI) official-partnership logomarks (2026-07): the official
-  // rounded-square badge in Kimi's brand blue (#1783FF — see KIMI_BRAND_COLOR in
-  // featuredProviders.ts) for the 3 visible Kimi-family cards. This replaces two
+  // rounded-square badge in Kimi's brand blue (#1783FF) for the 3 visible Kimi-family cards. This replaces two
   // weaker fallbacks: kimi-coding/kimi-web previously fell through to the
   // third-party LobeHub "Kimi" icon (Tier 4, KNOWN_SVGS has no "kimi-coding"/
   // "kimi-web" entry), and moonshot's `/providers/moonshot.svg` uses

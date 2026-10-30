@@ -7,10 +7,9 @@ import {
   findProviderConnection,
   getProviderApiKey,
   listProviderConnections,
-  updateProviderApiKey,
   updateProviderTestResult,
 } from "../provider-store.mjs";
-import { encryptCredential } from "../encryption.mjs";
+import { refuseLocalKeyWrite } from "../openvault-keys.mjs";
 import { openOmniRouteDb } from "../sqlite.mjs";
 import { t } from "../i18n.mjs";
 import { registerProviderCrud } from "./provider-crud.mjs";
@@ -385,121 +384,10 @@ export async function runProvidersRotateCommand(selector, opts = {}) {
     return 0;
   }
 
-  // --- Source new key ---
-  let newKey;
-  if (opts.fromEnv) {
-    newKey = process.env[opts.fromEnv];
-    if (!newKey) {
-      console.error(t("providers.rotate.envVarEmpty", { var: opts.fromEnv }));
-      return 2;
-    }
-  } else if (opts.newKey) {
-    newKey = opts.newKey;
-  } else {
-    // Interactive prompt (echo-off not strictly needed for a key value, but best practice)
-    const readline = await import("node:readline");
-    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-    newKey = await new Promise((resolve) =>
-      rl.question(`New API key for ${connection.name}: `, (a) => {
-        rl.close();
-        resolve(a.trim());
-      })
-    );
-    if (!newKey) {
-      console.error("No key provided.");
-      return 2;
-    }
-  }
-
-  // --- Dry-run ---
-  if (opts.dryRun) {
-    console.log(
-      t("providers.rotate.dryRunResult", { name: connection.name, id: connection.id.slice(0, 8) })
-    );
-    return 0;
-  }
-
-  // --- Confirm ---
-  if (!opts.yes) {
-    const readline = await import("node:readline");
-    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-    const answer = await new Promise((resolve) =>
-      rl.question(
-        t("providers.rotate.confirmPrompt", {
-          name: connection.name,
-          id: connection.id.slice(0, 8),
-        }),
-        resolve
-      )
-    );
-    rl.close();
-    if (!/^y(es|s)?$/i.test(answer)) {
-      console.log(t("common.cancelled"));
-      return 0;
-    }
-  }
-
-  // --- Write ---
-  const serverUp = await isServerUp();
-  if (serverUp) {
-    try {
-      const res = await apiFetch(`/api/providers/${encodeURIComponent(connection.id)}`, {
-        method: "PATCH",
-        body: {
-          apiKey: newKey,
-          testStatus: "unknown",
-          lastError: null,
-          rateLimitedUntil: null,
-          backoffLevel: 0,
-        },
-        retry: false,
-        acceptNotOk: true,
-      });
-      if (!res.ok) {
-        console.error(t("common.error", { message: `HTTP ${res.status}` }));
-        return 1;
-      }
-    } catch {
-      // Fall through to direct DB write
-      const { db: db2 } = await openOmniRouteDb();
-      try {
-        updateProviderApiKey(db2, connection.id, encryptCredential(newKey));
-      } finally {
-        db2.close();
-      }
-    }
-  } else {
-    const { db: db2 } = await openOmniRouteDb();
-    try {
-      updateProviderApiKey(db2, connection.id, encryptCredential(newKey));
-    } finally {
-      db2.close();
-    }
-  }
-
-  console.log(
-    t("providers.rotate.success", { name: connection.name, id: connection.id.slice(0, 8) })
-  );
-
-  // --- Post-rotation test ---
-  if (!opts.skipTest) {
-    const { db: db3 } = await openOmniRouteDb();
-    try {
-      const fresh = findProviderConnection(db3, connection.id);
-      if (fresh) {
-        const result = await runProviderTest(db3, fresh);
-        if (result.valid) {
-          console.log(t("providers.rotate.testPassed"));
-        } else {
-          console.error(t("providers.rotate.testFailed", { error: result.error }));
-        }
-      }
-    } finally {
-      db3.close();
-    }
-  }
-
-  return 0;
+  // FreeRoute does not store provider keys, so there is nothing to rotate here.
+  // Rotating a key means replacing it in OpenVault; neither the server nor the
+  // local SQLite file is written (see ../openvault-keys.mjs).
+  return refuseLocalKeyWrite();
 }
 
 export async function runProvidersStatusCommand(opts = {}) {

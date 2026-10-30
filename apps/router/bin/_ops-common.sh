@@ -1,4 +1,4 @@
-# bin/_ops-common.sh — shared helpers for the OmniRoute ops runbook scripts.
+# bin/_ops-common.sh: shared helpers for the FreeRoute ops runbook scripts.
 #
 # Sourced (not executed) by rollback.sh / snapshot-data.sh / restore-data.sh /
 # restore-policies.sh / cold-start-bench.sh — the self-hoster incident-recovery

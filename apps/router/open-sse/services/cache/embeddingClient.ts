@@ -151,6 +151,8 @@ export function createDefaultEmbeddingGenerator(config: {
   embeddingModel?: string;
   embeddingBaseUrl?: string;
   embeddingApiKey?: string;
+  /** Looks the key up at call time (OpenVault). Used when `embeddingApiKey` is not set. */
+  embeddingApiKeyResolver?: () => Promise<string | null | undefined>;
 }): EmbeddingGenerator {
   return async (
     text: string,
@@ -170,7 +172,17 @@ export function createDefaultEmbeddingGenerator(config: {
         }
       }
     }
-    const apiKey = config.embeddingApiKey;
+    let apiKey = config.embeddingApiKey;
+    if (!apiKey && config.embeddingApiKeyResolver) {
+      try {
+        apiKey = (await config.embeddingApiKeyResolver()) || undefined;
+      } catch (err) {
+        // OpenVault down, sealed or refusing: the semantic cache is best effort,
+        // so skip the embedding (a cache miss) and say why once per attempt.
+        console.warn("[CACHE] Embedding key unavailable from OpenVault:", (err as Error).message);
+        return null;
+      }
+    }
 
     if (!targetUrl) {
       if (provider === "lemonade") {

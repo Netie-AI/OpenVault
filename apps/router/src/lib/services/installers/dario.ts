@@ -23,6 +23,7 @@ import path from "node:path";
 import { DATA_DIR } from "@/lib/db/core";
 import { upsertVersionManagerTool } from "@/lib/db/versionManager";
 import { runNpm, InstallError } from "./utils";
+import { assertServiceToolAllowed } from "@omniroute/open-sse/netie/policy.ts";
 
 export const DARIO_PACKAGE = "@askalf/dario";
 export const DARIO_DEFAULT_PORT = 3456;
@@ -112,6 +113,9 @@ export async function getLatestVersion(): Promise<string | null> {
  * Upserts the version_manager row with tool='dario'.
  */
 export async function install(version = "latest"): Promise<InstallResult> {
+  // FreeRoute: the Claude-subscription pooling sidecars cannot be installed or
+  // spawned (open-sse/netie/policy.ts).
+  assertServiceToolAllowed("dario");
   const startMs = Date.now();
   const installDir = getDarioInstallDir();
 
@@ -186,6 +190,9 @@ export async function update(): Promise<InstallResult> {
  * startup failure (ServiceSupervisor.waitForHealthy tolerates it).
  */
 export function resolveSpawnArgs(apiKey: string, port: number): SpawnArgs {
+  // FreeRoute: the Claude-subscription pooling sidecars cannot be installed or
+  // spawned (open-sse/netie/policy.ts).
+  assertServiceToolAllowed("dario");
   const cliPath = getCliPath();
   const installDir = getDarioInstallDir();
 

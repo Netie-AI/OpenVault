@@ -1,11 +1,16 @@
 import { getDbInstance } from "@/lib/db/core";
-import { encrypt, decrypt } from "@/lib/db/encryption";
 import type { AgentCredentials } from "@/lib/cloudAgent/baseAgent";
+import { KeysManagedByOpenVaultError, resolveProviderApiKey } from "@/lib/netie/keyvault";
 
-// The `cloud_agent_credentials` table is provisioned by migration
-// `061_cloud_agent_credentials.sql` at database initialization (see
-// src/lib/db/migrations/). Do not create it inline here — the project
-// migration policy requires versioned, transaction-wrapped DDL.
+// FreeRoute: cloud agent API keys (Jules, Devin, Codex cloud, Cursor cloud) live
+// only in OpenVault's KeyVault. They are read over loopback at request time and
+// never stored here. The `cloud_agent_credentials` table (migration
+// `061_cloud_agent_credentials.sql`) is no longer written or read: saving answers
+// 501 keys_managed_by_openvault, and src/lib/netie/scrubLocalSecrets.ts empties
+// the table from any imported or older database.
+
+/** The cloud agent providers whose key is looked up in OpenVault under the provider id. */
+export const CLOUD_AGENT_PROVIDER_IDS = ["jules", "devin", "codex-cloud", "cursor-cloud"] as const;
 
 /** Mask API key for display — show last 4 chars only */
 export function maskApiKey(key: string): string {
@@ -13,76 +18,47 @@ export function maskApiKey(key: string): string {
   return "****" + key.slice(-4);
 }
 
-/** Get decrypted credentials for a provider */
-export function getCloudAgentCredentialFromDb(providerId: string): AgentCredentials | null {
-  const db = getDbInstance();
-  const row = db
-    .prepare(
-      "SELECT api_key_encrypted, base_url FROM cloud_agent_credentials WHERE provider_id = ?"
-    )
-    .get(providerId) as { api_key_encrypted: string; base_url: string | null } | undefined;
-
-  if (!row) return null;
-
-  const decryptedKey = decrypt(row.api_key_encrypted);
-  if (!decryptedKey) return null;
-
-  const creds: AgentCredentials = { apiKey: decryptedKey };
-  if (row.base_url) creds.baseUrl = row.base_url;
-  return creds;
+/**
+ * Credentials for a cloud agent provider from OpenVault, or null when OpenVault
+ * holds no pooled key for it. Throws the KeyVault 503 errors (OpenVault down,
+ * sealed, admin token missing or rejected) rather than falling back to anything
+ * stored locally.
+ */
+export async function getCloudAgentCredentialFromVault(
+  providerId: string
+): Promise<AgentCredentials | null> {
+  const apiKey = await resolveProviderApiKey(providerId);
+  return apiKey ? { apiKey } : null;
 }
 
-/** List all credentials with masked keys */
-export function listCloudAgentCredentials(): Array<{
-  providerId: string;
-  apiKey: string;
-  baseUrl: string | null;
-  updatedAt: string;
-}> {
-  const db = getDbInstance();
-  const rows = db
-    .prepare(
-      "SELECT provider_id, api_key_encrypted, base_url, updated_at FROM cloud_agent_credentials"
-    )
-    .all() as {
-    provider_id: string;
-    api_key_encrypted: string;
-    base_url: string | null;
-    updated_at: string;
-  }[];
-
-  return rows.map((row) => {
-    const decrypted = decrypt(row.api_key_encrypted) ?? "";
-    return {
-      providerId: row.provider_id,
-      apiKey: maskApiKey(decrypted),
-      baseUrl: row.base_url,
-      updatedAt: row.updated_at,
-    };
-  });
+/** Providers OpenVault holds a key for. Never carries key material, not even a masked tail. */
+export async function listCloudAgentCredentials(): Promise<
+  Array<{ providerId: string; apiKey: string; baseUrl: string | null; updatedAt: string | null }>
+> {
+  const rows: Array<{
+    providerId: string;
+    apiKey: string;
+    baseUrl: string | null;
+    updatedAt: string | null;
+  }> = [];
+  for (const providerId of CLOUD_AGENT_PROVIDER_IDS) {
+    if (await resolveProviderApiKey(providerId)) {
+      rows.push({ providerId, apiKey: "managed in OpenVault", baseUrl: null, updatedAt: null });
+    }
+  }
+  return rows;
 }
 
-/** Save or update credentials (encrypts API key at rest) */
+/** Always refuses: a cloud agent key is added in OpenVault, never saved here. */
 export function saveCloudAgentCredential(
-  providerId: string,
-  apiKey: string,
-  baseUrl?: string
-): void {
-  const encrypted = encrypt(apiKey);
-  if (!encrypted) throw new Error("Failed to encrypt API key");
-
-  const db = getDbInstance();
-  db.prepare(
-    `INSERT INTO cloud_agent_credentials (provider_id, api_key_encrypted, base_url, updated_at)
-     VALUES (@providerId, @apiKey, @baseUrl, datetime('now'))
-     ON CONFLICT(provider_id) DO UPDATE SET
-       api_key_encrypted = excluded.api_key_encrypted,
-       base_url = excluded.base_url,
-       updated_at = excluded.updated_at`
-  ).run({ providerId, apiKey: encrypted, baseUrl: baseUrl ?? null });
+  _providerId: string,
+  _apiKey: string,
+  _baseUrl?: string
+): never {
+  throw new KeysManagedByOpenVaultError(["apiKey"]);
 }
 
-/** Delete credentials for a provider */
+/** Delete credentials for a provider (clears a row left in the local table by an older build). */
 export function deleteCloudAgentCredential(providerId: string): void {
   const db = getDbInstance();
   db.prepare("DELETE FROM cloud_agent_credentials WHERE provider_id = ?").run(providerId);

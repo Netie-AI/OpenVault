@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# bin/snapshot-data.sh — consistent point-in-time snapshot of the OmniRoute data
+# bin/snapshot-data.sh: consistent point-in-time snapshot of the FreeRoute data
 # volume (the SQLite store under $DATA_DIR). Used by the data-layer
 # incident-recovery flow before any restore.
 #
@@ -15,10 +15,11 @@ usage() {
   cat <<'EOF'
 Usage: bin/snapshot-data.sh [--label <name>] [--data-dir <path>] [-h|--help]
 
-Creates a consistent snapshot of the OmniRoute SQLite data under the backups dir
+Creates a consistent snapshot of the FreeRoute SQLite data under the backups dir
 and prints the snapshot id (UTC timestamp) on stdout.
 
-Env: DATA_DIR (default ~/.omniroute), DB_BACKUPS_DIR (default $DATA_DIR/db_backups).
+Env: DATA_DIR (default: the FreeRoute data directory under your home folder),
+DB_BACKUPS_DIR (default $DATA_DIR/db_backups).
 EOF
 }
 

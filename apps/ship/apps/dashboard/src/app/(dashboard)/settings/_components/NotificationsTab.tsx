@@ -1,4 +1,5 @@
 "use client";
+// Modified by Netie AI, 2026
 
 import { Icon as UiIcon } from "@repo/ui/icons";
 
@@ -413,7 +414,7 @@ function describeChannel(
   }
 }
 
-function NewChannelForm({
+export function NewChannelForm({
   onSaved,
   onCancel,
 }: {
@@ -538,6 +539,11 @@ function NewChannelForm({
           onChange={(e) => setUrl(e.target.value)}
           className="w-full bg-background border border-border/50 rounded-lg px-3 py-2 text-sm"
         />
+      )}
+      {kind === "webhook" && (
+        <p className="text-xs text-muted-foreground">
+          {t.settings.notifications.form.webhookSignatureHint}
+        </p>
       )}
       {kind === "slack" && (
         <input

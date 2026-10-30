@@ -4,26 +4,10 @@ import {
   upsertUpstreamProxyConfig,
   deleteUpstreamProxyConfig,
 } from "@/lib/db/upstreamProxy";
-import { isClaudeCodeCompatibleProvider } from "@/shared/constants/providers";
+import { DISABLED, renderDisabled } from "@omniroute/open-sse/netie/policy.ts";
 
 import { z } from "zod";
 import { validateBody, isValidationFailure } from "@/shared/validation/helpers";
-
-/**
- * The upstream `dario` project can itself proxy other subscription-based
- * providers (OpenAI, Grok) — but FreeRoute's integration only wires up
- * Claude Pro/Max OAuth account management (login-start/login-complete/
- * accounts) and DarioExecutor only implements Claude Code's exact wire
- * shape, added specifically so Claude Code traffic stays undetectable as
- * Anthropic's wire format drifts. Routing a non-Claude provider's requests
- * through it here would hit account/shape handling that was never built for
- * that provider and break. Mirrors the scope CLIProxyAPI's own
- * "claude-native" deep mode already uses. Revisit if account management for
- * another provider gets added to this integration.
- */
-function isDarioEligibleProvider(providerId: string): boolean {
-  return providerId === "claude" || isClaudeCodeCompatibleProvider(providerId);
-}
 
 const upstreamProxySchema = z.object({
   // "dario" (#dario) is a new direct-passthrough mode alongside "cliproxyapi".
@@ -66,25 +50,16 @@ export async function PUT(
 
   const { mode, enabled, fallbackBackend } = validation.data;
 
-  const wantsDario = mode === "dario" || (mode === "fallback" && fallbackBackend === "dario");
-  if (wantsDario && !isDarioEligibleProvider(providerId)) {
-    return NextResponse.json(
-      {
-        error:
-          `Dario only proxies Claude-Code-shaped traffic (it authenticates via a Claude ` +
-          `Pro/Max subscription, not a per-provider credential) — "${providerId}" can't be ` +
-          `routed through it.`,
-      },
-      { status: 400 }
-    );
+  // FreeRoute: the only backends behind a non-native mode are the CLIProxyAPI and
+  // Dario Claude-subscription pooling sidecars, both hard-disabled
+  // (open-sse/netie/policy.ts). Only "native" can be saved.
+  if (mode !== "native" || fallbackBackend !== undefined) {
+    return renderDisabled(DISABLED.consumerSubscription);
   }
 
-  const config = await upsertUpstreamProxyConfig({
-    providerId,
-    mode,
-    enabled,
-    ...(fallbackBackend !== undefined ? { fallbackBackend } : {}),
-  });
+  // `mode` is "native" here and no fallback backend is set, so this only stores
+  // that a provider goes straight to its own upstream.
+  const config = await upsertUpstreamProxyConfig({ providerId, mode, enabled });
 
   return NextResponse.json(config);
 }

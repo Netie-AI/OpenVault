@@ -712,6 +712,7 @@
       "labelPlaceholder": "Label (e.g. On-call email)",
       "emailPlaceholder": "you@example.com",
       "webhookPlaceholder": "https://example.com/freebuild-hook",
+      "webhookSignatureHint": "Each delivery is a JSON POST. When the channel has a signing secret, the request carries sha256=<HMAC-SHA256 of the raw body> in X-FreeBuild-Signature-256. The same value is also sent as X-Openship-Signature-256 so receivers written against the older name keep verifying.",
       "slackPlaceholder": "https://hooks.slack.com/services/...",
       "discordPlaceholder": "https://discord.com/api/webhooks/...",
       "msteamsPlaceholder": "https://prod-00.westus.logic.azure.com/workflows/...",

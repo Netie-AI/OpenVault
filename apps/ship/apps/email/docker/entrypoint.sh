@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Modified by Netie AI, 2026
 # First-boot / every-boot entrypoint for the openship-mail engine.
 #
 # Idempotent by construction — this is what makes `docker pull` + recreate safe:
@@ -37,7 +38,7 @@
 # IREDAPD_DB_PASSWD, FAIL2BAN_DB_PASSWD, PGSQL_ROOT_PASSWD, DOMAIN_ADMIN_PASSWD_PLAIN).
 set -euo pipefail
 
-log() { echo "[openship-mail] $*"; }
+log() { echo "[freebuild-mail] $*"; }
 
 # db-bootstrap.sh reads OPENSHIP_MAIL_DB_HOST and OPENSHIP_MAIL_DB_PORT to wait for
 # and bootstrap the schema; step 3d reconciles that same port into daemon configs.

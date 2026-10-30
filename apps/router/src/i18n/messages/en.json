@@ -6427,11 +6427,7 @@
     "apiProtocolHint": "Some providers publish the same models over more than one protocol. Leave the default unless you need the alternative.",
     "bulkAddFormatHintCloudflare": "One key per line. Format: name|accountId|apiKey (Cloudflare account ID + API token).",
     "lmarenaWebCookieHint": "Open arena.ai, sign in, then copy the full Cookie header from a Network request. Include arena-auth-prod-v1.0 and arena-auth-prod-v1.1 (and further chunks if present), preferably with cf_clearance. Do not paste only the empty arena-auth-prod-v1 cookie. Optional: providerSpecificData.recaptchaV3Token if create-evaluation still returns 403.",
-    "kimiOfficialSupporterBadge": "Official Supporter",
-    "kimiOfficialSupporterTooltip": "Kimi (Moonshot AI) is an official FreeRoute launch partner",
-    "cheaperInferenceSupporterBadge": "Open Source Friend",
-    "cheaperInferenceSupporterTooltip": "Cheaper Inference backs FreeRoute as an Open Source Friend",
-    "kimiPartnerLinkNote": "Partner link — supports FreeRoute at no extra cost to you",
+    "partnerLinkNote": "Partner link",
     "codexQuotaPools": "Codex quota pools",
     "codexPoolAvailable": "Available",
     "codexPoolPartiallyLimited": "Partially limited",
@@ -13657,13 +13653,6 @@
     "running": "Running...",
     "testFailed": "Test failed"
   },
-  "kimiSponsorBanner": {
-    "foundingFriendTitle": "Kimi (Moonshot AI) is FreeRoute's founding Open Source Friend",
-    "description": "New users get 15% extra API credits on their first top-up. Use Kimi K3 in FreeRoute through the official Kimi API.",
-    "cta": "Get a Kimi API Key",
-    "partnerLinkNote": "Partner link",
-    "dismissAriaLabel": "Dismiss"
-  },
   "vscodeCopilotBanner": {
     "title": "FreeRoute now runs inside VS Code Copilot Chat",
     "description": "Install the free OmniCopilot extension and every FreeRoute model shows up right in the Copilot Chat model picker you already use.",
@@ -14422,13 +14411,6 @@
     "toolsMismatch": "Provider does not support tool calling",
     "structuredOutputMismatch": "Provider does not support structured output",
     "contextWindowMismatch": "Request exceeds provider context window"
-  },
-  "cheaperInferenceSponsorBanner": {
-    "title": "Cheaper Inference is an FreeRoute Open Source Friend",
-    "description": "A cost-ranked gateway reselling dozens of frontier models behind one OpenAI-compatible endpoint — routing each request to the cheapest eligible provider, never above list price.",
-    "cta": "Get an API Key",
-    "partnerLinkNote": "Partner link",
-    "dismissAriaLabel": "Dismiss"
   },
   "featureFlagOmnirouteDisableThinkingLevelVariantsDescription": "Disable the generation of thinking level variants (e.g. -low, -medium, -high) in the /v1/models catalog."
 }

@@ -39,6 +39,9 @@ const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const MANAGEMENT_API_KEY = `sk-smoke-mgmt-${randomBytes(16).toString("hex")}`;
 const OPENVAULT_VALID_TOKEN = `ovtok_smoke_${randomBytes(16).toString("hex")}`;
 const OPENVAULT_BOGUS_TOKEN = `ovtok_bogus_${randomBytes(16).toString("hex")}`;
+// A token the stub answers with OpenVault's limiter response, 429
+// {"detail":"too many verify requests"} (60 verify calls a minute per caller).
+const OPENVAULT_RATE_LIMITED_TOKEN = `ovtok_ratelimited_${randomBytes(16).toString("hex")}`;
 const OPENVAULT_KEY_ID = "key_smoke_test";
 const OPENVAULT_VERIFY_KEY_ID = "apikey_smoke_test";
 const OPENVAULT_ADMIN_TOKEN = `adm_smoke_${randomBytes(24).toString("hex")}`;
@@ -59,6 +62,7 @@ let dataDir;
 let adminTokenDir;
 const serverLogs = [];
 let verifyCallCount = 0;
+let rateLimitedCallCount = 0;
 let adminRejectedCount = 0;
 
 function pathNeedsAdmin(pathname) {
@@ -133,11 +137,27 @@ function startOpenVaultStub() {
           } catch {
             /* malformed body -> invalid */
           }
+          // OpenVault's exact shapes: the limiter answers after the guard admitted
+          // the admin token, a good token is {"ok":true,"valid":true,"key_id","tier"},
+          // and an unknown, revoked, empty or malformed token is {"ok":true,"valid":false}.
+          if (token === OPENVAULT_RATE_LIMITED_TOKEN) {
+            rateLimitedCallCount += 1;
+            res.writeHead(429);
+            res.end(JSON.stringify({ detail: "too many verify requests" }));
+            return;
+          }
           res.writeHead(200);
           if (token === OPENVAULT_VALID_TOKEN) {
-            res.end(JSON.stringify({ valid: true, key_id: OPENVAULT_VERIFY_KEY_ID, tier: "free" }));
+            res.end(
+              JSON.stringify({
+                ok: true,
+                valid: true,
+                key_id: OPENVAULT_VERIFY_KEY_ID,
+                tier: "free",
+              })
+            );
           } else {
-            res.end(JSON.stringify({ valid: false }));
+            res.end(JSON.stringify({ ok: true, valid: false }));
           }
         });
         return;
@@ -364,6 +384,31 @@ test("a bogus client token is rejected on /v1/models (401)", async () => {
     headers: { authorization: `Bearer ${OPENVAULT_BOGUS_TOKEN}` },
   });
   assert.equal(res.status, 401);
+});
+
+test("a client token OpenVault rate-limits (429) is refused 401, named in the log, and not cached", async () => {
+  const before = rateLimitedCallCount;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const res = await fetch(`${baseUrl()}/api/v1/models`, {
+      headers: { authorization: `Bearer ${OPENVAULT_RATE_LIMITED_TOKEN}` },
+    });
+    assert.equal(res.status, 401, `attempt ${attempt}: expected 401 (fail closed), got ${res.status}`);
+  }
+  // Not cached: both requests reached the stub, so a token is not locked out
+  // for 60 s by one 429.
+  assert.equal(rateLimitedCallCount - before, 2, "a 429 answer must not be cached");
+  const logs = serverLogs.join("");
+  assert.match(logs, /openvault_verify_rate_limited/, "the log must name the rate limit");
+  assert.doesNotMatch(
+    logs,
+    /openvault_keyvault_unreachable: could not verify an inbound client token/,
+    "a 429 must not be logged as an outage"
+  );
+  // The limiter does not take the good token down with it.
+  const good = await fetch(`${baseUrl()}/api/v1/models`, {
+    headers: { authorization: `Bearer ${OPENVAULT_VALID_TOKEN}` },
+  });
+  assert.notEqual(good.status, 401);
 });
 
 test("checking for an update is hard-disabled (upstream_updates_disabled)", async () => {
@@ -610,3 +655,97 @@ test("the Responses WebSocket upgrade answers the named 501", async () => {
   assert.equal(JSON.parse(body).error?.code, "consumer_subscription_pooling_disabled");
 });
 
+
+// ── Round 3 regressions (consumer paths and keys outside the vault) ─────────
+
+test("the Dario and CLIProxyAPI sidecar families and the version manager answer 501 consumer_subscription_pooling_disabled", async () => {
+  for (const [method, path] of [
+    ["POST", "/api/services/dario/install"],
+    ["POST", "/api/services/dario/start"],
+    ["POST", "/api/services/dario/admin/login-start"],
+    ["GET", "/api/services/dario/admin/accounts"],
+    ["POST", "/api/services/cliproxy/install"],
+    ["POST", "/api/services/cliproxy/start"],
+    ["GET", "/api/services/cliproxy/status"],
+    ["POST", "/api/version-manager/install"],
+    ["POST", "/api/version-manager/start"],
+  ]) {
+    const res = await fetch(`${baseUrl()}${path}`, {
+      method,
+      headers: managementHeaders({ "content-type": "application/json" }),
+      body: method === "GET" ? undefined : "{}",
+    });
+    await expectNamed(res, 501, "consumer_subscription_pooling_disabled");
+  }
+});
+
+test("an upstream proxy mode that routes through a sidecar cannot be saved", async () => {
+  const res = await fetch(`${baseUrl()}/api/upstream-proxy/claude`, {
+    method: "PUT",
+    headers: managementHeaders({ "content-type": "application/json" }),
+    body: JSON.stringify({ mode: "dario" }),
+  });
+  await expectNamed(res, 501, "consumer_subscription_pooling_disabled");
+});
+
+test("the firefly alias is gated like adobe-firefly (consumer_session_relay_disabled)", async () => {
+  for (const provider of ["adobe-firefly", "firefly"]) {
+    await expectNamed(
+      await postJson("/api/providers/validate", { provider, apiKey: "sso=abc" }),
+      501,
+      "consumer_session_relay_disabled"
+    );
+  }
+});
+
+test("a Claude Code Compatible provider node cannot be created or validated (tls_fingerprint_stealth_disabled)", async () => {
+  const node = {
+    type: "anthropic-compatible",
+    compatMode: "cc",
+    name: "smoke-cc",
+    prefix: "smokecc",
+    baseUrl: "https://relay.example.invalid",
+  };
+  await expectNamed(await postJson("/api/provider-nodes", node), 501, "tls_fingerprint_stealth_disabled");
+  await expectNamed(
+    await postJson("/api/provider-nodes/validate", { ...node, apiKey: "sk-should-never-be-stored" }),
+    501,
+    "tls_fingerprint_stealth_disabled"
+  );
+});
+
+test("a cloud agent key (Devin, Jules, Codex cloud, Cursor cloud) cannot be saved", async () => {
+  await expectNamed(
+    await postJson("/api/v1/agents/credentials", { provider: "devin", apiKey: "sk-should-never-be-stored" }),
+    501,
+    "keys_managed_by_openvault"
+  );
+});
+
+test("the semantic-cache embedding key cannot be saved or probed with, and can still be cleared", async () => {
+  const put = (body) =>
+    fetch(`${baseUrl()}/api/settings/cache-config`, {
+      method: "PUT",
+      headers: managementHeaders({ "content-type": "application/json" }),
+      body: JSON.stringify(body),
+    });
+  await expectNamed(
+    await put({ semanticCacheEmbeddingApiKey: "sk-should-never-be-stored" }),
+    501,
+    "keys_managed_by_openvault"
+  );
+  assert.equal((await put({ semanticCacheEmbeddingApiKey: "" })).status, 200);
+  await expectNamed(
+    await postJson("/api/settings/cache-config/test-embedding", {
+      provider: "openai",
+      model: "text-embedding-3-small",
+      apiKey: "sk-should-never-be-stored",
+    }),
+    501,
+    "keys_managed_by_openvault"
+  );
+  const settings = await readJson(
+    await fetch(`${baseUrl()}/api/settings/cache-config`, { headers: managementHeaders() })
+  );
+  assert.equal(settings.semanticCacheEmbeddingApiKey, "");
+});

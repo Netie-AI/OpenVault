@@ -71,6 +71,32 @@ const upstreamFiles = execFileSync("git", ["-C", UPSTREAM, "ls-files", "-z"], {
   .filter(Boolean)
   .sort();
 
+// The local tree is what git sees: tracked files plus untracked files that are
+// not ignored. Gitignored build output (for example apps/email/client/.react-router
+// and .wrangler) appears and disappears with every build, so it must not change
+// the NOTICE or receive a header. A path counts as present only when git sees it
+// and it is a file on disk, so a tracked file that was deleted still counts as
+// deleted. Outside a git work tree this falls back to the disk alone.
+function gitVisibleFiles() {
+  try {
+    const out = execFileSync(
+      "git",
+      ["-C", SHIP_ROOT, "ls-files", "--cached", "--others", "--exclude-standard", "-z", "--", "."],
+      { encoding: "utf8", maxBuffer: 64 * 1024 * 1024, stdio: ["ignore", "pipe", "ignore"] },
+    );
+    return new Set(out.split("\0").filter(Boolean));
+  } catch {
+    return null;
+  }
+}
+const GIT_VISIBLE = gitVisibleFiles();
+
+function presentLocally(rel) {
+  const here = join(SHIP_ROOT, rel);
+  if (!existsSync(here) || !statSync(here).isFile()) return false;
+  return GIT_VISIBLE === null || GIT_VISIBLE.has(rel);
+}
+
 // ---------------------------------------------------------------- classify
 
 const LOCKFILES = new Set(["package-lock.json", "bun.lock", "bun.lockb", "yarn.lock", "pnpm-lock.yaml"]);
@@ -301,7 +327,7 @@ let unchanged = 0;
 
 for (const rel of upstreamFiles) {
   const here = join(SHIP_ROOT, rel);
-  if (!existsSync(here) || !statSync(here).isFile()) {
+  if (!presentLocally(rel)) {
     deleted.push(rel);
     continue;
   }

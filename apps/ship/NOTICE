@@ -64,6 +64,7 @@ modification notice for them is this list.
   packages/db/package.json
   packages/platform/package.json
   packages/sdk/package.json
+  turbo.json
 
 Upstream files removed
 ----------------------
@@ -84,9 +85,9 @@ THIRD_PARTY_NOTICES.md). File counts at the imported commit:
 Files removed from kept units, by unit:
 
   (root): 7 files
-  apps/api/: 1 file
-  apps/dashboard/: 187 files
-  apps/email/: 28 files
+  apps/api/: 3 files
+  apps/dashboard/: 189 files
+  apps/email/: 57 files
   packages/adapters/: 1 file
 
   (root)
@@ -99,9 +100,13 @@ Files removed from kept units, by unit:
     release-advisories.json
 
   apps/api/
+    apps/api/.env.local-saas.example
+    apps/api/.env.saas.example
     apps/api/assets/geoip/GeoLite2-Country.mmdb
 
   apps/dashboard/
+    apps/dashboard/.env.local-saas.example
+    apps/dashboard/.env.saas.example
     apps/dashboard/public/android-chrome-192x192.png
     apps/dashboard/public/android-chrome-512x512.png
     apps/dashboard/public/apple-touch-icon.png
@@ -291,6 +296,35 @@ Files removed from kept units, by unit:
     apps/dashboard/src/i18n/locales/zh/widgets.json
 
   apps/email/
+    apps/email/client/.react-router/types/+future.ts
+    apps/email/client/.react-router/types/+routes.ts
+    apps/email/client/.react-router/types/+server-build.d.ts
+    apps/email/client/.react-router/types/app/(auth)/login/+types/page.ts
+    apps/email/client/.react-router/types/app/(routes)/+types/layout.ts
+    apps/email/client/.react-router/types/app/(routes)/developer/+types/page.ts
+    apps/email/client/.react-router/types/app/(routes)/mail/+types/layout.ts
+    apps/email/client/.react-router/types/app/(routes)/mail/+types/page.ts
+    apps/email/client/.react-router/types/app/(routes)/mail/[folder]/+types/page.ts
+    apps/email/client/.react-router/types/app/(routes)/mail/compose/+types/page.ts
+    apps/email/client/.react-router/types/app/(routes)/mail/create/+types/page.ts
+    apps/email/client/.react-router/types/app/(routes)/mail/under-construction/[path]/+types/page.ts
+    apps/email/client/.react-router/types/app/(routes)/settings/+types/layout.ts
+    apps/email/client/.react-router/types/app/(routes)/settings/+types/page.ts
+    apps/email/client/.react-router/types/app/(routes)/settings/[...settings]/+types/page.ts
+    apps/email/client/.react-router/types/app/(routes)/settings/appearance/+types/page.ts
+    apps/email/client/.react-router/types/app/(routes)/settings/general/+types/page.ts
+    apps/email/client/.react-router/types/app/(routes)/settings/labels/+types/page.ts
+    apps/email/client/.react-router/types/app/(routes)/settings/notifications/+types/page.ts
+    apps/email/client/.react-router/types/app/(routes)/settings/privacy/+types/page.ts
+    apps/email/client/.react-router/types/app/(routes)/settings/security/+types/page.ts
+    apps/email/client/.react-router/types/app/(routes)/settings/shortcuts/+types/page.ts
+    apps/email/client/.react-router/types/app/+types/mailto-handler.ts
+    apps/email/client/.react-router/types/app/+types/page.ts
+    apps/email/client/.react-router/types/app/+types/root.ts
+    apps/email/client/.react-router/types/app/meta-files/+types/not-found.ts
+    apps/email/client/.wrangler/state/v3/cache/miniflare-CacheObject/metadata.sqlite
+    apps/email/client/.wrangler/state/v3/cache/miniflare-CacheObject/metadata.sqlite-shm
+    apps/email/client/.wrangler/state/v3/cache/miniflare-CacheObject/metadata.sqlite-wal
     apps/email/client/messages/ar.json
     apps/email/client/messages/ca.json
     apps/email/client/messages/cs.json

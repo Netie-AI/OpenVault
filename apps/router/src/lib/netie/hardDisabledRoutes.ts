@@ -175,6 +175,32 @@ const RULES: HardDisabledRule[] = [
       "apply writes it onto a connection. Provider keys live only in OpenVault.",
   },
   {
+    prefix: "/api/services/dario",
+    code: CONSUMER_SUBSCRIPTION,
+    message: CONSUMER_SUBSCRIPTION_MESSAGE,
+    reason:
+      "Managed Dario sidecar: installs, starts and runs Claude Pro/Max OAuth logins " +
+      "(/admin/login/*) for a subscription pool. Includes install, start, stop, restart, " +
+      "update, status, auto-start and the admin accounts, login and import routes.",
+  },
+  {
+    prefix: "/api/services/cliproxy",
+    code: CONSUMER_SUBSCRIPTION,
+    message: CONSUMER_SUBSCRIPTION_MESSAGE,
+    reason:
+      "Managed CLIProxyAPI sidecar: multi-account subscription rotation with Claude Code " +
+      "wire emulation. Includes install, start, stop, restart, update, status, " +
+      "auto-start, provider-expose and accounts.",
+  },
+  {
+    prefix: "/api/version-manager",
+    code: CONSUMER_SUBSCRIPTION,
+    message: CONSUMER_SUBSCRIPTION_MESSAGE,
+    reason:
+      "The version manager's only tool is the cliproxyapi binary (download, start, stop, " +
+      "restart, release check), the same sidecar as /api/services/cliproxy.",
+  },
+  {
     prefix: "/api/services/9router",
     code: UPSTREAM_SERVICE_NOT_INCLUDED,
     message: UPSTREAM_SERVICE_NOT_INCLUDED_MESSAGE,
@@ -195,6 +221,13 @@ interface HardDisabledPatternRule {
 }
 
 const PATTERN_RULES: HardDisabledPatternRule[] = [
+  {
+    pattern: /^\/dashboard\/providers\/services\/(dario|cliproxy|cliproxyapi)(\/|$)/,
+    code: CONSUMER_SUBSCRIPTION,
+    message: CONSUMER_SUBSCRIPTION_MESSAGE,
+    reason:
+      "Reverse-proxied embed UI of the Dario and CLIProxyAPI Claude-subscription sidecars.",
+  },
   {
     pattern: /^\/api\/providers\/[^/]+\/(login|chatgpt-web-codex-doctor|refresh-token)(\/|$)/,
     code: SESSION_RELAY,

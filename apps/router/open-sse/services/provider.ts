@@ -10,7 +10,7 @@ import {
 } from "./claudeCodeCompatible.ts";
 import { getClaudeCodeCompatibleRequestDefaults } from "@/lib/providers/requestDefaults";
 import { buildClineHeaders } from "@/shared/utils/clineAuth";
-import { usesCcWireImage } from "./ccWireImageBuiltins.ts";
+import { isCcWireImageEnabled, usesCcWireImage } from "./ccWireImageBuiltins.ts";
 
 const OPENAI_COMPATIBLE_PREFIX = "openai-compatible-";
 const OPENAI_COMPATIBLE_DEFAULTS = {
@@ -32,6 +32,10 @@ function isAnthropicCompatible(provider) {
 }
 
 export function isClaudeCodeCompatible(provider) {
+  // FreeRoute: the Claude Code wire image is client impersonation and is off
+  // (open-sse/services/ccWireImageBuiltins.ts). An `anthropic-compatible-cc-*`
+  // node that reached this point is sent as a plain Anthropic-compatible node.
+  if (!isCcWireImageEnabled()) return false;
   return (
     (typeof provider === "string" && provider.startsWith(CLAUDE_CODE_COMPATIBLE_PREFIX)) ||
     // Built-in providers (e.g. agentrouter) that adopt the dynamic CC wire image

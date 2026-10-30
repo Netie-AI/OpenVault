@@ -8,6 +8,7 @@ import { pipeline } from "stream/promises";
 import { execFile } from "child_process";
 import { promisify } from "util";
 import { getChecksums, getReleaseByVersion } from "./releaseChecker.ts";
+import { assertServiceToolAllowed } from "@omniroute/open-sse/netie/policy.ts";
 
 const execFileAsync = promisify(execFile);
 const DEFAULT_DATA_DIR = process.env.DATA_DIR || path.join(os.homedir(), ".omniroute");
@@ -187,6 +188,8 @@ export async function downloadRelease(
 }
 
 export async function installVersion(version: string, dataDir?: string): Promise<string> {
+  // FreeRoute: the cliproxyapi sidecar is hard-disabled (open-sse/netie/policy.ts).
+  assertServiceToolAllowed("cliproxyapi");
   const dir = dataDir || DEFAULT_DATA_DIR;
   const binDir = path.join(dir, "bin");
   await fs.mkdir(binDir, { recursive: true });

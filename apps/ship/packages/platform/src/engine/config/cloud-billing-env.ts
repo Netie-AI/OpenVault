@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026
 import { oblienWebhookUrl } from "../lib/oblien-webhook-config";
 
 interface CloudBillingEnvironment {
@@ -19,7 +20,7 @@ export function assertCloudBillingEnvironment(config: CloudBillingEnvironment, a
   if (missing.length) {
     throw new Error(
       `Cloud billing is enabled but the API environment is missing: ${missing.join(", ")}. ` +
-      "Set these on the deployed API service. Docker Compose loads the root .env, not apps/api/.env.saas.",
+      "Set these on the deployed API service. Docker Compose loads the root .env.",
     );
   }
 

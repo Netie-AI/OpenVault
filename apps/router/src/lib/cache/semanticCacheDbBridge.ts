@@ -2,6 +2,7 @@ import { getDatabaseSettings } from "@/lib/db/databaseSettings";
 import { getDbInstance } from "@/lib/db/core";
 import { decryptConnectionFields } from "@/lib/db/encryption";
 import { registerSemanticCacheConfigResolver } from "@omniroute/open-sse/config/semanticCacheConfig.ts";
+import { resolveConnectionApiKey } from "@/lib/netie/providerGuards";
 
 let registered = false;
 
@@ -57,7 +58,18 @@ export function ensureSemanticCacheDbBridge(): void {
         : {};
 
       const embeddingBaseUrl = s.semanticCacheEmbeddingBaseUrl || conn.baseUrl;
-      const embeddingApiKey = s.semanticCacheEmbeddingApiKey || conn.apiKey;
+      // FreeRoute: the embedding provider's key is never read from the settings
+      // table. It is looked up in OpenVault when an embedding is requested, and a
+      // disabled provider or an OpenVault error just skips the embedding.
+      const embeddingProvider = s.semanticCacheEmbeddingProvider;
+      const embeddingApiKeyResolver = embeddingProvider
+        ? () =>
+            resolveConnectionApiKey({
+              provider: embeddingProvider,
+              authType: "apikey",
+              providerSpecificData: embeddingBaseUrl ? { baseUrl: embeddingBaseUrl } : {},
+            })
+        : undefined;
 
       return {
         // The vector layer is opt-in (#14159): it only runs when the operator turned
@@ -72,7 +84,7 @@ export function ensureSemanticCacheDbBridge(): void {
         embeddingModel: s.semanticCacheEmbeddingModel,
         embeddingDimension: s.semanticCacheEmbeddingDimension,
         embeddingBaseUrl,
-        embeddingApiKey,
+        embeddingApiKeyResolver,
         redisUrl: s.semanticCacheRedisUrl,
         redisPrefix: s.semanticCacheRedisPrefix,
         requireZeroTemperature: s.semanticCacheRequireZeroTemp,

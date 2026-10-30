@@ -4,6 +4,7 @@ import fsSync from "fs";
 import path from "path";
 import os from "os";
 import { setToolStatus, getVersionManagerTool } from "@/lib/db/versionManager";
+import { assertServiceToolAllowed } from "@omniroute/open-sse/netie/policy.ts";
 
 const DEFAULT_PORT = 8317;
 const GRACEFUL_TIMEOUT_MS = 5000;
@@ -53,6 +54,8 @@ export async function startProcess(
   port?: number,
   configDir?: string
 ): Promise<{ pid: number; port: number }> {
+  // FreeRoute: the cliproxyapi sidecar is hard-disabled (open-sse/netie/policy.ts).
+  assertServiceToolAllowed("cliproxyapi");
   const existing = await getVersionManagerTool("cliproxyapi");
   if (existing?.pid) {
     const alive = isProcessRunning(existing.pid);

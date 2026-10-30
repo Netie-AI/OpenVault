@@ -741,6 +741,33 @@ async function main() {
     assert.equal(status, 401, JSON.stringify(body));
   });
 
+  // The shapes FreeRoute's verify client (src/lib/netie/keyvault.ts) is written
+  // against, taken from the real OpenVault rather than from a stub.
+  await step(
+    "OpenVault verify answers {ok,valid,key_id,tier} / {ok:true,valid:false}, and 401 without the admin token",
+    async () => {
+      const good = await openVaultCall("POST", "/api/apikeys/verify", { token: clientToken });
+      assert.equal(good.status, 200, JSON.stringify(good.body));
+      assert.equal(good.body.ok, true, JSON.stringify(good.body));
+      assert.equal(good.body.valid, true, JSON.stringify(good.body));
+      assert.equal(typeof good.body.key_id, "string", JSON.stringify(good.body));
+      assert.equal(typeof good.body.tier, "string", JSON.stringify(good.body));
+      for (const token of [BOGUS_CLIENT_TOKEN, "", "   "]) {
+        const bad = await openVaultCall("POST", "/api/apikeys/verify", { token });
+        assert.equal(bad.status, 200, JSON.stringify(bad.body));
+        assert.deepEqual(bad.body, { ok: true, valid: false }, `token ${JSON.stringify(token)}`);
+      }
+      // Loopback alone is not enough: the call needs the admin token (or a listed service).
+      const anonymous = await fetch(`${openVaultUrl}/api/apikeys/verify`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ token: clientToken }),
+      });
+      assert.equal(anonymous.status, 401);
+      assert.equal((await readJson(anonymous)).error?.type, "openvault_unauthenticated");
+    }
+  );
+
   await step("cursor/auto gets 501 consumer_subscription_pooling_disabled", async () => {
     const { status, body } = await chat(fr.url, clientToken, "cursor/auto");
     assert.equal(status, 501, JSON.stringify(body));
@@ -819,6 +846,38 @@ async function main() {
       "self-check: the pooled key reveal is in the audit"
     );
   });
+
+  // OpenVault admits 60 verify calls a minute per caller. The test and FreeRoute
+  // present the same admin token, so they share one bucket: spend it here, then a
+  // client token FreeRoute has not seen (not in its 60 s cache) must fail closed
+  // and the log must name the cause. Runs after the steps that need a good verify.
+  await step(
+    "OpenVault rate-limits verify (429): FreeRoute fails closed (401) and logs openvault_verify_rate_limited",
+    async () => {
+      const fresh = await openVaultCall("POST", "/api/apikeys", { label: "freeroute-e2e-limited" });
+      assert.equal(fresh.status, 200, JSON.stringify(fresh.body));
+      let limited = null;
+      for (let call = 0; call < 130 && !limited; call += 1) {
+        const res = await fetch(`${openVaultUrl}/api/apikeys/verify`, {
+          method: "POST",
+          headers: { "content-type": "application/json", "X-OpenVault-Admin": adminToken() },
+          body: JSON.stringify({ token: fresh.body.token }),
+        });
+        if (res.status === 429) limited = await readJson(res);
+      }
+      assert.deepEqual(limited, { detail: "too many verify requests" });
+      const { status, body } = await chat(fr.url, fresh.body.token, model);
+      assert.equal(status, 401, JSON.stringify(body));
+      // The log is piped to a file, so give the write a moment to land.
+      let logText = "";
+      for (let wait = 0; wait < 50; wait += 1) {
+        logText = readFileSync(fr.child.logPath, "utf8");
+        if (/openvault_verify_rate_limited/.test(logText)) break;
+        await sleep(100);
+      }
+      assert.match(logText, /openvault_verify_rate_limited/);
+    }
+  );
 
   await stopProcess(fr.child);
 

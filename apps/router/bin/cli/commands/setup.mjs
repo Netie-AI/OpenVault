@@ -3,13 +3,7 @@ import { dirname, resolve } from "node:path";
 import { createPrompt, printHeading, printInfo, printSuccess } from "../io.mjs";
 import { openOmniRouteDb } from "../sqlite.mjs";
 import { getSettings, hashManagementPassword, updateSettings } from "../settings-store.mjs";
-import { testProviderApiKey } from "../provider-test.mjs";
-import { updateProviderTestResult, upsertApiKeyProviderConnection } from "../provider-store.mjs";
-import {
-  formatProviderChoices,
-  getProviderDisplayName,
-  resolveProviderChoice,
-} from "../provider-catalog.mjs";
+import { KEYS_MANAGED_BY_OPENVAULT_MESSAGE, refuseLocalKeyWrite } from "../openvault-keys.mjs";
 import { registerSetupOpenCode } from "./setup-open-code.mjs";
 import { t } from "../i18n.mjs";
 
@@ -20,8 +14,11 @@ async function getListCliTools() {
   return listCliTools;
 }
 
+// An explicit request to add a provider. `--api-key` alone is not one: the global
+// `--api-key` / OMNIROUTE_API_KEY is the FreeRoute server key (see mergeSetupOptions),
+// so a server-key user running `setup` must not be told they asked for a provider.
 function wantsProviderSetup(opts) {
-  return opts.addProvider || Boolean(opts.provider) || Boolean(opts.apiKey);
+  return Boolean(opts.addProvider) || Boolean(opts.provider);
 }
 
 async function resolvePassword(opts, prompt, nonInteractive, settings) {
@@ -66,71 +63,13 @@ async function setupPassword(db, opts, prompt, nonInteractive) {
   return true;
 }
 
-async function resolveProviderInput(opts, prompt, nonInteractive) {
-  let provider = opts.provider;
-  let apiKey = opts.apiKey;
-  let name = opts.providerName;
-  const defaultModel = opts.defaultModel;
-  const baseUrl = opts.providerBaseUrl;
-
-  if (!provider && !nonInteractive) {
-    console.log("Choose a provider:");
-    console.log(formatProviderChoices());
-    provider = resolveProviderChoice(await prompt.ask("Provider", "1"));
-  }
-
-  provider = provider || "openai";
-  if (!apiKey && !nonInteractive) {
-    apiKey = await prompt.ask(`${getProviderDisplayName(provider)} API key`);
-  }
-
-  if (!apiKey) {
-    throw new Error("Provider API key is required. Pass --api-key or OMNIROUTE_API_KEY.");
-  }
-
-  if (!name) {
-    name = getProviderDisplayName(provider);
-  }
-
-  return {
-    provider,
-    apiKey,
-    name,
-    defaultModel: defaultModel || null,
-    providerSpecificData: baseUrl ? { baseUrl } : null,
-  };
-}
-
-async function setupProvider(db, opts, prompt, nonInteractive) {
-  if (!wantsProviderSetup(opts) && nonInteractive) return null;
-
-  if (!wantsProviderSetup(opts)) {
-    const answer = await prompt.ask("Add your first provider now? [Y/n]", "Y");
-    if (/^n(o)?$/i.test(answer)) return null;
-  }
-
-  const input = await resolveProviderInput(opts, prompt, nonInteractive);
-  const connection = upsertApiKeyProviderConnection(db, input);
-  printSuccess(`Provider configured: ${connection.name}`);
-
-  if (opts.testProvider) {
-    printInfo(`Testing provider connection: ${connection.provider}`);
-    const result = await testProviderApiKey({
-      provider: input.provider,
-      apiKey: input.apiKey,
-      defaultModel: input.defaultModel,
-      baseUrl: input.providerSpecificData?.baseUrl || null,
-    });
-    updateProviderTestResult(db, connection.id, result);
-
-    if (result.valid) {
-      printSuccess("Provider test passed");
-    } else {
-      printInfo(`Provider test failed: ${result.error || "unknown error"}`);
-    }
-  }
-
-  return connection;
+// FreeRoute does not keep provider keys, so setup never asks for one and never
+// writes one. An explicit --add-provider / --provider / --api-key is refused; the
+// interactive flow just says where provider keys are added.
+function setupProvider(opts) {
+  if (wantsProviderSetup(opts)) return { refused: true };
+  printInfo(KEYS_MANAGED_BY_OPENVAULT_MESSAGE);
+  return { refused: false };
 }
 
 /**
@@ -161,13 +100,13 @@ export function registerSetup(program) {
     .command("setup")
     .description(t("setup.title"))
     .option("--password <value>", "Set admin password")
-    .option("--add-provider", "Add an API-key provider connection")
-    .option("--provider <id>", "Provider id, for example openai or anthropic")
-    .option("--provider-name <name>", "Display name for the connection")
-    .option("--api-key <value>", "Provider API key")
-    .option("--default-model <model>", "Optional default model")
-    .option("--provider-base-url <url>", "Optional OpenAI-compatible base URL override")
-    .option("--test-provider", "Test the provider after saving it")
+    .option("--add-provider", "Refused: provider keys are stored in OpenVault, not in FreeRoute")
+    .option("--provider <id>", "Refused: provider keys are stored in OpenVault, not in FreeRoute")
+    .option("--provider-name <name>", "Unused: provider connections are configured in OpenVault")
+    .option("--api-key <value>", "Unused here: FreeRoute never stores a provider key")
+    .option("--default-model <model>", "Unused: provider connections are configured in OpenVault")
+    .option("--provider-base-url <url>", "Unused: provider connections are configured in OpenVault")
+    .option("--test-provider", "Unused: no provider is saved by setup")
     .option("--non-interactive", "Read all inputs from flags/env and do not prompt")
     .option("--list", "List all supported CLI tools")
     .action(async (opts, cmd) => {
@@ -207,9 +146,8 @@ export async function runSetupCommand(opts = {}) {
     const { db, dbPath } = await openOmniRouteDb();
     printInfo(`Database: ${dbPath}`);
 
-    const before = getSettings(db);
     const passwordChanged = await setupPassword(db, opts, prompt, nonInteractive);
-    const providerConnection = await setupProvider(db, opts, prompt, nonInteractive);
+    const provider = setupProvider(opts);
 
     updateSettings(db, { setupComplete: true });
     const after = getSettings(db);
@@ -222,13 +160,9 @@ export async function runSetupCommand(opts = {}) {
         passwordChanged ? " (password updated)" : ""
       }`
     );
-    if (providerConnection) {
-      printInfo(`Provider: ${providerConnection.provider} (${providerConnection.name})`);
-    } else if (!before.setupComplete) {
-      printInfo("Provider: skipped");
-    }
-
-    return 0;
+    // An explicit provider-key request is refused (non-zero exit) after the rest
+    // of setup, which has nothing to do with keys, has finished.
+    return provider.refused ? refuseLocalKeyWrite() : 0;
   } finally {
     prompt.close();
   }

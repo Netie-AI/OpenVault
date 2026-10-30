@@ -1,5 +1,5 @@
-import { randomUUID } from "node:crypto";
-import { decryptCredential, encryptCredential } from "./encryption.mjs";
+import { decryptCredential } from "./encryption.mjs";
+import { KeysManagedByOpenVaultError } from "./openvault-keys.mjs";
 
 const REQUIRED_PROVIDER_COLUMNS = [
   ["auth_type", "TEXT"],
@@ -115,13 +115,6 @@ export function ensureProviderSchema(db) {
   ).run();
 }
 
-function nextPriority(db, provider) {
-  const row = db
-    .prepare("SELECT MAX(priority) as max_priority FROM provider_connections WHERE provider = ?")
-    .get(provider);
-  return Number(row?.max_priority || 0) + 1;
-}
-
 function parseJsonObject(value) {
   if (!value || typeof value !== "string") return undefined;
   try {
@@ -192,53 +185,13 @@ export function getProviderApiKey(connection) {
   return decryptCredential(connection.apiKey);
 }
 
-export function upsertApiKeyProviderConnection(db, input) {
-  ensureProviderSchema(db);
-
-  const provider = input.provider;
-  const name = input.name || provider;
-  const now = new Date().toISOString();
-  const existing = db
-    .prepare(
-      "SELECT id, priority FROM provider_connections WHERE provider = ? AND auth_type = 'apikey' AND name = ?"
-    )
-    .get(provider, name);
-
-  const connection = {
-    id: existing?.id || randomUUID(),
-    provider,
-    authType: "apikey",
-    name,
-    priority: existing?.priority || nextPriority(db, provider),
-    isActive: 1,
-    apiKey: encryptCredential(input.apiKey),
-    testStatus: input.testStatus || "unknown",
-    defaultModel: input.defaultModel || null,
-    providerSpecificData: input.providerSpecificData
-      ? JSON.stringify(input.providerSpecificData)
-      : null,
-    createdAt: input.createdAt || now,
-    updatedAt: now,
-  };
-
-  db.prepare(
-    `INSERT INTO provider_connections (
-      id, provider, auth_type, name, priority, is_active, api_key, provider_specific_data,
-      test_status, default_model, created_at, updated_at
-    ) VALUES (
-      @id, @provider, @authType, @name, @priority, @isActive, @apiKey, @providerSpecificData,
-      @testStatus, @defaultModel, @createdAt, @updatedAt
-    )
-    ON CONFLICT(id) DO UPDATE SET
-      api_key = excluded.api_key,
-      provider_specific_data = excluded.provider_specific_data,
-      test_status = excluded.test_status,
-      default_model = excluded.default_model,
-      is_active = excluded.is_active,
-      updated_at = excluded.updated_at`
-  ).run(connection);
-
-  return connection;
+/**
+ * FreeRoute never stores a provider key (see openvault-keys.mjs), so this always
+ * throws KeysManagedByOpenVaultError. Kept as an export so a caller that still
+ * imports it fails loudly with the named error instead of a missing-export crash.
+ */
+export function upsertApiKeyProviderConnection(_db, _input) {
+  throw new KeysManagedByOpenVaultError();
 }
 
 export function removeProviderConnectionByProvider(db, provider) {
@@ -252,29 +205,11 @@ export function removeProviderConnectionByProvider(db, provider) {
 }
 
 /**
- * Replace the encrypted API key for a connection and clear any cooldown state.
- * `encryptedKey` must already be passed through `encryptCredential()`.
+ * FreeRoute never stores a provider key (see openvault-keys.mjs), so this always
+ * throws KeysManagedByOpenVaultError.
  */
-export function updateProviderApiKey(db, connectionId, encryptedKey) {
-  ensureProviderSchema(db);
-  const now = new Date().toISOString();
-  const result = db
-    .prepare(
-      `UPDATE provider_connections
-         SET api_key = @apiKey,
-             test_status = 'unknown',
-             last_error = NULL,
-             last_error_at = NULL,
-             last_error_type = NULL,
-             last_error_source = NULL,
-             error_code = NULL,
-             rate_limited_until = NULL,
-             backoff_level = 0,
-             updated_at = @updatedAt
-       WHERE id = @id`
-    )
-    .run({ id: connectionId, apiKey: encryptedKey, updatedAt: now });
-  return result.changes;
+export function updateProviderApiKey(_db, _connectionId, _encryptedKey) {
+  throw new KeysManagedByOpenVaultError();
 }
 
 export function updateProviderTestResult(db, connectionId, result) {

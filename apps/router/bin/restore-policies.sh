@@ -75,4 +75,4 @@ COMMIT;
 DETACH DATABASE snap;"
 
 printf '%s\n' "$sql" | sqlite3 "$OMNIROUTE_SQLITE"
-ops_log "policies restored from $snap — restart OmniRoute to apply"
+ops_log "policies restored from $snap, restart FreeRoute to apply"

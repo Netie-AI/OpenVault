@@ -305,6 +305,25 @@ async function sendEmail(
   }
 }
 
+// The webhook signature is sent as X-FreeBuild-Signature-256 and, with the same
+// value, as the legacy X-Openship-Signature-256, so receivers that already verify
+// against the old name keep working (DR-0018). Both are documented in the dashboard's
+// webhook channel form (settings.notifications.form.webhookSignatureHint).
+export const WEBHOOK_SIGNATURE_HEADER = "X-FreeBuild-Signature-256";
+export const WEBHOOK_SIGNATURE_LEGACY_HEADER = "X-Openship-Signature-256";
+
+/**
+ * Both signature headers for a raw request body. One HMAC is computed once and
+ * written under both names, so a receiver can never see two different values.
+ */
+export function webhookSignatureHeaders(secret: string, body: string): Record<string, string> {
+  const value = `sha256=${createHmac("sha256", secret).update(body).digest("hex")}`;
+  return {
+    [WEBHOOK_SIGNATURE_HEADER]: value,
+    [WEBHOOK_SIGNATURE_LEGACY_HEADER]: value,
+  };
+}
+
 async function sendWebhook(
   delivery: NotificationDelivery,
   channel: NotificationChannel,
@@ -326,7 +345,7 @@ async function sendWebhook(
   });
 
   // HMAC signature so the receiver can verify the request came from
-  // Openship. The secret is set when the user creates the channel and
+  // FreeBuild. The secret is set when the user creates the channel and
   // stored encrypted in channel.config — we sign the raw body.
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -338,8 +357,7 @@ async function sendWebhook(
     // signing — otherwise we sign with ciphertext and the receiver's
     // HMAC verify always fails.
     const secret = decrypt(config.hmacSecret);
-    const sig = createHmac("sha256", secret).update(body).digest("hex");
-    headers["X-Openship-Signature-256"] = `sha256=${sig}`;
+    Object.assign(headers, webhookSignatureHeaders(secret, body));
   }
 
   // SSRF-safe delivery: safeFetch resolves once, pins the validated IP (closes

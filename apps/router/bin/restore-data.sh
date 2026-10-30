@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# bin/restore-data.sh — restore the OmniRoute SQLite data volume from a snapshot
+# bin/restore-data.sh: restore the FreeRoute SQLite data volume from a snapshot
 # created by bin/snapshot-data.sh. Used by the data-layer incident-recovery
 # flow after stopping writers.
 #
@@ -16,7 +16,7 @@ Usage: bin/restore-data.sh <snapshot-id> [--data-dir <path>] [--yes|-y] [-h|--he
 Restores storage.sqlite (and any sibling *.sqlite) from a snapshot. The current
 data is first copied to $DB_BACKUPS_DIR/pre-restore_<UTC> as a safety net.
 <snapshot-id> is a timestamp/sha, a snapshot dir name, or a path (see snapshot-data.sh).
-Stop OmniRoute before running, and restart it afterwards.
+Stop FreeRoute before running, and restart it afterwards.
 EOF
 }
 
@@ -61,4 +61,4 @@ for f in "$snap"/*.sqlite; do
   cp -a "$f" "$OMNIROUTE_DATA_DIR/"
 done
 
-ops_log "restore complete — restart OmniRoute to pick up the restored data"
+ops_log "restore complete, restart FreeRoute to pick up the restored data"

@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026
 // @vitest-environment happy-dom
 import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -120,7 +121,7 @@ async function open(productView: "platform" | "mail" = "platform") {
       .find((node) => node.textContent?.trim() === backup.fieldName)
       ?.querySelector("input") ?? null;
   await edit(name, "Hourly backup");
-  await edit(document.querySelector('input[placeholder="/backups/openship"]'), "/backups/hourly");
+  await edit(document.querySelector('input[placeholder="/backups/freebuild"]'), "/backups/hourly");
   await click(baseDictionary.widgets.shared.serverSelector.addServer, false);
 }
 async function fillServer() {

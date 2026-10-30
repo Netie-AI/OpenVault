@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAgent, getAvailableAgents } from "@/lib/cloudAgent/registry";
-import { getCloudAgentCredentialFromDb } from "@/lib/cloudAgent/credentials";
+import { getCloudAgentCredentialFromVault } from "@/lib/cloudAgent/credentials";
 import { getCloudAgentCorsHeaders, requireCloudAgentManagementAuth } from "@/lib/cloudAgent/api";
 import pino from "pino";
 import { sanitizeErrorMessage } from "@omniroute/open-sse/utils/error";
@@ -30,14 +30,27 @@ async function checkProviderHealth(providerId: string): Promise<ProviderHealth> 
     return { id: providerId, name, connected: false, latencyMs: 0, error: "Unknown provider" };
   }
 
-  const credentials = getCloudAgentCredentialFromDb(providerId);
+  // FreeRoute: the key comes from OpenVault, never from the local table. An
+  // OpenVault error is reported per provider, with its named code.
+  let credentials;
+  try {
+    credentials = await getCloudAgentCredentialFromVault(providerId);
+  } catch (error) {
+    return {
+      id: providerId,
+      name,
+      connected: false,
+      latencyMs: 0,
+      error: error instanceof Error ? error.message : "OpenVault unavailable",
+    };
+  }
   if (!credentials) {
     return {
       id: providerId,
       name,
       connected: false,
       latencyMs: 0,
-      error: "No credentials configured",
+      error: "No key in OpenVault. Add one at http://127.0.0.1:3010/keys",
     };
   }
 

@@ -1,75 +1,37 @@
-// #8085 — anonymous fingerprint fallback for keyless Pollinations image requests.
+// FreeRoute: keyless Pollinations image requests.
 //
-// Chat requests to Pollinations already fall back to a fingerprint-pool
-// session when no apiKey/accessToken is configured (see
-// PollinationsExecutor.execute()'s `isAnonymous` branch in
-// open-sse/executors/pollinations.ts). The image path
-// (open-sse/handlers/imageGeneration.ts::handleOpenAIImageGeneration) had no
-// equivalent: a keyless Pollinations image request went out with no
-// Authorization header AND no fingerprint headers, so Pollinations' own
-// upstream legitimately rejected it with a 401 — even with a perfectly
-// valid OmniRoute API key. This module mirrors that same anonymous
-// session-pool fallback for the image path.
+// Upstream (#8085) acquired a session from a rotating browser-fingerprint pool
+// (rotating user agents and Sec-CH-UA client hints) and merged those headers into
+// every keyless image request so the provider could not tie requests to one
+// client. That is browser fingerprint impersonation, which is not shipped
+// (tls_fingerprint_stealth_disabled), and it bypassed the BaseExecutor.getPool()
+// gate that already keeps the chat path honest.
+//
+// This edition sends the request with the plain headers the caller built (JSON
+// content type, plus the provider key when there is one) and nothing else. A
+// keyless request that the provider rejects surfaces the provider's own 401 or
+// 429; configure a Pollinations key in OpenVault to avoid it.
+//
+// The two exports keep the call sites in open-sse/handlers/imageGeneration.ts
+// unchanged. They no longer take, report or release any session.
 
-import { SessionPool } from "../../services/sessionPool/sessionPool.ts";
-import { DEFAULT_POOL_CONFIG } from "../../services/sessionPool/types.ts";
-import type { Session } from "../../services/sessionPool/session.ts";
-
-let pollinationsImagePool: SessionPool | null = null;
-
-function getPollinationsImagePool(): SessionPool {
-  if (!pollinationsImagePool) {
-    pollinationsImagePool = new SessionPool("pollinations", DEFAULT_POOL_CONFIG);
-    pollinationsImagePool.warmUp(DEFAULT_POOL_CONFIG.minSessions).catch(() => {});
-  }
-  return pollinationsImagePool;
-}
+/** The session slot is always null: no fingerprint pool exists in this edition. */
+export type PollinationsAnonSession = null;
 
 /**
- * When `providerId` is Pollinations and no real key/token is present, acquire
- * a fingerprint-pool session and return its headers merged over `headers`,
- * plus the session so the caller can release it once the upstream call is
- * done. No-op (returns `{ headers, session: null }`) for every other
- * provider or when a real key is configured.
+ * Returns `headers` untouched and no session, for every provider and for
+ * keyless Pollinations alike. No rotating fingerprint headers are added.
  */
 export async function applyPollinationsAnonymousFallback(
-  providerId: string,
-  token: string | undefined,
+  _providerId: string,
+  _token: string | undefined,
   headers: Record<string, string>
-): Promise<{ headers: Record<string, string>; session: Session | null }> {
-  if (providerId !== "pollinations" || token) {
-    return { headers, session: null };
-  }
-
-  const pool = getPollinationsImagePool();
-  let session: Session | null = null;
-  try {
-    session = await pool.acquireBlocking(10_000);
-  } catch {
-    // Pool exhausted — fall through without fingerprint headers rather than
-    // block the request indefinitely.
-    session = null;
-  }
-
-  if (!session) {
-    return { headers, session: null };
-  }
-
-  return {
-    headers: { ...headers, ...session.buildHeaders() },
-    session,
-  };
+): Promise<{ headers: Record<string, string>; session: PollinationsAnonSession }> {
+  return { headers, session: null };
 }
 
-/** Report the outcome of an anonymous Pollinations image request back to the pool. */
-export function reportPollinationsAnonOutcome(session: Session | null, status: number | undefined): void {
-  if (!session || !pollinationsImagePool) return;
-  if (status === 429) {
-    pollinationsImagePool.reportCooldown(session);
-  } else if (typeof status === "number" && status >= 500) {
-    pollinationsImagePool.reportDead(session);
-  } else {
-    pollinationsImagePool.reportSuccess(session);
-  }
-  session.release();
-}
+/** No-op: there is no pool to report an outcome to. */
+export function reportPollinationsAnonOutcome(
+  _session: PollinationsAnonSession,
+  _status: number | undefined
+): void {}

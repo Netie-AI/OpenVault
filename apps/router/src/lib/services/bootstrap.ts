@@ -17,6 +17,7 @@ import { getOrCreateApiKey } from "./apiKey";
 import { scheduleServiceModelSync, stopServiceModelSync } from "./modelSync";
 import type { ServiceStatus } from "./types";
 import { getServiceProviderPlugin } from "./providerPlugins/registry";
+import { isServiceToolDisabled } from "@omniroute/open-sse/netie/policy.ts";
 
 // 9router's port/health/lifecycle config is sourced from the plugin registry (#7333
 // Phase 1) rather than an inline literal — the plugin object below must resolve to the
@@ -157,6 +158,10 @@ function buildSpawnArgsFactory(
 
 export async function bootstrapEmbeddedServices(): Promise<void> {
   for (const cfg of SERVICES) {
+    // FreeRoute: the dario and cliproxy Claude-subscription sidecars are never
+    // supervised or auto-started, whatever a stored version_manager row says
+    // (open-sse/netie/policy.ts).
+    if (isServiceToolDisabled(cfg.tool)) continue;
     if (getSupervisor(cfg.tool)) continue;
 
     const row = await getVersionManagerTool(cfg.tool);

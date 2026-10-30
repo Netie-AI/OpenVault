@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026
 /**
  * Retained notification application services for HTTP and native operations.
  *
@@ -392,7 +393,8 @@ function sanitizeChannelConfig(
         }
       }
       // Signing-secret policy (revealSecret is returned to the client EXACTLY
-      // ONCE so a receiver can verify X-Openship-Signature-256):
+      // ONCE so a receiver can verify X-FreeBuild-Signature-256, which is also
+      // sent as X-Openship-Signature-256 for existing receivers):
       //   - explicit hmacSecret in the body → (re)set + reveal (create / rotate)
       //   - none supplied but one already stored (an edit of e.g. the URL) → CARRY
       //     the stored secret forward. Do NOT regenerate — that silently breaks

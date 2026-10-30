@@ -56,12 +56,15 @@ export const OPENVAULT_KEYVAULT_UNREACHABLE_CODE = "openvault_keyvault_unreachab
 export const OPENVAULT_ADMIN_TOKEN_UNAVAILABLE_CODE = "openvault_admin_token_unavailable";
 export const OPENVAULT_ADMIN_TOKEN_REJECTED_CODE = "openvault_admin_token_rejected";
 export const OPENVAULT_KEYVAULT_SEALED_CODE = "openvault_keyvault_sealed";
+/** OpenVault answered 429 "too many verify requests" (60 calls a minute per caller). */
+export const OPENVAULT_VERIFY_RATE_LIMITED_CODE = "openvault_verify_rate_limited";
 
 export type OpenVaultErrorCode =
   | typeof OPENVAULT_KEYVAULT_UNREACHABLE_CODE
   | typeof OPENVAULT_ADMIN_TOKEN_UNAVAILABLE_CODE
   | typeof OPENVAULT_ADMIN_TOKEN_REJECTED_CODE
-  | typeof OPENVAULT_KEYVAULT_SEALED_CODE;
+  | typeof OPENVAULT_KEYVAULT_SEALED_CODE
+  | typeof OPENVAULT_VERIFY_RATE_LIMITED_CODE;
 
 function openVaultBaseUrl(): string {
   const raw = process.env.OPENVAULT_URL?.trim() || DEFAULT_OPENVAULT_URL;
@@ -169,6 +172,27 @@ export class OpenVaultKeyVaultSealedError extends OpenVaultUnreachableError {
 }
 
 /**
+ * OpenVault rate-limited POST /api/apikeys/verify (429, detail "too many verify
+ * requests"). Not an outage: the router is asking too often. verifyClientToken
+ * logs it under its own code, does not cache the answer, and treats the token as
+ * invalid for this call.
+ */
+export class OpenVaultVerifyRateLimitedError extends OpenVaultUnreachableError {
+  readonly retryAfterSeconds: number | null;
+  constructor(route: string, retryAfterSeconds: number | null = null) {
+    super(
+      `OpenVault rate-limited the client token check (429 on ${route}, at most 60 verify ` +
+        `calls a minute per caller)${
+          retryAfterSeconds !== null ? `; retry after ${retryAfterSeconds}s` : ""
+        }.`,
+      OPENVAULT_VERIFY_RATE_LIMITED_CODE
+    );
+    this.name = "OpenVaultVerifyRateLimitedError";
+    this.retryAfterSeconds = retryAfterSeconds;
+  }
+}
+
+/**
  * True for any KeyVault error, including one that crossed a module boundary
  * (duck-typed on name and code, so a second copy of this module still matches).
  */
@@ -182,7 +206,8 @@ export function isOpenVaultKeyVaultError(error: unknown): error is OpenVaultUnre
     (e.code === OPENVAULT_KEYVAULT_UNREACHABLE_CODE ||
       e.code === OPENVAULT_ADMIN_TOKEN_UNAVAILABLE_CODE ||
       e.code === OPENVAULT_ADMIN_TOKEN_REJECTED_CODE ||
-      e.code === OPENVAULT_KEYVAULT_SEALED_CODE)
+      e.code === OPENVAULT_KEYVAULT_SEALED_CODE ||
+      e.code === OPENVAULT_VERIFY_RATE_LIMITED_CODE)
   );
 }
 
@@ -251,7 +276,7 @@ async function readErrorType(response: Response): Promise<{ type?: string; detai
 async function fetchJson<T>(
   url: string,
   init: RequestInit & { headers?: Record<string, string> } = {},
-  opts: { isSecretReveal?: boolean } = {}
+  opts: { isSecretReveal?: boolean; isVerify?: boolean } = {}
 ): Promise<T> {
   const { token, path } = readAdminToken();
   const route = url.replace(openVaultBaseUrl(), "");
@@ -265,6 +290,13 @@ async function fetchJson<T>(
     });
     if (response.status === 401) {
       throw new OpenVaultAdminTokenRejectedError(path, route);
+    }
+    if (response.status === 429 && opts.isVerify) {
+      const retryAfter = Number.parseInt(response.headers.get("retry-after") ?? "", 10);
+      throw new OpenVaultVerifyRateLimitedError(
+        route,
+        Number.isFinite(retryAfter) && retryAfter >= 0 ? retryAfter : null
+      );
     }
     if (response.status === 403 && opts.isSecretReveal) {
       const { type, detail } = await readErrorType(response);
@@ -535,35 +567,50 @@ async function sha256Hex(value: string): Promise<string> {
   return createHash("sha256").update(value).digest("hex");
 }
 
-let unreachableWarningLoggedAt = 0;
+const verifyWarningLoggedAt = new Map<string, number>();
 function warnOnceVerifyUnreachable(error: unknown): void {
   const now = Date.now();
-  // Rate-limit the console warning (once per 60s), a client hammering an
-  // invalid token with OpenVault down must not spam the log.
-  if (now - unreachableWarningLoggedAt < CACHE_TTL_MS) return;
-  unreachableWarningLoggedAt = now;
   // The error message never contains the admin token, only its path.
   const code = isOpenVaultKeyVaultError(error) ? error.code : OPENVAULT_KEYVAULT_UNREACHABLE_CODE;
+  // Rate-limit the console warning (once per 60s per code), a client hammering
+  // an invalid token with OpenVault down must not spam the log, and a rate-limit
+  // warning must not hide an outage warning or the other way round.
+  const last = verifyWarningLoggedAt.get(code) ?? 0;
+  if (now - last < CACHE_TTL_MS) return;
+  verifyWarningLoggedAt.set(code, now);
+  const detail = error instanceof Error ? error.message : String(error);
+  if (code === OPENVAULT_VERIFY_RATE_LIMITED_CODE) {
+    console.warn(
+      `[keyvault] ${code}: OpenVault is rate-limiting client token checks at ` +
+        `${openVaultBaseUrl()}/api/apikeys/verify, so this token is treated as invalid for now ` +
+        `and the answer is not cached. ${detail}`
+    );
+    return;
+  }
   console.warn(
     `[keyvault] ${code}: could not verify an inbound client token at ` +
-      `${openVaultBaseUrl()}/api/apikeys/verify, treating it as invalid. ` +
-      `${error instanceof Error ? error.message : String(error)}`
+      `${openVaultBaseUrl()}/api/apikeys/verify, treating it as invalid. ${detail}`
   );
 }
 
 /**
  * Verify an inbound client-facing bearer token against OpenVault
- * (`POST /api/apikeys/verify {"token"} -> {valid, key_id, tier}`), the
- * loopback-only endpoint OpenVault exposes for tokens it minted itself
- * (`POST /api/apikeys` on OpenVault's side, see http://127.0.0.1:3010/keys).
+ * (`POST /api/apikeys/verify {"token"} -> {"ok":true,"valid":true,"key_id","tier"}`
+ * or `{"ok":true,"valid":false}`), the endpoint OpenVault exposes for tokens it
+ * minted itself (`POST /api/apikeys` on OpenVault's side, see
+ * http://127.0.0.1:3010/keys). OpenVault admits the call on the admin token
+ * (X-OpenVault-Admin, sent by fetchJson), never on a loopback peer alone, and
+ * rate-limits it to 60 calls a minute per caller (429 "too many verify requests").
  *
  * Cached per sha256(token) for <=60s. Never resolves "valid" when OpenVault
- * is unreachable or answers with anything other than a clean `{valid:true}` -
- * an unreachable OpenVault must fail closed for inbound auth, the mirror image
- * of `resolveProviderApiKey` failing loud (503) for outbound provider keys:
- * here there is no safe "loud" option mid-request-auth, so the token is
- * simply rejected and a rate-limited warning naming the error code is logged.
- * The same applies to a missing or rejected admin token.
+ * is unreachable or answers with anything other than a clean
+ * `{ok:true,valid:true}` - an unreachable OpenVault must fail closed for inbound
+ * auth, the mirror image of `resolveProviderApiKey` failing loud (503) for
+ * outbound provider keys: here there is no safe "loud" option mid-request-auth,
+ * so the token is simply rejected and a rate-limited warning naming the error
+ * code is logged: openvault_keyvault_unreachable for an outage,
+ * openvault_verify_rate_limited for a 429 (neither answer is cached). The same
+ * applies to a missing or rejected admin token.
  */
 export async function verifyClientToken(token: string | null | undefined): Promise<ClientTokenVerification> {
   if (!token || typeof token !== "string") return INVALID_VERIFICATION;
@@ -575,17 +622,21 @@ export async function verifyClientToken(token: string | null | undefined): Promi
   const pending = verifyInflight.get(cacheKey);
   if (pending) return pending;
 
-  const request = fetchJson<{ valid: boolean; key_id?: string; tier?: string }>(
+  const request = fetchJson<{ ok?: boolean; valid?: boolean; key_id?: string; tier?: string }>(
     `${openVaultBaseUrl()}/api/apikeys/verify`,
     {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ token }),
-    }
+    },
+    { isVerify: true }
   )
     .then((body) => {
+      // OpenVault answers {"ok":true,"valid":false} for an unknown, revoked,
+      // disabled or malformed token and {"ok":true,"valid":true,"key_id","tier"}
+      // for a good one. Anything that is not exactly that is invalid.
       const result: ClientTokenVerification =
-        body && body.valid === true
+        body && body.ok === true && body.valid === true
           ? { valid: true, keyId: body.key_id, tier: body.tier }
           : INVALID_VERIFICATION;
       verifyCache.set(cacheKey, { at: Date.now(), result });
@@ -594,8 +645,8 @@ export async function verifyClientToken(token: string | null | undefined): Promi
     .catch((error) => {
       warnOnceVerifyUnreachable(error);
       // Fail closed, never cache a transient-unreachable result as valid,
-      // and don't poison the cache with "invalid" either (a real outage
-      // should not lock out a legitimate token once OpenVault recovers).
+      // and don't poison the cache with "invalid" either (a real outage or a
+      // 429 should not lock out a legitimate token once OpenVault recovers).
       return INVALID_VERIFICATION;
     })
     .finally(() => {
@@ -607,7 +658,7 @@ export async function verifyClientToken(token: string | null | undefined): Promi
 
 /** Test-only: drop the in-memory list/secret/verify caches. */
 export function __resetKeyVaultCacheForTest(): void {
-  unreachableWarningLoggedAt = 0;
+  verifyWarningLoggedAt.clear();
   keysCache = null;
   keysInflight = null;
   secretCache.clear();

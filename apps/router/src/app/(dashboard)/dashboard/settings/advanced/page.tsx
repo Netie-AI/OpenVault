@@ -4,7 +4,6 @@ import DebugModeCard from "../components/DebugModeCard";
 import LogToolSourcesCard from "../components/LogToolSourcesCard";
 import PayloadRulesTab from "../components/PayloadRulesTab";
 import RequestLimitsTab from "../components/RequestLimitsTab";
-import CliproxyapiSettingsTab from "../components/CliproxyapiSettingsTab";
 import HeadroomProxyCard from "../components/HeadroomProxyCard";
 
 export default function SettingsAdvancedPage() {
@@ -14,7 +13,6 @@ export default function SettingsAdvancedPage() {
       <LogToolSourcesCard />
       <PayloadRulesTab />
       <RequestLimitsTab />
-      <CliproxyapiSettingsTab />
       <HeadroomProxyCard />
     </div>
   );

@@ -1,4 +1,5 @@
 import { netieErrorResponse, resolveConnectionApiKey } from "@/lib/netie/providerGuards";
+import { renderKeysManagedByOpenVault } from "@omniroute/open-sse/netie/policy.ts";
 import { NextResponse } from "next/server";
 import { isAuthenticated } from "@/shared/utils/apiAuth";
 import { createDefaultEmbeddingGenerator } from "@omniroute/open-sse/services/cache/embeddingClient.ts";
@@ -37,22 +38,23 @@ export async function POST(request: Request) {
 
   const { provider, model, baseUrl, apiKey } = validation.data;
 
+  // FreeRoute: a key pasted into the probe body is refused, the same as on save.
+  // The probe uses the provider's key from OpenVault (below).
+  if (apiKey) return renderKeysManagedByOpenVault();
+
   // Resolve connection details from DB if not explicitly passed
   const conn = resolveProviderConnectionDetails(provider);
   const effectiveBaseUrl = baseUrl || conn.baseUrl;
 
   try {
-    // FreeRoute: when the probe body carries no key, use the provider's key
-    // from OpenVault (never the DB column). A KeyVault error or a disabled
-    // provider answers its named code.
+    // FreeRoute: the provider's key from OpenVault (never the DB column). A
+    // KeyVault error or a disabled provider answers its named code.
     const effectiveApiKey =
-      apiKey ||
       (await resolveConnectionApiKey({
         provider,
         authType: "apikey",
         providerSpecificData: conn.baseUrl ? { baseUrl: conn.baseUrl } : {},
-      })) ||
-      undefined;
+      })) || undefined;
     const generator = createDefaultEmbeddingGenerator({
       embeddingProvider: provider,
       embeddingModel: model,

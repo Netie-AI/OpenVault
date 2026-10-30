@@ -82,19 +82,138 @@ export function classifyConnection(
 
 // ── Secret detection ──────────────────────────────────────────────────────
 
-// providerSpecificData field names that carry a credential. End-anchored, so
-// metadata fields such as tokenExpiresAt, apiKeyHealth, accessKeyId,
-// tokenEndpoint or codexAppServerTokenFile do not match. `pat` is a personal
-// access token (qoder).
-const SECRET_FIELD_PATTERN =
-  /(^pat|api[-_]?keys?|secrets?|tokens?|cookies?|password|passphrase|authorization|session[-_]?key|account[-_]?key|runtime[-_]?key|access[-_]?key|private[-_]?key)$/i;
+// providerSpecificData field names that carry a credential, at any depth.
+//
+// A name is split into lowercase words (camelCase, snake_case, kebab-case, with
+// "api"+"key" joined) and counts as secret when it holds a secret word (apikey,
+// token, secret, cookie, session, password, passphrase, credential,
+// authorization, bearer, private, pat, csrf, jwt) or ends in a qualified "key"
+// (accessKey, accountKey, runtimeKey, privateKey, ...), unless its LAST word marks
+// it as metadata about a credential rather than the credential (tokenExpiresAt,
+// apiKeyHealth, accessKeyId, tokenEndpoint, codexAppServerTokenFile). The word
+// test catches names the old end-anchored pattern missed, e.g. token_v2 and
+// bearerHeader (a header is not metadata: authorizationHeader and cookieHeader
+// hold the credential itself), and a nested customHeaders.Authorization or
+// auth.credentials.password.
+const SECRET_WORDS = new Set([
+  "apikey",
+  "apikeys",
+  "secret",
+  "secrets",
+  "token",
+  "tokens",
+  "cookie",
+  "cookies",
+  "session",
+  "sessions",
+  "password",
+  "passwords",
+  "passphrase",
+  "credential",
+  "credentials",
+  "authorization",
+  "bearer",
+  "private",
+  "pat",
+  "csrf",
+  "jwt",
+]);
+const KEY_QUALIFIERS = new Set([
+  "access",
+  "account",
+  "runtime",
+  "private",
+  "session",
+  "signing",
+  "encryption",
+  "secret",
+  "console",
+  "master",
+  "client",
+]);
+const METADATA_LAST_WORDS = new Set([
+  "at",
+  "id",
+  "ids",
+  "endpoint",
+  "url",
+  "uri",
+  "expires",
+  "expiry",
+  "expiration",
+  "health",
+  "status",
+  "file",
+  "path",
+  "type",
+  "name",
+  "count",
+  "enabled",
+  "mode",
+  "format",
+  "limit",
+  "ttl",
+  "ms",
+  "seconds",
+  "version",
+  "label",
+  "kind",
+  "source",
+  "state",
+  "hint",
+  "provider",
+  "region",
+  "scope",
+  "scopes",
+  "lifetime",
+  "interval",
+  "time",
+  "timestamp",
+  "date",
+  "flag",
+  "ref",
+  "required",
+]);
+const MAX_PSD_DEPTH = 12;
 
-function hasValue(value: unknown): boolean {
-  if (value === null || value === undefined) return false;
+function fieldWords(name: string): string[] {
+  const raw = name
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/[-_.\s]+/g, " ")
+    .toLowerCase()
+    .split(" ")
+    .filter(Boolean);
+  const words: string[] = [];
+  for (let i = 0; i < raw.length; i += 1) {
+    if (raw[i] === "api" && (raw[i + 1] === "key" || raw[i + 1] === "keys")) {
+      words.push(raw[i + 1] === "key" ? "apikey" : "apikeys");
+      i += 1;
+    } else {
+      words.push(raw[i]);
+    }
+  }
+  return words;
+}
+
+/** True when a providerSpecificData field NAME looks like it holds a credential. */
+export function isSecretFieldName(name: string): boolean {
+  const words = fieldWords(name);
+  if (words.length === 0) return false;
+  const last = words[words.length - 1];
+  if (METADATA_LAST_WORDS.has(last)) return false;
+  if (words.some((word) => SECRET_WORDS.has(word))) return true;
+  return (last === "key" || last === "keys") && words.length > 1 && KEY_QUALIFIERS.has(words[words.length - 2]);
+}
+
+/** A credential value is a non-empty string, or an array or object holding one. Numbers and booleans are not. */
+function hasValue(value: unknown, depth = 0): boolean {
+  if (depth > MAX_PSD_DEPTH) return false;
   if (typeof value === "string") return value.trim().length > 0;
-  if (Array.isArray(value)) return value.some(hasValue);
-  if (typeof value === "object") return Object.values(value as JsonRecord).some(hasValue);
-  return true;
+  if (Array.isArray(value)) return value.some((item) => hasValue(item, depth + 1));
+  if (value && typeof value === "object") {
+    return Object.values(value as JsonRecord).some((item) => hasValue(item, depth + 1));
+  }
+  return false;
 }
 
 function asRecord(value: unknown): JsonRecord {
@@ -110,19 +229,75 @@ function asRecord(value: unknown): JsonRecord {
   return {};
 }
 
-/** Names of the providerSpecificData fields in `psd` that hold a non-empty secret. */
-export function findSecretProviderSpecificFields(psd: unknown): string[] {
-  const record = asRecord(psd);
-  return Object.keys(record).filter((key) => SECRET_FIELD_PATTERN.test(key) && hasValue(record[key]));
+/** Walk a providerSpecificData value; call `visit(path, key, value)` for every secret-named key that holds a value. */
+function walkSecretFields(
+  value: unknown,
+  prefix: string,
+  depth: number,
+  visit: (path: string, container: JsonRecord, key: string) => void
+): void {
+  if (depth > MAX_PSD_DEPTH) return;
+  if (Array.isArray(value)) {
+    for (const item of value) walkSecretFields(item, prefix, depth + 1, visit);
+    return;
+  }
+  if (!value || typeof value !== "object") return;
+  const record = value as JsonRecord;
+  for (const key of Object.keys(record)) {
+    const path = prefix ? `${prefix}.${key}` : key;
+    if (isSecretFieldName(key) && hasValue(record[key])) {
+      visit(path, record, key);
+    } else {
+      walkSecretFields(record[key], path, depth + 1, visit);
+    }
+  }
 }
 
-/** Copy of `psd` with every secret-bearing field removed. */
-export function stripSecretProviderSpecificData(psd: unknown): JsonRecord {
-  const record = { ...asRecord(psd) };
-  for (const key of Object.keys(record)) {
-    if (SECRET_FIELD_PATTERN.test(key)) delete record[key];
+/**
+ * Paths of the providerSpecificData fields in `psd` that hold a non-empty
+ * secret, at any depth: `cookie`, `extraApiKeys`, `customHeaders.Authorization`,
+ * `auth.credentials`. Arrays do not add a path segment.
+ */
+export function findSecretProviderSpecificFields(psd: unknown): string[] {
+  const found: string[] = [];
+  walkSecretFields(asRecord(psd), "", 0, (path) => found.push(path));
+  return found;
+}
+
+function stripSecretKeys(value: unknown, depth: number): unknown {
+  if (depth > MAX_PSD_DEPTH) return value;
+  if (Array.isArray(value)) return value.map((item) => stripSecretKeys(item, depth + 1));
+  if (!value || typeof value !== "object") return value;
+  const out: JsonRecord = {};
+  for (const [key, item] of Object.entries(value as JsonRecord)) {
+    if (isSecretFieldName(key)) continue;
+    out[key] = stripSecretKeys(item, depth + 1);
   }
-  return record;
+  return out;
+}
+
+/** Copy of `psd` with every secret-bearing field removed, at any depth. */
+export function stripSecretProviderSpecificData(psd: unknown): JsonRecord {
+  return stripSecretKeys(asRecord(psd), 0) as JsonRecord;
+}
+
+/** Value at a dotted path produced by findSecretProviderSpecificFields; arrays are searched for the first hit. */
+function valueAtPath(root: unknown, path: string): unknown {
+  let current: unknown[] = [root];
+  for (const segment of path.split(".")) {
+    const next: unknown[] = [];
+    for (const node of current) {
+      const nodes = Array.isArray(node) ? node : [node];
+      for (const item of nodes) {
+        if (item && typeof item === "object" && !Array.isArray(item) && segment in (item as JsonRecord)) {
+          next.push((item as JsonRecord)[segment]);
+        }
+      }
+    }
+    current = next;
+    if (current.length === 0) return undefined;
+  }
+  return current.length === 1 ? current[0] : current;
 }
 
 const CREDENTIAL_COLUMNS = ["apiKey", "accessToken", "refreshToken", "idToken"] as const;
@@ -140,11 +315,13 @@ export function findIncomingSecrets(data: JsonRecord, existing?: JsonRecord | nu
   if ("providerSpecificData" in data) {
     const incoming = asRecord(data.providerSpecificData);
     const before = asRecord(existing?.providerSpecificData);
-    for (const key of findSecretProviderSpecificFields(incoming)) {
+    for (const path of findSecretProviderSpecificFields(incoming)) {
       // A value carried over unchanged from the stored row is not a new write;
       // updateProviderConnection scrubs it instead of refusing the whole edit.
-      if (JSON.stringify(incoming[key]) === JSON.stringify(before[key])) continue;
-      found.push(`providerSpecificData.${key}`);
+      if (JSON.stringify(valueAtPath(incoming, path)) === JSON.stringify(valueAtPath(before, path))) {
+        continue;
+      }
+      found.push(`providerSpecificData.${path}`);
     }
   }
   return found;

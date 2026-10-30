@@ -1,4 +1,5 @@
 "use client";
+// Modified by Netie AI, 2026
 
 import { Icon as UiIcon, type IconName } from "@repo/ui/icons";
 
@@ -577,7 +578,7 @@ function ConfigureForm({
               <input
                 value={pathPrefix}
                 onChange={(e) => setPathPrefix(e.target.value)}
-                placeholder="openship/prod"
+                placeholder="freebuild/prod"
                 className={inputClass}
               />
             </Field>
@@ -634,7 +635,7 @@ function ConfigureForm({
             <input
               value={pathPrefix}
               onChange={(e) => setPathPrefix(e.target.value)}
-              placeholder="/backups/openship"
+              placeholder="/backups/freebuild"
               className={inputClass}
             />
           </Field>
@@ -675,7 +676,7 @@ function ConfigureForm({
             <input
               value={pathPrefix}
               onChange={(e) => setPathPrefix(e.target.value)}
-              placeholder="/backups/openship"
+              placeholder="/backups/freebuild"
               className={`${inputClass} font-mono`}
             />
           </Field>

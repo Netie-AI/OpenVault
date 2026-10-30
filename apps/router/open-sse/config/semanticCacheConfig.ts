@@ -47,8 +47,13 @@ export interface SemanticCacheConfig {
   excludeSystemPrompt: boolean;
   /** Optional custom base URL for embedding provider (e.g. http://192.168.31.147:13305/v1/embeddings). */
   embeddingBaseUrl?: string;
-  /** Optional custom API key / Bearer token for embedding provider. */
+  /** Optional custom API key / Bearer token for embedding provider (deploy-time env only; never persisted). */
   embeddingApiKey?: string;
+  /**
+   * Resolves the embedding provider's key at call time, from OpenVault. FreeRoute
+   * never stores this key; the DB-backed resolver supplies this instead of a value.
+   */
+  embeddingApiKeyResolver?: () => Promise<string | null | undefined>;
   /** Redis connection URL when backend is "redis". */
   redisUrl?: string;
   /** Key prefix for Redis cache keys. Defaults to "omniroute:semcache:". */
@@ -186,6 +191,7 @@ export function resolveSemanticCacheConfig(
       dynamic?.embeddingApiKey ||
       overrides?.embeddingApiKey ||
       undefined,
+    embeddingApiKeyResolver: dynamic?.embeddingApiKeyResolver ?? overrides?.embeddingApiKeyResolver,
     redisUrl:
       env.OMNIROUTE_SEMANTIC_CACHE_REDIS_URL || env.REDIS_URL || dynamic?.redisUrl || undefined,
     redisPrefix:

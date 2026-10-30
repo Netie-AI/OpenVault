@@ -4,20 +4,11 @@ import {
   getProviderApiKey,
   listProviderConnections,
   removeProviderConnectionByProvider,
-  upsertApiKeyProviderConnection,
 } from "../provider-store.mjs";
 import { openOmniRouteDb } from "../sqlite.mjs";
-import { loadAvailableProviders } from "../provider-catalog.mjs";
+import { refuseLocalKeyWrite } from "../openvault-keys.mjs";
 import { apiFetch, isServerUp, isRouteUnavailableStatus } from "../api.mjs";
 import { t } from "../i18n.mjs";
-
-function getValidProviderIds() {
-  try {
-    return new Set(loadAvailableProviders().map((p) => p.id));
-  } catch {
-    return null;
-  }
-}
 
 function maskKey(raw) {
   if (!raw || raw.length <= 8) return "***";
@@ -29,7 +20,7 @@ export function registerKeys(program) {
 
   keys
     .command("add <provider> [apiKey]")
-    .description(t("keys.addDescription"))
+    .description("Show where to add a provider key: provider keys are stored in OpenVault")
     .option("--stdin", t("keys.stdinOpt"))
     .action(async (provider, apiKey, opts, cmd) => {
       const globalOpts = cmd.parent.optsWithGlobals();
@@ -144,71 +135,15 @@ export function registerKeys(program) {
     });
 }
 
-export async function runKeysAddCommand(provider, apiKey, opts = {}) {
-  if (!provider) {
-    console.error(t("keys.providerRequired"));
-    return 1;
-  }
-
-  let key = apiKey;
-  if (opts.stdin) {
-    key = await readStdin();
-    if (!key) {
-      console.error(t("keys.stdinEmpty"));
-      return 1;
-    }
-  }
-
-  if (!key) {
-    console.error(t("keys.keyRequired"));
-    return 1;
-  }
-
-  const providerLower = provider.toLowerCase();
-  const validIds = getValidProviderIds();
-  if (validIds && !validIds.has(providerLower)) {
-    console.error(t("keys.unknownProvider", { provider: providerLower }));
-    return 1;
-  }
-
-  const serverUp = await isServerUp();
-  if (serverUp) {
-    try {
-      const res = await apiFetch("/api/v1/providers/keys", {
-        method: "POST",
-        body: { provider: providerLower, apiKey: key },
-        retry: false,
-        acceptNotOk: true,
-      });
-      if (res.ok) {
-        console.log(t("keys.added", { provider: providerLower }));
-        return 0;
-      }
-      // A missing route means this server does not implement the endpoint —
-      // fall through to the local SQLite path below rather than stranding the
-      // user. Real client errors still abort.
-      if (res.status >= 400 && res.status < 500 && !isRouteUnavailableStatus(res.status)) {
-        console.error(t("common.error", { message: `HTTP ${res.status}` }));
-        return 1;
-      }
-    } catch {}
-  }
-
-  const { db } = await openOmniRouteDb();
-  try {
-    const existing = listProviderConnections(db).find(
-      (c) => c.provider === providerLower && c.authType === "apikey"
-    );
-    upsertApiKeyProviderConnection(db, {
-      provider: providerLower,
-      name: existing?.name || providerLower,
-      apiKey: key,
-    });
-    console.log(t("keys.added", { provider: providerLower }));
-    return 0;
-  } finally {
-    db.close();
-  }
+/**
+ * `keys add` no longer stores anything. A provider key is added in OpenVault, and
+ * FreeRoute reads it from there at request time. This neither prompts, reads
+ * stdin, calls the server, nor falls back to a local SQLite write when the server
+ * answers 501 keys_managed_by_openvault: it prints where to add the key and exits
+ * non-zero.
+ */
+export async function runKeysAddCommand(_provider, _apiKey, _opts = {}) {
+  return refuseLocalKeyWrite();
 }
 
 export async function runKeysListCommand(opts = {}) {
@@ -323,15 +258,6 @@ export async function runKeysRemoveCommand(provider, opts = {}) {
   } finally {
     db.close();
   }
-}
-
-async function readStdin() {
-  return new Promise((resolve) => {
-    let data = "";
-    process.stdin.setEncoding("utf8");
-    process.stdin.on("data", (chunk) => (data += chunk));
-    process.stdin.on("end", () => resolve(data.trim()));
-  });
 }
 
 export async function runKeysRegenerateCommand(id, opts = {}) {

@@ -4,6 +4,7 @@ import { EventEmitter } from "node:events";
 import { spawn } from "node:child_process";
 import type { ChildProcess } from "node:child_process";
 import { sanitizeErrorMessage } from "@omniroute/open-sse/utils/error";
+import { assertServiceToolAllowed } from "@omniroute/open-sse/netie/policy.ts";
 import { getServiceRow, updateServiceField, setToolStatus } from "@/lib/db/versionManager";
 import { RingBuffer } from "./ringBuffer";
 import { HealthChecker } from "./healthCheck";
@@ -58,6 +59,10 @@ export class ServiceSupervisor extends EventEmitter {
 
   constructor(private readonly config: ServiceConfig) {
     super();
+    // FreeRoute: a supervisor for the Claude-subscription pooling sidecars
+    // (dario, cliproxy) can never exist, so none can be spawned from a route,
+    // the CLI, the startup bootstrap or a scheduler. See open-sse/netie/policy.ts.
+    assertServiceToolAllowed(config.tool);
     this.buffer = new RingBuffer(config.logsBufferBytes);
     this.checker = new HealthChecker(config.healthUrl, config.healthIntervalMs, (h) => {
       this.health = h;
