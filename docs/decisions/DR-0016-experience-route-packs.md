@@ -12,7 +12,7 @@ Renumbered from a draft DR-0013 on 2026-09-07: `main` already shipped
 ## Context and Problem Statement
 
 STATUS "Pricing NEEDS-YOU" and PRD F14 waited on a founder pick. Hosting SKUs
-in `ship/service.py` ($24 / $79 / $9) are a different product (we wrap a box).
+in `OpenMW/openmw/openvault/ship/service.py` ($24 / $79 / $9) are a different product (we wrap a box).
 The founder asked for prepaid **experience** packs so someone can start the
 ecosystem at about $10, get mixed cheap/free hops from our pooled keys
 (DR-0009 a), and when that runs out be guided to free register, BYOK, or a

@@ -19,6 +19,11 @@ Two rules this table exists to enforce:
 
 Same ``keys.db`` as the vault and the trust store, for one backup surface. A
 billing row is never pruned the way ``health_store`` prunes heartbeats.
+
+``route_spend`` sits beside ``usage_events`` with the same ``event_id``: the
+route policy's budget scope, role and estimated USD. A separate table, so the
+18-column ``usage_events`` shape that other readers rely on does not move.
+Hard caps sum ``route_spend.est_cost_usd``.
 """
 
 from __future__ import annotations
@@ -81,6 +86,12 @@ class UsageEvent:
     #: Typed refusal name when the request failed, e.g. openvault_vault_sealed.
     error_type: str = ""
     latency_ms: int = 0
+    #: Budget scope for caps: the issued key id, or a loopback ``service_id``.
+    service_id: str = ""
+    #: ``sql`` | ``tool`` | ``reason`` | ``summarize``, or "" when not role-routed.
+    route_role: str = ""
+    #: From the route policy price table. None when a paid model has no price.
+    est_cost_usd: float | None = 0.0
     event_id: str = field(default_factory=lambda: uuid.uuid4().hex[:16])
     created_at: float = field(default_factory=time.time)
 
@@ -171,6 +182,26 @@ class UsageStore:
                 "CREATE INDEX IF NOT EXISTS idx_usage_identity_time "
                 "ON usage_events(identity, created_at)"
             )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS route_spend (
+                  event_id TEXT PRIMARY KEY,
+                  created_at REAL NOT NULL,
+                  service_id TEXT NOT NULL DEFAULT '',
+                  vault_key_id TEXT NOT NULL DEFAULT '',
+                  route_role TEXT NOT NULL DEFAULT '',
+                  est_cost_usd REAL
+                )
+                """
+            )
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_spend_service_time "
+                "ON route_spend(service_id, created_at)"
+            )
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_spend_key_time "
+                "ON route_spend(vault_key_id, created_at)"
+            )
             conn.commit()
 
     def record(self, event: UsageEvent) -> UsageEvent:
@@ -201,8 +232,61 @@ class UsageStore:
                     int(event.latency_ms),
                 ),
             )
+            conn.execute(
+                "INSERT INTO route_spend (event_id, created_at, service_id, vault_key_id, "
+                "route_role, est_cost_usd) VALUES (?,?,?,?,?,?)",
+                (
+                    event.event_id,
+                    event.created_at,
+                    event.service_id,
+                    event.vault_key_id,
+                    event.route_role,
+                    None if event.est_cost_usd is None else float(event.est_cost_usd),
+                ),
+            )
             conn.commit()
         return event
+
+    def spend_usd(
+        self,
+        *,
+        vault_key_id: str | None = None,
+        service_id: str | None = None,
+        since: float,
+    ) -> float:
+        """Estimated USD since ``since`` for one vault key or one caller."""
+        if vault_key_id:
+            column, value = "vault_key_id", vault_key_id
+        elif service_id:
+            column, value = "service_id", service_id
+        else:
+            return 0.0
+        with contextlib.closing(self._connect()) as conn, conn:
+            row = conn.execute(
+                f"SELECT COALESCE(SUM(est_cost_usd),0) AS usd FROM route_spend "
+                f"WHERE {column}=? AND created_at >= ?",
+                (value, float(since)),
+            ).fetchone()
+        return float(row["usd"])
+
+    def spend_events(self, *, limit: int = 200) -> list[dict[str, Any]]:
+        """Budget rows, oldest first. ``est_cost_usd`` None means unpriced."""
+        with contextlib.closing(self._connect()) as conn, conn:
+            rows = conn.execute(
+                "SELECT * FROM route_spend ORDER BY created_at ASC LIMIT ?",
+                (max(1, min(int(limit), 1000)),),
+            ).fetchall()
+        return [
+            {
+                "event_id": r["event_id"],
+                "created_at": float(r["created_at"]),
+                "service_id": r["service_id"],
+                "vault_key_id": r["vault_key_id"],
+                "route_role": r["route_role"],
+                "est_cost_usd": None if r["est_cost_usd"] is None else float(r["est_cost_usd"]),
+            }
+            for r in rows
+        ]
 
     @staticmethod
     def _row(row: sqlite3.Row) -> dict[str, Any]:

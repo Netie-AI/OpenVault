@@ -1,0 +1,41 @@
+{
+  "_doc": "FreeRoute role routing, price table and hard spend caps (ROUTE-ROLE-BUDGET-01). Shipped defaults. Override with OPENVAULT_ROUTE_POLICY=/path/to/file.json; see docs/reference/freeroute-role-budget.md.",
+  "roles": {
+    "sql": [
+      {"provider": "groq", "model": "qwen/qwen3.8-27b"},
+      {"provider": "openrouter", "model": "qwen/qwen3.8-27b:free"},
+      {"provider": "sea_lion", "model": "aisingapore/Qwen-SEA-LION-v4.5-27B-IT"}
+    ],
+    "tool": [
+      {"provider": "groq", "model": "openai/gpt-oss-20b"},
+      {"provider": "google", "model": "gemini-3.1-flash-lite"},
+      {"provider": "nvidia", "model": "openai/gpt-oss-20b"}
+    ],
+    "reason": [
+      {"provider": "groq", "model": "openai/gpt-oss-120b"},
+      {"provider": "sambanova", "model": "gpt-oss-120b"},
+      {"provider": "nvidia", "model": "nvidia/nemotron-3-super-120b-a12b"},
+      {"provider": "openrouter", "model": "nvidia/nemotron-3-ultra-550b-a55b:free"}
+    ],
+    "summarize": [
+      {"provider": "google", "model": "gemini-3.1-flash-lite"},
+      {"provider": "groq", "model": "openai/gpt-oss-20b"},
+      {"provider": "openrouter", "model": "google/gemma-4-31b-it:free"},
+      {"provider": "sambanova", "model": "gemma-4-31B-it"}
+    ]
+  },
+  "models": {
+    "groq/*": {"free": true},
+    "google/*": {"free": true},
+    "nvidia/*": {"free": true},
+    "sambanova/*": {"free": true},
+    "sea_lion/*": {"free": true},
+    "openrouter/*:free": {"free": true},
+    "local_qwen/*": {"free": true}
+  },
+  "caps": {
+    "max_tokens_per_request": null,
+    "keys": {},
+    "callers": {}
+  }
+}

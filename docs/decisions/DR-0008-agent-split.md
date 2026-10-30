@@ -114,7 +114,7 @@ Exact files and proof steps for C1–C12 live in [`CURSOR_TASKS.md`](CURSOR_TASK
 ### Design next (Claude owns; Cursor waits for a task card)
 | Topic | Claude delivers | Then Cursor |
 |-------|-----------------|-------------|
-| ECS host adapter | Resource graph, cost honesty, when to offer vs Pages | One module under `ship/hosts/` + tests |
+| ECS host adapter | Resource graph, cost honesty, when to offer vs Pages | One module under `OpenMW/openmw/openvault/ship/hosts/` + tests |
 | Bill visualisation | Which provider APIs, what “suggestion” may claim | UI charts + API wrappers |
 | Paid target ranking | Label copy, never dress as detection | Rank field + badge in picker |
 | FreeRoute / OmniRoute cascade | What subset of `combo.ts` is worth porting | Thin Python wrapper tasks |

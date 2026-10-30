@@ -2,7 +2,7 @@
 
 Append-only. Never edited, only added to. Newest first.
 
-## 2026-10-29 - PR #170 security review fixes (Refs #63, #65)
+## 2026-10-30 - PR #170 security review fixes (Refs #63, #65)
 
 - The site-password sweep no longer loses a password on a label collision. A hop is deleted only after a positive check: this sweep just wrote its password, or an active secret already holds the same password for the same account. A secret revoked mid-sweep sends the hop down the write path instead. A different password under that label is a `conflict`: the hop is kept, nothing is overwritten, and `ok` is false until someone resolves it. The comparison runs inside `SecretStore.active_password_matches`, so no plaintext leaves the store and `last_revealed_at` is not stamped. One sweep runs at a time per process, so the /vault page load, the unseal hook and the CLI cannot write the same label twice. Founder go 2026-10-30.
 - `POST /api/vault/migrate-site-passwords` now migrates only `lifecycle == active` hops. A revoked, rotated or compromised `SITE_*` / `*PASSWORD` hop is not decrypted, not copied into secrets and not deleted, so a dead password never becomes an active secret under its label and the audit-retained encrypted row survives. They are reported as `skipped_inactive` in the response, the `openvault_site_password_migrate` log event and the `site_password_migrate` audit line. `remaining_site_keys` still counts every site-shaped row left in the key vault, so it now includes the skipped ones and `ok` can be true with `remaining_site_keys > 0`.
@@ -10,7 +10,7 @@ Append-only. Never edited, only added to. Newest first.
 - `POST /api/ship/engine` decrypts vault host credentials only for a target that leaves the machine (`spaceship_ftp`, `cloudflare_pages`, `coolify`, `netlify`, `vps_ssh`). `local_demo` and `aws_guide` decrypt nothing. Each decrypted host credential writes one `ship_host_credential` line to `secret_audit.jsonl` with the target, label and an 8-character key ref, never the value.
 - A request secret binding can no longer override a host label the vault supplies (`COOLIFY_URL`, `SPACESHIP_FTP_HOST` and the rest of `HOST_ENV_LABELS`). The vault value wins; a binding for a host label the vault does not hold is still used as the fallback, and every binding value is scrubbed from the response.
 
-## 2026-10-29 - Site passwords and TOTP seeds are secrets, not LLM hops (Refs #63, #64, #65, #66)
+## 2026-10-30 - Site passwords and TOTP seeds are secrets, not LLM hops (Refs #63, #64, #65, #66)
 
 - `POST /api/vault/migrate-site-passwords` moves `SITE_*` and `*PASSWORD` rows (`provider=custom`, empty base URL) out of the key vault and into `/api/secrets` as passwords, then deletes the hop row. It needs `X-OpenVault-Admin`, a loopback peer, and an unsealed vault. A secret with the same label already present is counted as `already_in_secrets` and the hop row is still deleted. A passphrase unseal runs the same sweep once, and `openvault secret list` and `secret get` call it first.
 - Hop surfaces now refuse and hide that shape. `PATCH /api/keys` refuses it with 400 like `POST`, and the env upsert refuses it too. `GET /api/keys`, the AirGPT key-vault snapshot, the FreeRoute candidate walk, precheck, and the proxy hop loop skip it. The web hop list, Add key, and BYOK refuse it too.
@@ -18,6 +18,34 @@ Append-only. Never edited, only added to. Newest first.
 - LiteLLM stays an optional `:4000` slot. It is seeded disabled, is not in the FreeRoute spendable list, shows Off on the vault page, and its precheck says `LiteLLM proxy not running on :4000` instead of a connect error. The FreeRoute page shows `—` and Loading until its status call returns.
 - Ship host adapters read Cloudflare, Netlify, Coolify, Spaceship FTP, and VPS credentials from vault rows labelled with the env name (`vault_host_env`), with process env as the fallback. Those host credentials are never forwarded as the deployed app's environment.
 - The web shell restarts `next start` when `:3010` is unreachable. A compiling or stalled listener never triggers a second copy. The CLI starts the web app detached on Windows.
+
+## 2026-10-30 - Localhost unseal without an admin paste (OpenVault #123)
+
+- When the request `Host` header is loopback (`127.0.0.1`, `localhost`, `[::1]`, any port) and the middleware URL host is loopback, the :3010 console attaches `X-OpenVault-Admin` from the local admin token file for vault status, passphrase unseal, Hello unseal, and `GET /api/keys`. The token is not written into the page. Next strips it from the browser response.
+- The unseal gate no longer asks for an admin token. Overview shows the same Unseal / Hello control as `/vault`.
+- A request whose `Host` header is missing, empty, repeated, or not loopback does not get that header, and the token file is not read for it. The middleware URL host cannot decide this alone: `next start -H 127.0.0.1` builds it from the bind address, so it is loopback for every request, including a DNS-rebinding page sending `Host: evil.example:3010`. A trailing-dot `localhost.` is refused. Other vault and key mutations still require the header and stay 401 without it. The API guard is unchanged. Refs #123.
+
+## 2026-10-30 - Spend caps cannot be outrun on a paid hop (Refs #148)
+
+- `n` and `best_of` count. A capped paid hop reserves `n` times `best_of` completions (each defaults to 1, each must be a whole number from 1 to 128). A value outside that is refused on that hop as `request.completions` (402, `unit: "completions"`) and nothing goes upstream. Before, `n: 128` reserved one completion and could spend about 128 times the cap.
+- A capped paid hop now sends the output budget it reserved: `max_tokens` (or `max_completion_tokens`, if that is the field the caller used) at the 1024 default when the caller named none. A streamed one also sends `stream_options.include_usage: true`, merged with any other `stream_options`, so the ledger records the usage frame and not the hold. The client receives that frame. Free hops and pool-walk hops with no cap on them are sent unchanged.
+- A failed ledger write for a paid hop that served no longer releases its hold. The hold keeps counting against the caps for the life of the process and `usage_ledger_write_failed_hold_kept` is logged at error level, with no message or key material. The response is unchanged.
+- An unreadable route policy file returns 503 with the file name only. The path and OS error are logged as `route_policy_unreadable`. Routing order, role lists, strict pin and the shipped `route_policy.json` are untouched. Refs #148.
+
+## 2026-10-30 - FreeRoute role routing, hard spend caps, cost stamps (Refs #148)
+
+- `POST /v1/chat/completions` accepts `role` = `sql` | `tool` | `reason` | `summarize`. Each role walks an ordered model list from `OpenMW/openmw/openvault/vault/route_policy.json`, free first, overridable with `OPENVAULT_ROUTE_POLICY`. A provider failure falls back to the next entry in order. No `role` keeps the pool walk. Any other value is 422 `openvault_unknown_role`. `role` with `strict` or `local_only` is 422 `openvault_role_conflict`. Defaults use only NVIDIA NIM, Groq, OpenRouter, SambaNova, Gemini, and SEA-LION, with no DeepSeek or China-hosted model names.
+- Hard caps: daily and monthly USD per vault key and per caller, plus `max_tokens_per_request`. The caller is the issued key id, or `service_id` for loopback. Spend persists in keys.db table `route_spend`, so `usage_events` stays 18 columns. A cap that would be exceeded returns 402 with `reason: "budget_exceeded"` and names the cap. A model is paid unless the policy marks it free. A role walk never runs a paid model unless that key or caller has a USD cap (`cap: "paid_default"`). No paid prices ship.
+- Every gateway JSON response carries `model`, `provider`, `tokens_in`, `tokens_out`, and `est_cost_usd`, naming the hop that actually served. Free models cost 0. Streams carry them on chunks. HttpGuard, admin_token, and auth are unchanged. No public `:5000`. Contract: `docs/reference/freeroute-role-budget.md`.
+
+## 2026-10-30 - OV-3a kept live sentinel, observe, health, and control (Refs #137)
+
+- `OpenMW/openmw/openvault/sentinel/`, `observe/`, `health/`, and `control/` stay. `app.py` and `routers/sentinel.py` import them, and the Detect page calls `/api/health/devices`, `/api/sentinel/devices`, and `/api/observe/path`. The web route guard lists `/api/control/action` and `/api/sentinel/`. `nvme_sentinel/` and CI job `test-nvme-sentinel` are untouched. No auth, key, or route change.
+
+## 2026-10-09 - Lease logs omit the kid, ref, and secret (Refs #160)
+
+- Redeem still writes `lease_redeem` to `secret_audit.jsonl` with `key_id`. That id is not passed to `log.info`. Mint, redeem, redeem refusal, audit-failure, and owner-assign lines do not include the kid, the `ovlease_` ref, or the secret.
+- Uvicorn access lines for `POST /api/keys/leases`, `POST /api/keys/leases/redeem`, and `POST /api/keys/owner` drop the query string. A ref in that query is refused and is not on the access line.
 
 ## 2026-10-09 - Space credentials are admin plus loopback (Refs #160)
 
@@ -31,7 +59,7 @@ Append-only. Never edited, only added to. Newest first.
 
 ## 2026-10-09 - Credential-bound Space and fail-closed redeem audit (Refs #160)
 
-- A Space credential is `dms:<space>`. It is minted once with `POST /keys/services` and reused. Lease mint and redeem do not mint or refresh it. The service id charset accepts that form: the Space is 1 to 64 of `A-Za-z0-9._-`, and a colon is allowed only in `dms:<space>`.
+- A Space credential is `dms:<space>`. It is minted once with `POST /keys/services` and reused. Lease mint and redeem do not mint or refresh it. The Space must match `^dms:[a-z0-9][a-z0-9-]{0,62}$`. A plain id is letters, digits, `.`, `_`, and `-`. `foo:bar` is 400 because that colon form was refused at `2204ce8c`. Main before that commit accepted it.
 - The kid is owned by that `dms:<space>` service through admin `POST /api/keys/owner`. `owner_tenant` stays on the binding. Mint and redeem derive the Space from the Bearer. The tenant is the binding, not the body. A body `space` or `tenant` that disagrees is `lease_space_mismatch` or `lease_tenant_mismatch`, and redeem does not consume the lease. A Bearer that is not `dms:<space>` is `lease_space_credential`. This is credential-bound Space. #165 is this behavior.
 - A successful redeem writes `lease_redeem` (kid, space, service_id, expires_at, owner_tenant) before the consume commits. If that write fails, the response is `lease_audit_failed`, the secret is not returned, and the lease stays redeemable. A refused redeem writes `lease_redeem_refused` with the reason, key_id when known, space, and service_id. Neither line contains the ref or the secret. Rate limit and purge of expired rows stay on #164.
 - A ref placed in the query string is refused (`lease_ref_in_url`) and is not redeemed, but uvicorn still records that request line on the access log.

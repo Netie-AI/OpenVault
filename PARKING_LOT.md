@@ -8,9 +8,9 @@
 
 | Item | Notes |
 |------|-------|
-| Wholesale OmniRoute + Openship Node trees (draft #99 `apps/router`, `apps/ship`) | Not merged. Tip already has FreeRoute (`routers/freeroute.py`, `vault/proxy.py`) and FreeBuild (`ship/`, `ship/hosts/`). Copying those trees would add a second process and a second credential store (DR-0003). Unlock: the founder re-asks with a plan that keeps KeyVault as the only key store and does not bind `:5000` on a public interface. |
+| Wholesale OmniRoute + Openship Node trees (draft #99 `apps/router`, `apps/ship`) | Not merged. Tip already has FreeRoute (`routers/freeroute.py`, `vault/proxy.py`) and FreeBuild (`OpenMW/openmw/openvault/ship/`, `OpenMW/openmw/openvault/ship/hosts/`). Copying those trees would add a second process and a second credential store (DR-0003). Unlock: the founder re-asks with a plan that keeps KeyVault as the only key store and does not bind `:5000` on a public interface. |
 | Netie `user.env` DPAPI wrap | Out of this tree — `EnvLoader` fix lives in `D:\Netie Space`. Unlock: someone picks it up in that repo. |
-| ~~SSH VPS executor~~ | Done 2026-08-06 — `ship/hosts/vps_ssh.py` (Docker + Caddy, replicas, blue/green, TLS). |
+| ~~SSH VPS executor~~ | Done 2026-08-06 — `OpenMW/openmw/openvault/ship/hosts/vps_ssh.py` (Docker + Caddy, replicas, blue/green, TLS). |
 | Multi-node load balancing | Today one box runs both the app and its proxy, so the box is the single point of failure. Unlock: a user hits the ceiling of one VPS, or asks for HA. Needs a real LB tier (second node + floating IP or DNS round-robin) and a shared session/store story. |
 | Route53 / registrar DNS automation | We hand back the exact A record and verify resolution; we never create it. Unlock: the founder decides OpenVault may hold a domain-registrar credential — today that is custody the user keeps. |
 | Rollback command for `vps_ssh` | The pieces exist (last 3 static releases kept, last 3 images kept, previous colour known) but there is no one-button rollback. Unlock: first user who needs to undo a bad deploy. |
