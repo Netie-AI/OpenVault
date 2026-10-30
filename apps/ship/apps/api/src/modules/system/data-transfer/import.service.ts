@@ -42,6 +42,7 @@ import {
   type ImportContext,
 } from "./project-import";
 import { summarizeExportCounts } from "./selection";
+import { isInstanceExportKind, isProjectExportKind } from "./types";
 import { transferServer } from "./export.service";
 import { getCloudConnectionStatusForOrg } from "@repo/platform/engine/lib/cloud/session";
 import type {
@@ -97,7 +98,7 @@ function isStringRecord(value: unknown): value is Record<string, string> {
 export function assertValidEnvelope(file: DataTransferFile): void {
   if (
     !file ||
-    (file.kind !== "openship-instance-export" && file.kind !== "openship-project-export")
+    (!isInstanceExportKind(file.kind) && !isProjectExportKind(file.kind))
   ) {
     throw new InvalidTransferFileError("Not a FreeBuild export file.");
   }
@@ -107,8 +108,8 @@ export function assertValidEnvelope(file: DataTransferFile): void {
     );
   }
   if (
-    (file.kind === "openship-instance-export" && file.dump?.scope?.kind !== "instance") ||
-    (file.kind === "openship-project-export" && file.dump?.scope?.kind !== "project")
+    (isInstanceExportKind(file.kind) && file.dump?.scope?.kind !== "instance") ||
+    (isProjectExportKind(file.kind) && file.dump?.scope?.kind !== "project")
   ) {
     throw new InvalidTransferFileError("The export scope does not match its contents.");
   }
@@ -133,7 +134,7 @@ export function assertValidEnvelope(file: DataTransferFile): void {
       if (
         file.secrets.encoding !== "plaintext" ||
         file.envelopeVersion !== 3 ||
-        file.kind !== "openship-project-export" ||
+        !isProjectExportKind(file.kind) ||
         "kdf" in file.secrets || "blob" in file.secrets
       ) {
         throw new InvalidTransferFileError("Plaintext credentials require a version 3 project export.");
@@ -263,10 +264,10 @@ export async function previewInstanceImport(opts: {
   validateImportSelection(opts.selection);
   const scope =
     opts.selection?.scope ??
-    (opts.file.kind === "openship-project-export" ? "projects" : "instance");
+    (isProjectExportKind(opts.file.kind) ? "projects" : "instance");
   if (scope === "projects")
     return (await planProjectImport(opts.file, { ...opts.selection, scope }, opts.context)).preview;
-  if (opts.file.kind === "openship-project-export")
+  if (isProjectExportKind(opts.file.kind))
     throw new ProjectImportError(
       "A project archive cannot replace an instance. Choose project import.",
     );
@@ -365,8 +366,8 @@ export async function importPreparedInstance(opts: {
     stripTransferSecrets(file.dump.tables);
   }
   const projectScope =
-    opts.selection?.scope === "projects" || file.kind === "openship-project-export";
-  if (file.kind === "openship-project-export" && opts.selection?.scope === "instance")
+    opts.selection?.scope === "projects" || isProjectExportKind(file.kind);
+  if (isProjectExportKind(file.kind) && opts.selection?.scope === "instance")
     throw new ProjectImportError("A project archive cannot replace an instance.");
   if (projectScope && mode === "wipe")
     throw new ProjectImportError(

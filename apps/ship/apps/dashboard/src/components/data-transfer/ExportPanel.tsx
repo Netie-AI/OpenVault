@@ -8,6 +8,7 @@ import { dataTransferApi, type ExportPreview, type ExportSelection, type Transfe
 import { getApiErrorMessage } from "@/lib/api/client";
 import { useToast } from "@/context/ToastContext";
 import { TransferRequirements } from "./TransferRequirements";
+import { exportDownloadFilename } from "./export-filename";
 import {
   ALL_HISTORY,
   HISTORY_LABELS,
@@ -112,10 +113,10 @@ export function ExportPanel({
       );
       const anchor = document.createElement("a");
       anchor.href = url;
-      const label = (
-        projectName ?? (selection.scope === "projects" ? "projects" : "instance")
-      ).replace(/[^a-z0-9_-]+/gi, "-");
-      const filename = `freebuild-${label}-${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
+      const filename = exportDownloadFilename({
+        scope: selection.scope === "projects" ? "projects" : "instance",
+        projectName,
+      });
       anchor.download = filename;
       document.body.append(anchor);
       anchor.click();

@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026
 /**
  * Whole-instance transfer through the real HTTP stack.
  *
@@ -570,7 +571,7 @@ it("transfers multiple HTTP chunks atomically and resumes a file import after re
       }),
     });
   const scopedFile = await scopedExport();
-  expect(scopedFile.kind).toBe("openship-project-export");
+  expect(scopedFile.kind).toBe("freebuild-project-export");
   expect(scopedFile.envelopeVersion).toBe(3);
   expect(scopedFile.secrets).toMatchObject({ encoding: "plaintext" });
   expect(JSON.stringify(scopedFile)).toContain("scoped-original");

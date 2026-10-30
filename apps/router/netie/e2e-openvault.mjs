@@ -21,17 +21,26 @@
 //      FreeRoute with it, then checks the upstream saw the vault secret and
 //      OpenVault audited a secret_reveal.
 //   7. Negative cases: bogus client token, disabled providers, a key save
-//      into FreeRoute (POST and PUT /api/providers, bulk, import), the
-//      /authorize OAuth callback, a tenant-custody key that must never be
-//      spent, a connect to a non-loopback address, a wrong admin token,
-//      OpenVault stopped.
-//   8. Greps FreeRoute's DATA_DIR and logs for the provider and tenant secrets.
+//      into FreeRoute (POST and PUT /api/providers, bulk, import, the cloud
+//      agent credentials route, the `keys add` CLI command), the /authorize
+//      OAuth callback, the Dario sidecar status route, a tenant-custody key
+//      that must never be spent, a connect to a non-loopback address, OpenVault
+//      answering 429 on verify, a SQLite backup carrying known secrets that is
+//      imported and must leave none of them in the live database file, a wrong
+//      admin token, OpenVault stopped.
+//   8. Greps FreeRoute's DATA_DIR and logs for every secret the test planted.
 // Every process and temp dir is removed on exit, pass or fail.
+//
+// The `keys add` step runs the real CLI entry point (bin/omniroute.mjs). That
+// entry point refuses to start on a Node below its security floor (22.22.2), so
+// on an older Node the step drives the same Commander program through the entry
+// point's loader instead and logs which path ran. Set FREEROUTE_E2E_CLI_NODE to
+// a supported node binary to force the real entry point.
 //
 // Run: npm run test:e2e
 
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { createServer } from "node:http";
 import { connect as netConnect } from "node:net";
 import {
@@ -48,7 +57,7 @@ import {
 import { networkInterfaces, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { randomBytes } from "node:crypto";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { setTimeout as sleep } from "node:timers/promises";
 
 const ROOT = resolve(fileURLToPath(new URL("..", import.meta.url)));
@@ -58,6 +67,17 @@ const PROVIDER_SECRET = `sk-e2e-vault-secret-${randomBytes(12).toString("hex")}`
 // A tenant-custody key: stored in OpenVault, never spent by a router.
 const TENANT_SECRET = `sk-e2e-tenant-secret-${randomBytes(12).toString("hex")}`;
 const BULK_SECRET = `sk-e2e-bulk-secret-${randomBytes(12).toString("hex")}`;
+// Keys a caller tries to hand FreeRoute through the cloud agent route and the CLI.
+const AGENT_SECRET = `sk-e2e-agent-secret-${randomBytes(12).toString("hex")}`;
+const CLI_SECRET = `sk-e2e-cli-secret-${randomBytes(12).toString("hex")}`;
+// Planted in a SQLite backup that is then imported (one per place a key can hide).
+const IMPORT_SECRETS = {
+  apiKey: `sk-e2e-import-apikey-${randomBytes(12).toString("hex")}`,
+  extraKey: `sk-e2e-import-extra-${randomBytes(12).toString("hex")}`,
+  agentKey: `sk-e2e-import-agent-${randomBytes(12).toString("hex")}`,
+  clientKey: `sk-e2e-import-client-${randomBytes(12).toString("hex")}`,
+  embeddingKey: `sk-e2e-import-embed-${randomBytes(12).toString("hex")}`,
+};
 const MANAGEMENT_API_KEY = `sk-e2e-mgmt-${randomBytes(16).toString("hex")}`;
 const BOGUS_CLIENT_TOKEN = `ov_bogus_${randomBytes(16).toString("hex")}`;
 const CANNED_CONTENT = `canned-e2e-reply-${randomBytes(4).toString("hex")}`;
@@ -188,8 +208,21 @@ async function readJson(res) {
 // ── fake upstream ────────────────────────────────────────────────────────────
 
 const upstreamCalls = [];
-// Every Authorization header the fake upstream ever saw. Never cleared.
+// Every Authorization header FreeRoute sent the fake upstream. Never cleared.
 const allUpstreamAuth = [];
+// The same, with the request that carried it (for a failure message).
+const allUpstreamRequests = [];
+// OpenVault's own chat probe (OpenMW vault/chat_probe.py): 30 to 120 s after
+// OpenVault starts it POSTs "Reply with OK" to the base_url of every enabled
+// OpenAI-compatible key with that key, tenant custody included, from httpx. It
+// is OpenVault talking to its own key's endpoint, not FreeRoute, so it is
+// recorded apart. Counting it as FreeRoute traffic made the tenant check flaky
+// (it passed or failed on the random jitter). Both signs must match, so no
+// FreeRoute request can be taken for a probe.
+const openVaultProbes = [];
+function isOpenVaultChatProbe(req, body) {
+  return /^python-httpx\//i.test(req.headers["user-agent"] || "") && /Reply with OK/.test(body);
+}
 
 function startFakeUpstream() {
   return new Promise((resolveServer, reject) => {
@@ -198,8 +231,19 @@ function startFakeUpstream() {
       req.on("data", (chunk) => (body += chunk));
       req.on("end", () => {
         const path = new URL(req.url, "http://127.0.0.1").pathname;
-        upstreamCalls.push({ method: req.method, path, authorization: req.headers.authorization });
-        allUpstreamAuth.push(req.headers.authorization || "");
+        const record = {
+          at: new Date().toISOString(),
+          method: req.method,
+          path,
+          authorization: req.headers.authorization || "",
+        };
+        if (isOpenVaultChatProbe(req, body)) {
+          openVaultProbes.push(record);
+        } else {
+          upstreamCalls.push({ method: req.method, path, authorization: req.headers.authorization });
+          allUpstreamAuth.push(record.authorization);
+          allUpstreamRequests.push(record);
+        }
         res.setHeader("content-type", "application/json");
         // Like a real provider: every route needs the key. An upstream that
         // answered without one would hide a router that never sends it.
@@ -409,6 +453,67 @@ function tcpProbe(host, port) {
     sock.once("connect", () => done("connected"));
     sock.once("error", (error) => done(error.code || String(error)));
   });
+}
+
+// ── CLI ──────────────────────────────────────────────────────────────────────
+
+// The CLI entry point refuses to start on a Node below its security floor
+// (bin/nodeRuntimeSupport.mjs), before it parses any command. On such a host the
+// same Commander program is driven through the entry point's own loader sequence
+// (tsx, polyfill, alias resolver, createProgram, parseAsync), minus only that
+// version gate, and the run is labelled so the report says which path ran.
+const CLI_LOADER_SCRIPT = `
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
+const root = process.env.E2E_CLI_ROOT;
+await import("tsx/esm");
+await import(pathToFileURL(join(root, "open-sse", "utils", "setupPolyfill.ts")).href);
+const { registerAliasResolver } = await import(pathToFileURL(join(root, "bin", "aliasResolver.mjs")).href);
+await registerAliasResolver(root);
+try {
+  const { createProgram } = await import(pathToFileURL(join(root, "bin", "cli", "program.mjs")).href);
+  await createProgram().parseAsync(JSON.parse(process.env.E2E_CLI_ARGV));
+} catch (err) {
+  if (err.exitCode !== undefined) process.exit(err.exitCode);
+  console.error(err.message);
+  process.exit(1);
+}
+`;
+
+/** Run the FreeRoute CLI against `dataDir`. Returns { status, stdout, stderr, path }. */
+async function runCli(args, { dataDir, input } = {}) {
+  const { getNodeRuntimeSupport } = await import(
+    pathToFileURL(join(ROOT, "bin", "nodeRuntimeSupport.mjs")).href
+  );
+  // FREEROUTE_E2E_CLI_NODE: a supported Node binary to run the real entry point
+  // with, when the Node running this script is below the CLI's floor.
+  const cliNode = process.env.FREEROUTE_E2E_CLI_NODE || "";
+  const support = cliNode ? { nodeCompatible: true } : getNodeRuntimeSupport();
+  const env = {
+    ...process.env,
+    DATA_DIR: dataDir,
+    OMNIROUTE_CLI_SKIP_REPO_ENV: "1",
+    OMNIROUTE_NO_UPDATE_NOTIFIER: "1",
+  };
+  const run = support.nodeCompatible
+    ? {
+        argv: [join(ROOT, "bin", "omniroute.mjs"), ...args],
+        env,
+        path: cliNode ? `bin/omniroute.mjs on ${cliNode}` : "bin/omniroute.mjs",
+      }
+    : {
+        argv: ["--input-type=module", "-e", CLI_LOADER_SCRIPT],
+        env: { ...env, E2E_CLI_ROOT: ROOT, E2E_CLI_ARGV: JSON.stringify(["node", "omniroute", ...args]) },
+        path: `program.mjs via the entry point's loader (entry point gate: Node ${support.nodeVersion} is below the floor)`,
+      };
+  const out = spawnSync(cliNode || process.execPath, run.argv, {
+    cwd: ROOT,
+    env: run.env,
+    input,
+    encoding: "utf8",
+    timeout: 120_000,
+  });
+  return { status: out.status, stdout: out.stdout || "", stderr: out.stderr || "", path: run.path };
 }
 
 // ── secret grep ──────────────────────────────────────────────────────────────
@@ -644,6 +749,74 @@ async function main() {
     }
   );
 
+  await step(
+    "POST /api/v1/agents/credentials is refused (501 keys_managed_by_openvault) and stores nothing",
+    async () => {
+      const res = await fetch(`${fr.url}/api/v1/agents/credentials`, {
+        method: "POST",
+        headers: mgmt(),
+        body: JSON.stringify({ provider: "devin", apiKey: AGENT_SECRET }),
+      });
+      const body = await readJson(res);
+      assert.equal(res.status, 501, JSON.stringify(body));
+      assert.equal(body.error?.code, "keys_managed_by_openvault", JSON.stringify(body));
+      assert.ok(!JSON.stringify(body).includes(AGENT_SECRET), "the refusal echoed the key");
+      const listed = await fetch(`${fr.url}/api/v1/agents/credentials`, { headers: mgmt() });
+      const listBody = await readJson(listed);
+      assert.equal(listed.status, 200, JSON.stringify(listBody));
+      assert.deepEqual(listBody.data, [], `a credential was stored: ${JSON.stringify(listBody)}`);
+    }
+  );
+
+  await step(
+    "GET /api/services/dario/status gets 501 consumer_subscription_pooling_disabled (with and without the management bearer)",
+    async () => {
+      for (const headers of [{}, mgmt()]) {
+        const res = await fetch(`${fr.url}/api/services/dario/status`, { headers });
+        const body = await readJson(res);
+        assert.equal(res.status, 501, JSON.stringify(body));
+        assert.equal(body.error?.code, "consumer_subscription_pooling_disabled", JSON.stringify(body));
+        assert.equal(typeof body.error?.message, "string");
+      }
+    }
+  );
+
+  await step(
+    "CLI `keys add` refuses to write a key locally, exits non-zero, and does not echo it",
+    async () => {
+      for (const [label, args, input] of [
+        ["positional key", ["keys", "add", "openai", CLI_SECRET], undefined],
+        ["--stdin key", ["keys", "add", "openai", "--stdin"], `${CLI_SECRET}\n`],
+      ]) {
+        const out = await runCli(args, { dataDir: DATA_DIR, input });
+        const text = `${out.stdout}\n${out.stderr}`;
+        log(`CLI ${label} via ${out.path}: exit ${out.status}`);
+        assert.notEqual(out.status, 0, `${label} exited 0:\n${text}`);
+        assert.equal(out.status, 1, `${label} exit code ${out.status}:\n${text}`);
+        // A refusal for the right reason, not a crash or the Node version gate.
+        assert.match(text, /keys_managed_by_openvault/, text);
+        assert.match(text, /http:\/\/127\.0\.0\.1:3010\/keys/, text);
+        assert.doesNotMatch(text, /is not supported/, text);
+        assert.ok(!text.includes(CLI_SECRET), `${label}: the refusal echoed the key`);
+      }
+      // Pointed at the live data directory: no provider connection gained a key.
+      const list = await readJson(
+        await fetch(`${fr.url}/api/providers?provider=openai`, { headers: mgmt() })
+      );
+      assert.ok(Array.isArray(list.connections), JSON.stringify(list));
+      assert.deepEqual(
+        list.connections.filter((c) => c.apiKey),
+        [],
+        "a connection holds an apiKey after `keys add`"
+      );
+      assert.deepEqual(
+        filesContaining(filesUnder(DATA_DIR), CLI_SECRET),
+        [],
+        "the CLI key reached FreeRoute's data directory"
+      );
+    }
+  );
+
   await step("/authorize gets 501 consumer_subscription_pooling_disabled", async () => {
     // The Trae OAuth loopback callback stored query-string credentials with no
     // auth, so it is probed both without and with the management bearer.
@@ -831,11 +1004,26 @@ async function main() {
   );
 
   await step("a tenant-custody key is never spent or revealed", async () => {
-    const tenantSeen = allUpstreamAuth.filter((a) => a.includes(TENANT_SECRET));
-    assert.equal(tenantSeen.length, 0, "the fake upstream received the tenant secret");
+    const tenantSeen = allUpstreamRequests.filter((r) => r.authorization.includes(TENANT_SECRET));
+    assert.equal(
+      tenantSeen.length,
+      0,
+      `FreeRoute sent the tenant secret to the upstream: ${JSON.stringify(
+        tenantSeen.map((r) => `${r.at} ${r.method} ${r.path}`)
+      )}\nall upstream requests: ${JSON.stringify(
+        allUpstreamRequests.map((r) => `${r.at} ${r.method} ${r.path} ${r.authorization.replace(/(sk-e2e-[a-z]+-secret-).*/, "$1...")}`),
+        null,
+        1
+      )}`
+    );
     assert.ok(
       allUpstreamAuth.includes(`Bearer ${PROVIDER_SECRET}`),
-      "self-check: the pooled secret did reach the upstream"
+      "self-check: the pooled secret did reach the upstream from FreeRoute"
+    );
+    const probedTenant = openVaultProbes.filter((r) => r.authorization.includes(TENANT_SECRET));
+    log(
+      `OpenVault's own chat probe reached the fake upstream ${openVaultProbes.length} time(s), ` +
+        `${probedTenant.length} with a tenant key (not FreeRoute traffic, not counted above)`
     );
     const tenantIds = new Set(tenantKeys.map((k) => k.id));
     const reveals = readAudit().filter((e) => e.event === "secret_reveal");
@@ -876,6 +1064,125 @@ async function main() {
         await sleep(100);
       }
       assert.match(logText, /openvault_verify_rate_limited/);
+    }
+  );
+
+  // Last of the steps that need the planted connection: an import replaces the
+  // whole database. The backup is a real snapshot of the live database (exported
+  // through the API) with a known secret planted in every place a key can hide;
+  // after the import, the scrubbed live file must hold none of them.
+  await step(
+    "importing a SQLite backup that carries known secrets leaves none of them in the live database file",
+    async () => {
+      const exported = await fetch(`${fr.url}/api/db-backups/export`, { headers: mgmt() });
+      assert.equal(exported.status, 200);
+      const importPath = join(TMP, "import-with-secrets.sqlite");
+      writeFileSync(importPath, Buffer.from(await exported.arrayBuffer()));
+
+      const { DatabaseSync } = await import("node:sqlite");
+      const planted = new DatabaseSync(importPath);
+      const now = new Date().toISOString();
+      try {
+        planted.exec("PRAGMA journal_mode = DELETE");
+        planted
+          .prepare(
+            "INSERT INTO provider_connections (id, provider, auth_type, name, priority, is_active, api_key, provider_specific_data, created_at, updated_at) " +
+              "VALUES ('e2e-import-conn', 'openai', 'apikey', 'e2e-import', 1, 1, ?, ?, ?, ?)"
+          )
+          .run(
+            IMPORT_SECRETS.apiKey,
+            JSON.stringify({ extraApiKeys: [IMPORT_SECRETS.extraKey] }),
+            now,
+            now
+          );
+        planted
+          .prepare(
+            "INSERT OR REPLACE INTO cloud_agent_credentials (provider_id, api_key_encrypted, base_url, updated_at) VALUES ('devin', ?, NULL, ?)"
+          )
+          .run(IMPORT_SECRETS.agentKey, now);
+        planted
+          .prepare(
+            "INSERT INTO api_keys (id, name, key, machine_id, created_at) VALUES ('e2e-import-client', 'e2e-import', ?, NULL, ?)"
+          )
+          .run(IMPORT_SECRETS.clientKey, now);
+        planted
+          .prepare(
+            "INSERT OR REPLACE INTO key_value (namespace, key, value) VALUES ('databaseSettings', 'cache.semanticCacheEmbeddingApiKey', ?)"
+          )
+          .run(JSON.stringify(IMPORT_SECRETS.embeddingKey));
+      } finally {
+        planted.close();
+      }
+
+      // Self-check: the file being uploaded really carries every planted secret.
+      const upload = readFileSync(importPath);
+      for (const [where, secret] of Object.entries(IMPORT_SECRETS)) {
+        assert.ok(upload.includes(Buffer.from(secret)), `self-check: ${where} not in the upload`);
+      }
+
+      // Control: the byte check can see what an ordinary clear leaves behind. A
+      // copy of the upload gets plain UPDATE and DELETE statements (no
+      // secure_delete, no VACUUM); the cells they freed still hold the secrets.
+      // Without this, a clean live file could only mean the check is blind.
+      const controlPath = join(TMP, "plain-clear-control.sqlite");
+      writeFileSync(controlPath, upload);
+      const control = new DatabaseSync(controlPath);
+      try {
+        control.exec("PRAGMA journal_mode = DELETE");
+        control.exec("PRAGMA secure_delete = OFF");
+        control.exec(
+          "UPDATE provider_connections SET api_key = NULL, provider_specific_data = NULL; " +
+            "DELETE FROM api_keys; DELETE FROM cloud_agent_credentials; " +
+            "DELETE FROM key_value WHERE key = 'cache.semanticCacheEmbeddingApiKey';"
+        );
+      } finally {
+        control.close();
+      }
+      const plainCleared = readFileSync(controlPath);
+      const remnants = Object.entries(IMPORT_SECRETS).filter(([, secret]) =>
+        plainCleared.includes(Buffer.from(secret))
+      );
+      assert.ok(remnants.length > 0, "control: a plain clear left no remnant, the byte check is blind");
+      log(`control: a plain clear leaves ${remnants.map(([where]) => where).join(", ")} in the file`);
+
+      const res = await fetch(`${fr.url}/api/db-backups/import?filename=e2e-import.sqlite`, {
+        method: "POST",
+        headers: mgmt({ "content-type": "application/octet-stream" }),
+        body: upload,
+      });
+      const body = await readJson(res);
+      assert.equal(res.status, 200, JSON.stringify(body));
+      assert.equal(body.imported, true, JSON.stringify(body));
+
+      // The import took effect (the planted connection is there) and holds no key.
+      const list = await readJson(
+        await fetch(`${fr.url}/api/providers?provider=openai`, { headers: mgmt() })
+      );
+      const row = list.connections?.find((c) => c.id === "e2e-import-conn");
+      assert.ok(row, `the imported connection is missing: ${JSON.stringify(list)}`);
+      assert.ok(!row.apiKey, "the imported connection kept an apiKey");
+      const agents = await readJson(
+        await fetch(`${fr.url}/api/v1/agents/credentials`, { headers: mgmt() })
+      );
+      assert.deepEqual(agents.data, [], `an agent key survived the import: ${JSON.stringify(agents)}`);
+
+      // The live file, its WAL and its shm, read as bytes, while FreeRoute still has them open.
+      const live = filesUnder(DATA_DIR).filter((p) => /storage\.sqlite(-wal|-shm)?$/.test(p));
+      assert.ok(
+        live.some((p) => p.endsWith("storage.sqlite") && statSync(p).size > 0),
+        `no live storage.sqlite in ${DATA_DIR}`
+      );
+      for (const [where, secret] of Object.entries(IMPORT_SECRETS)) {
+        assert.deepEqual(filesContaining(live, secret), [], `${where} is in the live database`);
+      }
+      // The scrubbed upload copy in the OS temp directory is gone as well.
+      const leftovers = readdirSync(tmpdir())
+        .filter((name) => /^omniroute-import-.*\.sqlite$/.test(name))
+        .map((name) => join(tmpdir(), name));
+      for (const secret of Object.values(IMPORT_SECRETS)) {
+        assert.deepEqual(filesContaining(leftovers, secret), [], "the upload copy kept a secret");
+      }
+      log(`import scrub: checked ${live.map((p) => p.slice(DATA_DIR.length + 1)).join(", ")}`);
     }
   );
 
@@ -920,7 +1227,7 @@ async function main() {
   await stopProcess(fr.child);
 
   await step(
-    "FreeRoute DATA_DIR and logs contain none of the provider, tenant or bulk secrets",
+    "FreeRoute DATA_DIR and logs contain none of the provider, tenant, bulk, agent, CLI or imported secrets",
     async () => {
       const dataFiles = filesUnder(DATA_DIR);
       assert.ok(
@@ -928,7 +1235,14 @@ async function main() {
         `no sqlite file in ${DATA_DIR}`
       );
       const freeRouteLogs = filesUnder(LOG_DIR).filter((p) => /freeroute-/.test(p));
-      for (const secret of [PROVIDER_SECRET, TENANT_SECRET, BULK_SECRET]) {
+      for (const secret of [
+        PROVIDER_SECRET,
+        TENANT_SECRET,
+        BULK_SECRET,
+        AGENT_SECRET,
+        CLI_SECRET,
+        ...Object.values(IMPORT_SECRETS),
+      ]) {
         const hits = filesContaining([...dataFiles, ...freeRouteLogs], secret);
         assert.deepEqual(hits, [], `secret found in: ${hits.join(", ")}`);
       }

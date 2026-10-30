@@ -44,7 +44,9 @@ modification notice for them is this list.
   apps/dashboard/src/i18n/locales/en/servers.json
   apps/dashboard/src/i18n/locales/en/settings.json
   apps/dashboard/src/i18n/locales/en/widgets.json
+  apps/email/client/bun.lock
   apps/email/client/project.inlang/settings.json
+  apps/email/package.json
   package.json
   packages/adapters/package.json
   packages/contracts/package.json

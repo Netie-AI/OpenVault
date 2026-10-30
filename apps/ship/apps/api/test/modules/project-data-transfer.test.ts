@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { db, eq, schema, sql, repos } from "@repo/db";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
@@ -373,10 +374,17 @@ describe("project control-plane export and import", () => {
     },
   );
 
+  it("writes FreeBuild names into the file it exports, for a project and for the whole instance", async () => {
+    await source();
+    expect((await exportFile()).kind).toBe("freebuild-project-export");
+    const instance = JSON.parse(JSON.stringify(await exportInstance({ passphrase: password })));
+    expect(instance.kind).toBe("freebuild-instance-export");
+  });
+
   it("exports all environments, linked apps, backup parents and repo keys without unrelated projects or plaintext secrets", async () => {
     await source();
     const file = await exportFile();
-    expect(file.kind).toBe("openship-project-export");
+    expect(file.kind).toBe("freebuild-project-export");
     expect(file.dump.tables.project!.map((row) => row.id).sort()).toEqual([
       "database",
       "staging",

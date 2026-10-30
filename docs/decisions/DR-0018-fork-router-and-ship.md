@@ -85,6 +85,15 @@ FreeRoute and FreeBuild.
 - Kept on purpose: the deploy-time env key (`OMNIROUTE_API_KEY`) as the operator's
   bootstrap credential, `X-OmniRoute-*` header names, the `/api/omniroute/status` path,
   and internal identifiers.
+- Also off: the Dario and CLIProxyAPI sidecar families and `/api/version-manager`
+  (`consumer_subscription_pooling_disabled`), Claude Code client impersonation and the
+  Pollinations rotating fingerprint pool (`tls_fingerprint_stealth_disabled`). Aliases
+  resolve to the canonical provider before classification. The local scrub runs
+  `secure_delete` and `VACUUM`, and the nested `providerSpecificData` guard matches
+  secret-looking words at any depth.
+- Open: `DATA_DIR/db_backups` is not scrubbed, so a backup taken by an earlier build can
+  still hold key bytes. The CLI does not run on Node below 22.22.2 (its own version
+  gate); the live test drives the CLI through the same loader on older Node.
 
 ### FreeBuild (`apps/ship`)
 
@@ -103,7 +112,26 @@ FreeRoute and FreeBuild.
   GitHub App identity, SSH keys (per-host file paths), SMTP relay creds, Stripe
   billing key (already disabled), user sessions, deployment env vars.
 - Kept: `X-Openship-Signature-256` is sent alongside its FreeBuild-named twin so
-  existing webhook receivers keep verifying; receivers see both names.
+  existing webhook receivers keep verifying; receivers see both names, with the same
+  HMAC (proven on the bytes on the wire).
+- Export files are stamped `freebuild-instance-export` or `freebuild-project-export`.
+  The importer still reads the `openship-*` names, so an Openship archive or an export
+  from an earlier build imports (`test/modules/data-transfer-kind.test.ts`). The
+  dashboard-to-API headers `x-openship-chunk-sha256` and `x-openship-transfer-signature`
+  stay: they never leave a FreeBuild install.
+- Install: `npm ci` needs no bun. The mail app's postinstall used to run `bun install`
+  and failed with exit 127 where bun is absent (the founder's volume cannot install bun).
+  `apps/email/scripts/postinstall.mjs` runs it only when bun exists. bun is still needed
+  to develop or test `apps/email` (its tests run under bun); the mail image installs its
+  own dependencies in its build stage. `npm run build` builds only the API and dashboard.
+- Open: the host-channel advisory says "Re-run `freebuild up`", but this fork ships no CLI
+  (`apps/cli` was not imported), so a host channel cannot be provisioned from FreeBuild.
+  Restore a provisioning path or reword the advisory to say host-level operations are
+  unavailable in this edition. The founder decides.
+- Open: the app catalog's `mindwire` entries link to oblien repositories and images. They
+  name a deployable third-party app, not FreeBuild; left as a catalog decision.
+- Not run here: the Docker-driven mail suites (`apps/api` `test:e2e`), because no Docker
+  daemon is reachable on the build machine.
 
 ## Seams
 
@@ -122,6 +150,12 @@ FreeBuild (`apps/ship`, `:3030` API, `:3031` dashboard) and the Python `ship/` h
 overlap the same way: the Python `ship/` is CORE (founder 2026-10-06) and stays; FreeBuild
 reads its Cloudflare token from the vault and keeps nothing local. Which one the console
 calls for a deploy is not decided here. Open seam.
+
+OpenVault itself, not a fork: `ChatProbeLoop` (`vault/chat_probe.py`) probes every enabled
+OpenAI-compatible key, `tenant` custody included, and sends that key's secret to its own
+`base_url`. That is a health check of the key against its own provider, not a spend by a
+metered caller, so it does not break the pooled-only rule. Worth a look on the OpenVault
+side if tenant keys ever point at hosts their uploader does not control.
 
 ### Parking-lot unlock
 

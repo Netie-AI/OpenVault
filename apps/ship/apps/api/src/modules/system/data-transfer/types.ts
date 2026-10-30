@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026
 /**
  * Wire types for instance and project data export / import.
  *
@@ -63,8 +64,25 @@ export interface PlaintextSecrets extends SecretBundle {
 
 export type TransferSecrets = SealedSecrets | PlaintextSecrets;
 
+/** Kinds this build writes into an export file. */
+export type DataTransferKind = "freebuild-instance-export" | "freebuild-project-export";
+
+/**
+ * Kinds written by Openship and by earlier FreeBuild builds. They are still read, so an
+ * old archive imports, and they are never written.
+ */
+export type LegacyDataTransferKind = "openship-instance-export" | "openship-project-export";
+
+export function isProjectExportKind(kind: string): boolean {
+  return kind === "freebuild-project-export" || kind === "openship-project-export";
+}
+
+export function isInstanceExportKind(kind: string): boolean {
+  return kind === "freebuild-instance-export" || kind === "openship-instance-export";
+}
+
 export interface DataTransferFile {
-  kind: "openship-instance-export" | "openship-project-export";
+  kind: DataTransferKind | LegacyDataTransferKind;
   envelopeVersion: 1 | 2 | 3;
   createdAt: string;
   sourceDriver: "pg" | "pglite";

@@ -82,7 +82,7 @@ services:
       # handles this automatically; this note is for raw `docker compose` users.
       PGDATA: ${PGDATA:-/var/lib/postgresql/data/pgdata}
       POSTGRES_USER: ${POSTGRES_USER:-openship}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required: set it in .env (see .env.example)}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required, set it in .env (see .env.example)}
       POSTGRES_DB: ${POSTGRES_DB:-openship}
     # PRIVATE: not published to the host. api reaches it at postgres:5432.
     expose:
@@ -179,7 +179,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: "${API_PORT:-4000}"
-      DATABASE_URL: postgresql://${POSTGRES_USER:-openship}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required: set it in .env (see .env.example)}@postgres:5432/${POSTGRES_DB:-openship}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-openship}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required, set it in .env (see .env.example)}@postgres:5432/${POSTGRES_DB:-openship}
       REDIS_URL: redis://redis:6379
       # Route via the containerized edge (below) instead of host OpenResty: the
       # API writes vhosts to the shared volume + reloads/certbots via `docker exec`.

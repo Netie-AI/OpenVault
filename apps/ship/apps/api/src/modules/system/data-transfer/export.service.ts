@@ -297,7 +297,7 @@ export async function prepareInstanceExport(
 
   return {
     file: {
-      kind: graph ? "openship-project-export" : "openship-instance-export",
+      kind: graph ? "freebuild-project-export" : "freebuild-instance-export",
       envelopeVersion: 2,
       createdAt: new Date().toISOString(),
       sourceDriver: dump.sourceDriver,

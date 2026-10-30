@@ -5,7 +5,7 @@
   "description": "Self-hosted email - iRedMail (engine) + Zero Email (server + client). Orchestrator package: install and run server + client together.",
   "scripts": {
     "resolve-catalogs": "bun run scripts/resolve-catalog-refs.ts",
-    "postinstall": "cd server && bun install && cd ../client && bun install",
+    "postinstall": "node scripts/postinstall.mjs",
     "install:server": "cd server && bun install",
     "install:client": "cd client && bun install",
     "install:all": "bun run resolve-catalogs && bun run install:server && bun run install:client",

@@ -27,6 +27,13 @@
 //      revealed or sent to Cloudflare, even with a better priority.
 //   7. The dashboard binds to 127.0.0.1 when FREEBUILD_DASHBOARD_HOST is unset,
 //      and its onboarding and 404 pages carry no upstream names.
+//   8. A webhook delivery to a receiver this script starts carries both
+//      X-FreeBuild-Signature-256 and X-Openship-Signature-256 with one equal
+//      value, and that value is the HMAC of the raw body under the secret the
+//      channel revealed.
+//   9. The data export holds neither vault secret, answers with no upstream
+//      name in its headers, and the filename the dashboard gives the download
+//      (the real function, loaded from the dashboard source) has none either.
 //
 // The one stand-in: api.cloudflare.com. FreeBuild's API process is started
 // with a small preload that sends requests for that host to a local stub, so
@@ -35,12 +42,12 @@
 
 import { spawn, spawnSync } from "node:child_process";
 import { createServer } from "node:http";
-import { randomBytes } from "node:crypto";
+import { createHmac, randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, openSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
 import { networkInterfaces, tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import assert from "node:assert/strict";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -62,6 +69,7 @@ const CF_HOST = "https://api.cloudflare.com";
 const children = new Map(); // name -> ChildProcess
 let tmpRoot;
 let cfStub;
+let webhookStub;
 
 function log(msg) {
   console.log(`[e2e] ${msg}`);
@@ -198,6 +206,30 @@ function startCloudflareStub() {
   return new Promise((r) => server.listen(0, "127.0.0.1", () => r(server)));
 }
 
+// ─── Webhook receiver ──────────────────────────────────────────────────────
+
+const webhookSeen = []; // { method, url, headers, rawHeaders, body }
+
+/** A plain HTTP receiver on loopback. It records exactly what FreeBuild sent. */
+function startWebhookReceiver() {
+  const server = createServer((req, res) => {
+    const chunks = [];
+    req.on("data", (chunk) => chunks.push(chunk));
+    req.on("end", () => {
+      webhookSeen.push({
+        method: req.method,
+        url: req.url,
+        headers: req.headers,
+        rawHeaders: req.rawHeaders,
+        body: Buffer.concat(chunks).toString("utf8"),
+      });
+      res.writeHead(204);
+      res.end();
+    });
+  });
+  return new Promise((r) => server.listen(0, "127.0.0.1", () => r(server)));
+}
+
 /** Preloaded into the FreeBuild API: send api.cloudflare.com requests to the stub. */
 const CF_REDIRECT_HOOK = `
 const target = process.env.E2E_CLOUDFLARE_STUB_URL;
@@ -315,6 +347,7 @@ async function main() {
 
   // ── c. Built FreeBuild API ──
   cfStub = await startCloudflareStub();
+  webhookStub = await startWebhookReceiver();
   const apiPort = await freePort();
   const apiUrl = `http://127.0.0.1:${apiPort}`;
   const apiEnv = {
@@ -329,6 +362,9 @@ async function main() {
     // Disposable loopback instance only: lets this script call admin routes
     // without a login flow. Never set in a real deployment.
     OPENSHIP_ALLOW_ZERO_AUTH: "true",
+    // Lets the webhook worker deliver to the loopback receiver this script starts
+    // (single-tenant opt-in; the default refuses private and plain-http targets).
+    NOTIFY_WEBHOOK_ALLOW_INTERNAL: "true",
     E2E_CLOUDFLARE_STUB_URL: `http://127.0.0.1:${cfStub.address().port}`,
   };
   delete apiEnv.OPENVAULT_HOME;
@@ -455,6 +491,12 @@ async function main() {
     }
   }
 
+  // ── e2. Webhook signature headers ──
+  await checkWebhookSignatures(apiUrl);
+
+  // ── e3. Data export ──
+  await checkDataExport(apiUrl, [SECRET, TENANT_SECRET]);
+
   // ── g. Dashboard, while the API is still up ──
   await checkDashboard(apiUrl);
 
@@ -483,6 +525,117 @@ async function main() {
     // credential table's name is in the catalog of every FreeBuild database.
     assert.ok(filesContaining(fbData, "secrets_enc").length > 0, "the scan finds a known string in PGlite files");
     pass(`secret absent from FreeBuild data dir (${fileCount} files scanned) and its logs`);
+  }
+}
+
+/**
+ * A webhook channel pointed at the local receiver. The test delivery must carry
+ * the FreeBuild signature header and its legacy twin with one equal value, and
+ * that value must be the HMAC-SHA256 of the raw body under the secret the
+ * channel revealed once at creation.
+ */
+async function checkWebhookSignatures(apiUrl) {
+  const url = `http://127.0.0.1:${webhookStub.address().port}/e2e-hook`;
+  const create = await fetch(`${apiUrl}/api/notifications/channels`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ kind: "webhook", label: "e2e receiver", config: { url } }),
+  });
+  const created = await json(create);
+  assert.equal(create.status, 200, `POST /api/notifications/channels: ${created.text}`);
+  const channelId = created.body?.channel?.id;
+  const secret = created.body?.secret;
+  assert.ok(channelId, `the channel has an id: ${created.text}`);
+  assert.ok(typeof secret === "string" && secret.length >= 16, "the channel revealed its signing secret once");
+  assert.equal(created.body.channel.config?.hmacSecretConfigured, true);
+  assert.ok(!JSON.stringify(created.body.channel).includes(secret), "the channel object must not echo the secret");
+  pass(`created webhook channel ${channelId} -> ${url}; signing secret revealed once`);
+
+  const before = webhookSeen.length;
+  const test = await fetch(`${apiUrl}/api/notifications/channels/${channelId}/test`, { method: "POST" });
+  const tested = await json(test);
+  assert.equal(test.status, 200, `POST /channels/${channelId}/test: ${tested.text}`);
+  assert.equal(tested.body?.ok, true, tested.text);
+  assert.equal(webhookSeen.length, before + 1, `the receiver saw ${webhookSeen.length - before} deliveries, want 1`);
+  const hit = webhookSeen.at(-1);
+  assert.equal(hit.method, "POST");
+  assert.equal(hit.url, "/e2e-hook");
+
+  const fresh = hit.headers["x-freebuild-signature-256"];
+  const legacy = hit.headers["x-openship-signature-256"];
+  assert.match(fresh ?? "", /^sha256=[0-9a-f]{64}$/, `X-FreeBuild-Signature-256 is ${fresh}`);
+  assert.match(legacy ?? "", /^sha256=[0-9a-f]{64}$/, `X-Openship-Signature-256 is ${legacy}`);
+  assert.equal(fresh, legacy, "both signature headers carry one value");
+  const expected = `sha256=${createHmac("sha256", secret).update(hit.body).digest("hex")}`;
+  assert.equal(fresh, expected, "the signature is HMAC-SHA256(raw body) under the revealed secret");
+  pass("webhook delivery carries X-FreeBuild-Signature-256 and X-Openship-Signature-256, equal, and equal to HMAC-SHA256(body, revealed secret)");
+
+  // Nothing else a receiver sees names the upstream: the legacy twin is the one
+  // allowed header name; the user agent, the other headers and the body are not.
+  const names = hit.rawHeaders.filter((_, i) => i % 2 === 0);
+  const values = hit.rawHeaders.filter((_, i) => i % 2 === 1);
+  const stray = names.filter((n) => /openship|oblien/i.test(n) && n.toLowerCase() !== "x-openship-signature-256");
+  assert.deepEqual(stray, [], `unexpected upstream-named headers: ${stray.join(", ")}`);
+  assertNoUpstreamNames(values.join("\n"), "the webhook header values");
+  assertNoUpstreamNames(hit.body, "the webhook body");
+  assert.match(hit.headers["user-agent"] ?? "", /^FreeBuild-Webhook\//, `user agent is ${hit.headers["user-agent"]}`);
+  pass(`webhook headers and body name no upstream (user agent ${hit.headers["user-agent"]}), apart from the legacy signature twin`);
+
+  // The secret is shown once: a later listing says only that one is configured.
+  const list = await fetch(`${apiUrl}/api/notifications/channels`);
+  const listed = await json(list);
+  assert.equal(list.status, 200, `GET /api/notifications/channels: ${listed.text}`);
+  assert.ok(!listed.text.includes(secret), "the channel listing must not carry the signing secret");
+  pass("GET /api/notifications/channels does not carry the signing secret");
+
+  const del = await fetch(`${apiUrl}/api/notifications/channels/${channelId}`, { method: "DELETE" });
+  assert.equal(del.status, 200, `DELETE channel: ${await del.text()}`);
+}
+
+/**
+ * The instance export, taken from the real endpoint: no vault secret in it, no
+ * upstream name in its response headers, and the download filename the dashboard
+ * builds for it (the dashboard's own function) carries no upstream name.
+ */
+async function checkDataExport(apiUrl, vaultSecrets) {
+  const res = await fetch(`${apiUrl}/api/system/data-transfer/export`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  const { text, body } = await json(res);
+  assert.equal(res.status, 200, `POST /api/system/data-transfer/export: ${text.slice(0, 300)}`);
+  assert.ok(body && typeof body === "object" && body.dump, "the export carries a dump");
+  assert.equal(body.kind, "freebuild-instance-export", "the export file is stamped with the FreeBuild name");
+  pass(`export file kind = ${body.kind} (the importer still reads the openship-* names)`);
+  for (const secret of vaultSecrets) {
+    assert.ok(!text.includes(secret), "the data export must not hold a secret that lives in OpenVault");
+  }
+  pass(`POST /api/system/data-transfer/export -> 200 (${text.length} bytes, ${body.summary?.rows ?? "?"} rows); holds no vault secret`);
+
+  const headerText = [...res.headers].map(([k, v]) => `${k}: ${v}`).join("\n");
+  assertNoUpstreamNames(headerText, "the export response headers");
+  const disposition = res.headers.get("content-disposition");
+  if (disposition) assertNoUpstreamNames(disposition, "the export Content-Disposition");
+  pass(`export response headers name no upstream (content-disposition ${disposition ?? "not set: the browser names the file"})`);
+
+  // The browser names the file. Load the dashboard's own function so the check
+  // runs the shipped code, not a copy of its template.
+  const { tsImport } = await import("tsx/esm/api");
+  const mod = await tsImport(
+    "./apps/dashboard/src/components/data-transfer/export-filename.ts",
+    pathToFileURL(join(SHIP_ROOT, "package.json")).href,
+  );
+  const now = new Date("2026-10-30T01:02:03.456Z");
+  const cases = [
+    ["instance export", mod.exportDownloadFilename({ scope: "instance", now }), /^freebuild-instance-2026-10-30T01-02-03-456Z\.json$/],
+    ["projects export", mod.exportDownloadFilename({ scope: "projects", now }), /^freebuild-projects-2026-10-30T01-02-03-456Z\.json$/],
+    ["named project", mod.exportDownloadFilename({ scope: "projects", projectName: "My App/v2", now }), /^freebuild-My-App-v2-2026-10-30T01-02-03-456Z\.json$/],
+  ];
+  for (const [what, filename, want] of cases) {
+    assert.match(filename, want, `${what} filename is ${filename}`);
+    assertNoUpstreamNames(filename, `the ${what} filename`);
+    pass(`data export download filename (${what}) = ${filename}, no Openship/OpenShip/Oblien`);
   }
 }
 
@@ -630,6 +783,8 @@ async function cleanup() {
   for (const name of [...children.keys()]) await stopProcess(name);
   cfStub?.closeAllConnections();
   cfStub?.close();
+  webhookStub?.closeAllConnections();
+  webhookStub?.close();
   if (tmpRoot) await rm(tmpRoot, { recursive: true, force: true }).catch(() => {});
 }
 
