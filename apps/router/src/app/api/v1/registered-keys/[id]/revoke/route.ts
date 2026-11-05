@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isAuthenticated } from "@/shared/utils/apiAuth";
+import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
 import { revokeRegisteredKey } from "@/lib/db/registeredKeys";
 
 /**
@@ -8,9 +8,10 @@ import { revokeRegisteredKey } from "@/lib/db/registeredKeys";
  * Explicit revoke endpoint (supports clients that cannot issue DELETE requests).
  */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  if (!(await isAuthenticated(request))) {
-    return NextResponse.json({ error: { message: "Authentication required" } }, { status: 401 });
-  }
+  // Management scope, not just any valid token: an OpenVault-issued client token
+  // (scope self:usage) must not change limits or issue and revoke registered keys.
+  const denied = await requireManagementAuth(request, { invalidApiKeyStatus: 401 });
+  if (denied) return denied;
 
   const resolvedParams = await params;
   const revoked = revokeRegisteredKey(resolvedParams.id);

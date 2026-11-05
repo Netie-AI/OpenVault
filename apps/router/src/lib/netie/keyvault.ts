@@ -71,6 +71,42 @@ function openVaultBaseUrl(): string {
   return raw.replace(/\/+$/, "");
 }
 
+/** Hostnames that mean "this machine". `new URL` has already folded 127.1, 0x7f.1 and the like into dotted form. */
+function isLoopbackHostname(hostname: string): boolean {
+  const host = hostname.toLowerCase();
+  return host === "localhost" || host === "[::1]" || /^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host);
+}
+
+/**
+ * OPENVAULT_URL must name this machine. Every call carries the OpenVault admin
+ * token and the reveal header, and a reveal answer carries a provider secret, so
+ * a URL that points anywhere else (a typo, a poisoned .env) would hand both to
+ * that host. OpenVault itself binds loopback only, so nothing legitimate needs
+ * a remote URL. The message names the host, never credentials embedded in the URL.
+ */
+function assertLoopbackOpenVaultUrl(): void {
+  const raw = openVaultBaseUrl();
+  let host = "";
+  let ok = false;
+  try {
+    const url = new URL(raw);
+    host = url.hostname;
+    ok =
+      (url.protocol === "http:" || url.protocol === "https:") &&
+      !url.username &&
+      !url.password &&
+      isLoopbackHostname(url.hostname);
+  } catch {
+    // Not a URL at all: refuse below.
+  }
+  if (!ok) {
+    throw new OpenVaultUnreachableError(
+      `OPENVAULT_URL must be an http(s) URL on this machine (127.0.0.1, localhost or [::1]) with no ` +
+        `credentials in it${host ? `; refusing to send the OpenVault admin token to "${host}"` : ""}.`
+    );
+  }
+}
+
 function expandHome(path: string): string {
   if (path === "~") return homedir();
   if (path.startsWith("~/")) return join(homedir(), path.slice(2));
@@ -278,6 +314,7 @@ async function fetchJson<T>(
   init: RequestInit & { headers?: Record<string, string> } = {},
   opts: { isSecretReveal?: boolean; isVerify?: boolean } = {}
 ): Promise<T> {
+  assertLoopbackOpenVaultUrl();
   const { token, path } = readAdminToken();
   const route = url.replace(openVaultBaseUrl(), "");
   const controller = new AbortController();
@@ -286,6 +323,9 @@ async function fetchJson<T>(
     const response = await fetch(url, {
       ...init,
       headers: { ...(init.headers ?? {}), [ADMIN_HEADER]: token },
+      // A redirect would carry the admin token (and a reveal) to wherever it
+      // points. OpenVault never redirects an API call; treat one as a failure.
+      redirect: "error",
       signal: controller.signal,
     });
     if (response.status === 401) {
@@ -495,6 +535,50 @@ export function normalizeBaseUrl(value: string | null | undefined): string | nul
   }
 }
 
+/** `scheme://host[:port]` in lower case, or null when `value` is not an absolute http(s) URL. */
+function originOf(value: unknown): string | null {
+  if (typeof value !== "string" || !value.trim()) return null;
+  try {
+    const url = new URL(value.trim());
+    if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+    return url.origin.toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * True when a connection for `routerProviderId` would send its request to that
+ * provider's own endpoint: no base URL override at all, or an override whose
+ * origin equals the origin of one of the registry entry's endpoints (baseUrl,
+ * baseUrls, responsesBaseUrl, messagesUrl). Scheme, host and port must all match,
+ * so an http downgrade, a lookalike host (`api.openai.com.attacker.example`) and
+ * a different port are all foreign. An unparseable override is foreign too.
+ *
+ * The registry is imported on first use, not at module load: this file is also
+ * loaded by the request gate (client token checks), which has no use for it.
+ */
+export async function isProviderOwnEndpoint(
+  routerProviderId: string,
+  baseUrl: string | null | undefined
+): Promise<boolean> {
+  if (typeof baseUrl !== "string" || !baseUrl.trim()) return true;
+  const requested = originOf(baseUrl);
+  if (!requested) return false;
+
+  const { getRegistryEntry } = await import("@omniroute/open-sse/config/providerRegistry.ts");
+  const id = routerProviderId.trim();
+  const entry = getRegistryEntry(id) ?? getRegistryEntry(id.toLowerCase());
+  if (!entry) return false;
+  const own = [
+    entry.baseUrl,
+    ...(Array.isArray(entry.baseUrls) ? entry.baseUrls : []),
+    entry.responsesBaseUrl,
+    entry.messagesUrl,
+  ];
+  return own.some((candidate) => originOf(candidate) === requested);
+}
+
 // ── Public API ────────────────────────────────────────────────────────────
 
 /**
@@ -513,6 +597,15 @@ export function normalizeBaseUrl(value: string | null | undefined): string | nul
  *   2. a usable key whose `provider` is the mapped OpenVault provider.
  *   3. for an id the map cannot name, a usable key whose `provider` is that
  *      exact router id. Never an arbitrary "custom" key.
+ *
+ * Rules 2 and 3 release a key by provider name, so they run only when the
+ * connection talks to that provider's own endpoint: no base URL override, or an
+ * override whose origin (scheme, host, port) is one the provider registry lists
+ * for that provider. A connection whose `providerSpecificData.baseUrl` points
+ * anywhere else gets `null`, never the provider's key: otherwise anyone who can
+ * edit a connection could aim "openai" at their own host and read the key from
+ * the request headers. An operator who really does front a provider with a
+ * gateway stores a key in OpenVault with that gateway as its `base_url` (rule 1).
  */
 export async function resolveProviderApiKey(
   routerProviderId: string,
@@ -527,6 +620,10 @@ export async function resolveProviderApiKey(
     );
     if (byEndpoint) return revealSecret(byEndpoint.id);
   }
+
+  // Rules 2 and 3 name a key by provider, so the request must go to that
+  // provider. See the doc comment above.
+  if (!(await isProviderOwnEndpoint(routerProviderId, opts.baseUrl))) return null;
 
   const ovProvider = mapToOpenVaultProvider(routerProviderId, opts.baseUrl);
   if (ovProvider !== "custom") {

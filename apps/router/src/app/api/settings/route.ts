@@ -34,6 +34,7 @@ import { isCliTokenAuthValid } from "@/lib/middleware/cliTokenAuth";
 import { extractApiKey } from "@/sse/services/auth";
 import { getApiKeyMetadata } from "@/lib/db/apiKeys";
 import { getRadarAdminUrl } from "@/lib/radar/links";
+import { rejectServiceSecretsInBody } from "@/lib/netie/providerGuards";
 import {
   AUTHZ_HEADER_AUTH_ID,
   AUTHZ_HEADER_AUTH_KIND,
@@ -295,6 +296,13 @@ export async function PATCH(request: Request) {
   }
   const attemptedKeys = attemptedKeysOf(rawBody);
   const expectedRevision = parseExpectedRevision(request, rawBody);
+
+  // FreeRoute: service keys (SkillsMP, CLIProxyAPI) are not kept in this database.
+  const serviceSecretRefusal = rejectServiceSecretsInBody(rawBody);
+  if (serviceSecretRefusal) {
+    emitSettingsFailureAudit(request, actor, "KEYS_MANAGED_BY_OPENVAULT", attemptedKeys);
+    return serviceSecretRefusal;
+  }
 
   try {
     // Zod validation

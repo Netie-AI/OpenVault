@@ -6,6 +6,7 @@ import { getQdrantConfig, normalizeQdrantConfig } from "@/lib/memory/qdrant";
 import { updateSettings, getSettings } from "@/lib/db/settings";
 import { invalidateMemorySettingsCache } from "@/lib/memory/settings";
 import { sanitizeErrorMessage } from "@omniroute/open-sse/utils/error.ts";
+import { rejectServiceSecretsInBody } from "@/lib/netie/providerGuards";
 
 function maskApiKey(apiKey: string | null): { hasApiKey: boolean; apiKeyMasked: string | null } {
   if (!apiKey || apiKey.trim().length === 0) {
@@ -59,6 +60,11 @@ export async function PUT(request: NextRequest) {
       { status: 400 }
     );
   }
+
+  // FreeRoute: the Qdrant API key is not kept in this database (a key-less local
+  // Qdrant needs none). An empty value still clears a stale one.
+  const refusal = rejectServiceSecretsInBody(rawBody, ["apiKey"]);
+  if (refusal) return refusal;
 
   const validation = validateBody(QdrantSettingsUpdateSchema, rawBody);
   if (isValidationFailure(validation)) {

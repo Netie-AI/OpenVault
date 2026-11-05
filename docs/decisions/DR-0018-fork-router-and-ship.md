@@ -94,16 +94,47 @@ FreeRoute and FreeBuild.
   resolve to the canonical provider before classification. The local scrub runs
   `secure_delete` and `VACUUM`, and the nested `providerSpecificData` guard matches
   secret-looking words at any depth.
+- Security review fixes (2026-10-30, after the first Security NO on #99):
+  - A key is released by provider name only to that provider's own endpoint.
+    `resolveProviderApiKey()` checks that the connection's base URL has the same scheme,
+    host and port as an endpoint the provider registry lists for it, or no override at
+    all. A connection aimed anywhere else gets no key, and OpenVault is not asked for
+    the secret. A key an operator stored in OpenVault with a `base_url` still serves
+    exactly that URL, which is how a gateway in front of a provider is set up.
+  - The hard-disable table matches the decoded, dot-resolved, lower-cased path (up to
+    three layers of `%` escapes, backslashes read as slashes), and a path whose encoding
+    cannot be read answers 400 `invalid_path_encoding`. Next.js decodes before it routes,
+    so `/api/%6fauth/...` used to reach the OAuth handler past a table that read the raw
+    string.
+  - `REQUIRE_API_KEY` defaults to true (flag definition, `.env.example`, both startup
+    warnings). Before, an anonymous caller on the loopback port spent the vault's keys
+    with no token. An operator can still set it to false.
+  - Service keys (SkillsMP, CLIProxyAPI, Qdrant, Notion) are not stored locally: a write
+    answers 501 `keys_managed_by_openvault` (an empty value still clears a stale one),
+    SkillsMP and Notion read provider `skillsmp` and `notion` from the vault, and the
+    scrub deletes copies an older build left. The keyless OpenCode free tier no longer
+    gets a synthesized OpenCode client identity (User-Agent, `x-opencode-*`, forged
+    ids); only headers a real OpenCode client sent are forwarded. Provider limits and
+    registered-key routes need the management scope, not any valid token.
+  - `.env.example` no longer ships `INITIAL_PASSWORD=CHANGEME`.
 - Open: `DATA_DIR/db_backups` is not scrubbed, so a backup taken by an earlier build can
   still hold key bytes. The CLI does not run on Node below 22.22.2 (its own version
   gate); the live test drives the CLI through the same loader on older Node.
+- Open: three more third-party credentials are still kept in FreeRoute's own database:
+  the BigQuery log-export service account, the Telegram bot token on a webhook
+  destination, and proxy logins. `bin/antigravity-bridge.mjs` and `src/mitm` are dormant
+  (their routes answer 501) but still in the tree. Management is anonymous on loopback
+  until onboarding completes. `OMNIROUTE_API_KEY` grants the management scope and skips
+  OpenVault (the operator's bootstrap credential, kept on purpose).
 
 ### FreeBuild (`apps/ship`)
 
 - Hard-disable: `hosted_cloud_disabled` (cloud/billing routes, cloud/tunnel
   migrations, cloud-mode branching). Removed from shipped UI and MCP: cloud/tunnel
   modal tabs, "Openship Cloud" prose (208 rewrites), cloud-only MCP descriptions.
-- Keys: `packages/core/src/netie/keyvault.ts`. Provider credential choke point is
+- Keys: `packages/core/src/netie/keyvault.ts`, which, like the FreeRoute client, refuses
+  an `OPENVAULT_URL` that is not on this machine and treats a redirect as a failure, so
+  the admin token cannot be sent to another host. Provider credential choke point is
   `packages/platform/.../credential.service.ts:requireProvider()`, which gates
   creation/updates and returns `keys_managed_by_openvault` for
   `OPENVAULT_MANAGED_CREDENTIAL_PROVIDERS` (currently `cloudflare`).
@@ -179,12 +210,18 @@ forks are built not to have.
 - Bad: two FreeRoutes and two ship engines. The seams above name what is still open.
 - Verify rate: OpenVault admits 60 verify calls a minute per caller. With the router's
   60 s cache that is 60 distinct client tokens a minute before a legitimate client sees
-  a transient 401. Raise the tier before a team passes that.
+  a transient 401. Raise the tier before a team passes that. Garbage tokens count against
+  the same budget, so a caller sending random bearers can use it up and make real
+  clients see that transient 401 (the router fails closed and logs
+  `openvault_verify_rate_limited`).
+- Revocation lag: the router caches a "valid" verdict for 60 s per token, so a token
+  revoked in OpenVault can still be accepted for up to a minute.
 
 ## Confirmation
 
 - `OpenMW/tests/test_apikeys_verify.py` (verify route: admin or service Bearer, never loopback alone)
-- `apps/router/netie/keyvault.test.mjs` (admin token, named 503s, pooled-only, no custom-key borrowing)
+- `apps/router/netie/keyvault.test.mjs` (admin token, named 503s, pooled-only, no custom-key borrowing, key released only to the provider's own endpoint, loopback-only `OPENVAULT_URL`, no redirects, service keys refused and scrubbed, `REQUIRE_API_KEY` default)
+- `apps/router/open-sse/netie/__tests__/policy.test.mjs` (route table incl. escaped paths and 400 `invalid_path_encoding`, no synthesized OpenCode identity)
 - `apps/router/netie/smoke.test.mjs` and `apps/ship/netie/smoke.test.mjs` (starts, named 501s)
 - `apps/router/netie/e2e-openvault.mjs` and `apps/ship/netie/e2e-openvault.mjs` (real OpenVault, vault key reaches the provider, secret absent from the fork's disk)
 - `apps/ship/netie/notice-check.mjs --check` (Apache change notices and NOTICE)

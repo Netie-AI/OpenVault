@@ -39,6 +39,7 @@ import {
   __resetKeyVaultCacheForTest,
 } from "../src/lib/netie/keyvault.ts";
 import {
+  rejectServiceSecretsInBody,
   assertConnectionWriteAllowed,
   findIncomingSecrets,
   findSecretProviderSpecificFields,
@@ -82,6 +83,8 @@ let sealed = false;
 // shapes, "rate_limited" answers 429, "legacy_shape" drops the "ok" field.
 let verifyMode = "ok";
 let verifyCalls = 0;
+// Key ids the stub revealed a secret for, in order. A refused lookup must leave it empty.
+const secretReveals = [];
 const savedEnv = {};
 
 function startStub() {
@@ -195,6 +198,7 @@ function startStub() {
         [DEVIN_KEY_ID]: DEVIN_SECRET,
       };
       if (secretMatch && secretMatch[1] in secrets && req.method === "GET") {
+        secretReveals.push(secretMatch[1]);
         if (req.headers["x-openvault-reveal"] !== "intentional") {
           res.writeHead(400);
           res.end(JSON.stringify({ detail: "reveal intent header required" }));
@@ -289,6 +293,7 @@ beforeEach(() => {
   sealed = false;
   verifyMode = "ok";
   verifyCalls = 0;
+  secretReveals.length = 0;
   writeFileSync(tokenPath, `${ADMIN_TOKEN}\n`, { mode: 0o600 });
   process.env.OPENVAULT_URL = baseUrl;
   process.env.OPENVAULT_ADMIN_TOKEN_PATH = tokenPath;
@@ -320,6 +325,65 @@ test("admin token path: OPENVAULT_ADMIN_TOKEN_PATH, then OPENVAULT_HOME, then ~/
   assert.equal(resolveAdminTokenPath(), join("/x/home", "admin_token"));
   delete process.env.OPENVAULT_HOME;
   assert.match(resolveAdminTokenPath(), /[\\/]\.openvault[\\/]admin_token$/);
+});
+
+test("OPENVAULT_URL must name this machine: the admin token is never sent elsewhere", async () => {
+  const refused = [
+    "http://203.0.113.9:5000",
+    "https://vault.attacker.example",
+    "http://localhost.attacker.example:5000",
+    "http://127.0.0.1.attacker.example:5000",
+    "http://user:hunter2@127.0.0.1:5000",
+    "ftp://127.0.0.1:5000",
+    "not a url",
+  ];
+  for (const url of refused) {
+    __resetKeyVaultCacheForTest();
+    process.env.OPENVAULT_URL = url;
+    const started = Date.now();
+    await assert.rejects(resolveProviderApiKey("openai"), (error) => {
+      assert.ok(error instanceof OpenVaultUnreachableError, `${url}: ${error}`);
+      assert.equal(error.status, 503);
+      assert.match(error.message, /OPENVAULT_URL must be/, url);
+      assert.ok(!error.message.includes(ADMIN_TOKEN), "the token is not in the message");
+      assert.ok(!error.message.includes("hunter2"), "URL credentials are not echoed");
+      return true;
+    });
+    assert.ok(Date.now() - started < 2000, `${url}: refused before any network call`);
+  }
+  // Loopback spellings are accepted, including the IPv6 one (no server there, so unreachable, not refused).
+  for (const url of ["http://127.0.0.1:1", "http://localhost:1", "http://[::1]:1", "http://127.0.0.2:1"]) {
+    __resetKeyVaultCacheForTest();
+    process.env.OPENVAULT_URL = url;
+    await assert.rejects(resolveProviderApiKey("openai"), (error) => {
+      assert.ok(error instanceof OpenVaultUnreachableError);
+      assert.doesNotMatch(error.message, /OPENVAULT_URL must be/, url);
+      return true;
+    });
+  }
+});
+
+test("a redirect from OpenVault is a failure: the admin token is not forwarded", async () => {
+  const landed = [];
+  const target = createServer((req, res) => {
+    landed.push({ url: req.url, admin: req.headers["x-openvault-admin"] });
+    res.writeHead(200, { "content-type": "application/json" });
+    res.end(JSON.stringify({ keys: [] }));
+  });
+  await new Promise((resolve) => target.listen(0, "127.0.0.1", resolve));
+  const redirector = createServer((req, res) => {
+    res.writeHead(302, { location: `http://127.0.0.1:${target.address().port}${req.url}` });
+    res.end();
+  });
+  await new Promise((resolve) => redirector.listen(0, "127.0.0.1", resolve));
+  try {
+    process.env.OPENVAULT_URL = `http://127.0.0.1:${redirector.address().port}`;
+    await assertKeyVaultError(resolveProviderApiKey("openai"), "openvault_keyvault_unreachable");
+    assert.deepEqual(landed, [], "the redirect target never saw a request");
+  } finally {
+    await new Promise((resolve) => redirector.close(resolve));
+    await new Promise((resolve) => target.close(resolve));
+  }
 });
 
 test("right token: the provider secret is returned", async () => {
@@ -354,6 +418,61 @@ test("no base URL match: falls back to the provider-id map, else null", async ()
     }),
     null
   );
+});
+
+test("own endpoint: the registry's own URL, with or without an override, gets the key", async () => {
+  assert.equal(await resolveProviderApiKey("openai", { baseUrl: null }), SECRET);
+  assert.equal(await resolveProviderApiKey("openai", { baseUrl: "" }), SECRET);
+  assert.equal(await resolveProviderApiKey("openai", { baseUrl: "https://api.openai.com/v1/chat/completions" }), SECRET);
+  // Same origin, other path and host case: still OpenAI.
+  assert.equal(await resolveProviderApiKey("openai", { baseUrl: "https://API.openai.com/v1/" }), SECRET);
+});
+
+test("own endpoint: a connection aimed at another host never receives the provider key", async () => {
+  // providerSpecificData.baseUrl is editable by whoever can edit a connection.
+  // Before this check, the key for "openai" went to whatever host it named.
+  const foreign = [
+    "https://attacker.example/v1",
+    "https://attacker.example",
+    "http://127.0.0.1:9999/v1",
+    "http://api.openai.com/v1", // scheme downgrade
+    "https://api.openai.com:8443/v1", // other port
+    "https://api.openai.com.attacker.example/v1", // lookalike suffix
+    "https://api.openai.com@attacker.example/v1", // userinfo trick
+    "https://attacker.example/api.openai.com",
+    "https://eu.api.openai.com/v1", // not a host the registry lists
+    "not a url",
+    "ftp://api.openai.com/v1",
+  ];
+  for (const baseUrl of foreign) {
+    __resetKeyVaultCacheForTest();
+    assert.equal(
+      await resolveProviderApiKey("openai", { baseUrl }),
+      null,
+      `openai key must not be released for ${baseUrl}`
+    );
+  }
+  assert.deepEqual(secretReveals, [], "the vault must not even be asked for the secret");
+});
+
+test("own endpoint: the same holds for an id the provider-id map cannot name", async () => {
+  // llm7 has a key filed under its exact router id (rule 3).
+  assert.equal(await resolveProviderApiKey("llm7"), EXACT_ID_SECRET);
+  secretReveals.length = 0;
+  __resetKeyVaultCacheForTest();
+  assert.equal(await resolveProviderApiKey("llm7", { baseUrl: "https://attacker.example/v1" }), null);
+  // An id with no registry entry has no own endpoint at all.
+  assert.equal(
+    await resolveProviderApiKey("openai-compatible-chat-abc", { baseUrl: "https://api.openai.com/v1" }),
+    null
+  );
+  assert.deepEqual(secretReveals, []);
+});
+
+test("own endpoint: a key bound to the exact URL still serves a gateway in front of a provider", async () => {
+  // The operator stored this key in OpenVault with ENDPOINT_BASE_URL as its base_url.
+  assert.equal(await resolveProviderApiKey("openai", { baseUrl: ENDPOINT_BASE_URL }), ENDPOINT_SECRET);
+  assert.deepEqual(secretReveals, [ENDPOINT_KEY_ID]);
 });
 
 test("custody: only pooled or untagged keys are spendable", () => {
@@ -768,6 +887,10 @@ const SENTINELS = {
   embeddingNested: `sk-sentinel-embedding-nested-${randomBytes(8).toString("hex")}`,
   agentKey: `sk-sentinel-agent-${randomBytes(8).toString("hex")}`,
   clientKey: `ovtok-sentinel-client-${randomBytes(8).toString("hex")}`,
+  skillsmpKey: `sk-sentinel-skillsmp-${randomBytes(8).toString("hex")}`,
+  cliproxyKey: `sk-sentinel-cliproxy-${randomBytes(8).toString("hex")}`,
+  qdrantKey: `sentinel-qdrant-${randomBytes(8).toString("hex")}`,
+  notionToken: `secret_sentinel-notion-${randomBytes(8).toString("hex")}`,
 };
 
 /** A SQLite file shaped like an imported FreeRoute database, holding every sentinel secret. */
@@ -818,6 +941,10 @@ async function writeImportedDatabase(path, { wal = false } = {}) {
     JSON.stringify({ cache: { semanticCacheEmbeddingApiKey: SENTINELS.embeddingNested, semanticCacheThreshold: 0.8 } })
   );
   put.run("settings", "unrelated", JSON.stringify("keep-me-too"));
+  put.run("settings", "skillsmpApiKey", JSON.stringify(SENTINELS.skillsmpKey));
+  put.run("settings", "cliproxyapi_api_key", JSON.stringify(SENTINELS.cliproxyKey));
+  put.run("settings", "qdrantApiKey", JSON.stringify(SENTINELS.qdrantKey));
+  put.run("notion", "integration_token", JSON.stringify(SENTINELS.notionToken));
   db.prepare("INSERT INTO cloud_agent_credentials VALUES (?, ?, ?, ?)").run(
     "devin",
     SENTINELS.agentKey,
@@ -858,6 +985,7 @@ for (const wal of [false, true]) {
     assert.equal(result.droppedClientKeys, 1);
     assert.equal(result.droppedAgentCredentials, 1);
     assert.equal(result.clearedEmbeddingKeys, 3);
+    assert.equal(result.clearedServiceSecrets, 4);
 
     // What should survive does: the rows, the non-secret metadata, unrelated settings.
     const { DatabaseSync } = await import("node:sqlite");
@@ -893,7 +1021,10 @@ test("scrub: a second run over a clean database changes nothing and does not VAC
   const again = scrubLocalProviderSecrets(db, { dropClientKeys: true });
   db.close();
   assert.equal(again.vacuumed, false);
-  assert.equal(again.clearedApiKeys + again.clearedEmbeddingKeys + again.droppedAgentCredentials, 0);
+  assert.equal(
+    again.clearedApiKeys + again.clearedEmbeddingKeys + again.droppedAgentCredentials + again.clearedServiceSecrets,
+    0
+  );
 });
 
 test("cloud agent keys: saving answers keys_managed_by_openvault, reads come from OpenVault", async () => {
@@ -958,7 +1089,7 @@ test("semantic cache: the embedding key is never read from the settings table, i
       semanticCacheEnabled: true,
       semanticCacheVectorEnabled: true,
       semanticCacheEmbeddingProvider: "openai",
-      semanticCacheEmbeddingBaseUrl: "https://embeddings.example/v1",
+      semanticCacheEmbeddingBaseUrl: "https://api.openai.com/v1",
       semanticCacheEmbeddingApiKey: legacy,
     },
   });
@@ -972,6 +1103,57 @@ test("semantic cache: the embedding key is never read from the settings table, i
   assert.equal(config.embeddingApiKey, undefined);
   assert.equal(typeof config.embeddingApiKeyResolver, "function");
   assert.equal(await config.embeddingApiKeyResolver(), SECRET, "the key comes from OpenVault");
+
+  // An embedding URL that is not the provider's own gets no key: the settings
+  // table is not a place to aim the vault's openai key at another host.
+  secretReveals.length = 0;
+  __resetKeyVaultCacheForTest();
+  updateDatabaseSettings({
+    cache: {
+      semanticCacheEmbeddingProvider: "openai",
+      semanticCacheEmbeddingBaseUrl: "https://embeddings.example/v1",
+    },
+  });
+  const foreign = resolveSemanticCacheConfig();
+  assert.equal(await foreign.embeddingApiKeyResolver(), null, "no key for a foreign embedding host");
+  assert.deepEqual(secretReveals, []);
+});
+
+test("service keys (SkillsMP, CLIProxyAPI, Qdrant) are refused with keys_managed_by_openvault, an empty value is not", async () => {
+  for (const [body, fields] of [
+    [{ skillsmpApiKey: "sk-skillsmp-real" }, ["skillsmpApiKey"]],
+    [{ cliproxyapi_api_key: "sk-cliproxy-real" }, ["cliproxyapi_api_key"]],
+    [{ theme: "dark", skillsmpApiKey: " sk-x ", qdrantApiKey: "q-real" }, ["skillsmpApiKey", "qdrantApiKey"]],
+  ]) {
+    const refusal = rejectServiceSecretsInBody(body);
+    assert.ok(refusal, JSON.stringify(Object.keys(body)));
+    assert.equal(refusal.status, 501);
+    const payload = await refusal.json();
+    assert.equal(payload.error.code, "keys_managed_by_openvault");
+    for (const field of fields) assert.match(payload.error.message, new RegExp(field));
+    assert.ok(!JSON.stringify(payload).includes("real"), "the refused value is not echoed");
+  }
+  // Clearing a stale value and unrelated settings pass.
+  assert.equal(rejectServiceSecretsInBody({ skillsmpApiKey: "", cliproxyapi_api_key: "  " }), null);
+  assert.equal(rejectServiceSecretsInBody({ theme: "dark" }), null);
+  assert.equal(rejectServiceSecretsInBody(null), null);
+  // The Qdrant route names its field "apiKey".
+  assert.equal(rejectServiceSecretsInBody({ apiKey: "q-real" }, ["apiKey"])?.status, 501);
+  assert.equal(rejectServiceSecretsInBody({ apiKey: "" }, ["apiKey"]), null);
+});
+
+test("the settings, Qdrant and SkillsMP routes use the guard and KeyVault, not the settings table", () => {
+  const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
+  assert.match(read("../src/app/api/settings/route.ts"), /rejectServiceSecretsInBody\(rawBody\)/);
+  assert.match(read("../src/app/api/settings/qdrant/route.ts"), /rejectServiceSecretsInBody\(rawBody, \["apiKey"\]\)/);
+  const marketplace = read("../src/app/api/skills/marketplace/route.ts");
+  assert.match(marketplace, /resolveProviderApiKey\("skillsmp"\)/);
+  assert.doesNotMatch(marketplace, /skillsmpApiKey/);
+  const notion = read("../src/app/api/settings/notion/route.ts");
+  assert.match(notion, /new KeysManagedByOpenVaultError\(\s*\["token"\]/);
+  assert.match(notion, /resolveProviderApiKey\("notion"\)/);
+  assert.doesNotMatch(read("../src/lib/db/notion.ts"), /setNotionToken|INSERT/);
+  assert.doesNotMatch(notion, /setNotionToken/);
 });
 
 // ── Item 5: the router CLI never writes a provider key ──────────────────────
@@ -1076,5 +1258,58 @@ test("the CLI sources never import the provider key writers", () => {
   );
   for (const source of sources) {
     assert.doesNotMatch(source, /upsertApiKeyProviderConnection|updateProviderApiKey|encryptCredential/);
+  }
+});
+
+// ── Security: anonymous /v1 is closed by default ────────────────────────────
+
+test("REQUIRE_API_KEY is on by default: flag, resolver, .env.example and both startup guards", async () => {
+  const saved = process.env.REQUIRE_API_KEY;
+  try {
+    delete process.env.REQUIRE_API_KEY;
+
+    const { FEATURE_FLAG_DEFINITIONS } = await import(
+      "../src/shared/constants/featureFlagDefinitions.ts"
+    );
+    const definition = FEATURE_FLAG_DEFINITIONS.find((flag) => flag.key === "REQUIRE_API_KEY");
+    assert.equal(definition?.defaultValue, "true");
+
+    // The real resolver: no env value, no database override, so the default decides.
+    const { isRequireApiKeyEnabled } = await import("../src/shared/utils/featureFlags.ts");
+    assert.equal(isRequireApiKeyEnabled(), true);
+    process.env.REQUIRE_API_KEY = "false";
+    assert.equal(isRequireApiKeyEnabled(), false, "an operator can still turn it off on purpose");
+    delete process.env.REQUIRE_API_KEY;
+
+    // .env.example is what a new install copies.
+    const example = readFileSync(new URL("../.env.example", import.meta.url), "utf8");
+    assert.match(example, /^REQUIRE_API_KEY=true$/m);
+    assert.doesNotMatch(example, /^REQUIRE_API_KEY=false$/m);
+
+    // The CLI exposure warning: silent when unset on a public bind, loud when switched off.
+    const { resolveExposureWarning } = await import("../bin/cli/utils/serverHost.mjs");
+    assert.equal(resolveExposureWarning({}, "0.0.0.0"), null);
+    assert.equal(resolveExposureWarning({ REQUIRE_API_KEY: "true" }, "0.0.0.0"), null);
+    assert.match(resolveExposureWarning({ REQUIRE_API_KEY: "false" }, "0.0.0.0") ?? "", /NO API-key requirement/);
+
+    // The server boot warning follows the same default.
+    const { warnIfNonLoopbackWithoutApiKey } = await import(
+      "../src/lib/startup/nonLoopbackApiKeyGuard.ts"
+    );
+    const warnings = [];
+    const realWarn = console.warn;
+    console.warn = (...args) => warnings.push(args.join(" "));
+    try {
+      warnIfNonLoopbackWithoutApiKey("test server", "0.0.0.0");
+      assert.deepEqual(warnings, [], "unset means required, so no exposure warning");
+      process.env.REQUIRE_API_KEY = "false";
+      warnIfNonLoopbackWithoutApiKey("test server", "0.0.0.0");
+      assert.equal(warnings.length, 1);
+    } finally {
+      console.warn = realWarn;
+    }
+  } finally {
+    if (saved === undefined) delete process.env.REQUIRE_API_KEY;
+    else process.env.REQUIRE_API_KEY = saved;
   }
 });

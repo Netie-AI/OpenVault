@@ -19,9 +19,10 @@
 // are deleted too. OpenVault issues those; an import must not bring back local
 // ones. Boot does not pass it.
 //
-// Two other places held a provider key and are cleared the same way: the cloud
-// agent table (cloud_agent_credentials, Devin/Jules/Codex-cloud/Cursor-cloud API
-// keys) and the semantic-cache embedding API key kept in key_value.
+// Three other places held a key and are cleared the same way: the cloud agent
+// table (cloud_agent_credentials, Devin/Jules/Codex-cloud/Cursor-cloud API
+// keys), the semantic-cache embedding API key kept in key_value, and the service
+// keys in the flat settings (SkillsMP, CLIProxyAPI, Qdrant) and the Notion token.
 //
 // Clearing a column or deleting a row does not remove the bytes from the SQLite
 // file: the old cell stays in the page until something overwrites it. So the
@@ -34,6 +35,7 @@
 // the import routes right after they write.
 
 import {
+  SERVICE_SECRET_SETTING_FIELDS,
   classifyConnection,
   findSecretProviderSpecificFields,
   stripSecretProviderSpecificData,
@@ -67,6 +69,7 @@ export interface ScrubResult {
   droppedClientKeys: number;
   droppedAgentCredentials: number;
   clearedEmbeddingKeys: number;
+  clearedServiceSecrets: number;
   /** True when the scrub changed something and the file was VACUUMed after it. */
   vacuumed: boolean;
 }
@@ -156,6 +159,36 @@ function clearEmbeddingKeys(db: DbLike): number {
   return cleared;
 }
 
+/** Delete the rows that held a service key: the flat settings (SERVICE_SECRET_SETTING_FIELDS) and the Notion token. */
+function clearServiceSecrets(db: DbLike): number {
+  try {
+    const marks = SERVICE_SECRET_SETTING_FIELDS.map(() => "?").join(", ");
+    const rows = db
+      .prepare(`SELECT key, value FROM key_value WHERE namespace = 'settings' AND key IN (${marks})`)
+      .all(...SERVICE_SECRET_SETTING_FIELDS) as Array<{ key: string; value: string | null }>;
+    const held = rows.filter((row) => {
+      try {
+        const parsed = JSON.parse(row.value ?? "null");
+        return typeof parsed === "string" && parsed.trim().length > 0;
+      } catch {
+        return Boolean(row.value && row.value.trim());
+      }
+    });
+    const remove = db.prepare("DELETE FROM key_value WHERE namespace = 'settings' AND key = ?");
+    for (const row of held) remove.run(row.key);
+    // The Notion integration token had its own namespace.
+    const notion = db
+      .prepare("SELECT value FROM key_value WHERE namespace = 'notion' AND key = 'integration_token'")
+      .all() as Array<{ value: string | null }>;
+    if (notion.length > 0) {
+      db.prepare("DELETE FROM key_value WHERE namespace = 'notion' AND key = 'integration_token'").run();
+    }
+    return held.length + notion.length;
+  } catch {
+    return 0;
+  }
+}
+
 /** Delete every row of cloud_agent_credentials (Devin, Jules, Codex cloud, Cursor cloud keys). */
 function dropAgentCredentials(db: DbLike): number {
   try {
@@ -202,6 +235,7 @@ export function scrubLocalProviderSecrets(
     droppedClientKeys: 0,
     droppedAgentCredentials: 0,
     clearedEmbeddingKeys: 0,
+    clearedServiceSecrets: 0,
     vacuumed: false,
   };
 
@@ -257,6 +291,7 @@ export function scrubLocalProviderSecrets(
 
   result.droppedAgentCredentials = dropAgentCredentials(db);
   result.clearedEmbeddingKeys = clearEmbeddingKeys(db);
+  result.clearedServiceSecrets = clearServiceSecrets(db);
 
   const touched =
     result.clearedApiKeys +
@@ -264,7 +299,8 @@ export function scrubLocalProviderSecrets(
     result.disabledClassified +
     result.droppedClientKeys +
     result.droppedAgentCredentials +
-    result.clearedEmbeddingKeys;
+    result.clearedEmbeddingKeys +
+    result.clearedServiceSecrets;
   if (touched > 0) {
     result.vacuumed = vacuumAfterScrub(db);
     console.warn(
@@ -272,7 +308,8 @@ export function scrubLocalProviderSecrets(
         `column(s), ${result.strippedProviderData} providerSpecificData secret set(s), ` +
         `${result.disabledClassified} disabled subscription/session connection(s), ` +
         `${result.droppedClientKeys} local client key(s), ${result.droppedAgentCredentials} ` +
-        `cloud agent key(s), ${result.clearedEmbeddingKeys} embedding key(s). Provider keys ` +
+        `cloud agent key(s), ${result.clearedEmbeddingKeys} embedding key(s), ` +
+        `${result.clearedServiceSecrets} service key(s). Provider keys ` +
         `belong in OpenVault (http://127.0.0.1:3010/keys).`
     );
   }

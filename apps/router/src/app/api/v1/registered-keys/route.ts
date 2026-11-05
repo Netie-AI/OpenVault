@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { isAuthenticated } from "@/shared/utils/apiAuth";
+import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
 import { isValidationFailure, validateBody } from "@/shared/validation/helpers";
 import { issueRegisteredKey, checkQuota, listRegisteredKeys } from "@/lib/db/registeredKeys";
 
@@ -23,9 +23,10 @@ const issueKeySchema = z.object({
  * Optional query params: ?provider=&accountId=
  */
 export async function GET(request: Request) {
-  if (!(await isAuthenticated(request))) {
-    return NextResponse.json({ error: { message: "Authentication required" } }, { status: 401 });
-  }
+  // Management scope, not just any valid token: an OpenVault-issued client token
+  // (scope self:usage) must not change limits or issue and revoke registered keys.
+  const denied = await requireManagementAuth(request, { invalidApiKeyStatus: 401 });
+  if (denied) return denied;
 
   const { searchParams } = new URL(request.url);
   const provider = searchParams.get("provider") ?? undefined;
@@ -50,9 +51,10 @@ export async function GET(request: Request) {
  * Subsequent fetches will only return the masked prefix.
  */
 export async function POST(request: Request) {
-  if (!(await isAuthenticated(request))) {
-    return NextResponse.json({ error: { message: "Authentication required" } }, { status: 401 });
-  }
+  // Management scope, not just any valid token: an OpenVault-issued client token
+  // (scope self:usage) must not change limits or issue and revoke registered keys.
+  const denied = await requireManagementAuth(request, { invalidApiKeyStatus: 401 });
+  if (denied) return denied;
 
   let rawBody: unknown;
   try {

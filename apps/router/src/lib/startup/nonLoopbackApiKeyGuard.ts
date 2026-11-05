@@ -14,8 +14,9 @@ function isLoopbackHost(host: string): boolean {
 
 function isRequireApiKeyDisabled(): boolean {
   const raw = (process.env.REQUIRE_API_KEY || "").trim().toLowerCase();
-  // Matches the feature-flag default: unset/empty falls back to "false".
-  return raw !== "true" && raw !== "1" && raw !== "yes";
+  // Matches the feature-flag default: unset/empty falls back to "true", so only
+  // an explicit false-like value turns the requirement off.
+  return raw === "false" || raw === "0" || raw === "no";
 }
 
 /**

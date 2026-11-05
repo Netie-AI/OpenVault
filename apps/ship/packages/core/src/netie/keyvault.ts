@@ -8,6 +8,8 @@
 // whose label starts with the FreeBuild provider id, time out OpenVault
 // requests after 5s, expand ~ in the token path env vars, and drop expired
 // secrets from the in-memory cache.
+// Modified by Netie AI, 2026: refuse an OPENVAULT_URL that is not on this
+// machine, and refuse HTTP redirects, so the admin token cannot be sent elsewhere.
 /**
  * The ONLY client FreeBuild uses to read third-party provider API keys.
  *
@@ -145,6 +147,41 @@ function baseUrl(): string {
   return (process.env.OPENVAULT_URL?.trim() || "http://127.0.0.1:5000").replace(/\/+$/, "");
 }
 
+/** Hostnames that mean "this machine". `new URL` has already folded 127.1, 0x7f.1 and the like into dotted form. */
+function isLoopbackHostname(hostname: string): boolean {
+  const host = hostname.toLowerCase();
+  return host === "localhost" || host === "[::1]" || /^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host);
+}
+
+/**
+ * OPENVAULT_URL must name this machine. Every call carries the OpenVault admin
+ * token, and a reveal answer carries a provider secret, so a URL that points
+ * anywhere else (a typo, a poisoned .env) would hand both to that host.
+ * OpenVault binds loopback only, so nothing legitimate needs a remote URL.
+ * The error never echoes credentials embedded in the URL.
+ */
+function assertLoopbackOpenVaultUrl(): void {
+  let ok = false;
+  try {
+    const url = new URL(baseUrl());
+    ok =
+      (url.protocol === "http:" || url.protocol === "https:") &&
+      !url.username &&
+      !url.password &&
+      isLoopbackHostname(url.hostname);
+  } catch {
+    // Not a URL at all: refuse below.
+  }
+  if (!ok) {
+    throw new OpenVaultKeyvaultUnreachableError(
+      new Error(
+        "OPENVAULT_URL must be an http(s) URL on this machine (127.0.0.1, localhost or [::1]) " +
+          "with no credentials in it; the OpenVault admin token is never sent elsewhere.",
+      ),
+    );
+  }
+}
+
 /**
  * Node built-ins, loaded at call time. A static `import "node:fs"` here breaks
  * the dashboard build: @repo/core is transpiled into client bundles, and
@@ -213,12 +250,16 @@ async function openVaultRequest(
   path: string,
   extraHeaders: Record<string, string> = {},
 ): Promise<{ res: Response; forbiddenChecked: boolean }> {
+  assertLoopbackOpenVaultUrl();
   const tokenPath = adminTokenPath();
   const token = await readAdminToken(tokenPath);
   let res: Response;
   try {
     res = await fetch(`${baseUrl()}${path}`, {
       headers: { ...extraHeaders, "X-OpenVault-Admin": token },
+      // A redirect would carry the admin token (and a reveal) to wherever it
+      // points. OpenVault never redirects an API call; treat one as a failure.
+      redirect: "error",
       // Covers the body read too: the signal stays attached to the response.
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });

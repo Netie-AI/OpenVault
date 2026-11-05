@@ -378,6 +378,33 @@ export function rejectProviderSecretsInBody(body: unknown): Response | null {
   return carriesSecret ? renderKeysManagedByOpenVault() : null;
 }
 
+/**
+ * Settings that held a third-party service credential (the SkillsMP marketplace
+ * key, the CLIProxyAPI sidecar key, the Qdrant API key). FreeRoute no longer
+ * keeps them: they are refused with keys_managed_by_openvault, and the scrub
+ * blanks any copy an older build or an import left behind. An empty value is
+ * allowed through so an operator can still clear a stale one.
+ */
+export const SERVICE_SECRET_SETTING_FIELDS: readonly string[] = [
+  "skillsmpApiKey",
+  "cliproxyapi_api_key",
+  "qdrantApiKey",
+];
+
+/** 501 keys_managed_by_openvault when `body` sets any of `fields` to a non-empty value, else null. */
+export function rejectServiceSecretsInBody(
+  body: unknown,
+  fields: readonly string[] = SERVICE_SECRET_SETTING_FIELDS
+): Response | null {
+  const root = asRecord(body);
+  const held = fields.filter((field) => hasValue(root[field]));
+  if (held.length === 0) return null;
+  return renderKeysManagedByOpenVault(
+    `${held.join(", ")} would be stored in FreeRoute's own database. Service keys are stored in ` +
+      "OpenVault. Add them at http://127.0.0.1:3010/keys."
+  );
+}
+
 // ── KeyVault-backed key for a stored connection ───────────────────────────
 
 /**

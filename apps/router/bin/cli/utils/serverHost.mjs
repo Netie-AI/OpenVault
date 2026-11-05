@@ -49,7 +49,8 @@ export function resolveExposureWarning(env = process.env, host = resolveServerHo
   const requireKey = String(env.REQUIRE_API_KEY || "")
     .trim()
     .toLowerCase();
-  if (requireKey === "true" || requireKey === "1" || requireKey === "yes") return null;
+  // Unset or empty follows the feature-flag default, which is "required".
+  if (requireKey !== "false" && requireKey !== "0" && requireKey !== "no") return null;
   return (
     `SECURITY: listening on ${host} with NO API-key requirement. The inference ` +
     `plane (/v1/*) is reachable by ANY device that can route to this host, and ` +

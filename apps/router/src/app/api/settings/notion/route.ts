@@ -1,17 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { isAuthenticated } from "@/shared/utils/apiAuth";
+import { clearNotionToken } from "@/lib/db/notion";
 import {
-  getNotionConfig,
-  setNotionToken,
-  clearNotionToken,
-} from "@/lib/db/notion";
-import { createNotionClient } from "@/lib/notion/api";
+  KeysManagedByOpenVaultError,
+  isOpenVaultKeyVaultError,
+  openVaultErrorResponse,
+  resolveProviderApiKey,
+} from "@/lib/netie/keyvault";
+import { netieErrorResponse } from "@/lib/netie/providerGuards";
 import { sanitizeErrorMessage } from "@omniroute/open-sse/utils/error";
 
-const setTokenSchema = z.object({
-  token: z.string().min(1).max(500),
-}).strict();
+// FreeRoute: the Notion integration token is stored in OpenVault (provider
+// "notion"), never in this database. POST refuses a token with 501
+// keys_managed_by_openvault before anything is written; DELETE still clears a
+// copy an older build left behind.
+
+const setTokenSchema = z
+  .object({
+    token: z.string().min(1).max(500),
+  })
+  .strict();
 
 export async function GET(request: NextRequest) {
   if (!(await isAuthenticated(request))) {
@@ -19,12 +28,10 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const config = getNotionConfig();
-    return NextResponse.json({
-      connected: config.connected,
-      hasToken: config.token !== null,
-    });
+    const hasToken = Boolean(await resolveProviderApiKey("notion"));
+    return NextResponse.json({ connected: hasToken, hasToken });
   } catch (error) {
+    if (isOpenVaultKeyVaultError(error)) return openVaultErrorResponse(error);
     return NextResponse.json({ error: sanitizeErrorMessage(error) }, { status: 500 });
   }
 }
@@ -49,28 +56,16 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  try {
-    setNotionToken(parsed.data.token);
-
-    const client = createNotionClient(parsed.data.token);
-    const result = await client.searchPagesAndDatabases("test", undefined, 1);
-    if (result && typeof result === "object" && "object" in result && (result as Record<string, unknown>).object === "error") {
-      clearNotionToken();
-      return NextResponse.json(
-        { error: "Token validation failed: invalid token", connected: false },
-        { status: 400 }
-      );
-    }
-
-    return NextResponse.json({
-      connected: true,
-      message: "Notion integration token saved and validated",
-    });
-  } catch (error) {
-    clearNotionToken();
-    const msg = error instanceof Error ? error.message : String(error);
-    return NextResponse.json({ error: sanitizeErrorMessage(msg), connected: false }, { status: 400 });
-  }
+  // A well-formed token is never stored here, and never echoed back.
+  return (
+    netieErrorResponse(
+      new KeysManagedByOpenVaultError(
+        ["token"],
+        "The Notion integration token is stored in OpenVault. Add it at " +
+          "http://127.0.0.1:3010/keys with provider notion."
+      )
+    ) ?? NextResponse.json({ error: "keys_managed_by_openvault" }, { status: 501 })
+  );
 }
 
 export async function DELETE(request: NextRequest) {

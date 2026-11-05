@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { getSettings } from "@/lib/db/settings";
+import {
+  isOpenVaultKeyVaultError,
+  openVaultErrorResponse,
+  resolveProviderApiKey,
+} from "@/lib/netie/keyvault";
 import { isAuthenticated } from "@/shared/utils/apiAuth";
 import { getSkillsProviderSetting } from "@/lib/skills/providerSettings";
 import { sanitizeErrorMessage } from "@omniroute/open-sse/utils/error";
@@ -30,12 +34,16 @@ export async function GET(request: Request) {
     }
 
     // Search SkillsMP for non-empty queries
-    const settings = await getSettings();
-    const apiKey = (settings as Record<string, unknown>).skillsmpApiKey;
+    // FreeRoute: the SkillsMP key lives in OpenVault (provider "skillsmp"), never in settings.
+    const apiKey = await resolveProviderApiKey("skillsmp");
 
     if (!apiKey) {
       return NextResponse.json(
-        { error: "SkillsMP API key not configured. Add it in Settings → AI." },
+        {
+          error:
+            "SkillsMP API key not configured. Add it in OpenVault (http://127.0.0.1:3010/keys) " +
+            "with provider skillsmp.",
+        },
         { status: 400 }
       );
     }
@@ -56,6 +64,7 @@ export async function GET(request: Request) {
     const data = await res.json();
     return NextResponse.json({ skills: data.data?.skills || data.skills || [] });
   } catch (err: unknown) {
+    if (isOpenVaultKeyVaultError(err)) return openVaultErrorResponse(err);
     const error = sanitizeErrorMessage(err instanceof Error ? err.message : String(err));
     return NextResponse.json({ error }, { status: 500 });
   }

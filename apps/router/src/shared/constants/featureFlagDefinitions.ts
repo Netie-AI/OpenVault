@@ -19,7 +19,11 @@ export const FEATURE_FLAG_DEFINITIONS: FeatureFlagDefinition[] = [
     description: "Require an API key for all incoming requests",
     descriptionI18nKey: "featureFlagRequireApiKeyDescription",
     category: "security",
-    defaultValue: "false",
+    // FreeRoute: on by default. Without it an anonymous caller on the loopback
+    // port spends the operator's provider keys (read from OpenVault) with no
+    // token at all, and an invalid bearer degrades to anonymous. Turn it off
+    // only on purpose (REQUIRE_API_KEY=false).
+    defaultValue: "true",
     type: "boolean",
     requiresRestart: false,
     warningLevel: "caution",

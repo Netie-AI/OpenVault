@@ -304,6 +304,73 @@ test("keyvault client fails loud (never a silent fallback) when OpenVault is unr
   process.env.OPENVAULT_URL = openVaultUrl;
 });
 
+test("keyvault client: OPENVAULT_URL must name this machine, the admin token is never sent elsewhere", async () => {
+  process.env.OPENVAULT_ADMIN_TOKEN_PATH = adminTokenPath;
+  const refused = [
+    "http://203.0.113.9:5000",
+    "https://vault.attacker.example",
+    "http://localhost.attacker.example:5000",
+    "http://127.0.0.1.attacker.example:5000",
+    "http://user:hunter2@127.0.0.1:5000",
+    "ftp://127.0.0.1:5000",
+    "not a url",
+  ];
+  try {
+    for (const url of refused) {
+      process.env.OPENVAULT_URL = url;
+      keyvault._resetSecretCacheForTests();
+      const started = Date.now();
+      for (const call of [() => keyvault.listKeys(), () => keyvault.getSecret(STUB_KEY.id)]) {
+        await assert.rejects(call, (err) => {
+          assert.equal(err.code, "openvault_keyvault_unreachable", url);
+          assert.equal(err.statusCode, 503, url);
+          assert.ok(!String(err.stack).includes("hunter2"), "URL credentials are not echoed");
+          assert.match(String(err.stack), /OPENVAULT_URL must be/, url);
+          return true;
+        });
+      }
+      assert.ok(Date.now() - started < 2000, `${url}: refused before any network call`);
+    }
+    // Loopback spellings pass the check (nothing listens, so unreachable for a different reason).
+    for (const url of ["http://127.0.0.1:1", "http://localhost:1", "http://[::1]:1", "http://127.0.0.2:1"]) {
+      process.env.OPENVAULT_URL = url;
+      await assert.rejects(keyvault.listKeys(), (err) => {
+        assert.equal(err.code, "openvault_keyvault_unreachable", url);
+        assert.doesNotMatch(String(err.stack), /OPENVAULT_URL must be/, url);
+        return true;
+      });
+    }
+  } finally {
+    process.env.OPENVAULT_URL = openVaultUrl;
+  }
+});
+
+test("keyvault client: a redirect from OpenVault is a failure and the admin token is not forwarded", async () => {
+  const landed = [];
+  const target = createServer((req, res) => {
+    landed.push({ url: req.url, admin: req.headers["x-openvault-admin"] });
+    res.writeHead(200, { "content-type": "application/json" });
+    res.end(JSON.stringify({ keys: [] }));
+  });
+  await new Promise((resolve) => target.listen(0, "127.0.0.1", resolve));
+  const redirector = createServer((req, res) => {
+    res.writeHead(302, { location: `http://127.0.0.1:${target.address().port}${req.url}` });
+    res.end();
+  });
+  await new Promise((resolve) => redirector.listen(0, "127.0.0.1", resolve));
+  try {
+    process.env.OPENVAULT_URL = `http://127.0.0.1:${redirector.address().port}`;
+    process.env.OPENVAULT_ADMIN_TOKEN_PATH = adminTokenPath;
+    keyvault._resetSecretCacheForTests();
+    await assert.rejects(keyvault.listKeys(), (err) => err.code === "openvault_keyvault_unreachable");
+    assert.deepEqual(landed, [], "the redirect target never saw a request");
+  } finally {
+    process.env.OPENVAULT_URL = openVaultUrl;
+    await new Promise((resolve) => redirector.close(resolve));
+    await new Promise((resolve) => target.close(resolve));
+  }
+});
+
 test("keyvault client sends the admin token: right token returns the secret", async () => {
   process.env.OPENVAULT_URL = openVaultUrl;
   process.env.OPENVAULT_ADMIN_TOKEN_PATH = adminTokenPath;

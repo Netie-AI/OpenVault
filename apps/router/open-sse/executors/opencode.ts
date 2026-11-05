@@ -29,7 +29,6 @@ import {
 import {
   clientSuppliedOpencodeSession,
   forwardOpencodeClientHeaders,
-  resolveOpencodeCliDefaults,
 } from "../utils/opencodeHeaders.ts";
 import { projectOpencodeSessionBody } from "../utils/opencodeSessionIdentity.ts";
 import {
@@ -1283,21 +1282,12 @@ export class OpencodeExecutor extends BaseExecutor {
       headers["Accept"] = "text/event-stream";
     }
 
-    // Synthesize OpenCode CLI identity headers by default so Cloudflare in front of
-    // opencode.ai/zen doesn't 429 VPS requests lacking CLI identity. Opt-out via
-    // OPENCODE_SYNTHESIZE_CLI_HEADERS=false. Client-supplied headers always win;
-    // User-Agent is replaced with the CLI UA unless the client already sends one that
-    // looks like the OpenCode CLI. Default values match 9router's proven defaults.
-    const cliDefaults = resolveOpencodeCliDefaults(
-      this.config?.id || this.provider || "opencode",
-      gatedScope
-    );
-
+    // FreeRoute does not present itself as the OpenCode CLI: no synthesized
+    // User-Agent, x-opencode-client, x-opencode-project or forged ids. A real
+    // OpenCode client's own headers are forwarded below.
     this._clientSession = clientSuppliedOpencodeSession(clientHeaders, body);
-    if (clientHeaders || cliDefaults) {
-      forwardOpencodeClientHeaders(headers, clientHeaders ?? {}, {
-        synthesizeRequestId: true,
-        cliDefaults,
+    if (clientHeaders) {
+      forwardOpencodeClientHeaders(headers, clientHeaders, {
         sessionBody: projectOpencodeSessionBody(body),
       });
     }

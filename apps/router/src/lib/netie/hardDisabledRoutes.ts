@@ -247,16 +247,61 @@ const PATTERN_RULES: HardDisabledPatternRule[] = [
   },
 ];
 
+export const INVALID_PATH_ENCODING_CODE = "invalid_path_encoding";
+
 export interface HardDisabledMatch {
-  status: 501;
+  /** 501 for a disabled route family, 400 for a path whose encoding cannot be read. */
+  status: 501 | 400;
   body: { error: { code: string; message: string } };
 }
 
-/** Returns the 501 body to send for `pathname`, or `null` if it isn't hard-disabled. */
-export function matchHardDisabledRoute(pathname: string): HardDisabledMatch | null {
+const MAX_DECODE_ROUNDS = 4;
+
+/**
+ * The path the router will actually serve for `pathname`: percent-escapes
+ * decoded (repeatedly, so `%256f` cannot hide an `o`), backslashes read as
+ * slashes, and empty, `.` and `..` segments resolved. Next.js decodes the path
+ * before it picks a route handler, so `/api/%6fauth/codex` reaches the handler
+ * for `/api/oauth/codex`; a table that only looks at the raw string misses it.
+ *
+ * Returns `null` when the path cannot be read safely: a malformed escape, a NUL
+ * byte, or escapes still unwrapping after MAX_DECODE_ROUNDS rounds. The caller
+ * answers 400 for those instead of guessing.
+ */
+export function normalizeRoutePath(pathname: string): string | null {
+  let path = pathname;
+  let settled = false;
+  for (let round = 0; round < MAX_DECODE_ROUNDS; round += 1) {
+    let decoded: string;
+    try {
+      decoded = decodeURIComponent(path);
+    } catch {
+      return null;
+    }
+    if (decoded === path) {
+      settled = true;
+      break;
+    }
+    path = decoded;
+  }
+  if (!settled) return null;
+  if (path.includes("\0")) return null;
+
+  const segments: string[] = [];
+  for (const segment of path.replace(/\\/g, "/").split("/")) {
+    if (segment === "" || segment === ".") continue;
+    if (segment === "..") {
+      segments.pop();
+      continue;
+    }
+    segments.push(segment);
+  }
   // Lowercased so a case variant of a disabled prefix cannot slip past (the
   // proxy matcher is case-insensitive for the same reason).
-  const path = pathname.toLowerCase();
+  return `/${segments.join("/")}`.toLowerCase();
+}
+
+function matchNormalized(path: string): HardDisabledMatch | null {
   for (const rule of RULES) {
     if (path === rule.prefix || path.startsWith(`${rule.prefix}/`)) {
       return { status: 501, body: { error: { code: rule.code, message: rule.message } } };
@@ -268,4 +313,26 @@ export function matchHardDisabledRoute(pathname: string): HardDisabledMatch | nu
     }
   }
   return null;
+}
+
+/**
+ * Returns the response to send for `pathname`, or `null` if it isn't
+ * hard-disabled: a 501 body for a disabled family, or a 400 when the path's
+ * encoding cannot be read. Both the raw path and its normalized form are
+ * checked, so neither an escaped nor a plain spelling gets through.
+ */
+export function matchHardDisabledRoute(pathname: string): HardDisabledMatch | null {
+  const normalized = normalizeRoutePath(pathname);
+  if (normalized === null) {
+    return {
+      status: 400,
+      body: {
+        error: {
+          code: INVALID_PATH_ENCODING_CODE,
+          message: "The request path has an invalid or over-encoded escape sequence.",
+        },
+      },
+    };
+  }
+  return matchNormalized(pathname.toLowerCase()) ?? matchNormalized(normalized);
 }

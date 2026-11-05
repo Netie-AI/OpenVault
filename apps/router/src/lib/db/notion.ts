@@ -7,6 +7,8 @@ type KeyValueRow = {
   value?: string;
 };
 
+// FreeRoute: no writer. The Notion token lives in OpenVault; this module only
+// reads and clears a copy an older build stored (see scrubLocalSecrets.ts).
 export function getNotionToken(): string | null {
   try {
     const db = getDbInstance();
@@ -16,17 +18,6 @@ export function getNotionToken(): string | null {
     return typeof row?.value === "string" ? JSON.parse(row.value) : null;
   } catch {
     return null;
-  }
-}
-
-export function setNotionToken(token: string): void {
-  try {
-    const db = getDbInstance();
-    db.prepare(
-      "INSERT OR IGNORE INTO key_value (namespace, key, value) VALUES (?, ?, ?)"
-    ).run(NOTION_NAMESPACE, NOTION_TOKEN_KEY, JSON.stringify(token));
-  } catch {
-    // Non-fatal — token still works in-memory if persistence fails.
   }
 }
 

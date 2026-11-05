@@ -23,7 +23,11 @@ import {
   resolveCanonicalProviderId,
   UPSTREAM_UPDATES_DISABLED_MESSAGE,
 } from "../policy.ts";
-import { matchHardDisabledRoute } from "../../../src/lib/netie/hardDisabledRoutes.ts";
+import {
+  matchHardDisabledRoute,
+  normalizeRoutePath,
+  INVALID_PATH_ENCODING_CODE,
+} from "../../../src/lib/netie/hardDisabledRoutes.ts";
 
 test("apikey/none/optional providers stay allowed", () => {
   assert.equal(
@@ -174,6 +178,128 @@ test("hard-disabled route table covers /authorize and per-connection login/refre
   for (const path of ["/api/providers", "/api/providers/abc123", "/api/providers/abc123/test", "/authorized"]) {
     assert.equal(matchHardDisabledRoute(path), null, path);
   }
+});
+
+// Security: Next.js decodes the path before it picks a handler, so a table that
+// only reads the raw string is bypassed by an escaped spelling of the same route.
+test("hard-disabled routes cannot be reached through an escaped, doubled or dotted spelling", () => {
+  const oauth = "consumer_subscription_pooling_disabled";
+  const relay = "consumer_session_relay_disabled";
+  const cases = [
+    ["/api/%6fauth/codex/authorize", oauth],
+    ["/api/%6Fauth/codex/authorize", oauth],
+    ["/api/o%61uth/codex/authorize", oauth],
+    ["/api/oauth%2fcodex/authorize", oauth],
+    ["/api/%256fauth/codex/authorize", oauth], // %25 -> %, then %6f -> o
+    ["/api/%25256fauth/codex/authorize", oauth], // three layers
+    ["/%61pi/oauth/codex/authorize", oauth],
+    ["/API/%4Fauth/codex/authorize", oauth],
+    ["/api//oauth/codex/authorize", oauth],
+    ["/api/./oauth/codex/authorize", oauth],
+    ["/api/x/../oauth/codex/authorize", oauth],
+    ["/api\\oauth\\codex\\authorize", oauth],
+    ["/api/oauth/", oauth],
+    ["/api/tools/%61gent-bridge/status", relay],
+    ["/api/tools/agent%2Dbridge/status", relay],
+    ["/api/settings/m%69tm", relay],
+    ["/api/services/%64ario/install", oauth],
+    ["/api/services/dari%6f/admin/login-start", oauth],
+    ["/api/services/%63liproxy/accounts", oauth],
+    ["/api/version-%6danager/start", oauth],
+    ["/api/providers/abc123/%6cogin", relay],
+    ["/api/providers/abc123/refresh%2dtoken", relay],
+    ["/api/providers/%63laude-auth/import", oauth],
+    ["/api/co%70ilot/chat", relay],
+    ["/dashboard/providers/services/%64ario/embed/", oauth],
+  ];
+  for (const [path, code] of cases) {
+    const match = matchHardDisabledRoute(path);
+    assert.ok(match, `${path} must be refused`);
+    assert.equal(match.status, 501, path);
+    assert.equal(match.body.error.code, code, path);
+  }
+});
+
+test("a path whose encoding cannot be read answers 400 invalid_path_encoding, not a guess", () => {
+  const unreadable = [
+    "/api/%zz/x",
+    "/api/oauth/%",
+    "/api/oauth/%E0%A4%A", // truncated UTF-8 sequence
+    "/api/a%00b",
+    "/api/%2500/x", // %00 behind one layer
+    "/api/%252525256fauth/x", // more layers than the decoder will unwrap
+  ];
+  for (const path of unreadable) {
+    const match = matchHardDisabledRoute(path);
+    assert.ok(match, path);
+    assert.equal(match.status, 400, path);
+    assert.equal(match.body.error.code, INVALID_PATH_ENCODING_CODE, path);
+    assert.equal(normalizeRoutePath(path), null, path);
+  }
+});
+
+test("normalizing the path leaves ordinary routes alone", () => {
+  const open = [
+    "/",
+    "/api/providers",
+    "/api/providers/abc123",
+    "/api/providers/a%20b",
+    "/api/providers/abc123/test",
+    "/api/oauthx/codex",
+    "/api/v1/models",
+    "/v1/chat/completions",
+    "/v1/models/gpt%2D4o",
+    "/v1beta/models/gemini-pro:generateContent",
+    "/dashboard/providers",
+    "/api/services/mux/status",
+    "/api/services/darion/status",
+  ];
+  for (const path of open) {
+    assert.equal(matchHardDisabledRoute(path), null, path);
+  }
+  assert.equal(normalizeRoutePath("/API//Foo/./Bar/../Baz/"), "/api/foo/baz");
+  assert.equal(normalizeRoutePath("/a%2Fb"), "/a/b");
+});
+
+// Security: the keyless OpenCode free tier used to get a forged OpenCode client
+// identity (User-Agent opencode/1.18.x, x-opencode-client, ses_/msg_ ids) so a
+// datacenter caller passed a client-only check. FreeRoute adds none of it.
+test("OpenCode requests carry no synthesized client identity", async () => {
+  const { forwardOpencodeClientHeaders } = await import("../../utils/opencodeHeaders.ts");
+
+  // A generic client: nothing is invented for it.
+  const generic = {};
+  forwardOpencodeClientHeaders(generic, { "user-agent": "curl/8.5.0" }, {});
+  assert.deepEqual(generic["user-agent"] ?? generic["User-Agent"], "curl/8.5.0");
+  for (const name of ["x-opencode-client", "x-opencode-project", "x-opencode-session", "x-opencode-request"]) {
+    assert.equal(generic[name], undefined, `${name} must not be synthesized`);
+  }
+
+  // No client headers at all: still nothing.
+  const bare = {};
+  forwardOpencodeClientHeaders(bare, {}, {});
+  assert.deepEqual(bare, {});
+
+  // A real OpenCode client's own headers pass through untouched.
+  const real = {};
+  const own = {
+    "user-agent": "opencode/1.99.0",
+    "x-opencode-client": "cli",
+    "x-opencode-session": "ses_0123456789abAbCdEfGhIjKlMn",
+  };
+  forwardOpencodeClientHeaders(real, own, {});
+  assert.equal(real["x-opencode-client"], "cli");
+  assert.equal(real["x-opencode-session"], own["x-opencode-session"]);
+
+  // The sources hold no fabricated identity either.
+  const { readFileSync } = await import("node:fs");
+  for (const file of ["utils/opencodeHeaders.ts", "executors/opencode.ts"]) {
+    const source = readFileSync(new URL(`../../${file}`, import.meta.url), "utf8");
+    assert.doesNotMatch(source, /opencode\/1\.\d+\.\d+/, file);
+    assert.doesNotMatch(source, /resolveOpencodeCliDefaults|applyCliDefaults|canonicalId/, file);
+  }
+  const example = readFileSync(new URL("../../../.env.example", import.meta.url), "utf8");
+  assert.doesNotMatch(example, /^#?OPENCODE_(SYNTHESIZE_CLI_HEADERS|USER_AGENT|CLIENT|PROJECT)=/m);
 });
 
 // ── Round 3 regression tests ────────────────────────────────────────────────

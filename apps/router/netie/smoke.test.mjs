@@ -457,6 +457,26 @@ test("GET /authorize (Trae OAuth callback, no auth) does not store a connection"
   await expectNamed(await fetch(url), 501, "consumer_subscription_pooling_disabled");
 });
 
+test("escaped spellings of disabled routes answer the same named 501, unreadable escapes answer 400", async () => {
+  // Next.js decodes the path before routing, so these reach the handlers of
+  // /api/oauth/..., /api/tools/agent-bridge/..., /api/services/dario/... and /api/settings/mitm.
+  for (const [path, code] of [
+    ["/api/%6fauth/codex/authorize", "consumer_subscription_pooling_disabled"],
+    ["/api/%256fauth/codex/authorize", "consumer_subscription_pooling_disabled"],
+    ["/api/tools/%61gent-bridge/status", "consumer_session_relay_disabled"],
+    ["/api/services/%64ario/install", "consumer_subscription_pooling_disabled"],
+    ["/api/settings/m%69tm", "consumer_session_relay_disabled"],
+  ]) {
+    for (const headers of [{}, managementHeaders()]) {
+      await expectNamed(await fetch(`${baseUrl()}${path}`, { headers, redirect: "manual" }), 501, code);
+    }
+  }
+  for (const path of ["/api/%zz/x", "/api/oauth/%E0%A4%A"]) {
+    const res = await fetch(`${baseUrl()}${path}`, { headers: managementHeaders(), redirect: "manual" });
+    assert.equal(res.status, 400, path);
+  }
+});
+
 test("a browser-session provider cannot be created, even without a key", async () => {
   await expectNamed(
     await postJson("/api/providers", { provider: "copilot-web", name: "smoke-copilot-web" }),

@@ -70,6 +70,10 @@ const BULK_SECRET = `sk-e2e-bulk-secret-${randomBytes(12).toString("hex")}`;
 // Keys a caller tries to hand FreeRoute through the cloud agent route and the CLI.
 const AGENT_SECRET = `sk-e2e-agent-secret-${randomBytes(12).toString("hex")}`;
 const CLI_SECRET = `sk-e2e-cli-secret-${randomBytes(12).toString("hex")}`;
+// Pooled "deepseek" keys no other connection uses, for the foreign-host step.
+// The unbound one has no base_url; the bound one is stored for one host's exact URL.
+const FOREIGN_TEST_SECRET = `sk-e2e-foreign-secret-${randomBytes(12).toString("hex")}`;
+const BOUND_TEST_SECRET = `sk-e2e-bound-secret-${randomBytes(12).toString("hex")}`;
 // Planted in a SQLite backup that is then imported (one per place a key can hide).
 const IMPORT_SECRETS = {
   apiKey: `sk-e2e-import-apikey-${randomBytes(12).toString("hex")}`,
@@ -379,12 +383,14 @@ function readAudit() {
 const DATA_DIR = join(TMP, "freeroute-data");
 mkdirSync(DATA_DIR, { recursive: true });
 
-async function startFreeRoute(name, { adminTokenPath }) {
+async function startFreeRoute(name, { adminTokenPath, defaultAuth = false }) {
   const port = await getFreePort();
   // No HOST or OMNIROUTE_HOSTNAME: the bind under test is FreeRoute's default.
   const inherited = { ...process.env };
   delete inherited.HOST;
   delete inherited.OMNIROUTE_HOSTNAME;
+  // defaultAuth: leave REQUIRE_API_KEY unset, so the shipped default decides.
+  delete inherited.REQUIRE_API_KEY;
   const child = startProcess(name, process.execPath, ["scripts/dev/run-next.mjs", "start"], {
     cwd: ROOT,
     env: {
@@ -401,7 +407,7 @@ async function startFreeRoute(name, { adminTokenPath }) {
       OMNIROUTE_DISABLE_LOCAL_HEALTHCHECK: "true",
       OMNIROUTE_DISABLE_TOKEN_HEALTHCHECK: "true",
       OMNIROUTE_API_KEY: MANAGEMENT_API_KEY,
-      REQUIRE_API_KEY: "true",
+      ...(defaultAuth ? {} : { REQUIRE_API_KEY: "true" }),
     },
   });
   const url = `http://127.0.0.1:${port}`;
@@ -618,6 +624,53 @@ async function main() {
     }
   );
 
+  // Two pooled keys for a built-in provider that nothing else in this run uses
+  // (deepseek, alias "ds"). The foreign-host steps below re-aim a deepseek
+  // connection at another host:
+  //   - host A has no key bound to it: the unbound key must be neither revealed
+  //     nor sent there;
+  //   - host B has a key stored for exactly its URL: that key must be revealed and
+  //     sent there (the control that proves the steps can see a leak, and that the
+  //     connection is the one that gets used).
+  // Both go in before FreeRoute starts so its first key list (cached 60s) holds
+  // them: a missing key must not be able to explain a refusal.
+  const startCapture = async () => {
+    const seen = [];
+    const server = createServer((req, res) => {
+      let raw = "";
+      req.on("data", (chunk) => (raw += chunk));
+      req.on("end", () => {
+        seen.push({ path: req.url, headers: req.headers, body: raw });
+        res.writeHead(401, { "content-type": "application/json" });
+        res.end(JSON.stringify({ error: { message: "e2e capture host" } }));
+      });
+    });
+    await new Promise((resolveListen) => server.listen(0, "127.0.0.1", resolveListen));
+    return { seen, server, url: `http://127.0.0.1:${server.address().port}/v1` };
+  };
+  const foreignHosts = await step("pooled deepseek keys stored in OpenVault (unbound, and bound to host B)", async () => {
+    const hostA = await startCapture();
+    const hostB = await startCapture();
+    const unbound = await openVaultCall("POST", "/api/keys", {
+      label: "freeroute-e2e-deepseek",
+      provider: "deepseek",
+      secret: FOREIGN_TEST_SECRET,
+      role: "primary",
+      priority: 50,
+    });
+    assert.equal(unbound.status, 200, JSON.stringify(unbound.body));
+    const bound = await openVaultCall("POST", "/api/keys", {
+      label: "freeroute-e2e-deepseek-bound",
+      provider: "deepseek",
+      secret: BOUND_TEST_SECRET,
+      role: "primary",
+      base_url: hostB.url,
+      priority: 40,
+    });
+    assert.equal(bound.status, 200, JSON.stringify(bound.body));
+    return { hostA, hostB, unboundKey: unbound.body, boundKey: bound.body };
+  });
+
   // Baseline before FreeRoute exists, so before it can ask OpenVault for the
   // secret. Creating a connection starts a background model sync that reads
   // the key, which can land before the connection test; the 60s secret cache
@@ -830,6 +883,42 @@ async function main() {
     }
   });
 
+  await step(
+    "escaped, doubled and dotted spellings of disabled routes still get the named 501",
+    async () => {
+      // Next.js decodes the path before it routes, so these reach the same
+      // handlers as /api/oauth/..., /api/tools/agent-bridge/... and so on.
+      const subscription = "consumer_subscription_pooling_disabled";
+      const relay = "consumer_session_relay_disabled";
+      const cases = [
+        ["/api/%6fauth/codex/authorize", subscription],
+        ["/api/%6Fauth/codex/authorize", subscription],
+        ["/api/o%61uth%2fcodex/authorize", subscription],
+        ["/api/%256fauth/codex/authorize", subscription],
+        ["/api/tools/%61gent-bridge/status", relay],
+        ["/api/services/%64ario/install", subscription],
+        ["/api/services/%63liproxy/accounts", subscription],
+        ["/api/settings/m%69tm", relay],
+        ["/api/%63opilot/chat", relay],
+        ["/api/providers/abc123/%6cogin", relay],
+        ["/api/version-%6danager/start", subscription],
+      ];
+      for (const [path, code] of cases) {
+        for (const headers of [{}, mgmt()]) {
+          const res = await fetch(`${fr.url}${path}`, { headers, redirect: "manual" });
+          const body = await readJson(res);
+          assert.equal(res.status, 501, `${path}: ${res.status} ${JSON.stringify(body)}`);
+          assert.equal(body.error?.code, code, `${path}: ${JSON.stringify(body)}`);
+        }
+      }
+      // An escape the router cannot read is refused, not guessed at.
+      for (const path of ["/api/%zz/x", "/api/oauth/%E0%A4%A"]) {
+        const res = await fetch(`${fr.url}${path}`, { headers: mgmt(), redirect: "manual" });
+        assert.equal(res.status, 400, `${path}: ${res.status}`);
+      }
+    }
+  );
+
   await step("FreeRoute listens on 127.0.0.1 only (non-loopback connect refused)", async () => {
     const ip = nonLoopbackIPv4();
     assert.ok(ip, "this machine has no non-loopback IPv4 address to probe");
@@ -952,6 +1041,93 @@ async function main() {
     assert.equal(status, 501, JSON.stringify(body));
     assert.equal(body.error?.code, "consumer_session_relay_disabled");
   });
+
+  const deepseekChat = (extra = {}) => chat(fr.url, clientToken, "ds/deepseek-v4-flash", extra);
+  const createDeepseekConnection = async (name, baseUrl) => {
+    const createRes = await fetch(`${fr.url}/api/providers`, {
+      method: "POST",
+      headers: mgmt(),
+      body: JSON.stringify({ provider: "deepseek", name, providerSpecificData: { baseUrl } }),
+    });
+    const createBody = await readJson(createRes);
+    assert.ok(createRes.status === 200 || createRes.status === 201, JSON.stringify(createBody));
+    const connection = createBody.connection ?? createBody;
+    assert.equal(connection.provider, "deepseek", JSON.stringify(createBody));
+    return connection;
+  };
+  const deleteConnection = (connection) =>
+    fetch(`${fr.url}/api/providers/${connection.id}`, { method: "DELETE", headers: mgmt() });
+  const revealsFor = (key) =>
+    readAudit().filter((e) => e.event === "secret_reveal" && e.key_id === key.id);
+  const settle = () => new Promise((resolveWait) => setTimeout(resolveWait, 1500));
+
+  await step(
+    "a built-in provider re-aimed at a foreign host is not sent the vault key (and the vault is not asked)",
+    async () => {
+      // Runs before the control below, so no earlier upstream 401 can have locked
+      // the provider out and explain the refusal. The only deepseek connection has
+      // a baseUrl on host A, where no key is bound. Any key FreeRoute resolved for it would be sent to host A. It must
+      // get none, and OpenVault must not be asked to reveal the unbound key at all
+      // (not by the chat, and not by the background model sync that creating a
+      // connection starts).
+      const { hostA, unboundKey } = foreignHosts;
+      const revealedBefore = revealsFor(unboundKey).length;
+      assert.equal(revealedBefore, 0, "the unbound deepseek key was revealed before the step");
+      const connection = await createDeepseekConnection("e2e-redirected", hostA.url);
+      try {
+        await settle();
+        const { status, body } = await deepseekChat();
+        await settle();
+        log(`host A chat: ${status} ${JSON.stringify(body).slice(0, 140)}; host A saw ${hostA.seen.length}`);
+        assert.notEqual(status, 200, `the call must not be served: ${JSON.stringify(body)}`);
+        assert.doesNotMatch(
+          JSON.stringify(body),
+          /Ambiguous model/,
+          "the model did not resolve to the deepseek connection, so the step proves nothing"
+        );
+        for (const secret of [FOREIGN_TEST_SECRET, BOUND_TEST_SECRET]) {
+          assert.ok(
+            !JSON.stringify(hostA.seen).includes(secret),
+            `host A saw a vault key: ${JSON.stringify(hostA.seen)}`
+          );
+        }
+        for (const call of hostA.seen) {
+          assert.ok(!call.headers.authorization, "no Authorization header goes to a foreign host");
+        }
+        assert.deepEqual(
+          revealsFor(unboundKey),
+          [],
+          "OpenVault was asked to reveal the unbound deepseek key for a connection on a foreign host"
+        );
+      } finally {
+        await deleteConnection(connection);
+      }
+    }
+  );
+
+  await step(
+    "control: a deepseek connection on host B gets the key stored for exactly host B's URL",
+    async () => {
+      const { hostB, boundKey, unboundKey } = foreignHosts;
+      const connection = await createDeepseekConnection("e2e-bound-host", hostB.url);
+      try {
+        await settle();
+        const { status, body } = await deepseekChat();
+        await settle();
+        log(`host B chat: ${status} ${JSON.stringify(body).slice(0, 140)}; host B saw ${hostB.seen.length}`);
+        assert.ok(hostB.seen.length > 0, "the chat never reached host B: the connection was not used");
+        const chatCall = hostB.seen.find((c) => c.path.includes("chat/completions")) ?? hostB.seen.at(-1);
+        assert.equal(chatCall.headers.authorization, `Bearer ${BOUND_TEST_SECRET}`);
+        assert.ok(revealsFor(boundKey).length > 0, "the bound key was not revealed");
+        assert.deepEqual(revealsFor(unboundKey), [], "the unbound key must not be used for host B");
+        assert.ok(!JSON.stringify(hostB.seen).includes(FOREIGN_TEST_SECRET));
+      } finally {
+        await deleteConnection(connection);
+        await new Promise((resolveClose) => foreignHosts.hostA.server.close(resolveClose));
+        await new Promise((resolveClose) => foreignHosts.hostB.server.close(resolveClose));
+      }
+    }
+  );
 
   await step(
     "tenant-only endpoint: no key is spent, the connection test fails, chat is not served",
@@ -1215,6 +1391,25 @@ async function main() {
   );
   await stopProcess(fr.child);
 
+  fr = await step("FreeRoute starts with REQUIRE_API_KEY unset (the shipped default)", () =>
+    startFreeRoute("freeroute-2b-default-auth", { adminTokenPath, defaultAuth: true })
+  );
+  await step("the default refuses anonymous and bogus-bearer /v1 calls (401)", async () => {
+    const anonymous = await fetch(`${fr.url}/v1/models`);
+    assert.equal(anonymous.status, 401, await anonymous.text());
+    const bogus = await fetch(`${fr.url}/v1/models`, {
+      headers: { authorization: `Bearer ${BOGUS_CLIENT_TOKEN}` },
+    });
+    assert.equal(bogus.status, 401, await bogus.text());
+    const chatAnonymous = await fetch(`${fr.url}/v1/chat/completions`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ model, messages: [{ role: "user", content: "hi" }] }),
+    });
+    assert.equal(chatAnonymous.status, 401, await chatAnonymous.text());
+  });
+  await stopProcess(fr.child);
+
   await step("OpenVault stops", () => stopProcess(openVault));
   fr = await step("FreeRoute restarts with OpenVault down (fresh caches)", () =>
     startFreeRoute("freeroute-3-vault-down", { adminTokenPath })
@@ -1241,6 +1436,8 @@ async function main() {
         BULK_SECRET,
         AGENT_SECRET,
         CLI_SECRET,
+        FOREIGN_TEST_SECRET,
+        BOUND_TEST_SECRET,
         ...Object.values(IMPORT_SECRETS),
       ]) {
         const hits = filesContaining([...dataFiles, ...freeRouteLogs], secret);
