@@ -248,7 +248,7 @@
     "stopping": "Stabdomas serveris (PID {pid})...",
     "stopped": "Serveris sustabdytas.",
     "notRunning": "Serveris neveikia.",
-    "port": "Prievadas, kuriame klausytis (numatyta: 20128)",
+    "port": "Prievadas, kuriame klausytis (numatyta: 3020)",
     "no_open": "Neatidaryti naršyklės automatiškai",
     "daemon": "Paleisti serverį kaip foninį demoną",
     "log": "Rodyti serverio žurnalus tiesiogiai",

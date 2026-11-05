@@ -1,4 +1,5 @@
 "use client";
+// Modified by Netie AI, 2026: no tunnel token field; FreeBuild stores no tunnel token.
 
 import { Icon as UiIcon, type IconName } from "@repo/ui/icons";
 
@@ -43,15 +44,9 @@ export function TunnelStep({ state, onUpdate, onNext, onBack }: StepProps) {
   const [selected, setSelected] = useState<Provider>(
     state.tunnel?.provider ?? "edge",
   );
-  const [token, setToken] = useState(state.tunnel?.token ?? "");
-
-  const needsToken = selected === "cloudflare" || selected === "ngrok";
 
   function handleContinue() {
-    if (needsToken && !token.trim()) return;
-
     const tunnel: TunnelConfig = { provider: selected };
-    if (needsToken) tunnel.token = token.trim();
 
     onUpdate({ tunnel });
     onNext();
@@ -83,7 +78,7 @@ export function TunnelStep({ state, onUpdate, onNext, onBack }: StepProps) {
               <button
                 key={p.id}
                 className={`ob-tunnel-card${isActive ? " active" : ""}`}
-                onClick={() => { setSelected(p.id); setToken(""); }}
+                onClick={() => setSelected(p.id)}
               >
                 <div className="ob-tunnel-card-icon"><UiIcon name={Icon} size={20} /></div>
                 <div className="ob-tunnel-card-content">
@@ -101,21 +96,10 @@ export function TunnelStep({ state, onUpdate, onNext, onBack }: StepProps) {
           })}
         </div>
 
-        {/* Token input (shown for cloudflare / ngrok) */}
-        {needsToken && (
-          <div className="ob-form-group">
-            <label htmlFor="ob-tunnel-token">
-              {selected === "cloudflare" ? t.onboarding.tunnel.cloudflareTokenLabel : t.onboarding.tunnel.ngrokTokenLabel}
-            </label>
-            <input
-              id="ob-tunnel-token"
-              type="password"
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleContinue()}
-              placeholder={selected === "cloudflare" ? t.onboarding.tunnel.cloudflarePlaceholder : t.onboarding.tunnel.ngrokPlaceholder}
-              autoComplete="off"
-            />
+        {selected === "cloudflare" && (
+          <div className="ob-pref-hint">
+            <UiIcon name="info" size={14} />
+            {t.onboarding.tunnel.cloudflareVaultHint}
           </div>
         )}
 

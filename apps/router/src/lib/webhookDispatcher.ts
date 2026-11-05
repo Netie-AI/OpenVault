@@ -6,6 +6,7 @@
 
 import crypto from "crypto";
 import { encrypt, decrypt } from "./db/encryption";
+import { resolveProviderApiKey } from "./netie/keyvault";
 import { OutboundUrlGuardError } from "@/shared/network/outboundUrlGuard";
 import { fetchWebhookUrl, type WebhookFetchOptions } from "@/shared/network/webhookFetch";
 import type { WebhookEvent } from "./webhooks/eventDescriptions";
@@ -151,7 +152,7 @@ export function notifyWebhookEvent(event: WebhookEvent, data: Record<string, any
 
 /**
  * Dispatch an event to all matching enabled webhooks.
- * Routes by kind: slack/discord use raw payload helpers; telegram decrypts botToken from metadata;
+ * Routes by kind: slack/discord use raw payload helpers; telegram reads the bot token from OpenVault;
  * custom uses HMAC-signed deliverWebhook.
  */
 export async function dispatchEvent(event: WebhookEvent, data: Record<string, any>): Promise<void> {
@@ -185,10 +186,14 @@ export async function dispatchEvent(event: WebhookEvent, data: Record<string, an
           const discordPayload = buildDiscordPayload(event, data);
           result = await deliverRaw(wh.url, discordPayload as unknown as Record<string, unknown>);
         } else if (kind === "telegram") {
-          const meta = decryptMetadata(wh.metadata_encrypted ?? null);
-          const botToken = meta?.botToken;
+          // The bot token lives in OpenVault (provider telegram), never on the webhook row.
+          const botToken = await resolveProviderApiKey("telegram");
           if (!botToken) {
-            result = { success: false, status: 0, error: "Missing Telegram botToken in metadata" };
+            result = {
+              success: false,
+              status: 0,
+              error: "No Telegram bot token in OpenVault (provider telegram)",
+            };
           } else {
             const apiUrl = buildTelegramUrl(botToken);
             // For Telegram, wh.url stores the chat_id

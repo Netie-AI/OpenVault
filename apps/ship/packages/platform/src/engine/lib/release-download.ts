@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: no default release repository (the upstream project is never downloaded from).
 /**
  * Fetch and extract a published Openship release tarball into a local
  * cache directory. Used by `openship-dist.ts` and the webmail dist
@@ -53,6 +54,7 @@ import { existsSync, mkdirSync, renameSync, rmSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { spawn } from "node:child_process";
+import { isUpstreamRepo } from "@repo/core";
 import { safeFetch, type SafeFetchResponse } from "./safe-fetch";
 import { assertPublicHostLiteral, SsrfError } from "./ssrf-guard";
 
@@ -63,8 +65,6 @@ const TAR_TIMEOUT_MS = 5 * 60_000;
  *  sha-verify). Generous for real dists; bounds a hostile/oversized response. */
 const MAX_RELEASE_ARTIFACT_BYTES = 512_000_000;
 
-const DEFAULT_REPO = "oblien/openship";
-
 export interface FetchAndExtractReleaseInput {
   /** Release tag / cache key, e.g. "v0.1.0". The extracted dist lives at `<cacheDir>/<tag>/`. */
   tag: string;
@@ -72,7 +72,8 @@ export interface FetchAndExtractReleaseInput {
   cacheDir: string;
 
   // ── GitHub-Releases mode (asset name → github.com/<repo>/releases/download/…) ──
-  /** GitHub `owner/repo`, e.g. "oblien/openship". Defaults to "oblien/openship". */
+  /** GitHub `owner/repo` that FreeBuild publishes releases from. There is no
+   *  default, and a repo owned by the upstream project is refused. */
   repo?: string;
   /** Release asset filename, e.g. "openship-v0.1.0-linux-amd64.tar.gz". */
   asset?: string;
@@ -155,7 +156,16 @@ export async function fetchAndExtractRelease(
     if (!input.asset) {
       throw new ReleaseDownloadError({ reason: "GitHub release download requires an asset name.", envOverride });
     }
-    const repo = input.repo ?? DEFAULT_REPO;
+    // Modified by Netie AI, 2026: FreeBuild does not download the upstream
+    // project's release artifacts (they run upstream code with none of this
+    // fork's guards). Point `envOverride` at a local dist instead.
+    const repo = input.repo?.trim();
+    if (!repo || isUpstreamRepo(repo)) {
+      throw new ReleaseDownloadError({
+        reason: "Release downloads from the upstream project are disabled; FreeBuild has no published release dist to fetch.",
+        envOverride,
+      });
+    }
     assetUrl = `https://github.com/${repo}/releases/download/${tag}/${input.asset}`;
     shaUrl = `${assetUrl}.sha256`;
   }

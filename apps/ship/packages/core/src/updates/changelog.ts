@@ -1,9 +1,12 @@
+// Modified by Netie AI, 2026: no release feed by default (see GITHUB_REPO in ./types).
 import { BRAND_LINKS } from "../constants";
 import { GITHUB_REPO } from "./types";
 
-/** Raw repository changelog pinned to a branch or release tag. */
+/** Raw repository changelog pinned to a branch or release tag, or "" when there is no release feed. */
 export function changelogMarkdownUrl(ref: string): string {
-  return `https://raw.githubusercontent.com/${GITHUB_REPO}/${encodeURIComponent(ref)}/CHANGELOG.md`;
+  return GITHUB_REPO
+    ? `https://raw.githubusercontent.com/${GITHUB_REPO}/${encodeURIComponent(ref)}/CHANGELOG.md`
+    : "";
 }
 
 export { normalizeChangelogVersion, parseChangelog, extractChangelogSection } from "./changelog-parser";

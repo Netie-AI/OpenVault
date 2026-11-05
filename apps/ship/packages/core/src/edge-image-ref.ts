@@ -1,3 +1,5 @@
+// Modified by Netie AI, 2026: the managed image names are FreeBuild names (MANAGED_IMAGE_NAMES).
+import { MANAGED_IMAGE_NAMES } from "./constants";
 import { buildImageRef } from "./image-ref";
 
 /**
@@ -7,7 +9,7 @@ import { buildImageRef } from "./image-ref";
  * `OPENSHIP_EDGE_TAG`), which meant the same box could compute two different edge
  * tags depending on which door the install came through. Order:
  *
- *   explicit → OPENSHIP_EDGE_IMAGE → injectedDefault → `<registry>/openship-edge:<tag>`
+ *   explicit → OPENSHIP_EDGE_IMAGE → injectedDefault → `<registry>/freebuild-edge:<tag>`
  *
  * where `registry = OPENSHIP_IMAGE_REGISTRY || DEFAULT_IMAGE_REGISTRY` and
  *       `tag      = OPENSHIP_EDGE_TAG || OPENSHIP_VERSION || fallbackTag || "latest"`.
@@ -27,7 +29,7 @@ export function buildEdgeImageRef(opts?: {
   fallbackTag?: string;
 }): string {
   return buildImageRef(opts, {
-    name: "openship-edge",
+    name: MANAGED_IMAGE_NAMES.edge,
     imageOverride: process.env.OPENSHIP_EDGE_IMAGE,
     tagOverride: process.env.OPENSHIP_EDGE_TAG,
   });

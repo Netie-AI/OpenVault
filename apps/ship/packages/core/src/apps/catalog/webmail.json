@@ -20,7 +20,7 @@
   "services": [
     {
       "name": "webmail",
-      "image": "ghcr.io/oblien/openship-webmail:latest",
+      "image": "localhost/freebuild/freebuild-webmail:latest",
       "exposedPort": 4080,
       "exposed": true,
       "volumes": [

@@ -8,10 +8,9 @@
  * dashboard) gets a machine-readable reason rather than "route not found".
  *
  * Mounted at `/api/cloud` in place of Openship's `cloud-saas.routes` +
- * `cloud-local.routes`, and layered under `billingPlansRoutes` at
- * `/api/billing` in place of `billing-saas.routes` / `billing-local.routes`
- * (GET /api/billing/plans still answers — reading the "coming soon" plan
- * catalog is not a hosted-cloud feature).
+ * `cloud-local.routes`, and at `/api/billing` in place of `billing-saas.routes` /
+ * `billing-local.routes`. GET /api/billing/plans answers the same 501: the plan
+ * catalog it served is the upstream hosted cloud's, not FreeBuild's.
  */
 import { Hono } from "hono";
 import { HostedCloudDisabledError } from "@repo/core";

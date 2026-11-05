@@ -3,6 +3,7 @@ const MAX_TRACE_HEADER_LENGTH = 2048;
 const INSTANCE_ID_PATTERN = /^[A-Za-z0-9._:-]{1,64}$/;
 
 export const OMNIROUTE_PEER_TRACE_HEADER = "X-FreeRoute-Peer-Trace";
+const LEGACY_PEER_TRACE_HEADER = "X-OmniRoute-Peer-Trace";
 
 type HeaderSource = Headers | Record<string, unknown> | null | undefined;
 type PeerEnvironment = {
@@ -25,6 +26,10 @@ function readHeader(headers: HeaderSource, name: string): string | null {
     if (key.toLowerCase() === expected && typeof value === "string") return value;
   }
   return null;
+}
+
+function readPeerTrace(headers: HeaderSource): string | null {
+  return readHeader(headers, OMNIROUTE_PEER_TRACE_HEADER) ?? readHeader(headers, LEGACY_PEER_TRACE_HEADER);
 }
 
 function getInstanceId(env: PeerEnvironment): string | null {
@@ -81,7 +86,7 @@ export function inspectPeerRequest(
   const instanceId = getInstanceId(env);
   if (!instanceId) return null;
 
-  const trace = parsePeerTrace(readHeader(headers, OMNIROUTE_PEER_TRACE_HEADER));
+  const trace = parsePeerTrace(readPeerTrace(headers));
   if (trace.includes(instanceId)) {
     return {
       code: "peer_loop_detected",
@@ -122,12 +127,16 @@ export function applyPeerTraceHeader(
   const instanceId = getInstanceId(env);
   if (!instanceId || !isConfiguredOmniRoutePeer(targetUrl, env)) return false;
 
-  const trace = parsePeerTrace(readHeader(clientHeaders, OMNIROUTE_PEER_TRACE_HEADER));
+  const trace = parsePeerTrace(readPeerTrace(clientHeaders));
   if (!trace.includes(instanceId)) trace.push(instanceId);
-  const traceHeaderLower = OMNIROUTE_PEER_TRACE_HEADER.toLowerCase();
+  const traceHeadersLower = [OMNIROUTE_PEER_TRACE_HEADER, LEGACY_PEER_TRACE_HEADER].map((name) =>
+    name.toLowerCase()
+  );
   for (const key of Object.keys(outgoingHeaders)) {
-    if (key.toLowerCase() === traceHeaderLower) delete outgoingHeaders[key];
+    if (traceHeadersLower.includes(key.toLowerCase())) delete outgoingHeaders[key];
   }
+  // Both names, so a peer on an older build still sees the trace and cannot loop.
   outgoingHeaders[OMNIROUTE_PEER_TRACE_HEADER] = trace.join(",");
+  outgoingHeaders[LEGACY_PEER_TRACE_HEADER] = trace.join(",");
   return true;
 }

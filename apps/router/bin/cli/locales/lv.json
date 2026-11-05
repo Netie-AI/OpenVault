@@ -248,7 +248,7 @@
     "stopping": "Apturot serveri (PID {pid})...",
     "stopped": "Serveris apturēts.",
     "notRunning": "Serveris nedarbojas.",
-    "port": "Port, kurā klausīties (noklusējums: 20128)",
+    "port": "Port, kurā klausīties (noklusējums: 3020)",
     "no_open": "Neatvērt pārlūku automātiski",
     "daemon": "Palaist serveri kā fonu dēmonu",
     "log": "Rādīt servera žurnālus tiešā veidā",

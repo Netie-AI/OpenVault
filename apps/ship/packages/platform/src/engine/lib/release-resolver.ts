@@ -21,7 +21,7 @@ import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { GithubReleasePayload, ReleaseSource } from "@repo/core";
-import { renderAssetName } from "@repo/core";
+import { isUpstreamRepo, renderAssetName } from "@repo/core";
 import { APP_VERSION } from "./app-version";
 import { fetchAndExtractRelease } from "./release-download";
 import { safeFetch } from "./safe-fetch";
@@ -225,6 +225,9 @@ function resolvedVersion(raw: string | null | undefined): ResolvedReleaseVersion
 
 /** Fetch a repo's latest published release (best-effort; null on any failure). */
 export async function fetchLatestRelease(repo: string): Promise<GithubReleasePayload | null> {
+  // Modified by Netie AI, 2026: no request for an empty repo or one owned by the
+  // upstream project (FreeBuild does not read the upstream's release stream).
+  if (!repo.trim() || isUpstreamRepo(repo)) return null;
   try {
     const ctl = new AbortController();
     const timer = setTimeout(() => ctl.abort(), 10_000);

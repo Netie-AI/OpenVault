@@ -29,6 +29,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { DATA_DIR } from "@/lib/db/core";
 import { upsertVersionManagerTool } from "@/lib/db/versionManager";
+import { assertServiceToolAllowed } from "@omniroute/open-sse/netie/policy.ts";
 import { runNpm, InstallError } from "./utils";
 
 export const OPENWA_PACKAGE = "@open-wa/wa-automate";
@@ -102,6 +103,9 @@ export async function getLatestVersion(): Promise<string | null> {
  * Upserts the version_manager row with tool='openwa'.
  */
 export async function install(version = "latest"): Promise<InstallResult> {
+  // FreeRoute: open-wa holds a paired WhatsApp Web session on a stealth headless
+  // browser, so it cannot be installed or spawned (open-sse/netie/policy.ts).
+  assertServiceToolAllowed("openwa");
   const startMs = Date.now();
 
   // Create install dir + minimal package.json (idempotent) — same shape as mux.ts.
@@ -203,6 +207,8 @@ export async function uninstall(): Promise<void> {
  *   flag needed.
  */
 export function resolveSpawnArgs(apiKey: string, port: number): SpawnArgs {
+  // FreeRoute: see install() above.
+  assertServiceToolAllowed("openwa");
   const serverPath = getServerPath();
   fs.mkdirSync(path.join(OPENWA_INSTALL_DIR, "data"), { recursive: true });
 

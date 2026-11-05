@@ -248,7 +248,7 @@
     "stopping": "Qed jieqaf is-server (PID {pid})...",
     "stopped": "Is-server waqaf.",
     "notRunning": "Is-server mhux qed jaħdem.",
-    "port": "Port li jisma' fuqu (default: 20128)",
+    "port": "Port li jisma' fuqu (default: 3020)",
     "no_open": "Tiftaħx il-browser awtomatikament",
     "daemon": "Mexxi s-server bħala daemon fl-isfond",
     "log": "Uri l-logs tas-server inline",

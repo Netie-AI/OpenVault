@@ -1,3 +1,4 @@
+<!-- Modified by Netie AI, 2026: secrets-at-rest section describes the per-install secret. -->
 # Security Guide — where to look
 
 > This is **not** the vulnerability-disclosure policy (that's [`SECURITY.md`](./SECURITY.md)).
@@ -141,9 +142,15 @@ env vars, SMTP passwords).
 
 - AES-256-GCM, key = `SHA-256(BETTER_AUTH_SECRET)`. Ciphertext is tagged `enc1:` so plaintext
   vs encrypted is explicit (no silent decrypt-fallback).
-- `BETTER_AUTH_SECRET` defaults to a placeholder only on `target=local`; a deployable target
-  **refuses to boot** on the placeholder (`apps/api/src/config/env.ts`). The CLI auto-generates
-  a per-install secret (`~/.openship/auth-secret`, `0600`).
+- `BETTER_AUTH_SECRET` from the environment wins. When it is unset, empty or the public
+  placeholder `change-me-in-production`, the API generates a random per-install secret on
+  first start and keeps it in `~/.openship/auth-secret` (mode `0600`; `OPENSHIP_DATA_DIR` or
+  `OPENSHIP_AUTH_SECRET_FILE` move it) (`packages/db/src/install-secret.ts`). A deployable
+  target (`OPENSHIP_TARGET` other than `local`) still **refuses to boot** unless the operator
+  set the variable (`packages/platform/src/engine/config/env.ts`).
+- Values an earlier build sealed under the placeholder keep opening (`createEncryption`
+  `fallbackSecrets`); the next write of each seals it under the install secret.
+- The secret file is part of the data. In a container, put it on a volume or set the variable.
 
 **Rule:** serialized/API-returned objects expose only `hasX` flags, never ciphertext or
 plaintext. Losing the secret makes every stored credential undecryptable — treat it as such.

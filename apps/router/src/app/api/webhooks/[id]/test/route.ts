@@ -6,7 +6,8 @@
 import { NextResponse } from "next/server";
 import { sanitizeErrorMessage } from "@omniroute/open-sse/utils/error";
 import { getWebhook, recordWebhookDelivery } from "@/lib/db/webhooks";
-import { decryptMetadata } from "@/lib/webhookDispatcher";
+import { resolveProviderApiKey } from "@/lib/netie/keyvault";
+import { netieErrorResponse } from "@/lib/netie/providerGuards";
 import { buildSlackPayload } from "@/lib/webhooks/integrations/slack";
 import { buildTelegramUrl, buildTelegramPayload } from "@/lib/webhooks/integrations/telegram";
 import { buildDiscordPayload } from "@/lib/webhooks/integrations/discord";
@@ -110,10 +111,20 @@ export async function POST(_: Request, { params }: { params: Promise<{ id: strin
       payloadSent = buildDiscordPayload("test.ping", testData) as Record<string, unknown>;
       fetchUrl = webhook.url;
     } else if (kind === "telegram") {
-      const meta = decryptMetadata(webhook.metadata_encrypted ?? null);
-      const botToken = meta?.botToken;
+      // The bot token lives in OpenVault (provider telegram), never on the webhook row.
+      let botToken: string | null;
+      try {
+        botToken = await resolveProviderApiKey("telegram");
+      } catch (keyVaultError) {
+        const named = netieErrorResponse(keyVaultError);
+        if (named) return named;
+        throw keyVaultError;
+      }
       if (!botToken) {
-        return NextResponse.json({ error: "Missing Telegram botToken" }, { status: 422 });
+        return NextResponse.json(
+          { error: "No Telegram bot token in OpenVault (provider telegram)" },
+          { status: 422 }
+        );
       }
       fetchUrl = buildTelegramUrl(botToken);
       payloadSent = buildTelegramPayload("test.ping", testData, webhook.url) as Record<

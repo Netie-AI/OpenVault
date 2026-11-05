@@ -1,5 +1,10 @@
+// Modified by Netie AI, 2026: the catalog is the bundled one. The upstream
+// project's repository is no longer fetched at boot or every 10 minutes, and no
+// remote entry overrides a bundled one. An operator can opt in to an overlay
+// they control with FREEBUILD_CATALOG_URL (off by default).
 import {
   APP_TEMPLATES,
+  isUpstreamUrl,
   isValidAppTemplate,
   parseAppTemplate,
   templateEngineOk,
@@ -10,45 +15,72 @@ import { trackBackgroundWork } from "../../lib/background-work";
 import { readApiVersion } from "../../lib/release-dist";
 
 /**
- * Runtime app catalog = the BUNDLED catalog (`@repo/core` APP_TEMPLATES) overlaid
- * by a repo-fetched copy, so a new/updated app in the repo appears AND installs
- * on existing instances without a redeploy. Stale-while-revalidate + fail-safe:
- * `getRuntimeCatalog()` is synchronous (every consumer stays sync) — it returns
- * the current cache and kicks a background refresh when stale. Any fetch/parse
- * failure or an offline box simply keeps serving the last-good/bundled catalog,
- * so the overlay can never break the catalog.
+ * Runtime app catalog = the BUNDLED catalog (`@repo/core` APP_TEMPLATES). By
+ * default nothing else is read and no network request is made.
  *
- * Versioning (the overlay can be AHEAD of this instance): each entry declares an
- * optional `minEngine`. Resolution never silently drops a too-new app — instead:
- *   - engine ok                         → the overlay entry (remote-wins).
+ * Opt-in overlay: when the operator sets FREEBUILD_CATALOG_URL to a catalog they
+ * control (https, or http on loopback), that file is fetched in the background
+ * and its entries are merged over the bundled ones (overlay wins). The URL may
+ * not point at the upstream project's repository or hosts. Stale-while-revalidate
+ * and fail-safe: `getRuntimeCatalog()` is synchronous (every consumer stays sync)
+ * and returns the current cache; a fetch or parse failure keeps the last-good or
+ * bundled catalog, so the overlay can never break the catalog.
+ *
+ * Versioning (an overlay can be AHEAD of this instance): each entry declares an
+ * optional `minEngine`. Resolution never silently drops a too-new app. Instead:
+ *   - engine ok                         → the overlay entry (overlay wins).
  *   - too new, but bundled copy is ok    → serve the BUNDLED copy (no break),
  *                                          flagged `updateAvailable`.
  *   - too new, no runnable copy          → a guided `requiresUpdate` PLACEHOLDER
- *                                          ("Requires Openship ≥ X"), not installable.
+ *                                          ("Requires FreeBuild ≥ X"), not installable.
  * `schemaVersion` (an unreadable future SHAPE) is still dropped at ingest, but a
  * best-effort placeholder is surfaced when the raw entry's identity is readable.
  *
- * Trust: the source is our own repo over HTTPS (repo-curated, no signing, no user
- * uploads); every entry is shape-validated before it can drive an install.
+ * Trust: an overlay is whatever the operator points at. Every entry is
+ * shape-validated before it can drive an install, but it is NOT signed, so only
+ * point it at a file you control.
  */
 
-const REMOTE_URL =
-  "https://raw.githubusercontent.com/oblien/openship/main/packages/core/src/apps/catalog.json";
+export const CATALOG_URL_ENV = "FREEBUILD_CATALOG_URL";
+
+/** The operator's overlay URL, or null (the default: bundled catalog only). */
+export function catalogOverlayUrl(env: NodeJS.ProcessEnv = process.env): string | null {
+  const raw = env[CATALOG_URL_ENV]?.trim();
+  if (!raw) return null;
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    console.warn(`[catalog] ${CATALOG_URL_ENV} is not a valid URL; serving the bundled catalog only`);
+    return null;
+  }
+  const loopback = ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
+  if (url.protocol !== "https:" && !(url.protocol === "http:" && loopback)) {
+    console.warn(`[catalog] ${CATALOG_URL_ENV} must be https (or http on loopback); serving the bundled catalog only`);
+    return null;
+  }
+  if (isUpstreamUrl(url.toString())) {
+    console.warn(`[catalog] ${CATALOG_URL_ENV} points at the upstream project and is ignored`);
+    return null;
+  }
+  return url.toString();
+}
+
 const TTL_MS = 600_000; // 10 minutes
 /** Catalog-ENVELOPE version we know how to read (the top-level `version`). A
  *  newer envelope is logged, not fatal — entries are gated individually. */
 const MAX_CATALOG_VERSION = 1;
 
 /** A resolved catalog entry: a template, possibly a lightweight placeholder that
- *  needs a newer Openship to install. */
+ *  needs a newer FreeBuild to install. */
 export type ResolvedAppTemplate = AppTemplate & {
-  /** Set when this id needs a newer Openship than this instance — not installable. */
+  /** Set when this id needs a newer FreeBuild than this instance, not installable. */
   requiresUpdate?: { minVersion?: string };
   /** A newer (engine-gated) version exists in the overlay; the bundled copy is served. */
   updateAvailable?: boolean;
 };
 
-/** This instance's Openship version, for the `minEngine` gate.
+/** This instance's FreeBuild version, for the `minEngine` gate.
  *
  *  Kept defensive, but note it no longer throws: `readApiVersion()` used to read
  *  package.json off disk, which threw inside the desktop's compiled binary — so
@@ -114,8 +146,8 @@ function placeholder(entry: AppTemplate): ResolvedAppTemplate {
 }
 
 /**
- * Resolve the effective catalog for this instance: remote-wins union of bundled
- * + overlay ids, then the engine gate with bundled fallback / guided placeholder.
+ * Resolve the effective catalog for this instance: union of bundled + overlay
+ * ids (overlay wins), then the engine gate with bundled fallback / guided placeholder.
  * `tooNewRaw` are placeholders for entries whose SHAPE was too new to parse.
  */
 export function resolveCatalog(
@@ -125,7 +157,7 @@ export function resolveCatalog(
 ): ResolvedAppTemplate[] {
   const byId = new Map<string, AppTemplate>();
   for (const b of bundledValid) byId.set(b.id, b);
-  for (const r of remote) byId.set(r.id, r); // remote wins
+  for (const r of remote) byId.set(r.id, r); // overlay wins
 
   const out: ResolvedAppTemplate[] = [];
   for (const [id, entry] of byId) {
@@ -154,9 +186,11 @@ let cache: readonly ResolvedAppTemplate[] = resolveCatalog([], []);
 let cachedAt = 0;
 let refreshing = false;
 
-async function fetchRemote(): Promise<{ entries: AppTemplate[]; tooNew: ResolvedAppTemplate[] } | null> {
+async function fetchRemote(
+  url: string,
+): Promise<{ entries: AppTemplate[]; tooNew: ResolvedAppTemplate[] } | null> {
   try {
-    const res = await fetch(REMOTE_URL, { signal: AbortSignal.timeout(8_000) });
+    const res = await fetch(url, { signal: AbortSignal.timeout(8_000), redirect: "error" });
     if (!res.ok) return null;
     const body = (await res.json()) as { apps?: unknown; version?: unknown };
     if (!Array.isArray(body?.apps)) return null;
@@ -187,10 +221,10 @@ async function fetchRemote(): Promise<{ entries: AppTemplate[]; tooNew: Resolved
   }
 }
 
-function refresh(): void {
+function refresh(url: string): void {
   if (refreshing) return;
   refreshing = true;
-  void trackBackgroundWork(fetchRemote()
+  void trackBackgroundWork(fetchRemote(url)
     .then((remote) => {
       if (remote) cache = resolveCatalog(remote.entries, remote.tooNew);
       cachedAt = Date.now();
@@ -203,14 +237,17 @@ function refresh(): void {
     }));
 }
 
-/** The current app catalog (bundled ∪ repo overlay, engine-resolved). Sync;
- *  refreshes in the background when the cache is older than the TTL. */
+/** The current app catalog (bundled, plus the operator's overlay if one is
+ *  configured; engine-resolved). Sync. Makes no network request unless
+ *  FREEBUILD_CATALOG_URL is set, and then refreshes in the background when the
+ *  cache is older than the TTL. */
 export function getRuntimeCatalog(): readonly ResolvedAppTemplate[] {
-  if (Date.now() - cachedAt > TTL_MS) refresh();
+  const overlayUrl = catalogOverlayUrl();
+  if (overlayUrl && Date.now() - cachedAt > TTL_MS) refresh(overlayUrl);
   return cache;
 }
 
-/** One app by id from the CURATED runtime catalog (bundled ∪ overlay). May be a
+/** One app by id from the CURATED runtime catalog (bundled, plus the operator overlay). May be a
  *  `requiresUpdate` placeholder — callers gate install on that. Org-agnostic;
  *  use `getTemplateForOrg` when a per-org custom app should also resolve. */
 export function getRuntimeTemplate(id: string | null | undefined): ResolvedAppTemplate | undefined {
@@ -241,6 +278,9 @@ export async function getTemplateForOrg(
   return custom ? { ...custom.template, verified: false, unlisted: false, custom: true } : undefined;
 }
 
-// Warm the overlay at boot so instances pick up repo changes promptly. Skipped
-// under vitest so importing the module never fires a real network fetch.
-if (!process.env.VITEST) refresh();
+// Warm the operator's overlay at boot, only when one is configured. Skipped under
+// vitest so importing the module never fires a real network fetch.
+if (!process.env.VITEST) {
+  const overlayUrl = catalogOverlayUrl();
+  if (overlayUrl) refresh(overlayUrl);
+}

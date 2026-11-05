@@ -9,6 +9,8 @@
 
 import { randomUUID } from "node:crypto";
 import { getDbInstance } from "./core";
+import { KeysManagedByOpenVaultError } from "@/lib/netie/keyvault";
+import { LOG_EXPORT_SECRET_FIELDS } from "@/lib/netie/scrubLocalSecrets";
 
 export interface LogExportDestinationRow {
   id: string;
@@ -100,9 +102,28 @@ export function getLogExportDestination(id: string): LogExportDestinationRow | n
   return row ? mapRow(row) : null;
 }
 
+/** FreeRoute keeps no log-export credentials: they are read from OpenVault when a client is built. */
+function assertNoStoredCredentials(
+  config: Record<string, unknown> | undefined,
+  existing?: Record<string, unknown>
+): void {
+  const held = LOG_EXPORT_SECRET_FIELDS.filter((field) => {
+    const value = config?.[field];
+    // A copy an older build left is not a new write; the boot scrub removes it.
+    return typeof value === "string" && value.trim().length > 0 && value !== existing?.[field];
+  });
+  if (held.length > 0) {
+    throw new KeysManagedByOpenVaultError(
+      held,
+      `${held.join(", ")} would be stored in FreeRoute's own database. Log-export credentials are read from OpenVault.`
+    );
+  }
+}
+
 export function createLogExportDestination(
   input: CreateLogExportDestinationInput
 ): LogExportDestinationRow {
+  assertNoStoredCredentials(input.config);
   const db = getDbInstance();
   const now = new Date().toISOString();
   const id = randomUUID();
@@ -133,6 +154,7 @@ export function updateLogExportDestination(
 ): LogExportDestinationRow | null {
   const existing = getLogExportDestination(id);
   if (!existing) return null;
+  assertNoStoredCredentials(input.config, existing.config);
 
   const db = getDbInstance();
   db.prepare(

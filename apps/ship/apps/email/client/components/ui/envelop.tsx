@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: FreeBuild naming; upstream names removed from shipped text.
 export default function Envelop() {
   return (
     <div className="relative h-[303.33px] w-[455px]">
@@ -275,7 +276,7 @@ export default function Envelop() {
       </div>
       <div className="absolute left-[170px] top-[32px]">
         <div className="flex flex-col font-mono text-[9px] font-semibold leading-tight text-white/70">
-          <span>0 Email</span>
+          <span>FreeBuild Mail</span>
           <span>123 Open Source Way</span>
           <span>Freemail City, FS 98765</span>
           <span>United States</span>

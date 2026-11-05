@@ -248,7 +248,7 @@
     "stopping": "server বন্ধ করা হচ্ছে (PID {pid})...",
     "stopped": "server বন্ধ হয়েছে।",
     "notRunning": "server চলছে না।",
-    "port": "যে পোর্টে listen করবে (ডিফল্ট: 20128)",
+    "port": "যে পোর্টে listen করবে (ডিফল্ট: 3020)",
     "no_open": "browser স্বয়ংক্রিয়ভাবে খুলবেন না",
     "daemon": "server-কে background daemon হিসেবে চালান",
     "log": "server log-গুলো inline দেখান",

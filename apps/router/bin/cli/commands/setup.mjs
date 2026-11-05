@@ -21,9 +21,18 @@ function wantsProviderSetup(opts) {
   return Boolean(opts.addProvider) || Boolean(opts.provider);
 }
 
-async function resolvePassword(opts, prompt, nonInteractive, settings) {
+// Placeholder from old .env copies and deploy manifests. A FreeRoute install never
+// takes it as a password, from INITIAL_PASSWORD or from --password.
+const PLACEHOLDER_PASSWORDS = new Set(["CHANGEME"]);
+
+export function isPlaceholderPassword(value) {
+  return typeof value === "string" && PLACEHOLDER_PASSWORDS.has(value.trim());
+}
+
+export async function resolvePassword(opts, prompt, nonInteractive, settings) {
   if (opts.password !== undefined) return opts.password;
-  if (!settings.password && process.env.INITIAL_PASSWORD) return process.env.INITIAL_PASSWORD;
+  const fromEnv = process.env.INITIAL_PASSWORD;
+  if (!settings.password && fromEnv && !isPlaceholderPassword(fromEnv)) return fromEnv;
   if (nonInteractive) return "";
 
   const answer = await prompt.ask("Set an admin password now? [y/N]", "N");
@@ -48,6 +57,10 @@ async function setupPassword(db, opts, prompt, nonInteractive) {
       printInfo("Password setup skipped. Dashboard login remains disabled.");
     }
     return false;
+  }
+
+  if (isPlaceholderPassword(password)) {
+    throw new Error("CHANGEME is the well-known placeholder password. Choose a different one.");
   }
 
   if (password.length < 8) {

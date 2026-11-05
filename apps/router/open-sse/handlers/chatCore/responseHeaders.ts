@@ -2,7 +2,7 @@ import {
   attachOmniRouteMetaHeaders,
   buildOmniRouteResponseMetaHeaders,
 } from "@/domain/omnirouteResponseMeta";
-import { OMNIROUTE_RESPONSE_HEADERS } from "@/shared/constants/headers";
+import { OMNIROUTE_RESPONSE_HEADERS, withLegacyHeaderTwins } from "@/shared/constants/headers";
 import { defaultLogger } from "@omniroute/open-sse/utils/logger";
 
 const STREAMING_RESPONSE_HEADER_DENYLIST = new Set([
@@ -107,7 +107,8 @@ function responseHeaderWireBytes(name: string, value: string): number {
 }
 
 function isOmniRouteInternalHeader(headerName: string): boolean {
-  return headerName.toLowerCase().startsWith("x-omniroute-");
+  const lower = headerName.toLowerCase();
+  return lower.startsWith("x-omniroute-") || lower.startsWith("x-freeroute-");
 }
 
 /**
@@ -348,7 +349,7 @@ export function buildStreamingResponseHeaders(
     responseHeaders[CODEX_TURN_STATE_RESPONSE_HEADER] = codexTurnState;
   }
   attachOmniRouteMetaHeaders(responseHeaders, meta);
-  return responseHeaders;
+  return withLegacyHeaderTwins(responseHeaders);
 }
 
 export function materializeDeduplicatedExecutionResult<T extends Record<string, unknown>>(

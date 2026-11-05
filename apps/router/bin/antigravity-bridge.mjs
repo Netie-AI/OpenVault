@@ -18,7 +18,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const PORT = parseInt(process.env.BRIDGE_PORT || "20129", 10);
-const ROUTER_URL = process.env.ROUTER_URL || "http://127.0.0.1:20128/v1/antigravity";
+const ROUTER_URL = process.env.ROUTER_URL || "http://127.0.0.1:3020/v1/antigravity";
 const ROUTER_API_KEY =
   process.env.ROUTER_API_KEY || process.env.OMNIROUTE_API_KEY || "sk-omniroute-bridge-local";
 

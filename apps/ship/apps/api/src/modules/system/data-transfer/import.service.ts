@@ -236,18 +236,32 @@ export function dropOpenVaultManagedCredentials(
     return !managed;
   });
   const dropped = legacyDns.length + droppedCredentialIds.size;
-  if (dropped === 0) return { file, bundle, dropped };
+  // A tunnel token is not stored either (see assertNoTunnelToken), so an export from a
+  // build that kept one must not put it back through the instance_settings row or the bundle.
+  const isTunnelTokenEntry = (entry: { table: string; column: string }) =>
+    entry.table === "instance_settings" && entry.column === "tunnelToken";
+  const settingsRows = tables["instance_settings"] ?? [];
+  const carriesTunnelToken =
+    settingsRows.some((row) => row.tunnelToken !== undefined && row.tunnelToken !== null) ||
+    (bundle?.entries.some(isTunnelTokenEntry) ?? false);
+  if (dropped === 0 && !carriesTunnelToken) return { file, bundle, dropped };
 
   const nextTables = { ...tables };
   if ("dns_credential" in tables) nextTables["dns_credential"] = [];
   if ("credential" in tables) nextTables["credential"] = keptCredentials;
+  if ("instance_settings" in tables) {
+    nextTables["instance_settings"] = settingsRows.map((row) =>
+      "tunnelToken" in row ? { ...row, tunnelToken: null } : row,
+    );
+  }
   const nextBundle = bundle
     ? {
         ...bundle,
         entries: bundle.entries.filter(
           (entry) =>
             entry.table !== "dns_credential" &&
-            !(entry.table === "credential" && droppedCredentialIds.has(entry.id)),
+            !(entry.table === "credential" && droppedCredentialIds.has(entry.id)) &&
+            !isTunnelTokenEntry(entry),
         ),
       }
     : bundle;

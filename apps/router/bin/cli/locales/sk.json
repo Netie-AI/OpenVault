@@ -248,7 +248,7 @@
     "stopping": "Zastavuje sa server (PID {pid})...",
     "stopped": "Server bol zastavený.",
     "notRunning": "Server nie je spustený.",
-    "port": "Port na počúvanie (predvolené: 20128)",
+    "port": "Port na počúvanie (predvolené: 3020)",
     "no_open": "Neotvárať prehliadač automaticky",
     "daemon": "Spustiť server ako démona na pozadí",
     "log": "Zobrazovať protokoly servera priamo",

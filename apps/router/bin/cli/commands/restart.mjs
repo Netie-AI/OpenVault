@@ -6,7 +6,7 @@ export function registerRestart(program) {
   program
     .command("restart")
     .description(t("restart.description"))
-    // No Commander default: runServe() falls back to PORT, then 20128 (#7049).
+    // No Commander default: runServe() falls back to PORT, then 3020 (#7049).
     .option("--port <port>", t("serve.port"))
     .action(async (opts) => {
       const exitCode = await runRestartCommand(opts);

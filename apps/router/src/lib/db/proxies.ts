@@ -3,6 +3,7 @@
 // (Vercel Edge, Deno Deploy, or Cloudflare Workers) instead of an undici ProxyAgent. All relay
 // types share the exact same x-relay-target / x-relay-path / x-relay-auth header spec; only the
 // deployment surface differs.
+import { assertProxyLoginWriteAllowed } from "@/lib/netie/providerGuards";
 import { randomUUID } from "crypto";
 import { getDbInstance } from "./core";
 import { backupDbFile } from "./backup";
@@ -130,6 +131,8 @@ function insertProxyRow(
   payload: ProxyPayload,
   now: string
 ) {
+  // FreeRoute keeps no proxy logins: a username or password answers keys_managed_by_openvault.
+  assertProxyLoginWriteAllowed(payload);
   db.prepare(
     `INSERT INTO proxy_registry
       (id, name, type, host, port, username, password, region, notes, status, source, family, subscription_id, created_at, updated_at)
@@ -160,6 +163,8 @@ function updateProxyRow(
   payload: Partial<ProxyPayload>,
   now: string
 ) {
+  // Blank values clear a stored login and pass; a non-empty one is refused.
+  assertProxyLoginWriteAllowed(payload);
   const incomingUsername =
     typeof payload.username === "string" ? payload.username.trim() : undefined;
   const incomingPassword =

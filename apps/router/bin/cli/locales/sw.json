@@ -248,7 +248,7 @@
     "stopping": "Inasimamisha seva (PID {pid})...",
     "stopped": "Seva imesimamishwa.",
     "notRunning": "Seva haifanyi kazi.",
-    "port": "Porti ya kusikilizia (chaguo-msingi: 20128)",
+    "port": "Porti ya kusikilizia (chaguo-msingi: 3020)",
     "no_open": "Usifungue kivinjari kiotomatiki",
     "daemon": "Endesha seva kama daemoni ya chinichini",
     "log": "Onyesha kumbukumbu za seva ndani ya mstari",

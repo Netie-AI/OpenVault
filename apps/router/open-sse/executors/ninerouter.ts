@@ -29,6 +29,7 @@ import {
 import { stripInternalBodyFields } from "../config/cliFingerprints.ts";
 import { FETCH_TIMEOUT_MS } from "../config/constants.ts";
 import { buildErrorBody } from "../utils/error.ts";
+import { assertServiceToolAllowed } from "../netie/policy.ts";
 import { getSupervisor } from "@/lib/services/registry";
 import { getOrCreateApiKey } from "@/lib/services/apiKey";
 
@@ -50,6 +51,9 @@ export class NineRouterExecutor extends BaseExecutor {
   private readonly upstreamBaseUrl: string;
 
   constructor(baseUrl?: string) {
+    // FreeRoute: 9router is a separate upstream product that is not included in
+    // this edition (upstream_service_not_included), so no executor can be built.
+    assertServiceToolAllowed("9router");
     const effectiveBase = baseUrl ?? resolveNineRouterBaseUrl();
     super("9router", {
       id: "9router",

@@ -6,6 +6,7 @@ import {
   setManagedImagesFromSource,
 } from "@repo/adapters";
 import { isDevWatchReload } from "@repo/db";
+import { DEFAULT_ENCRYPTION_SECRET } from "@repo/db/encryption";
 import { app } from "./app";
 import { cloudRuntimeTarget, cloudRuntimeTargetId, env, runtimeTargetId } from "@repo/platform/engine/config/env";
 import { getAuthMode } from "@repo/platform/engine/lib/auth-mode";
@@ -27,7 +28,7 @@ const hostname = process.env.OPENSHIP_API_HOST?.trim() || "127.0.0.1";
 // Hand the adapters' backup-credential decrypt the SAME resolved secret the API
 // encrypts with (env applies the BETTER_AUTH_SECRET default; process.env may
 // not). Single source, no process.env mutation — see backup/common/credentials.
-setBackupCredentialSecret(env.BETTER_AUTH_SECRET);
+setBackupCredentialSecret(env.BETTER_AUTH_SECRET, [DEFAULT_ENCRYPTION_SECRET]);
 
 // Same pattern, same reason: adapters can't derive the pinned edge image (it comes
 // from APP_VERSION, i.e. apps/api/package.json), so declare it once here. Without

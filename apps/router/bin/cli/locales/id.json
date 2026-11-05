@@ -248,7 +248,7 @@
     "stopping": "Menghentikan server (PID {pid})...",
     "stopped": "Server dihentikan.",
     "notRunning": "Server tidak berjalan.",
-    "port": "Port yang digunakan untuk mendengarkan (default: 20128)",
+    "port": "Port yang digunakan untuk mendengarkan (default: 3020)",
     "no_open": "Jangan buka browser secara otomatis",
     "daemon": "Jalankan server sebagai daemon latar belakang",
     "log": "Tampilkan log server secara langsung",

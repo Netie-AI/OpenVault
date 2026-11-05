@@ -85,12 +85,6 @@ function printLoopbackRedirectWarning(providerId, redirectUri) {
       "ERR_CONNECTION_REFUSED) — that is normal, not a failure. Copy the full URL\n" +
       "from the address bar anyway and paste it below.\n"
   );
-  if (providerId === "antigravity") {
-    process.stdout.write(
-      "Tip: `freeroute login antigravity` captures the code automatically and\n" +
-        "avoids that error page entirely.\n"
-    );
-  }
 }
 
 function targetApiOptions(opts = {}) {

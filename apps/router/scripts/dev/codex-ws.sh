@@ -42,7 +42,7 @@
 set -euo pipefail
 
 # ---- Configuração (com defaults seguros) ------------------------------------
-OMNIROUTE_WS_BASE="${OMNIROUTE_WS_BASE:-http://127.0.0.1:20128/v1}"  # base do OmniRoute local
+OMNIROUTE_WS_BASE="${OMNIROUTE_WS_BASE:-http://127.0.0.1:3020/v1}"  # base do FreeRoute local
 OMNIROUTE_WS_MODEL="${OMNIROUTE_WS_MODEL:-gpt-5.5}"                  # id PURO (sem "codex/")
 CODEX_WS_HOME="${CODEX_WS_HOME:-$HOME/.codex-ws}"                    # CODEX_HOME isolado da Cloud
 
@@ -60,12 +60,12 @@ export CODEX_HOME="$CODEX_WS_HOME"
 if [ ! -f "$CODEX_HOME/config.toml" ]; then
   mkdir -p "$CODEX_HOME"
   cat > "$CODEX_HOME/config.toml" <<EOF
-# Gerado por codex-ws.sh — config isolada para o WS local do OmniRoute.
+# Gerado por codex-ws.sh: config isolada para o WS local do FreeRoute.
 model = "$OMNIROUTE_WS_MODEL"
 model_provider = "omniroute-local"
 
 [model_providers.omniroute-local]
-name = "OmniRoute Local (WS)"
+name = "FreeRoute Local (WS)"
 base_url = "$OMNIROUTE_WS_BASE"   # a URL WebSocket é derivada desta base pela CLI
 wire_api = "responses"            # único valor suportado desde fev/2026
 supports_websockets = true        # <- liga o transporte Responses-over-WebSocket

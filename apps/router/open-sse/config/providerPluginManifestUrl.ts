@@ -1,4 +1,9 @@
-export const PROVIDER_PLUGIN_MANIFEST_HEADER = "X-FreeRoute-Provider-Manifest-Url";
+import {
+  FREEROUTE_ROUTING_RESPONSE_HEADERS,
+  withLegacyHeaderTwins,
+} from "../../src/shared/constants/headers.ts";
+
+export const PROVIDER_PLUGIN_MANIFEST_HEADER = FREEROUTE_ROUTING_RESPONSE_HEADERS.providerManifestUrl;
 export const PROVIDER_PLUGIN_MANIFEST_PATH = "/api/v1/provider-plugin-manifest";
 
 function trimTrailingSlash(value: string): string {
@@ -20,7 +25,7 @@ export function resolveProviderPluginManifestUrl(origin?: string | null): string
 }
 
 export function getProviderPluginManifestHeader(origin?: string | null): Record<string, string> {
-  return {
+  return withLegacyHeaderTwins({
     [PROVIDER_PLUGIN_MANIFEST_HEADER]: resolveProviderPluginManifestUrl(origin),
-  };
+  });
 }

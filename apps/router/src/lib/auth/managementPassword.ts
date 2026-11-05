@@ -4,8 +4,8 @@ import { getSettings, updateSettings } from "@/lib/db/settings";
 const BCRYPT_HASH_PATTERN = /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/;
 const MANAGEMENT_PASSWORD_SALT_ROUNDS = 12;
 
-// Well-known placeholder shipped in `.env.example` (INITIAL_PASSWORD=CHANGEME). Bootstrapping
-// with it leaves the dashboard open to anyone, so we warn loudly on boot (Seg2 hardening).
+// Well-known placeholder from old `.env` copies and deploy manifests (INITIAL_PASSWORD=CHANGEME).
+// As INITIAL_PASSWORD it is treated as unset, so onboarding asks for a real password.
 const INSECURE_DEFAULT_PASSWORDS = new Set(["CHANGEME"]);
 
 type JsonRecord = Record<string, unknown>;
@@ -27,7 +27,23 @@ export interface EnsuredManagementPassword {
 }
 
 function getInitialPasswordValue(value: string | null | undefined) {
-  return typeof value === "string" && value.length > 0 ? value : null;
+  if (typeof value !== "string" || value.length === 0) return null;
+  return INSECURE_DEFAULT_PASSWORDS.has(value.trim()) ? null : value;
+}
+
+// The placeholder also has to read as unset to code that only tests
+// `process.env.INITIAL_PASSWORD` for truthiness (auth gate, setup wizard skip).
+function discardPlaceholderInitialPasswordEnv(
+  logger: EnsureManagementPasswordOptions["logger"]
+): void {
+  const fromEnv = process.env.INITIAL_PASSWORD;
+  if (typeof fromEnv !== "string" || !INSECURE_DEFAULT_PASSWORDS.has(fromEnv.trim())) return;
+  process.env.INITIAL_PASSWORD = "";
+  const warn = logger?.warn?.bind(logger) ?? console.warn;
+  warn(
+    '[AUTH][SECURITY] INITIAL_PASSWORD is the well-known placeholder "CHANGEME". Ignoring it. ' +
+      "Choose the dashboard password in onboarding, or set a different INITIAL_PASSWORD."
+  );
 }
 
 export function getStoredManagementPassword(settings: JsonRecord | null | undefined) {
@@ -77,18 +93,19 @@ export async function ensurePersistentManagementPasswordHash(
     };
   }
 
+  discardPlaceholderInitialPasswordEnv(options.logger);
+
+  if (storedPassword && INSECURE_DEFAULT_PASSWORDS.has(storedPassword)) {
+    const warn = options.logger?.warn?.bind(options.logger) ?? console.warn;
+    warn(
+      '[AUTH][SECURITY] The stored management password is the well-known placeholder "CHANGEME". ' +
+        "Change it in the dashboard."
+    );
+  }
+
   const bootstrapPassword =
     storedPassword ||
     getInitialPasswordValue(options.initialPassword ?? process.env.INITIAL_PASSWORD);
-
-  if (bootstrapPassword && INSECURE_DEFAULT_PASSWORDS.has(bootstrapPassword)) {
-    const warn = options.logger?.warn?.bind(options.logger) ?? console.warn;
-    warn(
-      '[AUTH][SECURITY] Management password is set to the well-known default "CHANGEME" ' +
-        "(INITIAL_PASSWORD in .env.example). Anyone can sign in to the dashboard with it — " +
-        "change it immediately via the dashboard or a strong INITIAL_PASSWORD."
-    );
-  }
 
   if (!bootstrapPassword) {
     return {

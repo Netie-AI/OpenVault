@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: the default registry is local (see DEFAULT_IMAGE_REGISTRY).
 import { DEFAULT_IMAGE_REGISTRY } from "./constants";
 
 /**
@@ -6,7 +7,8 @@ import { DEFAULT_IMAGE_REGISTRY } from "./constants";
  *
  *   explicit → <image env override> → injectedDefault → `<registry>/<image>:<tag>`
  *
- * where `registry = OPENSHIP_IMAGE_REGISTRY || DEFAULT_IMAGE_REGISTRY` and
+ * where `registry = OPENSHIP_IMAGE_REGISTRY || DEFAULT_IMAGE_REGISTRY` (a `localhost/`
+ * reference, so nothing is pulled from a remote registry unless the operator sets one) and
  *       `tag      = <tag env override> || OPENSHIP_VERSION || fallbackTag || "latest"`.
  *
  * The image name and the two env overrides are the ONLY per-image differences, so

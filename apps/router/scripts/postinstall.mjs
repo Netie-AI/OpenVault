@@ -22,6 +22,6 @@ if (
     const { warmUpRuntimes } = await import("../bin/cli/runtime/index.mjs");
     await warmUpRuntimes();
   } catch (err) {
-    console.warn(`[omniroute] postinstall warm-up skipped: ${err?.message ?? err}`);
+    console.warn(`[freeroute] postinstall warm-up skipped: ${err?.message ?? err}`);
   }
 })();

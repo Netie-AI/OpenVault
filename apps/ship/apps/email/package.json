@@ -2,7 +2,7 @@
   "name": "@repo/email",
   "version": "0.8.0",
   "private": true,
-  "description": "Self-hosted email - iRedMail (engine) + Zero Email (server + client). Orchestrator package: install and run server + client together.",
+  "description": "Self-hosted email - iRedMail (engine) + FreeBuild Mail webmail (server + client). Orchestrator package: install and run server + client together.",
   "scripts": {
     "resolve-catalogs": "bun run scripts/resolve-catalog-refs.ts",
     "postinstall": "node scripts/postinstall.mjs",

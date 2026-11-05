@@ -6,12 +6,14 @@ import { Icon as UiIcon } from "@repo/ui/icons";
 /**
  * Settings → Updates. Update/advisory status + user controls, for the desktop
  * app and self-hosted servers. Security posture is explicit: auto-update is OFF
- * by default, notifications can be muted, and everything is pulled from GitHub
- * only (see the disclosure) — nothing pushes to the install.
+ * by default, notifications can be muted, and everything is pulled from
+ * FreeBuild's own release feed only (see the disclosure), nothing pushes to the
+ * install. Modified by Netie AI, 2026: with no feed configured (the default) the
+ * tab says so instead of reporting "up to date", and no request leaves the page.
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { BRAND_LINKS, changelogUrl } from "@repo/core";
+import { BRAND_LINKS, RELEASES_LATEST_API, changelogUrl } from "@repo/core";
 import { SettingsSection } from "./SettingsSection";
 import { SettingsToggleRow } from "./SettingsToggleRow";
 import { useUpdates } from "@/components/updates/useUpdates";
@@ -44,6 +46,8 @@ export function UpdatesTab() {
   }, [refresh]);
 
   const upToDate = state && !state.updateAvailable;
+  // No release feed configured: there is nothing to check, so don't claim "latest".
+  const hasFeed = Boolean(RELEASES_LATEST_API) || desktop;
 
   return (
     <div className="space-y-6">
@@ -64,7 +68,9 @@ export function UpdatesTab() {
                   ? t.settings.updates.checking
                   : state.updateAvailable
                     ? interpolate(t.settings.updates.available, { version: state.latestVersion ?? "" })
-                    : t.settings.updates.upToDate}
+                    : hasFeed
+                      ? t.settings.updates.upToDate
+                      : t.settings.updates.noFeed}
               </p>
               <p className="text-[12px] text-muted-foreground">
                 {state?.currentVersion ? interpolate(t.settings.updates.current, { version: state.currentVersion }) : ""}
@@ -88,6 +94,7 @@ export function UpdatesTab() {
                 {t.settings.updates.updateNow}
               </button>
             )}
+            {hasFeed && (
             <button
               type="button"
               onClick={checkNow}
@@ -97,6 +104,7 @@ export function UpdatesTab() {
               {checking ? <UiIcon name="spinner" className="size-3.5 animate-spin" /> : <UiIcon name="refresh" className="size-3.5" />}
               {t.settings.updates.checkNow}
             </button>
+            )}
           </div>
         </div>
 
@@ -118,6 +126,7 @@ export function UpdatesTab() {
           />
         </div>
 
+        {BRAND_LINKS.site && (
         <a
           href={changelogUrl()}
           target="_blank"
@@ -127,6 +136,7 @@ export function UpdatesTab() {
           <UiIcon name="external-link" className="size-3.5" />
           {t.settings.updates.viewChangelog}
         </a>
+        )}
       </SettingsSection>
 
       {/* Security disclosure */}

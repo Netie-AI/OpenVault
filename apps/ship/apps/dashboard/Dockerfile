@@ -1,4 +1,5 @@
 # syntax=docker/dockerfile:1
+# Modified by Netie AI, 2026
 # ─── Build stage ────────────────────────────────────────
 # Pinned to .bun-version (1.3.3) — reproducible official images.
 FROM oven/bun:1.3.3 AS builder
@@ -31,5 +32,5 @@ COPY --from=builder /app/apps/dashboard/public ./apps/dashboard/public
 COPY --from=builder /app/apps/dashboard/standalone-server.mjs ./apps/dashboard/standalone-server.mjs
 
 ENV NODE_ENV=production
-EXPOSE 3001
+EXPOSE 3031
 CMD ["node", "apps/dashboard/standalone-server.mjs"]

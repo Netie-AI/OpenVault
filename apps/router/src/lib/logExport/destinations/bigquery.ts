@@ -88,14 +88,6 @@ const FIELDS: readonly LogExportConfigField[] = [
     helpFallback: "Only used when the dataset has to be created.",
   },
   {
-    key: "serviceAccountJson",
-    labelFallback: "Service account key (JSON)",
-    type: "textarea",
-    required: true,
-    secret: true,
-    helpFallback: "Needs BigQuery Data Editor on the dataset. Stored encrypted, never returned.",
-  },
-  {
     key: "autoCreate",
     labelFallback: "Create dataset and table if missing",
     type: "boolean",
@@ -476,7 +468,8 @@ export const bigQueryDestination: LogExportDestinationType<BigQueryConfig> = {
   id: "bigquery",
   labelFallback: "Google BigQuery",
   descriptionFallback:
-    "Stream call logs into a BigQuery table with a service account. Batches are inserted hourly.",
+    "Stream call logs into a BigQuery table with a service account. Batches are inserted hourly. " +
+    "The service account key is read from OpenVault (provider bigquery), not stored by FreeRoute.",
   docsUrl: "https://cloud.google.com/bigquery/docs/streaming-data-into-bigquery",
   secretFields: ["serviceAccountJson"],
   fields: FIELDS,

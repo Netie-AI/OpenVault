@@ -1,15 +1,12 @@
 "use client";
 
 import React, { createContext, useContext, useState, useCallback } from "react";
-import { CLOUD_DASHBOARD_URL, CLOUD_API_URL, SYSTEM } from "@repo/core";
+import { CLOUD_DASHBOARD_URL, CLOUD_API_URL } from "@repo/core";
 import {
   clearProductViewCookie,
   type ProductView,
   writeProductViewCookie,
 } from "@/lib/product-view";
-
-/** Default cloud domain. Modified by Netie AI, 2026: read from SYSTEM instead of a second literal copy. */
-const DEFAULT_CLOUD_DOMAIN = SYSTEM.DOMAINS.CLOUD_DOMAIN;
 
 /* ── Types ────────────────────────────────────────────────────────── */
 
@@ -43,7 +40,7 @@ interface PlatformContextValue {
   cloudApiUrl: string;
   machineName?: string;
   hostDomain?: string;
-  /** Resolved base domain - hostDomain or the default cloud domain */
+  /** Base domain for free project domains: HOST_DOMAIN, or "" when it is unset (free domains off). */
   baseDomain: string;
   setSelfHosted: (v: boolean) => void;
 }
@@ -104,7 +101,10 @@ export function PlatformProvider({
   hostDomain,
 }: PlatformProviderProps) {
   const [selfHosted, setSelfHostedState] = useState(initialSelfHosted);
-  const baseDomain = hostDomain || DEFAULT_CLOUD_DOMAIN;
+  // Modified by Netie AI, 2026: no fallback. This was the upstream project's cloud
+  // domain, which offered free subdomains the operator does not own. Empty means
+  // free domains are off until HOST_DOMAIN is set; consumers hide the option.
+  const baseDomain = hostDomain || "";
   const setSelfHosted = useCallback((v: boolean) => setSelfHostedState(v), []);
 
   // No local state for productView on purpose: it's resolved in the server

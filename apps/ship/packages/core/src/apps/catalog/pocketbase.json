@@ -65,7 +65,7 @@
       "label": "Superuser email",
       "help": "Email for the superuser created during the first deployment.",
       "type": "text",
-      "default": "admin@openship.local",
+      "default": "admin@freebuild.local",
       "required": true
     }
   ],

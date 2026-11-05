@@ -1,3 +1,10 @@
+import {
+  netieErrorResponse,
+  redactProviderNode,
+  rejectCredentialHeaders,
+} from "@/lib/netie/providerGuards";
+import { mergeStoredHeaderValues } from "@/shared/constants/upstreamHeaders";
+import { rejectClientImpersonationHeaders } from "@omniroute/open-sse/netie/policy.ts";
 import { NextResponse } from "next/server";
 import {
   deleteModelAliasesForProvider,
@@ -58,6 +65,11 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     }
     const { name, prefix, apiType, baseUrl, chatPath, modelsPath, customHeaders, iconUrl, dailyQuotaResetTimezone, dailyQuotaResetHour } =
       validation.data;
+    // Provider keys live in OpenVault: a header that carries one, under any name, is refused.
+    const headerRefusal = rejectCredentialHeaders(customHeaders);
+    if (headerRefusal) return headerRefusal;
+    const identityRefusal = rejectClientImpersonationHeaders(customHeaders);
+    if (identityRefusal) return identityRefusal;
     const node: any = await getProviderNodeById(id);
 
     if (!node) {
@@ -97,7 +109,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       // #2166: explicit null (not omission) so an empty submission clears a
       // previously stored custom icon.
       iconUrl: iconUrl?.trim() || null,
-      customHeaders: customHeaders || null,
+      // A form sends the placeholder back for a header value it did not retype.
+      customHeaders: mergeStoredHeaderValues(customHeaders, node.customHeaders),
       dailyQuotaResetTimezone: dailyQuotaResetTimezone?.trim() || null,
       dailyQuotaResetHour:
         dailyQuotaResetHour === 0 || dailyQuotaResetHour != null ? dailyQuotaResetHour : null,
@@ -156,8 +169,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       })
     );
 
-    return NextResponse.json({ node: updated });
+    return NextResponse.json({ node: redactProviderNode(updated) });
   } catch (error) {
+    const named = netieErrorResponse(error);
+    if (named) return named;
     console.log("Error updating provider node:", error);
     return NextResponse.json({ error: "Failed to update provider node" }, { status: 500 });
   }

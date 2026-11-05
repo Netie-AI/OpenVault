@@ -158,8 +158,9 @@ function buildSpawnArgsFactory(
 
 export async function bootstrapEmbeddedServices(): Promise<void> {
   for (const cfg of SERVICES) {
-    // FreeRoute: the dario and cliproxy Claude-subscription sidecars are never
-    // supervised or auto-started, whatever a stored version_manager row says
+    // FreeRoute: the dario and cliproxy Claude-subscription sidecars, the open-wa
+    // WhatsApp Web sidecar and the 9router upstream product are never supervised or
+    // auto-started, whatever a stored version_manager row says
     // (open-sse/netie/policy.ts).
     if (isServiceToolDisabled(cfg.tool)) continue;
     if (getSupervisor(cfg.tool)) continue;

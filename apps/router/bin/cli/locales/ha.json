@@ -248,7 +248,7 @@
     "stopping": "Ana dakatar da uwar garke (PID {pid})...",
     "stopped": "An dakatar da uwar garke.",
     "notRunning": "Uwar garken ba ya aiki.",
-    "port": "Tashar da za a saurara a kanta (tsoho: 20128)",
+    "port": "Tashar da za a saurara a kanta (tsoho: 3020)",
     "no_open": "Kada a buɗe burauza ta atomatik",
     "daemon": "Gudanar da uwar garke a matsayin daemon na bayan fage",
     "log": "Nuna rajistan ayyukan uwar garke a nan take",

@@ -248,7 +248,7 @@
     "stopping": "Server wordt gestopt (PID {pid})...",
     "stopped": "Server gestopt.",
     "notRunning": "Server is niet actief.",
-    "port": "Poort om op te luisteren (standaard: 20128)",
+    "port": "Poort om op te luisteren (standaard: 3020)",
     "no_open": "Browser niet automatisch openen",
     "daemon": "Server als achtergronddaemon uitvoeren",
     "log": "Serverlogboeken inline weergeven",

@@ -9,13 +9,13 @@ const uninstallAlreadyInProgress =
   process.env.OMNIROUTE_SKIP_UNINSTALL_HOOK === "1" ||
   process.env.npm_lifecycle_event === "uninstall";
 
-console.log("🛑 OmniRoute Uninstaller");
+console.log("🛑 FreeRoute Uninstaller");
 console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
 // 1. Stop PM2 process if it exists
 try {
   console.log("Stopping and removing background PM2 processes...");
-  execSync("pm2 delete omniroute 2>/dev/null", { stdio: "ignore" });
+  execSync("pm2 delete freeroute 2>/dev/null", { stdio: "ignore" });
 } catch {
   // It's perfectly fine if pm2 is not installed or the process doesn't exist.
 }
@@ -45,14 +45,14 @@ if (uninstallAlreadyInProgress) {
 } else {
   console.log("🗑️ Removing npm package...");
   try {
-    execSync("npm uninstall -g omniroute", {
+    execSync("npm uninstall -g @netie/freeroute", {
       stdio: "inherit",
       env: {
         ...process.env,
         OMNIROUTE_SKIP_UNINSTALL_HOOK: "1",
       },
     });
-    console.log("\n✅ OmniRoute has been successfully uninstalled from your system.");
+    console.log("\n✅ FreeRoute has been successfully uninstalled from your system.");
     if (!fullUninstall) {
       console.log(`ℹ️ Your configurations and databases were preserved in ${dataDir}.`);
     }

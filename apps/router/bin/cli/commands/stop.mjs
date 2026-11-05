@@ -68,7 +68,7 @@ export async function runStopCommand(opts = {}, deps = {}) {
     }
   }
 
-  const port = opts.port ? parseInt(String(opts.port), 10) : 20128;
+  const port = opts.port ? parseInt(String(opts.port), 10) : 3020;
   if (pid === null) {
     console.log(t("stop.portFallback"));
     // #9455: a stale supervisor PID file would let the port-fallback stop also

@@ -818,6 +818,7 @@
     "checking": "Checking for updates…",
     "available": "FreeBuild {version} is available",
     "upToDate": "You're on the latest version",
+    "noFeed": "Updates come from FreeBuild's own releases. This install does not check any other project's releases.",
     "current": "Current: {version}",
     "rerunToUpdate": " · re-run your install to update",
     "updateNow": "Update now",
@@ -829,13 +830,13 @@
     "viewChangelog": "View changelog & releases",
     "securityTitle": "How update checks work",
     "securityDescription": "Full transparency over what talks to your install",
-    "security1": "FreeBuild checks for updates and security advisories",
-    "securityOnlyGithub": "only from public GitHub releases",
+    "security1": "This install does not check any other project's releases, changelog or advisories. Updates come from",
+    "securityOnlyGithub": "FreeBuild's own releases",
     "security2": "(FreeBuild source: ",
     "security3": "). It only ever",
     "security3NoLink": ". It only ever",
     "securityPulls": "pulls",
-    "security4": "this data — no third-party service and no FreeBuild-operated server can push updates or signals to your install. Advisories are pinned to each release, so unreleased changes never reach you. Critical security advisories are always shown once; everything else respects the toggle above."
+    "security4": "this data. Nothing is pushed to your install, and no release feed is configured by default. Critical security advisories are always shown once; everything else respects the toggle above."
   },
   "infrastructure": {
     "title": "Platform components",

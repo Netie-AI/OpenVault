@@ -31,7 +31,7 @@
  *   GET /health                        - 200 ok
  */
 
-import { answered, refused, safeErrorMessage } from "@repo/core";
+import { answered, isUpstreamUrl, refused, safeErrorMessage, shellQuote } from "@repo/core";
 import { createHash, randomBytes } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -234,7 +234,7 @@ export function edgeDefaultCertPaths(confDir: string): {
  * only for names we do not serve, and giving it one would make it look, to anyone
  * reading a scan or a browser warning, like a cert we meant to use for that name.
  */
-export const EDGE_DEFAULT_CERT_CN = "openship-edge-default";
+export const EDGE_DEFAULT_CERT_CN = "freebuild-edge-default";
 
 // ── Containerized edge ───────────────────────────────────────────────────────
 
@@ -565,18 +565,20 @@ http {
 export const GEOIP_DIR = "/usr/share/GeoIP";
 export const GEOIP_DB_PATH = `${GEOIP_DIR}/GeoLite2-Country.mmdb`;
 /**
- * Fallback download source for a BARE box only — the container edge bakes the DB
- * in (apps/edge/Dockerfile), so this is never the shipping path.
+ * Download source for a BARE box only: the operator's own mirror
+ * (OPENSHIP_GEOIP_URL), or null. The container edge bakes the DB in
+ * (apps/edge/Dockerfile), so this is never the shipping path.
  *
- * Points at OUR vendored copy, matching apps/api/src/lib/geo-ip.ts. It used to
- * point at a third-party mirror (P3TERX/GeoLite.mmdb releases/latest), which
- * contradicted the stance that stands one directory over in
- * apps/api/assets/geoip/README.md: production reads a copy we ship, and the only
- * upstream reference belongs in a maintainer-time script (`bun run update:geoip`).
+ * Modified by Netie AI, 2026: there is no default source. This used to point at
+ * the upstream project's repository, which a FreeBuild install must not fetch
+ * from. Without a mirror the database is simply not installed and geo lookups
+ * return nil. A URL that names the upstream project is ignored.
  */
-const GEOIP_DB_URL =
-  process.env.OPENSHIP_GEOIP_URL?.trim() ||
-  "https://raw.githubusercontent.com/oblien/openship/main/apps/api/assets/geoip/GeoLite2-Country.mmdb";
+export function geoipMirrorUrl(): string | null {
+  const raw = process.env.OPENSHIP_GEOIP_URL?.trim();
+  if (!raw || isUpstreamUrl(raw)) return null;
+  return raw;
+}
 
 // ── Local Lua source directory ───────────────────────────────────────────────
 
@@ -1094,10 +1096,11 @@ async function installGeoDeps(executor: CommandExecutor): Promise<void> {
 
   // ── 2. GeoLite2-Country database ──────────────────────────────────────
   try {
+    const mirror = geoipMirrorUrl();
     const exists = await executor.exists(GEOIP_DB_PATH);
-    if (!exists) {
+    if (!exists && mirror) {
       await executor.mkdir(GEOIP_DIR);
-      await executor.exec(`curl -fsSL -o ${GEOIP_DB_PATH} "${GEOIP_DB_URL}"`);
+      await executor.exec(`curl -fsSL -o ${GEOIP_DB_PATH} ${shellQuote(mirror)}`);
     }
   } catch {
     // Non-fatal

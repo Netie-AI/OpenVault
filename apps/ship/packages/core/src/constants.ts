@@ -43,18 +43,75 @@ export function isInvitationClaimPath(path: string): boolean {
  * is how a docs link ends up dead in one menu and fine in the other.
  */
 /**
- * Where our published images live when nothing overrides it.
+ * Where the managed images (edge, mail, webmail) are looked up when nothing
+ * overrides it.
  *
- * `OPENSHIP_IMAGE_REGISTRY` overrides it everywhere. Shared because the fallback
- * was typed independently in the CLI's compose generator, the API's edge-image
- * pin and the adapters' edge installer — three defaults that had to agree for a
- * pull to resolve, with nothing making them.
+ * Modified by Netie AI, 2026: this was the upstream project's public registry,
+ * which runs upstream builds without this fork's guards. The default is now a
+ * `localhost/` reference: it names an image built from this repository's
+ * Dockerfiles on the box (see docker/docker-compose.yml and deliverManagedImage)
+ * and can never resolve to a remote registry, so a missing image fails to pull
+ * instead of running someone else's build. Publish the images to a registry you
+ * operate and set `OPENSHIP_IMAGE_REGISTRY` to use them from there.
+ *
+ * Shared because the fallback was typed independently in the compose generator,
+ * the API's edge-image pin and the adapters' edge installer; three defaults that
+ * had to agree for a pull to resolve, with nothing making them.
  *
  * NOTE: the shipped compose YAML repeats it as `${OPENSHIP_IMAGE_REGISTRY:-…}`
  * because compose interpolation can't read TypeScript. That copy is asserted
  * against this one by test.
  */
-export const DEFAULT_IMAGE_REGISTRY = "ghcr.io/oblien";
+export const DEFAULT_IMAGE_REGISTRY = "localhost/freebuild";
+
+/** Image names of the images built from this repository's Dockerfiles. */
+export const MANAGED_IMAGE_NAMES = {
+  api: "freebuild-api",
+  dashboard: "freebuild-dashboard",
+  edge: "freebuild-edge",
+  mail: "freebuild-mail",
+  webmail: "freebuild-webmail",
+} as const;
+
+/**
+ * Hosts and path prefixes that belong to the upstream project (Openship, Oblien
+ * and their hosted cloud). FreeBuild must not fetch from them at runtime, so
+ * every operator-supplied URL (catalog overlay, GeoIP database, native-modules
+ * catalog, release feed) is refused when this matches.
+ */
+const UPSTREAM_HOST_SUFFIXES = ["oblien.com", "openship.io", "opsh.io"] as const;
+const UPSTREAM_GITHUB_OWNERS = ["oblien", "openship"] as const;
+const UPSTREAM_GITHUB_HOSTS = new Set([
+  "github.com",
+  "raw.githubusercontent.com",
+  "api.github.com",
+  "ghcr.io",
+  "objects.githubusercontent.com",
+]);
+
+/** True for a GitHub `owner/repo` owned by the upstream project. */
+export function isUpstreamRepo(repo: string | null | undefined): boolean {
+  const owner = repo?.trim().toLowerCase().split("/")[0];
+  return owner !== undefined && (UPSTREAM_GITHUB_OWNERS as readonly string[]).includes(owner);
+}
+
+export function isUpstreamUrl(value: string): boolean {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return false;
+  }
+  const host = url.hostname.toLowerCase().replace(/\.$/, "");
+  if (UPSTREAM_HOST_SUFFIXES.some((suffix) => host === suffix || host.endsWith(`.${suffix}`))) {
+    return true;
+  }
+  if (!UPSTREAM_GITHUB_HOSTS.has(host)) return false;
+  const segments = url.pathname.toLowerCase().split("/").filter(Boolean);
+  // api.github.com/repos/<owner>/..., every other host: /<owner>/...
+  const owner = host === "api.github.com" && segments[0] === "repos" ? segments[1] : segments[0];
+  return owner !== undefined && (UPSTREAM_GITHUB_OWNERS as readonly string[]).includes(owner);
+}
 
 // Modified by Netie AI, 2026: openship.io / discord.gg / x.com were Openship's
 // own site, support form, and social account, and none of them are FreeBuild's.

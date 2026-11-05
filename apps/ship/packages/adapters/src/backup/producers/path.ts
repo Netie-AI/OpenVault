@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026
 /**
  * PathArchiveProducer — back up FOLDERS the operator names, not just the mounts
  * Docker happens to report.
@@ -112,12 +113,12 @@ function guardSourcePath(path: string, serviceName: string): string {
   const q = shellQuote(path);
   return [
     `if [ ! -d ${q} ]; then`,
-    `  echo "openship: ${path} does not exist inside service ${serviceName} (or is not a directory), ` +
+    `  echo "freebuild: ${path} does not exist inside service ${serviceName} (or is not a directory), ` +
       `so there is nothing to archive. Check the path, or point the policy at a volume instead." >&2`,
     `  exit 66`,
     `fi`,
     `if [ -z "$(find ${q} -mindepth 1 -print -quit 2>/dev/null)" ]; then`,
-    `  echo "openship: ${path} exists inside service ${serviceName} but is empty. Refusing to record ` +
+    `  echo "freebuild: ${path} exists inside service ${serviceName} but is empty. Refusing to record ` +
       `an empty archive as a backup — a directory that should hold data and does not usually means ` +
       `the data lives somewhere else (a volume mounted one level off, or an app that moved its data ` +
       `directory). Fix the path, or remove it from the policy if it is expected to be empty." >&2`,
@@ -146,7 +147,7 @@ function guardRestorePath(path: string, codec: DumpCodec, clear: boolean): strin
   const lines: string[] = [];
   if (tool && clear) {
     lines.push(
-      `command -v ${tool} >/dev/null 2>&1 || { echo "openship: ${tool} is not available inside ` +
+      `command -v ${tool} >/dev/null 2>&1 || { echo "freebuild: ${tool} is not available inside ` +
         `this service, so the archive cannot be decompressed. Refusing to clear ${path}: nothing ` +
         `was written and your data is untouched." >&2; exit 90; }`,
     );

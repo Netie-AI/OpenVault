@@ -248,7 +248,7 @@
     "stopping": "Se oprește serverul (PID {pid})...",
     "stopped": "Serverul a fost oprit.",
     "notRunning": "Serverul nu rulează.",
-    "port": "Portul de ascultare (implicit: 20128)",
+    "port": "Portul de ascultare (implicit: 3020)",
     "no_open": "Nu deschide automat browserul",
     "daemon": "Rulează serverul ca daemon în fundal",
     "log": "Afișează jurnalele serverului în linie",

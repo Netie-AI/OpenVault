@@ -20,7 +20,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: "Log export destination not found" }, { status: 404 });
     }
 
-    const client = createClientForDestination(destination);
+    const client = await createClientForDestination(destination);
     const result = await client.test();
     return NextResponse.json({ ok: result.ok, detail: sanitizeErrorMessage(result.detail) });
   } catch (error: any) {

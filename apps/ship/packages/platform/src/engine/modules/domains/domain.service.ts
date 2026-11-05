@@ -1207,7 +1207,8 @@ async function removeLiveDomain(ctx: RequestContext, domain: Domain, project: Pr
   // and "remove this domain from Openship" must never take their mail with it.
   const released = await releaseRecords(ctx.organizationId, domain.hostname, [
     domain.hostname,
-    `_openship-challenge.${domain.hostname}`,
+    `${SYSTEM.DOMAINS.VERIFICATION_PREFIX}.${domain.hostname}`,
+    `${SYSTEM.DOMAINS.LEGACY_VERIFICATION_PREFIX}.${domain.hostname}`,
   ]).catch((err: unknown) => ({ deleted: 0, reason: safeErrorMessage(err) }));
   if (released.reason) {
     // Not fatal: a domain must stay removable from Openship when the provider is
@@ -1635,10 +1636,20 @@ async function verifyCname(hostname: string): Promise<boolean> {
   }
 }
 
-/** Check _openship-challenge.{hostname} TXT record for verification token. */
-async function verifyTxt(hostname: string, token: string): Promise<boolean> {
-  const records = await resolveRecords(`_openship-challenge.${hostname}`, "TXT");
-  return records.some((v) => v === token);
+/**
+ * Check the TXT ownership record for the verification token. The FreeBuild name
+ * is checked first; the name an existing install already published
+ * (`_openship-challenge`) is still accepted.
+ */
+export async function verifyTxt(hostname: string, token: string): Promise<boolean> {
+  for (const prefix of [
+    SYSTEM.DOMAINS.VERIFICATION_PREFIX,
+    SYSTEM.DOMAINS.LEGACY_VERIFICATION_PREFIX,
+  ]) {
+    const records = await resolveRecords(`${prefix}.${hostname}`, "TXT");
+    if (records.some((v) => v === token)) return true;
+  }
+  return false;
 }
 
 // ── Record generation ────────────────────────────────────────────────────────
@@ -1672,7 +1683,7 @@ export function relativeSubdomain(hostname: string): string | null {
 /**
  * The route record (A/CNAME) + TXT ownership record host+name for a hostname.
  * `name` is the FQDN — EXACTLY what verifyARecord/verifyCname/verifyTxt resolve
- * (`hostname` and `_openship-challenge.${hostname}`), so "add the shown records
+ * (`hostname` and `_freebuild-challenge.${hostname}`), so "add the shown records
  * → verify passes" holds by construction. `host` is the zone-relative form.
  * Pure — the unit-test seam for the per-hostname record fix.
  */
@@ -1686,8 +1697,10 @@ export function dnsRecordHosts(hostname: string): {
   return {
     routeHost: sub ?? "@",
     routeName: hostname,
-    txtHost: sub ? `_openship-challenge.${sub}` : "_openship-challenge",
-    txtName: `_openship-challenge.${hostname}`,
+    txtHost: sub
+      ? `${SYSTEM.DOMAINS.VERIFICATION_PREFIX}.${sub}`
+      : SYSTEM.DOMAINS.VERIFICATION_PREFIX,
+    txtName: `${SYSTEM.DOMAINS.VERIFICATION_PREFIX}.${hostname}`,
   };
 }
 
@@ -1698,7 +1711,7 @@ export function dnsRecordHosts(hostname: string): {
  *
  * Cloud       → CNAME <host> → <target from Oblien>
  * Self-hosted → A     <host> → <server public IP>
- * Both        → TXT _openship-challenge[.<sub>] → <verification hash>
+ * Both        → TXT _freebuild-challenge[.<sub>] → <verification hash>
  */
 async function buildRecords(
   hostname: string,
@@ -1815,7 +1828,7 @@ function verifyMessage(
   }
 
   if (!txtOk) {
-    parts.push(`TXT record _openship-challenge.${hostname} must equal "${token}"`);
+    parts.push(`TXT record ${SYSTEM.DOMAINS.VERIFICATION_PREFIX}.${hostname} must equal "${token}"`);
   }
 
   return parts.join(". ");

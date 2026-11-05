@@ -11,6 +11,7 @@ import {
   getAllDomainBudgets,
 } from "@/lib/db/usageAnalytics";
 import { isFreeModel, providerHasFreeModels } from "@/shared/utils/freeModels";
+import { SERVICE_SECRET_SETTING_FIELDS } from "@/lib/netie/providerGuards";
 
 /**
  * When `settings.hidePaidModels === true`, exports must not leak paid model ids
@@ -64,7 +65,12 @@ export async function GET(request: Request) {
     // REDACT sensitive security keys to maintain Zero-Trust posture
     // even if the admin shares their backup file.
     // Use destructuring (not delete) to avoid mutating a potentially cached object.
-    const { password: _pw, requireLogin: _rl, ...safeSettings } = rawSettings;
+    const { password: _pw, requireLogin: _rl, ...settingsWithoutLogin } = rawSettings;
+    // Service keys (SkillsMP, CLIProxyAPI, Qdrant) are not FreeRoute's to hand out: a copy an
+    // older build left behind never leaves in a backup file.
+    const safeSettings = Object.fromEntries(
+      Object.entries(settingsWithoutLogin).filter(([key]) => !SERVICE_SECRET_SETTING_FIELDS.includes(key))
+    );
 
     const providerConnections = await getProviderConnections();
     const providerNodes = await getCachedProviderNodes();

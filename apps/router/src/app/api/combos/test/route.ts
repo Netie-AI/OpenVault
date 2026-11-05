@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
+import { FREEROUTE_REQUEST_HEADERS, withLegacyHeaderTwins } from "@/shared/constants/headers";
 import { buildComboTestRequestBody, extractComboTestResponseText } from "@/lib/combos/testHealth";
 import { getComboByName, getCombos } from "@/lib/db/combos";
 import { pickApiKeyForInternalUse } from "@/lib/db/apiKeys";
@@ -94,8 +95,12 @@ async function testComboTarget(
           "X-Internal-Test": "combo-health-check",
           // Force a fresh execution path so combo tests cannot be satisfied by
           // FreeRoute's semantic cache or other request reuse layers.
-          "X-FreeRoute-No-Cache": "true",
-          ...(target.connectionId ? { "X-FreeRoute-Connection": target.connectionId } : {}),
+          ...withLegacyHeaderTwins({
+            [FREEROUTE_REQUEST_HEADERS.noCache]: "true",
+            ...(target.connectionId
+              ? { [FREEROUTE_REQUEST_HEADERS.connection]: target.connectionId }
+              : {}),
+          }),
           "X-Request-Id": `combo-test-${randomUUID()}`,
         },
         body: JSON.stringify(testBody),

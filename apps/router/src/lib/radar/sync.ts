@@ -13,18 +13,13 @@
 
 import { RadarFeedSchema, RadarTierSchema, type RadarFeed, type RadarTier } from "./feedSchema";
 import { verifyFeedBytes } from "./verify";
+import { RADAR_UPSTREAM_NOT_INCLUDED, getRadarFeedBaseUrl } from "./feedBaseUrl";
 import { sanitizeErrorMessage } from "@omniroute/open-sse/utils/error";
 import { isFeatureFlagEnabled } from "@/shared/utils/featureFlags";
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
-
-/**
- * Default feed base URL.  Forks and self-hosters point this at their own
- * signed feed with the `RADAR_FEED_URL` env var (see docs/frameworks/RADAR.md).
- */
-const DEFAULT_FEED_BASE_URL = "https://radar.omniroute.online";
 
 const SYNC_TIMEOUT_MS = 30_000;
 
@@ -195,7 +190,8 @@ export async function syncRadar(deps: SyncDeps = {}): Promise<SyncStatus> {
     }
 
     // Step 3: Download feed
-    const baseUrl = (process.env.RADAR_FEED_URL || DEFAULT_FEED_BASE_URL).replace(/\/+$/, "");
+    const baseUrl = getRadarFeedBaseUrl();
+    if (!baseUrl) return { status: "error", reason: RADAR_UPSTREAM_NOT_INCLUDED };
     const url = `${baseUrl}/v1/catalog/latest`;
 
     const headers: Record<string, string> = { "x-omniroute-radar-schema": "2" };

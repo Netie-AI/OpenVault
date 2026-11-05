@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026
 import { describe, expect, it } from "vitest";
 
 import { buildMailBackupPayload } from "../../../src/modules/mail/admin/backup-plan";
@@ -84,8 +85,8 @@ describe("mail backup cannot silently omit the secrets it was asked for", () => 
     // backup module still carrying it.
     const script = buildMailBackupPayload("example.com", { messageData: true, keys: true })
       .payloadConfig.produceCommand;
-    expect(script).toContain("openship: tar (staging the mail archive) failed with status");
-    expect(script).toContain("openship: the compressor 'zstd' failed with status");
+    expect(script).toContain("freebuild: tar (staging the mail archive) failed with status");
+    expect(script).toContain("freebuild: the compressor 'zstd' failed with status");
     // And the raw masking shape is gone.
     expect(script).not.toMatch(/tar -c[^\n]*\| zstd -c -3\s*$/m);
   });

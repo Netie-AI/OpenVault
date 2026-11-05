@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: the DNS verification prefix is a FreeBuild name; the CLOUD_DOMAIN default is no longer a free-domain base.
 /**
  * System-wide limits, defaults, and operational constants.
  *
@@ -105,12 +106,23 @@ export const SYSTEM = {
 
   // ── Domains / SSL ────────────────────────────────────────────────────
   DOMAINS: {
-    /** Free domain for cloud deployments (slug.CLOUD_DOMAIN) */
+    /**
+     * The upstream project's hosted-cloud domain. Modified by Netie AI, 2026: it
+     * is kept ONLY so hostnames under it are recognised and refused (an edge
+     * target there would loop into the upstream's edge). It is not a base domain
+     * for free project domains: those exist only when HOST_DOMAIN is set, and the
+     * dashboard shows no free-domain option without it.
+     */
     CLOUD_DOMAIN: "opsh.io",
     /** Maximum custom domains per project */
     MAX_PER_PROJECT: 10,
-    /** DNS TXT record prefix for domain verification */
-    VERIFICATION_PREFIX: "_openship-challenge",
+    /** DNS TXT record prefix for domain verification (the name FreeBuild shows and writes) */
+    VERIFICATION_PREFIX: "_freebuild-challenge",
+    /**
+     * The prefix existing installs already published in their DNS zones. Still
+     * accepted when verifying and when taking records back, never emitted.
+     */
+    LEGACY_VERIFICATION_PREFIX: "_openship-challenge",
     /** SSL renewal scheduler interval (ms) */
     SSL_RENEW_INTERVAL_MS: 6 * 60 * 60 * 1000, // 6 hours
     /** How many days before expiry to trigger renewal */

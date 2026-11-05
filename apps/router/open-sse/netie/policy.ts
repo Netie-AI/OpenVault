@@ -64,13 +64,22 @@ export function disabledMessage(code: DisabledCode): string {
   return DISABLED_MESSAGES[code];
 }
 
+/** Every code a `NetieDisabledError` can carry: the three buckets plus the separate-product 501. */
+export type NetieErrorCode = DisabledCode | typeof UPSTREAM_SERVICE_NOT_INCLUDED_CODE;
+
+function namedMessage(code: NetieErrorCode): string {
+  return code === UPSTREAM_SERVICE_NOT_INCLUDED_CODE
+    ? UPSTREAM_SERVICE_NOT_INCLUDED_MESSAGE
+    : DISABLED_MESSAGES[code];
+}
+
 /** Thrown by choke points that gate on `classifyProvider`/`classifyProviderId`. */
 export class NetieDisabledError extends Error {
   readonly status = 501 as const;
-  readonly code: DisabledCode;
+  readonly code: NetieErrorCode;
 
-  constructor(code: DisabledCode, message?: string) {
-    super(message ?? DISABLED_MESSAGES[code]);
+  constructor(code: NetieErrorCode, message?: string) {
+    super(message ?? namedMessage(code));
     this.name = "NetieDisabledError";
     this.code = code;
   }
@@ -85,8 +94,8 @@ export interface DisabledErrorBody {
   error: { code: DisabledCode | string; message: string };
 }
 
-export function disabledErrorBody(code: DisabledCode, message?: string): DisabledErrorBody {
-  return { error: { code, message: message ?? DISABLED_MESSAGES[code] } };
+export function disabledErrorBody(code: NetieErrorCode, message?: string): DisabledErrorBody {
+  return { error: { code, message: message ?? namedMessage(code) } };
 }
 
 /**
@@ -95,7 +104,7 @@ export function disabledErrorBody(code: DisabledCode, message?: string): Disable
  * call sites (pass `.status`/the body through instead if the caller already
  * has its own response helper).
  */
-export function renderDisabled(code: DisabledCode, message?: string): Response {
+export function renderDisabled(code: NetieErrorCode, message?: string): Response {
   return new Response(JSON.stringify(disabledErrorBody(code, message)), {
     status: 501,
     headers: { "content-type": "application/json" },
@@ -219,6 +228,27 @@ const EXECUTOR_AUTH_OVERRIDES: Record<string, DisabledCode> = {
   // fingerprint on the WS upgrade", passed by driving headless Chromium.
   "cloudflare-playground": DISABLED.tlsStealth,
   cfp: DISABLED.tlsStealth,
+  // freebuff.ts: sends the Codebuff CLI's user agent and x-codebuff-* ids, runs
+  // the CLI's session and agent-run handshake, and takes a CLI-login token, so
+  // it plays the Codebuff client rather than calling a documented API.
+  freebuff: DISABLED.tlsStealth,
+  fb: DISABLED.tlsStealth,
+  // cursor.ts (cursor-api): speaks the cursor-agent CLI wire protocol with the
+  // CLI's client-type and client-version headers. The `cursor` provider itself is
+  // an OAuth subscription and is already refused by its registry row.
+  "cursor-api": DISABLED.tlsStealth,
+  cua: DISABLED.tlsStealth,
+  // qoder.ts: forces the Qoder-Cli user agent on every request, replays the Qwen
+  // CLI's qwen-oauth identity to DashScope, and drives the operator's local
+  // qodercli login for a personal access token. The dashboard lists it with the
+  // OAuth subscriptions; only its registry row says "apikey".
+  qoder: DISABLED.consumerSubscription,
+  if: DISABLED.consumerSubscription,
+  // muse-code registry row: every request carries the Muse CLI's own build user
+  // agent ("muse-build/...", "required by Meta"), and the dashboard offers the
+  // Muse subscription device login beside a pasted key.
+  "muse-code": DISABLED.tlsStealth,
+  mc: DISABLED.tlsStealth,
 };
 
 function executorAuthOverride(...names: string[]): DisabledCode | null {
@@ -394,28 +424,42 @@ export function assertProviderAllowed(providerId: string | null | undefined): vo
   if (code) throw new NetieDisabledError(code);
 }
 
-// Managed sidecar services that exist only to pool a consumer subscription
-// login. dario.ts pools "the operator's own Claude Pro/Max subscription (Claude
-// Code OAuth)" and rebuilds every request into Claude Code's wire shape;
-// CLIProxyAPI does the same with multi-account rotation, CCH signing and uTLS.
-// Installing, starting or supervising either one is disabled at the lowest
+// Managed sidecar services that are not shipped in this edition, each with the
+// named 501 it answers:
+// - dario.ts pools "the operator's own Claude Pro/Max subscription (Claude Code
+//   OAuth)" and rebuilds every request into Claude Code's wire shape; CLIProxyAPI
+//   does the same with multi-account rotation, CCH signing and uTLS.
+// - open-wa (@open-wa/wa-automate) holds a paired WhatsApp Web login in a
+//   headless Chromium that runs puppeteer-extra-plugin-stealth, a browser
+//   session relay.
+// - 9router is a separate upstream product, not part of FreeRoute.
+// Installing, starting or supervising any of them is disabled at the lowest
 // layer (ServiceSupervisor, the installers, the version manager, the startup
 // bootstrap) so no route, CLI command, startup hook or scheduler can reach it.
 // The HTTP families are also blocked in `src/lib/netie/hardDisabledRoutes.ts`.
-// 9router is a different, named case (`upstream_service_not_included`).
-const DISABLED_SERVICE_TOOLS: ReadonlySet<string> = new Set(["dario", "cliproxy", "cliproxyapi"]);
+const DISABLED_SERVICE_TOOLS: ReadonlyMap<string, NetieErrorCode> = new Map<string, NetieErrorCode>([
+  ["dario", DISABLED.consumerSubscription],
+  ["cliproxy", DISABLED.consumerSubscription],
+  ["cliproxyapi", DISABLED.consumerSubscription],
+  ["openwa", DISABLED.sessionRelay],
+  ["9router", UPSTREAM_SERVICE_NOT_INCLUDED_CODE],
+]);
+
+/** The named 501 for a hard-disabled managed sidecar, or null when `tool` may run. */
+export function serviceToolDisabledCode(tool: string | null | undefined): NetieErrorCode | null {
+  if (!tool) return null;
+  return DISABLED_SERVICE_TOOLS.get(tool.trim().toLowerCase()) ?? null;
+}
 
 /** True when `tool` names a managed sidecar that is hard-disabled in this edition. */
 export function isServiceToolDisabled(tool: string | null | undefined): boolean {
-  if (!tool) return false;
-  return DISABLED_SERVICE_TOOLS.has(tool.trim().toLowerCase());
+  return serviceToolDisabledCode(tool) !== null;
 }
 
-/** Throws `NetieDisabledError(consumer_subscription_pooling_disabled)` for a disabled sidecar. */
+/** Throws `NetieDisabledError` (the sidecar's named 501) for a disabled sidecar. */
 export function assertServiceToolAllowed(tool: string | null | undefined): void {
-  if (isServiceToolDisabled(tool)) {
-    throw new NetieDisabledError(DISABLED.consumerSubscription);
-  }
+  const code = serviceToolDisabledCode(tool);
+  if (code) throw new NetieDisabledError(code);
 }
 
 /**
@@ -438,4 +482,39 @@ export function isProviderHidden(entryOrId: ClassifiableProvider | string | null
     return classifyProviderId(entryOrId as string | null) !== null;
   }
   return classifyProvider(entryOrId) !== null;
+}
+
+// Client identity headers on a custom provider node. A node's customHeaders are
+// sent to its upstream on every request, so a header that copies another vendor's
+// CLI (the Claude Code, Codex, Gemini or Muse CLI user agent, `X-App: cli`, the
+// Codex `originator`, the Stainless SDK and Claude Code session headers) is client
+// impersonation and answers tls_fingerprint_stealth_disabled. An ordinary custom
+// User-Agent or header stays allowed.
+const CLI_USER_AGENT =
+  /^(?:claude-cli|claude-code|codex_cli_rs|codex-cli|codex_exec|geminicli|gemini-cli|musecodecli|muse-code|muse-build|codebuff|cursor-agent|qoder-cli|opencode)(?:[/ ]|$)/i;
+const CLI_IDENTITY_HEADER_NAME = /^(?:x-stainless-.+|x-claude-code-.+|anthropic-dangerous-direct-browser-access)$/i;
+
+/** Names of the headers in `headers` that copy a vendor CLI's identity; empty when none do. */
+export function findClientImpersonationHeaders(headers: unknown): string[] {
+  if (!headers || typeof headers !== "object" || Array.isArray(headers)) return [];
+  const found: string[] = [];
+  for (const [name, raw] of Object.entries(headers as Record<string, unknown>)) {
+    const lower = name.trim().toLowerCase();
+    const value = typeof raw === "string" ? raw.trim() : "";
+    if (CLI_IDENTITY_HEADER_NAME.test(lower)) found.push(name);
+    else if (lower === "user-agent" && CLI_USER_AGENT.test(value)) found.push(name);
+    else if (lower === "x-app" && value.toLowerCase() === "cli") found.push(name);
+    else if (lower === "originator" && /^codex/i.test(value)) found.push(name);
+  }
+  return found;
+}
+
+/** The named 501 for a header set that copies a vendor CLI's identity, or null. */
+export function rejectClientImpersonationHeaders(headers: unknown): Response | null {
+  const found = findClientImpersonationHeaders(headers);
+  if (found.length === 0) return null;
+  return renderDisabled(
+    DISABLED.tlsStealth,
+    `Header ${found.join(", ")} copies another vendor's CLI identity. ${DISABLED_MESSAGES[DISABLED.tlsStealth]}`
+  );
 }

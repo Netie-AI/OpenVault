@@ -248,7 +248,7 @@
     "stopping": "Szerver leállítása (PID: {pid})...",
     "stopped": "A szerver leállt.",
     "notRunning": "A szerver nem fut.",
-    "port": "Figyelési port (alapértelmezett: 20128)",
+    "port": "Figyelési port (alapértelmezett: 3020)",
     "no_open": "Ne nyissa meg automatikusan a böngészőt",
     "daemon": "A szerver futtatása háttérdémonként",
     "log": "A szervernaplók megjelenítése helyben",

@@ -248,7 +248,7 @@
     "stopping": "Zaustavljanje servera (PID {pid})...",
     "stopped": "Server je zaustavljen.",
     "notRunning": "Server ne radi.",
-    "port": "Port za slušanje (podrazumijevano: 20128)",
+    "port": "Port za slušanje (podrazumijevano: 3020)",
     "no_open": "Nemoj automatski otvarati preglednik",
     "daemon": "Pokreni server kao pozadinski demon",
     "log": "Prikaži serverske logove inline",

@@ -1,5 +1,5 @@
 import { getProviderAlias } from "@/shared/constants/providers";
-import { OMNIROUTE_RESPONSE_HEADERS } from "@/shared/constants/headers";
+import { OMNIROUTE_RESPONSE_HEADERS, withLegacyHeaderTwins } from "@/shared/constants/headers";
 import { APP_CONFIG } from "@/shared/constants/appConfig";
 import {
   generationDurationMs,
@@ -206,7 +206,7 @@ export function buildOmniRouteResponseMetaHeaders({
     headers[OMNIROUTE_RESPONSE_HEADERS.tokensPerSecond] = toHeaderValue(tps.toFixed(3));
   }
 
-  return headers;
+  return withLegacyHeaderTwins(headers);
 }
 
 export function buildOmniRouteSseMetadataComment(

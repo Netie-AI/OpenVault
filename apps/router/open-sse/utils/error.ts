@@ -10,6 +10,10 @@ import { normalizePayloadForLog } from "@/lib/logPayloads";
 import type { ModelCooldownErrorPayload } from "@/types";
 import { buildPassthroughErrorResponse } from "./upstreamErrorPassthrough.ts";
 import { isFeatureFlagEnabled } from "@/shared/utils/featureFlags";
+import {
+  FREEROUTE_ROUTING_RESPONSE_HEADERS,
+  withLegacyHeaderTwins,
+} from "@/shared/constants/headers";
 import { resolveRetryAfterInstant } from "./retryAfterInstant.ts";
 
 export { parseRetryAfterHeader, resolveRetryAfterInstant } from "./retryAfterInstant.ts";
@@ -1071,7 +1075,9 @@ export function providerCircuitOpenResponse(
       headers: {
         "Content-Type": "application/json",
         "Retry-After": String(retryAfterSec),
-        "X-FreeRoute-Provider-Breaker": "open",
+        ...withLegacyHeaderTwins({
+          [FREEROUTE_ROUTING_RESPONSE_HEADERS.providerBreaker]: "open",
+        }),
       },
     }
   );

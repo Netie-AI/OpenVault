@@ -9,8 +9,8 @@ import { isFeatureFlagEnabled } from "@/shared/utils/featureFlags";
 import { RadarIntelFeedSchema, type RadarIntelFeed } from "./intelFeedSchema";
 import { compareVersions, type RadarSettingsSnapshot } from "./sync";
 import { verifyFeedBytes } from "./verify";
+import { RADAR_UPSTREAM_NOT_INCLUDED, getRadarFeedBaseUrl } from "./feedBaseUrl";
 
-const DEFAULT_FEED_BASE_URL = "https://radar.omniroute.online";
 const SYNC_TIMEOUT_MS = 30_000;
 const MAX_FEED_BYTES = 10 * 1024 * 1024;
 
@@ -103,7 +103,8 @@ export async function syncRadarIntel(deps: IntelSyncDeps = {}): Promise<IntelSyn
     if (!settings.optIn) return { status: "opt_out" };
     if (!settings.supporterKey) return { status: "no_key" };
 
-    const baseUrl = (process.env.RADAR_FEED_URL || DEFAULT_FEED_BASE_URL).replace(/\/+$/, "");
+    const baseUrl = getRadarFeedBaseUrl();
+    if (!baseUrl) return { status: "error", reason: RADAR_UPSTREAM_NOT_INCLUDED };
     const response = await fetchFn(`${baseUrl}/v1/intel/latest`, {
       method: "GET",
       headers: { Authorization: `Bearer ${settings.supporterKey}` },

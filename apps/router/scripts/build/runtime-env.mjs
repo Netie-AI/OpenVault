@@ -81,7 +81,7 @@ export function warnConflictingHeapLimits(env, omnirouteMb, log = console.warn) 
   if (nodeMb == null || !envHasExplicitOmnirouteMemoryMb(env)) return false;
   if (nodeMb === omnirouteMb) return false;
   log(
-    `[omniroute] heap limit conflict: OMNIROUTE_MEMORY_MB=${omnirouteMb} disagrees with NODE_OPTIONS --max-old-space-size=${nodeMb}. ` +
+    `[freeroute] heap limit conflict: OMNIROUTE_MEMORY_MB=${omnirouteMb} disagrees with NODE_OPTIONS --max-old-space-size=${nodeMb}. ` +
       `run-standalone.mjs / Docker appends OMNIROUTE_MEMORY_MB last, so the effective V8 heap is ${omnirouteMb} MB. ` +
       `Set only OMNIROUTE_MEMORY_MB (recommended) or make both values match.`
   );

@@ -2,6 +2,7 @@
  * db/settings.js — Settings, pricing, and proxy config.
  */
 
+import { assertProxyLoginWriteAllowed } from "@/lib/netie/providerGuards";
 import { getDbInstance } from "./core";
 import { backupDbFile } from "./backup";
 import { PROVIDER_ID_TO_ALIAS } from "@omniroute/open-sse/config/providerModels.ts";
@@ -483,6 +484,8 @@ export async function getProxyForLevel(level: string, id?: string | null) {
 }
 
 export async function setProxyForLevel(level: string, id: string | null, proxy: ProxyValue) {
+  // FreeRoute keeps no proxy logins: a username, password or userinfo URL is refused.
+  assertProxyLoginWriteAllowed(proxy);
   const db = getDbInstance();
   const config = await getProxyConfig();
 
@@ -849,6 +852,13 @@ export async function setProxyConfig(config: Record<string, unknown>) {
     const id = typeof config.id === "string" ? config.id : null;
     const proxy = (config.proxy as ProxyValue) || null;
     return setProxyForLevel(level, id, proxy);
+  }
+
+  assertProxyLoginWriteAllowed(config.global);
+  for (const mapKey of ["providers", "combos", "keys"]) {
+    for (const entry of Object.values((config[mapKey] as Record<string, unknown>) ?? {})) {
+      assertProxyLoginWriteAllowed(entry);
+    }
   }
 
   const db = getDbInstance();

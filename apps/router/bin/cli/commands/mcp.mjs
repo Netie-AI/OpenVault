@@ -126,7 +126,7 @@ export function registerMcp(program) {
  * Returns the exit code (0 = success, non-zero = failure).
  */
 async function mcpJsonRpcCall(tool, args, { stream = false, globalOpts = {} } = {}) {
-  const baseUrl = globalOpts.baseUrl ?? "http://localhost:20128";
+  const baseUrl = globalOpts.baseUrl ?? "http://localhost:3020";
   const apiKey = globalOpts.apiKey ?? "";
   const streamUrl = `${baseUrl}/api/mcp/stream`;
 

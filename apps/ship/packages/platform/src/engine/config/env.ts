@@ -5,7 +5,7 @@
 import { z } from "zod";
 import { createPrivateKey } from "crypto";
 import { assertCloudBillingEnvironment } from "./cloud-billing-env";
-import { DEFAULT_ENCRYPTION_SECRET as DEFAULT_BETTER_AUTH_SECRET } from "@repo/db/encryption";
+import { isPlaceholderSecret, resolveInstallSecretOnce } from "@repo/db/install-secret";
 import {
   runtimeTarget,
   runtimeTargetId,
@@ -220,7 +220,9 @@ const envSchema = z.object({
   OPENSHIP_PRODUCT: z.enum(["platform", "mail"]).default("platform"),
 
   /* ---------- Auth (Better Auth) ---------- */
-  BETTER_AUTH_SECRET: z.string().default(DEFAULT_BETTER_AUTH_SECRET),
+  // The operator's value, else the per-install secret file (packages/db/src/install-secret.ts).
+  // The public placeholder from .env.example counts as unset.
+  BETTER_AUTH_SECRET: z.string().optional().transform((raw) => resolveInstallSecretOnce(raw).secret),
   BETTER_AUTH_COOKIE_DOMAIN: z.string().optional(),
   /**
    * Gate that ENABLES the option to toggle `authMode → "none"` (zero-auth)
@@ -630,7 +632,7 @@ export const REDIS_REQUIRED =
 // The secret is a real secret in every saas-shaped deployment.
 if (
   runtimeTargetId !== "local" &&
-  env.BETTER_AUTH_SECRET === DEFAULT_BETTER_AUTH_SECRET
+  isPlaceholderSecret(process.env.BETTER_AUTH_SECRET)
 ) {
   throw new Error(
     `BETTER_AUTH_SECRET must be set to a secure value when OPENSHIP_TARGET="${runtimeTargetId}".`,

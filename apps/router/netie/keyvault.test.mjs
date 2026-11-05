@@ -73,6 +73,14 @@ const EXACT_ID_KEY_ID = "key_unit_llm7_exact";
 const EXACT_ID_SECRET = "sk-unit-llm7-exact";
 const DEVIN_KEY_ID = "key_unit_devin";
 const DEVIN_SECRET = "sk-unit-devin-agent";
+const BIGQUERY_KEY_ID = "key_unit_bigquery";
+const BIGQUERY_SECRET = JSON.stringify({
+  type: "service_account",
+  client_email: "export@unit.iam.gserviceaccount.com",
+  private_key: "-----BEGIN PRIVATE KEY-----\nunit-test-not-real\n-----END PRIVATE KEY-----\n",
+});
+const TELEGRAM_KEY_ID = "key_unit_telegram";
+const TELEGRAM_SECRET = "1234567:AAunit-test-not-real-telegram-bot-token";
 
 let tmpDir;
 let tokenPath;
@@ -179,6 +187,22 @@ function startStub() {
                 lifecycle: "active",
                 custody: "pooled",
               },
+              {
+                id: BIGQUERY_KEY_ID,
+                provider: "bigquery",
+                enabled: true,
+                priority: 1,
+                lifecycle: "active",
+                custody: "pooled",
+              },
+              {
+                id: TELEGRAM_KEY_ID,
+                provider: "telegram",
+                enabled: true,
+                priority: 1,
+                lifecycle: "active",
+                custody: "pooled",
+              },
             ],
           })
         );
@@ -196,6 +220,8 @@ function startStub() {
         [CUSTOM_OTHER_ENDPOINT_ID]: CUSTOM_OTHER_ENDPOINT_SECRET,
         [EXACT_ID_KEY_ID]: EXACT_ID_SECRET,
         [DEVIN_KEY_ID]: DEVIN_SECRET,
+        [BIGQUERY_KEY_ID]: BIGQUERY_SECRET,
+        [TELEGRAM_KEY_ID]: TELEGRAM_SECRET,
       };
       if (secretMatch && secretMatch[1] in secrets && req.method === "GET") {
         secretReveals.push(secretMatch[1]);
@@ -891,6 +917,16 @@ const SENTINELS = {
   cliproxyKey: `sk-sentinel-cliproxy-${randomBytes(8).toString("hex")}`,
   qdrantKey: `sentinel-qdrant-${randomBytes(8).toString("hex")}`,
   notionToken: `secret_sentinel-notion-${randomBytes(8).toString("hex")}`,
+  proxyPassword: `sentinel-proxy-password-${randomBytes(8).toString("hex")}`,
+  proxyUsername: `sentinel-proxy-user-${randomBytes(8).toString("hex")}`,
+  proxyConfigPassword: `sentinel-proxyconfig-password-${randomBytes(8).toString("hex")}`,
+  proxyConfigUrlLogin: `sentinel-proxyurl-login-${randomBytes(8).toString("hex")}`,
+  logExportAccount: `sentinel-bigquery-account-${randomBytes(8).toString("hex")}`,
+  webhookBotToken: `sentinel-telegram-token-${randomBytes(8).toString("hex")}`,
+  obsidianToken: `sentinel-obsidian-${randomBytes(8).toString("hex")}`,
+  radarKey: `sentinel-radar-${randomBytes(8).toString("hex")}`,
+  commandCodeKey: `sentinel-commandcode-${randomBytes(8).toString("hex")}`,
+  nodeHeaderSecret: `sentinel-nodeheader-${randomBytes(8).toString("hex")}`,
 };
 
 /** A SQLite file shaped like an imported FreeRoute database, holding every sentinel secret. */
@@ -909,6 +945,14 @@ async function writeImportedDatabase(path, { wal = false } = {}) {
     CREATE TABLE cloud_agent_credentials (
       provider_id TEXT PRIMARY KEY, api_key_encrypted TEXT, base_url TEXT, updated_at TEXT
     );
+    CREATE TABLE proxy_registry (
+      id TEXT PRIMARY KEY, name TEXT, type TEXT, host TEXT, port INTEGER, username TEXT, password TEXT
+    );
+    CREATE TABLE log_export_destinations (id TEXT PRIMARY KEY, name TEXT, type TEXT, config TEXT);
+    CREATE TABLE webhooks (id TEXT PRIMARY KEY, url TEXT, kind TEXT, metadata_encrypted TEXT);
+    CREATE TABLE radar_settings (id INTEGER PRIMARY KEY, opt_in INTEGER, supporter_key_encrypted TEXT);
+    CREATE TABLE command_code_auth_sessions (id TEXT PRIMARY KEY, state_hash TEXT, encrypted_api_key TEXT);
+    CREATE TABLE provider_nodes (id TEXT PRIMARY KEY, name TEXT, custom_headers_json TEXT);
   `);
   db.prepare(
     "INSERT INTO provider_connections VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
@@ -951,6 +995,27 @@ async function writeImportedDatabase(path, { wal = false } = {}) {
     null,
     "2026-10-01"
   );
+  db.prepare("INSERT INTO proxy_registry VALUES (?, ?, ?, ?, ?, ?, ?)").run(
+    "proxy-1", "office", "http", "10.0.0.5", 8080, SENTINELS.proxyUsername, SENTINELS.proxyPassword
+  );
+  db.prepare("INSERT INTO proxy_registry VALUES (?, ?, ?, ?, ?, ?, ?)").run(
+    "proxy-2", "open", "http", "10.0.0.6", 3128, "", ""
+  );
+  put.run("proxyConfig", "global", JSON.stringify({ type: "http", host: "10.0.0.7", port: 80, username: "u", password: SENTINELS.proxyConfigPassword }));
+  put.run("proxyConfig", "providers", JSON.stringify({ openai: `http://svc:${SENTINELS.proxyConfigUrlLogin}@10.0.0.8:8080`, groq: { host: "10.0.0.9", port: 81 } }));
+  db.prepare("INSERT INTO log_export_destinations VALUES (?, ?, ?, ?)").run(
+    "dest-1", "bq", "bigquery",
+    JSON.stringify({ projectId: "unit-project", datasetId: "d", serviceAccountJson: SENTINELS.logExportAccount })
+  );
+  db.prepare("INSERT INTO webhooks VALUES (?, ?, ?, ?)").run("wh-1", "123456", "telegram", SENTINELS.webhookBotToken);
+  put.run("obsidian", "api_key", JSON.stringify(SENTINELS.obsidianToken));
+  put.run("obsidian", "base_url", JSON.stringify("http://127.0.0.1:27123"));
+  db.prepare("INSERT INTO radar_settings VALUES (1, 1, ?)").run(SENTINELS.radarKey);
+  db.prepare("INSERT INTO command_code_auth_sessions VALUES (?, ?, ?)").run("cc-1", "hash-1", SENTINELS.commandCodeKey);
+  db.prepare("INSERT INTO provider_nodes VALUES (?, ?, ?)").run(
+    "node-1", "gateway",
+    JSON.stringify({ "X-Custom-Auth": SENTINELS.nodeHeaderSecret, "X-Org": "keep-me" })
+  );
   // Pad so the secrets sit on pages that the scrub frees rather than on the only page.
   const pad = db.prepare("INSERT INTO key_value VALUES (?, ?, ?)");
   for (let i = 0; i < 200; i += 1) pad.run("padding", `row-${i}`, "x".repeat(200));
@@ -986,6 +1051,9 @@ for (const wal of [false, true]) {
     assert.equal(result.droppedAgentCredentials, 1);
     assert.equal(result.clearedEmbeddingKeys, 3);
     assert.equal(result.clearedServiceSecrets, 4);
+    // proxy_registry (1), proxyConfig global and providers (2), log export config, webhook token,
+    // Obsidian token, Radar key, Command Code key, node credential header (1 each).
+    assert.equal(result.clearedThirdPartySecrets, 9);
 
     // What should survive does: the rows, the non-secret metadata, unrelated settings.
     const { DatabaseSync } = await import("node:sqlite");
@@ -1010,6 +1078,22 @@ for (const wal of [false, true]) {
       0.8
     );
     assert.equal(after.prepare("SELECT COUNT(*) AS n FROM cloud_agent_credentials").get().n, 0);
+
+    // Third-party stores: the rows and their non-secret fields stay, the credentials do not.
+    const proxy = after.prepare("SELECT * FROM proxy_registry WHERE id = 'proxy-1'").get();
+    assert.deepEqual([proxy.host, proxy.port, proxy.username, proxy.password], ["10.0.0.5", 8080, "", ""]);
+    const proxyGlobal = JSON.parse(after.prepare("SELECT value FROM key_value WHERE namespace = 'proxyConfig' AND key = 'global'").get().value);
+    assert.deepEqual(proxyGlobal, { type: "http", host: "10.0.0.7", port: 80 });
+    const proxyProviders = JSON.parse(after.prepare("SELECT value FROM key_value WHERE namespace = 'proxyConfig' AND key = 'providers'").get().value);
+    assert.deepEqual(proxyProviders, { openai: "http://10.0.0.8:8080", groq: { host: "10.0.0.9", port: 81 } });
+    assert.deepEqual(JSON.parse(after.prepare("SELECT config FROM log_export_destinations").get().config), { projectId: "unit-project", datasetId: "d" });
+    const hook = after.prepare("SELECT * FROM webhooks").get();
+    assert.deepEqual([hook.url, hook.kind, hook.metadata_encrypted], ["123456", "telegram", null]);
+    assert.equal(after.prepare("SELECT COUNT(*) AS n FROM key_value WHERE namespace = 'obsidian' AND key = 'api_key'").get().n, 0);
+    assert.equal(JSON.parse(after.prepare("SELECT value FROM key_value WHERE namespace = 'obsidian' AND key = 'base_url'").get().value), "http://127.0.0.1:27123");
+    assert.equal(after.prepare("SELECT supporter_key_encrypted AS k FROM radar_settings").get().k, null);
+    assert.equal(after.prepare("SELECT encrypted_api_key AS k FROM command_code_auth_sessions").get().k, null);
+    assert.deepEqual(JSON.parse(after.prepare("SELECT custom_headers_json AS j FROM provider_nodes").get().j), { "X-Org": "keep-me" });
     after.close();
   });
 }
@@ -1022,7 +1106,11 @@ test("scrub: a second run over a clean database changes nothing and does not VAC
   db.close();
   assert.equal(again.vacuumed, false);
   assert.equal(
-    again.clearedApiKeys + again.clearedEmbeddingKeys + again.droppedAgentCredentials + again.clearedServiceSecrets,
+    again.clearedApiKeys +
+      again.clearedEmbeddingKeys +
+      again.droppedAgentCredentials +
+      again.clearedServiceSecrets +
+      again.clearedThirdPartySecrets,
     0
   );
 });
@@ -1312,4 +1400,374 @@ test("REQUIRE_API_KEY is on by default: flag, resolver, .env.example and both st
     if (saved === undefined) delete process.env.REQUIRE_API_KEY;
     else process.env.REQUIRE_API_KEY = saved;
   }
+});
+
+// ── Round 4, item 10: BigQuery service account, Telegram bot token, proxy logins ──
+
+const CANARY = {
+  proxyPassword: `canary-proxy-password-${randomBytes(6).toString("hex")}`,
+  proxyUser: `canary-proxy-user-${randomBytes(6).toString("hex")}`,
+  proxyUrl: `canary-proxy-url-${randomBytes(6).toString("hex")}`,
+  serviceAccount: `canary-service-account-${randomBytes(6).toString("hex")}`,
+  botToken: `canary-bot-token-${randomBytes(6).toString("hex")}`,
+  header: `canary-header-${randomBytes(6).toString("hex")}`,
+};
+
+/** A 501 keys_managed_by_openvault Response that does not echo `canary`. */
+async function assertKeysManaged(response, canary) {
+  assert.ok(response, "expected a refusal Response");
+  assert.equal(response.status, 501);
+  const text = await response.text();
+  assert.equal(JSON.parse(text).error.code, "keys_managed_by_openvault");
+  if (canary) assert.ok(!text.includes(canary), "the refused value must not be echoed");
+}
+
+function useCoreDatabase(name) {
+  process.env.DATA_DIR = join(tmpDir, name);
+  process.env.DISABLE_SQLITE_AUTO_BACKUP = "true";
+}
+
+test("proxy logins: a body with a username or password answers 501, blanks and plain proxies pass", async () => {
+  const { rejectProxyLoginsInBody, findProxyLoginFields } = await import("../src/lib/netie/providerGuards.ts");
+  const plain = { name: "p", host: "10.0.0.1", port: 8080 };
+  for (const body of [
+    { ...plain, password: CANARY.proxyPassword },
+    { ...plain, username: CANARY.proxyUser },
+    { items: [plain, { ...plain, password: CANARY.proxyPassword }] },
+    { level: "global", proxy: { type: "http", host: "h", port: 1, password: CANARY.proxyPassword } },
+    { global: { host: "h", port: 1, username: CANARY.proxyUser } },
+    { providers: { openai: { host: "h", port: 1, password: CANARY.proxyPassword } } },
+    { keys: { k1: { host: "h", port: 1, username: CANARY.proxyUser } } },
+    { proxy: { host: `${CANARY.proxyUser}@h`, port: 1 } },
+  ]) {
+    await assertKeysManaged(rejectProxyLoginsInBody(body), CANARY.proxyPassword);
+  }
+  // Clearing a stored login and a proxy that needs none are not writes of a credential.
+  assert.equal(rejectProxyLoginsInBody({ ...plain, username: "", password: "  " }), null);
+  assert.equal(rejectProxyLoginsInBody({ items: [plain] }), null);
+  assert.equal(rejectProxyLoginsInBody({ level: "global", proxy: null }), null);
+  assert.equal(rejectProxyLoginsInBody(null), null);
+  assert.deepEqual(findProxyLoginFields(`http://svc:${CANARY.proxyUrl}@10.0.0.1:8080`), ["url"]);
+  assert.deepEqual(findProxyLoginFields("http://10.0.0.1:8080"), []);
+});
+
+test("proxy logins: the registry and legacy proxyConfig writers refuse them and write nothing", async () => {
+  useCoreDatabase("proxy-data");
+  const { getDbInstance } = await import("../src/lib/db/core.ts");
+  const proxies = await import("../src/lib/db/proxies.ts");
+  const settings = await import("../src/lib/db/settings.ts");
+  const handlers = await import("../src/lib/api/proxyRegistryRouteHandlers.ts");
+  const isRefusal = (error) => error instanceof KeysManagedByOpenVaultError && error.status === 501;
+
+  const created = await proxies.createProxy({ name: "open", type: "http", host: "10.1.1.1", port: 8080 });
+  assert.ok(created?.id);
+  await assert.rejects(
+    proxies.createProxy({ name: "login", type: "http", host: "10.1.1.2", port: 8080, username: CANARY.proxyUser, password: CANARY.proxyPassword }),
+    isRefusal
+  );
+  await assert.rejects(proxies.updateProxy(created.id, { password: CANARY.proxyPassword }), isRefusal);
+  await assert.rejects(
+    proxies.upsertProxy({ name: "bulk", type: "http", host: "10.1.1.3", port: 8080, password: CANARY.proxyPassword }),
+    isRefusal
+  );
+  // Blank credentials clear a stored login and are accepted.
+  assert.ok(await proxies.updateProxy(created.id, { username: "", password: "" }));
+
+  await assert.rejects(
+    settings.setProxyConfig({ global: { type: "http", host: "h", port: 1, password: CANARY.proxyPassword } }),
+    isRefusal
+  );
+  await assert.rejects(
+    settings.setProxyConfig({ providers: { openai: { host: "h", port: 1, username: CANARY.proxyUser } } }),
+    isRefusal
+  );
+  await assert.rejects(
+    settings.setProxyForLevel("provider", "openai", `http://svc:${CANARY.proxyUrl}@h:1`),
+    isRefusal
+  );
+
+  // The route handlers answer the named 501 before validation or any write.
+  for (const handler of [handlers.handleProxyCreate, handlers.handleProxyUpdate]) {
+    const response = await handler(
+      new Request("http://127.0.0.1/api/settings/proxies", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ id: created.id, name: "x", host: "10.1.1.4", port: 80, password: CANARY.proxyPassword }),
+      })
+    );
+    await assertKeysManaged(response, CANARY.proxyPassword);
+  }
+
+  const bytes = dbFileBytes(getDbInstance().name);
+  for (const value of Object.values(CANARY)) assert.ok(!bytes.includes(Buffer.from(value)), value);
+});
+
+test("proxy login routes call the guard before they validate or write", () => {
+  const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
+  assert.match(read("../src/lib/api/proxyRegistryRouteHandlers.ts"), /rejectProxyLoginsInBody\(parsed\.body\)[\s\S]*rejectProxyLoginsInBody\(parsed\.body\)/);
+  assert.match(read("../src/app/api/settings/proxy/route.ts"), /rejectProxyLoginsInBody\(rawBody\)/);
+  assert.match(read("../src/app/api/settings/proxies/bulk-import/route.ts"), /rejectProxyLoginsInBody\(rawBody\)/);
+});
+
+test("log export: the service account is refused on write and read from OpenVault at run time", async () => {
+  const secrets = await import("../src/lib/logExport/secrets.ts");
+  const registry = await import("../src/lib/logExport/registry.ts");
+  const { LOG_EXPORT_SECRET_FIELDS } = await import("../src/lib/netie/scrubLocalSecrets.ts");
+
+  // The scrub's list covers every registered destination's secret fields.
+  for (const type of registry.listLogExportDestinationTypes()) {
+    for (const field of type.secretFields) assert.ok(LOG_EXPORT_SECRET_FIELDS.includes(field), `${type.id}.${field}`);
+  }
+  assert.deepEqual(secrets.findIncomingSecretFields("bigquery", { serviceAccountJson: CANARY.serviceAccount }), ["serviceAccountJson"]);
+  assert.deepEqual(secrets.findIncomingSecretFields("bigquery", { serviceAccountJson: secrets.SECRET_PLACEHOLDER }), []);
+  assert.deepEqual(secrets.findIncomingSecretFields("bigquery", { serviceAccountJson: "", projectId: "p" }), []);
+  const message = secrets.logExportCredentialMessage("bigquery", ["serviceAccountJson"]);
+  assert.match(message, /provider bigquery/);
+  assert.ok(!message.includes(CANARY.serviceAccount));
+  await assertKeysManaged((await import("@omniroute/open-sse/netie/policy.ts")).renderKeysManagedByOpenVault(message), CANARY.serviceAccount);
+
+  // A stored copy is ignored: the credential is the one OpenVault holds.
+  const vaultConfig = await secrets.resolveVaultDestinationConfig("bigquery", {
+    projectId: "p",
+    serviceAccountJson: "stale copy from an older build",
+  });
+  assert.equal(vaultConfig.serviceAccountJson, BIGQUERY_SECRET);
+  assert.equal(vaultConfig.projectId, "p");
+
+  // OpenVault has no key for the type: a named error, not a silent empty credential.
+  registry.__registerLogExportDestinationTypeForTest({
+    id: "nokey-sink",
+    labelFallback: "t",
+    descriptionFallback: "t",
+    secretFields: ["token"],
+    fields: [],
+    configSchema: { safeParse: (value) => ({ success: true, data: value }) },
+    createClient: () => ({}),
+  });
+  try {
+    await assert.rejects(secrets.resolveVaultDestinationConfig("nokey-sink", {}), /No nokey-sink credential in OpenVault/);
+  } finally {
+    registry.__resetLogExportDestinationTypesForTest();
+  }
+
+  // OpenVault down: the named 503.
+  process.env.OPENVAULT_URL = await getDeadUrl();
+  __resetKeyVaultCacheForTest();
+  await assertKeyVaultError(secrets.resolveVaultDestinationConfig("bigquery", {}), "openvault_keyvault_unreachable");
+});
+
+test("log export: the destination store refuses a credential and keeps nothing", async () => {
+  useCoreDatabase("logexport-data");
+  const { getDbInstance } = await import("../src/lib/db/core.ts");
+  const store = await import("../src/lib/db/logExportDestinations.ts");
+  const isRefusal = (error) => error instanceof KeysManagedByOpenVaultError && error.status === 501;
+  const base = { name: "bq", type: "bigquery", config: { projectId: "p", datasetId: "d", tableId: "t" } };
+
+  await assert.rejects(
+    async () => store.createLogExportDestination({ ...base, config: { ...base.config, serviceAccountJson: CANARY.serviceAccount } }),
+    isRefusal
+  );
+  const created = store.createLogExportDestination(base);
+  assert.ok(created.id);
+  assert.throws(
+    () => store.updateLogExportDestination(created.id, { config: { ...base.config, serviceAccountJson: CANARY.serviceAccount } }),
+    isRefusal
+  );
+  assert.ok(store.updateLogExportDestination(created.id, { enabled: true }));
+
+  const bytes = dbFileBytes(getDbInstance().name);
+  assert.ok(!bytes.includes(Buffer.from(CANARY.serviceAccount)));
+
+  const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
+  for (const route of ["../src/app/api/log-export/destinations/route.ts", "../src/app/api/log-export/destinations/[id]/route.ts"]) {
+    const source = read(route);
+    assert.match(source, /findIncomingSecretFields\(/);
+    assert.match(source, /renderKeysManagedByOpenVault\(/);
+    assert.doesNotMatch(source, /encryptDestinationConfig|requiresEncryptionKey/);
+  }
+  assert.match(read("../src/lib/logExport/runner.ts"), /await resolveVaultDestinationConfig\(/);
+  assert.doesNotMatch(read("../src/lib/logExport/runner.ts"), /decryptDestinationConfig/);
+});
+
+test("webhooks: a Telegram bot token is refused on write and read from OpenVault", async () => {
+  const { rejectSecretWebhookMetadata, findSecretMetadataFields } = await import("../src/lib/netie/providerGuards.ts");
+  await assertKeysManaged(rejectSecretWebhookMetadata({ botToken: CANARY.botToken }), CANARY.botToken);
+  await assertKeysManaged(rejectSecretWebhookMetadata({ chat: "x", api_key: CANARY.botToken }), CANARY.botToken);
+  assert.equal(rejectSecretWebhookMetadata({ botToken: "" }), null);
+  assert.equal(rejectSecretWebhookMetadata({ chatTitle: "ops" }), null);
+  assert.equal(rejectSecretWebhookMetadata(undefined), null);
+  assert.deepEqual(findSecretMetadataFields({ botToken: "x", chatTitle: "ops" }), ["botToken"]);
+
+  const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
+  assert.match(read("../src/app/api/webhooks/route.ts"), /rejectSecretWebhookMetadata\(data\.metadata\)/);
+  assert.match(read("../src/app/api/webhooks/[id]/route.ts"), /rejectSecretWebhookMetadata\(metadata\)/);
+  for (const path of ["../src/lib/webhookDispatcher.ts", "../src/app/api/webhooks/[id]/test/route.ts"]) {
+    const source = read(path);
+    assert.match(source, /resolveProviderApiKey\("telegram"\)/);
+    assert.doesNotMatch(source, /meta\?\.botToken/);
+  }
+  // The vault lookup that dispatch and the test route use returns the stub's token.
+  const { resolveProviderApiKey: lookup } = await import("../src/lib/netie/keyvault.ts");
+  assert.equal(await lookup("telegram"), TELEGRAM_SECRET);
+});
+
+// ── Round 4, item 11: import scrub (the fixtures above hold the sentinels) ──
+
+test("scrub: a JSON import drops service keys from settings and logins from proxyConfig before they are written", async () => {
+  const { sanitizeImportedConnections } = await import("../src/lib/netie/scrubLocalSecrets.ts");
+  const out = sanitizeImportedConnections({
+    settings: { theme: "dark", skillsmpApiKey: CANARY.botToken, qdrantApiKey: CANARY.botToken, cliproxyapi_api_key: CANARY.botToken },
+    proxyConfig: {
+      global: { host: "h", port: 1, username: CANARY.proxyUser, password: CANARY.proxyPassword },
+      providers: { openai: `http://svc:${CANARY.proxyUrl}@h:1`, groq: { host: "g", port: 2 } },
+      combos: {},
+      keys: {},
+    },
+  });
+  assert.deepEqual(out.settings, { theme: "dark" });
+  assert.deepEqual(out.proxyConfig.global, { host: "h", port: 1 });
+  assert.deepEqual(out.proxyConfig.providers, { openai: "http://h:1", groq: { host: "g", port: 2 } });
+  const text = JSON.stringify(out);
+  for (const value of Object.values(CANARY)) assert.ok(!text.includes(value), value);
+});
+
+// ── Round 4, item 12: credential-looking header values ──
+
+test("headers: a credential is recognised by its value, whatever the header name", async () => {
+  const { looksLikeCredentialValue } = await import("../src/shared/constants/upstreamHeaders.ts");
+  for (const value of [
+    "Bearer abcdefgh12345678",
+    "Basic dXNlcjpwYXNzd29yZA==",
+    "sk-proj-abcdefgh12345678",
+    "ghp_abcdefghijklmnop1234567890",
+    "xoxb-1234567890-abcdefghijkl",
+    "AIzaSyA-abcdefghijklmnopqrstuvwxyz",
+    "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0In0.c2lnbmF0dXJl",
+    "REVIEWSECRET_NODEHDR_411",
+    "a1B2c3D4e5F6g7H8i9J0kLmN",
+    "0123456789abcdef0123456789abcdef",
+  ]) {
+    assert.equal(looksLikeCredentialValue(value), true, value);
+  }
+  for (const value of [
+    "application/json",
+    "assistants=v2",
+    "2023-06-01",
+    "acme-corp",
+    "https://example.com/app",
+    "Mozilla/5.0 (X11; Linux x86_64)",
+    "123e4567-e89b-12d3-a456-426614174000",
+    "claude-3-5-sonnet-20241022",
+    "acme-corp-prod-2024-eu-west",
+    "FreeRoute-Webhook/1.0",
+    "",
+  ]) {
+    assert.equal(looksLikeCredentialValue(value), false, value);
+  }
+});
+
+test("headers: customHeaders and providerSpecificData.extraHeaders carrying a credential are refused", async () => {
+  const guards = await import("../src/lib/netie/providerGuards.ts");
+  const { findCredentialHeaders, rejectCredentialHeaders, isSecretHeaderName } = guards;
+
+  // The names the review used: neither is on the five-name denylist.
+  assert.deepEqual(
+    findCredentialHeaders({ "X-Auth-Token": "REVIEWSECRET_NODEHDR_411", "X-Custom-Auth": "REVIEWSECRET_NODEHDR_412", "X-Org": "acme" }),
+    ["X-Auth-Token", "X-Custom-Auth"]
+  );
+  // A credential-looking value under a harmless name.
+  assert.deepEqual(findCredentialHeaders({ "X-Tenant": "sk-live-abcdefgh12345678", "X-Trace": `Bearer ${CANARY.header}` }), ["X-Tenant", "X-Trace"]);
+  assert.deepEqual(findCredentialHeaders({ "X-Org": "acme", "OpenAI-Beta": "assistants=v2", "X-Auth-Mode": "strict" }), []);
+  assert.deepEqual(findCredentialHeaders({ "X-Auth-Token": "" }), []);
+  assert.equal(isSecretHeaderName("X-Auth"), true);
+  assert.equal(isSecretHeaderName("X-Auth-Mode"), false);
+
+  const refusal = rejectCredentialHeaders({ "X-Auth-Token": CANARY.header });
+  await assertKeysManaged(refusal, CANARY.header);
+  assert.equal(rejectCredentialHeaders({ "X-Org": "acme" }), null);
+  assert.equal(rejectCredentialHeaders(null), null);
+
+  // providerSpecificData header maps, at any depth, by name or by value.
+  assert.deepEqual(
+    findSecretProviderSpecificFields({ extraHeaders: { "X-Auth": "REVIEWSECRET_PSDHDR_404", "X-Org": "acme" } }),
+    ["extraHeaders.X-Auth"]
+  );
+  assert.deepEqual(
+    findSecretProviderSpecificFields({ nested: { customHeaders: { "X-Anything": "ghp_abcdefghijklmnop1234" } } }),
+    ["nested.customHeaders.X-Anything"]
+  );
+  assert.throws(
+    () =>
+      assertConnectionWriteAllowed({
+        provider: "openai",
+        authType: "apikey",
+        providerSpecificData: { extraHeaders: { "X-Auth": CANARY.header } },
+      }),
+    (error) => error instanceof KeysManagedByOpenVaultError && !error.message.includes(CANARY.header)
+  );
+  assert.deepEqual(
+    stripSecretProviderSpecificData({ extraHeaders: { "X-Auth": CANARY.header, "X-Org": "acme" }, authMethod: "builtin" }),
+    { extraHeaders: { "X-Org": "acme" }, authMethod: "builtin" }
+  );
+  // Fields that only look auth-adjacent stay allowed.
+  assert.equal(isSecretFieldName("authMethod"), false);
+  assert.deepEqual(findSecretProviderSpecificFields({ authMethod: "builtin", extraHeaders: { "X-Org": "acme" } }), []);
+});
+
+test("headers: stored header values are never echoed, and the placeholder keeps the stored value", async () => {
+  const { redactProviderNode } = await import("../src/lib/netie/providerGuards.ts");
+  const { redactHeaderValues, mergeStoredHeaderValues, HEADER_VALUE_PLACEHOLDER } = await import("../src/shared/constants/upstreamHeaders.ts");
+
+  const node = { id: "n1", name: "gw", customHeaders: { "X-Org": "acme-private-value", "X-Env": "prod" } };
+  const shown = redactProviderNode(node);
+  assert.deepEqual(shown.customHeaders, { "X-Org": HEADER_VALUE_PLACEHOLDER, "X-Env": HEADER_VALUE_PLACEHOLDER });
+  assert.ok(!JSON.stringify(shown).includes("acme-private-value"));
+  assert.equal(node.customHeaders["X-Org"], "acme-private-value", "the stored node is not mutated");
+  assert.deepEqual(redactProviderNode({ id: "n2", customHeaders: null }).customHeaders, null);
+  assert.equal(redactHeaderValues(undefined), null);
+
+  assert.deepEqual(
+    mergeStoredHeaderValues({ "X-Org": HEADER_VALUE_PLACEHOLDER, "X-New": "v", "X-Gone": HEADER_VALUE_PLACEHOLDER }, node.customHeaders),
+    { "X-Org": "acme-private-value", "X-New": "v" }
+  );
+  assert.equal(mergeStoredHeaderValues(null, node.customHeaders), null);
+  assert.equal(mergeStoredHeaderValues({ "X-Gone": HEADER_VALUE_PLACEHOLDER }, {}), null);
+});
+
+test("headers: the provider-node store refuses a credential header and writes nothing", async () => {
+  useCoreDatabase("nodes-data");
+  const { getDbInstance } = await import("../src/lib/db/core.ts");
+  const nodes = await import("../src/lib/db/providers/nodes.ts");
+  const isRefusal = (error) => error instanceof KeysManagedByOpenVaultError && error.status === 501;
+  const base = { type: "openai-compatible", name: "gw", prefix: "gw", apiType: "chat", baseUrl: "http://127.0.0.1:9/v1" };
+
+  await assert.rejects(nodes.createProviderNode({ ...base, id: "openai-compatible-chat-bad", customHeaders: { "X-Custom-Auth": CANARY.header } }), isRefusal);
+  await assert.rejects(nodes.createProviderNode({ ...base, id: "openai-compatible-chat-bad2", customHeaders: { "X-Tenant": `sk-${CANARY.header}` } }), isRefusal);
+  const node = await nodes.createProviderNode({ ...base, id: "openai-compatible-chat-ok", customHeaders: { "X-Org": "acme" } });
+  assert.deepEqual(node.customHeaders, { "X-Org": "acme" });
+  await assert.rejects(nodes.updateProviderNode(node.id, { customHeaders: { "X-Auth-Token": CANARY.header } }), isRefusal);
+  assert.ok(await nodes.updateProviderNode(node.id, { customHeaders: { "X-Org": "acme", "X-Env": "prod" } }));
+
+  assert.ok(!dbFileBytes(getDbInstance().name).includes(Buffer.from(CANARY.header)));
+
+  const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
+  for (const route of ["../src/app/api/provider-nodes/route.ts", "../src/app/api/provider-nodes/[id]/route.ts"]) {
+    const source = read(route);
+    assert.match(source, /rejectCredentialHeaders\(customHeaders\)/);
+    assert.match(source, /redactProviderNode\(/);
+  }
+  // The list, the create branches and the update answer with header names only.
+  assert.match(read("../src/app/api/provider-nodes/route.ts"), /nodes: nodes\.map\(\(node\) => redactProviderNode\(node\)\)/);
+  assert.ok(read("../src/app/api/provider-nodes/route.ts").match(/node: redactProviderNode\(node\)/g)?.length >= 1);
+  assert.doesNotMatch(read("../src/app/api/provider-nodes/route.ts"), /NextResponse\.json\(\{ node(?!:)/, "a create branch echoes the raw node");
+  assert.match(read("../src/app/api/provider-nodes/[id]/route.ts"), /node: redactProviderNode\(updated\)/);
+  assert.match(read("../src/app/api/provider-nodes/[id]/route.ts"), /mergeStoredHeaderValues\(customHeaders, node\.customHeaders\)/);
+});
+
+test("the other settings routes use the guards: Obsidian, export-json, and the legacy JSON import", () => {
+  const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
+  assert.match(read("../src/app/api/settings/obsidian/route.ts"), /new KeysManagedByOpenVaultError\(\s*\["token"\]/);
+  assert.doesNotMatch(read("../src/app/api/settings/obsidian/route.ts"), /setObsidianToken\(/);
+  assert.match(read("../src/app/api/settings/export-json/route.ts"), /SERVICE_SECRET_SETTING_FIELDS/);
+  assert.match(read("../src/lib/db/jsonMigration.ts"), /sanitizeImportedConnections\(data\)/);
 });

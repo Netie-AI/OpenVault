@@ -1,4 +1,5 @@
 # syntax=docker/dockerfile:1
+# Modified by Netie AI, 2026
 # ─── Build stage ────────────────────────────────────────
 # Pin bun (was :latest — non-deterministic; drifted to 1.3.14) to .bun-version.
 FROM oven/bun:1.3.3 AS builder
@@ -71,5 +72,5 @@ COPY --from=builder /app/apps/api ./apps/api
 COPY --from=builder /app/apps/email/engine ./apps/email/engine
 
 ENV NODE_ENV=production
-EXPOSE 4000
+EXPOSE 3030
 CMD ["bun", "run", "apps/api/dist/index.js"]

@@ -248,7 +248,7 @@
     "stopping": "Server to‘xtatilmoqda (PID {pid})...",
     "stopped": "Server to‘xtatildi.",
     "notRunning": "Server ishlamayapti.",
-    "port": "Tinglash uchun port (standart: 20128)",
+    "port": "Tinglash uchun port (standart: 3020)",
     "no_open": "Brauzerni avtomatik ravishda ochmaslik",
     "daemon": "Serverni fon demoni sifatida ishga tushirish",
     "log": "Server jurnallarini bevosita ko‘rsatish",

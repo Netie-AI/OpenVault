@@ -1441,7 +1441,7 @@ export async function handleOpenAIImageEdit({
   // makes undici serialize it as the string "[object FormData]" (text/plain), dropping every
   // field (including `model`, which reaches the upstream empty). A Buffer body is accepted
   // verbatim by any fetch implementation. (#3273)
-  const boundary = `----OmniRouteImageEdit${randomUUID().replace(/-/g, "")}`;
+  const boundary = `----FreeRouteImageEdit${randomUUID().replace(/-/g, "")}`;
   const CRLF = "\r\n";
   const partBuffers: Buffer[] = [];
   const appendField = (name: string, value: string) => {

@@ -272,7 +272,7 @@ async function applyOmniglyph(
 
 export const omniglyphEngine: CompressionEngine = {
   id: "omniglyph",
-  name: "OmniGlyph",
+  name: "FreeRoute Glyph",
   description:
     "Contexto-como-imagem para Claude Fable 5 na rota direta medida; wires GPT nativos ficam disponíveis apenas após recibo de fidelidade do provedor.",
   icon: "image",
@@ -282,7 +282,7 @@ export const omniglyphEngine: CompressionEngine = {
   sampling: true, // perda intencional + factsheet → fidelity gate pula por design
   metadata: {
     id: "omniglyph",
-    name: "OmniGlyph",
+    name: "FreeRoute Glyph",
     description:
       "Contexto-como-imagem para Claude Fable 5 na rota direta medida; transformadores GPT nativos permanecem fail-closed até validação do provedor.",
     inputScope: "mixed",

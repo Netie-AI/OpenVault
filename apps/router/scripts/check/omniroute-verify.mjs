@@ -2,7 +2,7 @@
 
 import { CLI_TOKEN_HEADER, getCliToken } from "../../bin/cli/utils/cliToken.mjs";
 
-const baseUrl = (process.env.OMNIROUTE_BASE_URL || "http://127.0.0.1:20128").replace(/\/$/, "");
+const baseUrl = (process.env.OMNIROUTE_BASE_URL || "http://127.0.0.1:3020").replace(/\/$/, "");
 const apiKey = process.env.OMNIROUTE_API_KEY || "";
 const timeoutMs = 5000;
 
@@ -40,7 +40,7 @@ function check(label, passed, detail = "") {
   return passed;
 }
 
-console.log("OmniRoute Verification");
+console.log("FreeRoute Verification");
 console.log(`Gateway: ${baseUrl}`);
 const results = [];
 

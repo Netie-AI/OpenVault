@@ -248,7 +248,7 @@
     "stopping": "server बन्द हुँदैछ (PID {pid})...",
     "stopped": "Server बन्द भयो।",
     "notRunning": "Server चलिरहेको छैन।",
-    "port": "सुन्ने port (पूर्वनिर्धारित: 20128)",
+    "port": "सुन्ने port (पूर्वनिर्धारित: 3020)",
     "no_open": "browser स्वतः नखोल्नुहोस्",
     "daemon": "server लाई background daemon का रूपमा चलाउनुहोस्",
     "log": "server logs इनलाइन देखाउनुहोस्",

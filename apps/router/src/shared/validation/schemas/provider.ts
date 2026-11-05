@@ -336,9 +336,6 @@ export const removeModelAliasSchema = z.object({
 
 export const createProviderNodeSchema = z
   .object({
-    // #6874: name/prefix are required in general, but a `preset` (e.g.
-    // "vibeproxy-openai") supplies both — enforced conditionally below
-    // instead of unconditionally here.
     name: z.string().trim().optional().or(z.literal("")),
     prefix: z.string().trim().optional().or(z.literal("")),
     apiType: z
@@ -354,10 +351,6 @@ export const createProviderNodeSchema = z
     baseUrl: z.string().trim().min(1).optional(),
     type: z.enum(["openai-compatible", "anthropic-compatible"]).optional(),
     compatMode: z.enum(["cc"]).optional(),
-    // #6874: named presets fill in name/prefix/apiType for well-known
-    // OpenAI-compatible local gateways so the operator only has to paste
-    // a baseUrl. Currently just VibeProxy (github.com/automazeio/vibeproxy).
-    preset: z.enum(["vibeproxy-openai"]).optional(),
     chatPath: z.string().trim().startsWith("/").max(500).optional().or(z.literal("")),
     modelsPath: z.string().trim().startsWith("/").max(500).optional().or(z.literal("")),
     // #2166: optional operator-supplied remote icon URL for the provider node. Empty
@@ -381,19 +374,6 @@ export const createProviderNodeSchema = z
         message: reservedProviderPrefixMessage(normalizedPrefix),
         path: ["prefix"],
       });
-    }
-    if (value.preset === "vibeproxy-openai") {
-      // Preset supplies name/prefix/apiType — but baseUrl is still mandatory
-      // (a local proxy's host/port is operator-specific, unlike the generic
-      // openai-compatible fallback-to-api.openai.com default).
-      if (!value.baseUrl || !value.baseUrl.trim()) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Base URL is required for the VibeProxy preset",
-          path: ["baseUrl"],
-        });
-      }
-      return;
     }
     if (!value.name || !value.name.trim()) {
       ctx.addIssue({

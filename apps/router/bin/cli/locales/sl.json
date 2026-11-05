@@ -248,7 +248,7 @@
     "stopping": "Ustavljanje strežnika (PID {pid}) ...",
     "stopped": "Strežnik je ustavljen.",
     "notRunning": "Strežnik se ne izvaja.",
-    "port": "Vrata za poslušanje (privzeto: 20128)",
+    "port": "Vrata za poslušanje (privzeto: 3020)",
     "no_open": "Ne odpri brskalnika samodejno",
     "daemon": "Zaženi strežnik kot demon v ozadju",
     "log": "Prikaži strežniške dnevnike neposredno",

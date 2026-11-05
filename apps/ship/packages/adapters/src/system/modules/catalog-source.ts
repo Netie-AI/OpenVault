@@ -1,6 +1,11 @@
+// Modified by Netie AI, 2026: there is no default remote. The catalog was fetched
+// from the upstream project's `native-modules` repository (ref `main`); that
+// repository is no longer contacted. A remote is used only when the operator sets
+// OPENSHIP_MODULE_CATALOG_BASE_URL to one they run, and a URL naming the upstream
+// project is refused. Otherwise the embedded, signature-checked bundle is used.
 /**
- * Catalog source — resolve a VERIFIED module catalog from the pinned remote
- * GitHub ref, falling back to the embedded bundle. Both paths run through the
+ * Catalog source: resolve a VERIFIED module catalog from the operator's pinned
+ * remote (if one is configured), falling back to the embedded bundle. Both paths run through the
  * SAME verify gate (verify.ts): there is no unsigned execution path, even offline.
  *
  * Resolution order (mirrors readLua's disk-first/embedded-fallback in
@@ -12,6 +17,7 @@
  * mirrors downloadTarballOnRemote (source-tarball.ts): fail on HTTP error, retry.
  */
 
+import { isUpstreamUrl } from "@repo/core";
 import type { ModuleCatalog, VerifiedCatalog } from "./types";
 import {
   CATALOG_PUBKEYS,
@@ -23,11 +29,15 @@ import {
 } from "./verify";
 import { EMBEDDED_CATALOG } from "./catalog-embedded";
 
-/** Pinned catalog coordinates, baked at build time; env overrides for dev/ops. */
-const CATALOG_BASE_URL =
-  process.env.OPENSHIP_MODULE_CATALOG_BASE_URL?.trim() ||
-  "https://raw.githubusercontent.com/openship/native-modules";
-const CATALOG_REF = process.env.OPENSHIP_MODULE_CATALOG_REF?.trim() || "main";
+/** The operator's catalog remote, or null (the default: embedded bundle only). */
+function catalogBaseUrl(): string | null {
+  const raw = process.env.OPENSHIP_MODULE_CATALOG_BASE_URL?.trim().replace(/\/+$/, "");
+  if (!raw || isUpstreamUrl(raw)) return null;
+  return raw;
+}
+function catalogRef(): string {
+  return process.env.OPENSHIP_MODULE_CATALOG_REF?.trim() || "main";
+}
 
 export interface CatalogLoadResult {
   catalog?: VerifiedCatalog;
@@ -117,7 +127,9 @@ async function fetchBytes(url: string): Promise<Buffer | null> {
 
 /** Fetch + verify the pinned remote catalog for `module`, if reachable. */
 export async function fetchRemoteCatalog(module: string): Promise<CatalogLoadResult> {
-  const dir = `${CATALOG_BASE_URL}/${CATALOG_REF}/modules/${module}`;
+  const base = catalogBaseUrl();
+  if (!base) return {}; // no operator remote configured: nothing to fetch
+  const dir = `${base}/${catalogRef()}/modules/${module}`;
   const [manifest, sig] = await Promise.all([
     fetchBytes(`${dir}/catalog.json`),
     fetchBytes(`${dir}/catalog.json.sig`).catch(() => null),
@@ -140,12 +152,12 @@ export async function fetchRemoteCatalog(module: string): Promise<CatalogLoadRes
     const b = await fetchBytes(`${dir}/${key}`);
     if (b) assets.set(key, b);
   }
-  return verifyAndBuild(module, manifest, sig ?? Buffer.alloc(0), assets, `${CATALOG_REF}`);
+  return verifyAndBuild(module, manifest, sig ?? Buffer.alloc(0), assets, catalogRef());
 }
 
 /**
- * Resolve the best verified catalog for `module`: pinned remote first (live
- * updates), then the embedded bundle (offline / air-gapped). Returns null when
+ * Resolve the best verified catalog for `module`: the operator's pinned remote
+ * first (only when configured), then the embedded bundle (offline / air-gapped). Returns null when
  * neither source has a verifiable catalog — the caller then leaves the module
  * untouched (fail-closed).
  */

@@ -2,7 +2,6 @@ import { getMachineId } from "@/shared/utils/machine";
 import { loadHomeSettings } from "./loadHomeSettings";
 import HomePageClient from "../dashboard/HomePageClient";
 import BootstrapBanner from "../dashboard/BootstrapBanner";
-import VscodeCopilotBanner from "../dashboard/VscodeCopilotBanner";
 import NewsBanner from "../dashboard/NewsBanner";
 import FirstRunReadinessCard from "../dashboard/FirstRunReadinessCard";
 
@@ -16,7 +15,6 @@ export default async function HomePage() {
     <>
       {isBootstrapped && <BootstrapBanner />}
       <FirstRunReadinessCard setupComplete={Boolean(settings.setupComplete)} />
-      <VscodeCopilotBanner />
       <NewsBanner />
       <HomePageClient machineId={machineId} />
     </>

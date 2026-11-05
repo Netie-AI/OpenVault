@@ -8,13 +8,13 @@
  */
 import { generateOpencodeConfig } from "../../src/lib/cli-helper/config-generator/opencode.ts";
 
-const baseURL = process.env.OMNIROUTE_URL ?? "http://localhost:20128";
+const baseURL = process.env.OMNIROUTE_URL ?? "http://localhost:3020";
 const apiKey = process.env.OMNIROUTE_KEY ?? process.env.OPENCODE_API_KEY ?? "";
 
 if (!apiKey) {
   console.error(
     "OMNIROUTE_KEY (or OPENCODE_API_KEY) env var is required. " +
-      "Find it in OmniRoute dashboard → Settings → API Keys."
+      "Find it in FreeRoute dashboard → Settings → API Keys."
   );
   process.exit(1);
 }

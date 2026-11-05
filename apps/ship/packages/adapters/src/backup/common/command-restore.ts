@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026
 import { createWriteStream, promises as fs } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { tmpdir } from "node:os";
@@ -182,7 +183,7 @@ export async function receiveCommandArchive(
   const quoted = shellQuote(target);
   const prelude = [
     tool
-      ? `command -v ${tool} >/dev/null 2>&1 || { echo "openship: '${tool}' is not installed on this host; your data is untouched." >&2; exit 90; }`
+      ? `command -v ${tool} >/dev/null 2>&1 || { echo "freebuild: '${tool}' is not installed on this host; your data is untouched." >&2; exit 90; }`
       : "",
     `command -v tar >/dev/null 2>&1 || exit 90`,
     `mkdir -p ${quoted} || exit 91`,

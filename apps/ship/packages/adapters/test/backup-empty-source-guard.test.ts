@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026
 /**
  * A volume capture must not record an archive of nothing as a backup.
  *
@@ -95,7 +96,7 @@ describe("the gate refuses an empty mount and passes a populated one", () => {
   const gateFor = (dir: string) =>
     [
       `SRC='pgdata-0'`,
-      `[ -n "$(ls -A ${dir} 2>/dev/null)" ] || { echo "openship: backup source $SRC is empty` +
+      `[ -n "$(ls -A ${dir} 2>/dev/null)" ] || { echo "freebuild: backup source $SRC is empty` +
         ` or missing on this host" >&2; exit 91; }`,
       `tar -c -C ${dir} . | wc -c`,
     ].join("\n");

@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: a tunnel token is refused with 501 keys_managed_by_openvault.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Hono } from "hono";
 import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from "node:fs/promises";
@@ -2345,7 +2346,12 @@ describe("HTTP/native system parity", () => {
       expect(await system.getEmailSettings()).toMatchObject({ host: "smtp.example.test", port: 587, user: "admin", hasPassword: true });
       await system.updateEmailSettings({ host: "smtp.example.test", user: "renamed", password: "" });
       expect(h.settings!.smtpPasswordEncrypted).toBe(sealed);
-      await system.updateSettings({ tunnelToken: "secret-tunnel-token", tunnelProvider: "cloudflare" });
+      // FreeBuild stores no tunnel token (501 keys_managed_by_openvault); the provider still saves.
+      const refused = await system.updateSettings({ tunnelToken: "secret-tunnel-token", tunnelProvider: "cloudflare" }).then(() => null, (error: any) => error);
+      expect(refused?.statusCode ?? refused?.status).toBe(501);
+      expect(refused?.code ?? refused?.body?.error?.code).toBe("keys_managed_by_openvault");
+      expect(h.settings).not.toHaveProperty("tunnelToken", "secret-tunnel-token");
+      await system.updateSettings({ tunnelProvider: "cloudflare" });
       expect(JSON.stringify(await system.getSettings())).not.toContain("secret-tunnel-token");
       expect(JSON.stringify(await system.getEmailSettings())).not.toContain(sealed);
     }

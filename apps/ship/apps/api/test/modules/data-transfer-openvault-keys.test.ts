@@ -77,4 +77,26 @@ describe("dropOpenVaultManagedCredentials", () => {
     expect(out.bundle).toBeNull();
     expect(out.file.dump.tables.dns_credential).toEqual([]);
   });
+
+  it("drops a tunnel token from the instance_settings row and from the bundle", () => {
+    const file = exportFile({
+      instance_settings: [{ id: "default", tunnelProvider: "cloudflare", tunnelToken: "REVIEWSECRET_CFTUNNEL_106" }],
+    });
+    const withToken: SecretBundle = {
+      version: 1,
+      entries: [
+        { table: "instance_settings", id: "default", column: "tunnelToken", scheme: "plaintext", value: "REVIEWSECRET_CFTUNNEL_106" },
+        { table: "servers", id: "srv_1", column: "sshPassword", scheme: "enc1", value: "ssh" },
+      ],
+    };
+
+    const out = dropOpenVaultManagedCredentials(file, withToken);
+
+    expect(out.file.dump.tables.instance_settings).toEqual([
+      { id: "default", tunnelProvider: "cloudflare", tunnelToken: null },
+    ]);
+    expect(out.bundle!.entries.map((e) => `${e.table}:${e.column}`)).toEqual(["servers:sshPassword"]);
+    expect(JSON.stringify(out)).not.toContain("REVIEWSECRET_CFTUNNEL_106");
+    expect(file.dump.tables.instance_settings![0]!.tunnelToken).toBe("REVIEWSECRET_CFTUNNEL_106");
+  });
 });

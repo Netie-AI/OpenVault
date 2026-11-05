@@ -3,10 +3,14 @@
 /**
  * Update + advisory state for the dashboard (desktop AND self-hosted).
  *
- * Everything is PULLED from the public GitHub repo — the latest release + an
- * advisory manifest pinned to that release's tag (so unreleased commits to main
- * never reach clients). Nothing is pushed to the app. Pure resolution lives in
- * @repo/core; this hook only does I/O + persistence.
+ * Modified by Netie AI, 2026: FreeBuild has no published release feed yet, and
+ * it must not read the upstream project's releases, changelog or advisories. With
+ * no feed configured (the default, see GITHUB_REPO in @repo/core) the browser
+ * makes no request to GitHub and the state reports no update information. When a
+ * feed is configured, the latest release + an advisory manifest pinned to that
+ * release's tag are pulled from it. Operator-pushed platform notices still come
+ * from this install's own API. Pure resolution lives in @repo/core; this hook only
+ * does I/O + persistence.
  */
 
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
@@ -104,19 +108,33 @@ async function persistLastSeen(version: string): Promise<void> {
   else localStorage.setItem(LS_LAST_SEEN, version);
 }
 
-// Session-scoped cache: fetch GitHub once per app session (GitHub rate-limits
-// unauthenticated calls to 60/hr/IP; navigation shouldn't re-hit it).
+// Session-scoped cache: read the release feed (if any) once per app session.
 let remoteCache: Promise<ReleaseFeedSnapshot> | null = null;
 let remoteInFlight: Promise<ReleaseFeedSnapshot> | null = null;
+
+/** Where the release, changelog and advisory documents come from. Empty `latestApi` means no feed. */
+export interface ReleaseFeed {
+  latestApi: string;
+  changelogUrl: (tag: string) => string;
+  advisoryUrl: (tag: string) => string;
+}
+
+const DEFAULT_FEED: ReleaseFeed = {
+  latestApi: RELEASES_LATEST_API,
+  changelogUrl: changelogMarkdownUrl,
+  advisoryUrl: advisoryManifestUrl,
+};
 
 /** One uncached update read. Exported so the three-source failure isolation is testable. */
 export async function fetchRemoteUncached(
   fetcher: typeof fetch = fetch,
+  feed: ReleaseFeed = DEFAULT_FEED,
 ): Promise<{ latest: LatestRelease | null; manifest: AdvisoryManifest | null }> {
   let latest: LatestRelease | null = null;
   let manifest: AdvisoryManifest | null = null;
+  if (!feed.latestApi) return { latest, manifest };
   try {
-    const res = await fetcher(RELEASES_LATEST_API, {
+    const res = await fetcher(feed.latestApi, {
       headers: { Accept: "application/vnd.github+json" },
     });
     if (res.ok) {
@@ -128,8 +146,8 @@ export async function fetchRemoteUncached(
         // a missing changelog must not hide a critical advisory, and a missing
         // advisory must not erase the release notes.
         const [changelogResult, manifestResult] = await Promise.allSettled([
-          fetcher(changelogMarkdownUrl(tag)),
-          fetcher(advisoryManifestUrl(tag), { headers: { Accept: "application/json" } }),
+          fetcher(feed.changelogUrl(tag)),
+          fetcher(feed.advisoryUrl(tag), { headers: { Accept: "application/json" } }),
         ]);
         if (changelogResult.status === "fulfilled" && changelogResult.value.ok) {
           try {
@@ -218,7 +236,7 @@ export interface UseUpdates {
   /** Error message when `updatePhase === "error"`. */
   updateError: string | null;
   reload: () => void;
-  /** Force a fresh GitHub check, bypassing the session cache. */
+  /** Force a fresh release-feed check, bypassing the session cache. */
   refresh: () => void;
 }
 

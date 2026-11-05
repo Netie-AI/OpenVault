@@ -248,7 +248,7 @@
     "stopping": "Zaustavljanje poslužitelja (PID {pid})...",
     "stopped": "Poslužitelj je zaustavljen.",
     "notRunning": "Poslužitelj nije pokrenut.",
-    "port": "Port na kojem se osluškuje (zadano: 20128)",
+    "port": "Port na kojem se osluškuje (zadano: 3020)",
     "no_open": "Ne otvara automatski preglednik",
     "daemon": "Pokreni poslužitelj kao pozadinski daemon",
     "log": "Prikaži zapise poslužitelja u retku",

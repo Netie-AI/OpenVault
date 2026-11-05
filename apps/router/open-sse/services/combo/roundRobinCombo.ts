@@ -1,4 +1,5 @@
 /** Round-robin combo dispatcher. Lift-as-is from combo.ts. @internal */
+import { readSelectedConnectionId } from "../../../src/shared/constants/headers.ts";
 import {
   checkFallbackError,
   decayModelFailureCount,
@@ -745,9 +746,7 @@ export async function handleRoundRobinCombo({
               // so release the sticky pin here rather than on the next turn.
               {
                 const rrSelectedConnectionId =
-                  result.headers?.get("X-OmniRoute-Selected-Connection-Id") ||
-                  result.headers?.get("x-omniroute-selected-connection-id") ||
-                  undefined;
+                  readSelectedConnectionId(result.headers);
                 releaseStickyPinOnFailure(
                   _rrSessionSticky.messageHash,
                   rrSelectedConnectionId || target.connectionId
@@ -798,9 +797,7 @@ export async function handleRoundRobinCombo({
             recordedAttempts++;
 
             const selectedConnectionId =
-              result.headers?.get("X-OmniRoute-Selected-Connection-Id") ||
-              result.headers?.get("x-omniroute-selected-connection-id") ||
-              undefined;
+              readSelectedConnectionId(result.headers);
             const effectiveConnectionId = selectedConnectionId || target.connectionId || "";
 
             const rawModel = parseModel(modelStr).model || modelStr;
@@ -988,9 +985,7 @@ export async function handleRoundRobinCombo({
           );
           const { cooldownMs } = fallbackResult;
           const selectedConnectionId =
-            result.headers?.get("X-OmniRoute-Selected-Connection-Id") ||
-            result.headers?.get("x-omniroute-selected-connection-id") ||
-            undefined;
+            readSelectedConnectionId(result.headers);
           const targetWithConnection = selectedConnectionId
             ? { ...target, connectionId: selectedConnectionId }
             : target;

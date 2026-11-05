@@ -464,7 +464,7 @@ function sendError(res, status, safeMessage, extraHeaders = {}) {
  */
 function sendUnauthorized(res) {
   sendError(res, 401, "Unauthorized", {
-    "WWW-Authenticate": 'Basic realm="OmniRoute WebDAV"',
+    "WWW-Authenticate": 'Basic realm="FreeRoute WebDAV"',
   });
 }
 

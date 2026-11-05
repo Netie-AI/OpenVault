@@ -248,7 +248,7 @@
     "stopping": "Pysäytetään palvelinta (PID {pid})...",
     "stopped": "Palvelin pysäytetty.",
     "notRunning": "Palvelin ei ole käynnissä.",
-    "port": "Kuunneltava portti (oletus: 20128)",
+    "port": "Kuunneltava portti (oletus: 3020)",
     "no_open": "Älä avaa selainta automaattisesti",
     "daemon": "Suorita palvelin taustapalveluna",
     "log": "Näytä palvelinlokit suoraan",

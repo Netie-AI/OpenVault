@@ -176,7 +176,7 @@ export const ENGINE_CATALOG: Record<string, EngineMeta> = {
   },
   omniglyph: {
     id: "omniglyph",
-    label: "OmniGlyph",
+    label: "FreeRoute Glyph",
     stackPriority: 90,
     isSingleMode: true,
     description: "Contexto-como-imagem (Claude Fable 5, rota direta).",

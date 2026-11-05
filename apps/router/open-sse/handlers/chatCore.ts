@@ -1,4 +1,9 @@
 import {
+  FREEROUTE_REQUEST_HEADERS,
+  readFreeRouteHeader,
+  type HeaderSource,
+} from "@/shared/constants/headers";
+import {
   extractRequestToolIdentityMap,
   resolveResponseToolNameMap,
 } from "./chatCore/requestToolIdentity.ts";
@@ -1084,12 +1089,12 @@ async function handleChatCoreInner({
   // below so call_logs.session_tag is only ever set when the caller explicitly supplied the
   // header — never synthesized from the internal per-request skillRequestId.
   const explicitSessionIdHeader =
-    (clientRawRequest?.headers && typeof clientRawRequest.headers.get === "function"
-      ? clientRawRequest.headers.get("x-omniroute-session-id")
-      : getHeaderValueCaseInsensitive(
-          clientRawRequest?.headers ?? null,
-          "x-omniroute-session-id"
-        )) || null;
+    readFreeRouteHeader(
+      (clientRawRequest?.headers ?? null) as HeaderSource,
+      FREEROUTE_REQUEST_HEADERS.sessionId
+    ) ||
+    getHeaderValueCaseInsensitive(clientRawRequest?.headers ?? null, "x-omniroute-session-id") ||
+    null;
   const pipelineSessionId = explicitSessionIdHeader || skillRequestId;
   const reasoningReplaySessionKey = sessionAffinityKey || explicitSessionIdHeader;
   const reasoningCacheScope = reasoningReplaySessionKey
@@ -1866,12 +1871,14 @@ async function handleChatCoreInner({
         if (compressionConfig.liveZone?.enabled === true) {
           const { applyLiveZoneCompression } = await import("../services/compression/liveZone.ts");
           const explicitSessionId =
-            clientRawRequest?.headers && typeof clientRawRequest.headers.get === "function"
-              ? clientRawRequest.headers.get("x-omniroute-session-id")
-              : getHeaderValueCaseInsensitive(
-                  clientRawRequest?.headers ?? null,
-                  "x-omniroute-session-id"
-                );
+            readFreeRouteHeader(
+              (clientRawRequest?.headers ?? null) as HeaderSource,
+              FREEROUTE_REQUEST_HEADERS.sessionId
+            ) ||
+            getHeaderValueCaseInsensitive(
+              clientRawRequest?.headers ?? null,
+              "x-omniroute-session-id"
+            );
           const liveZoneSessionId =
             explicitSessionId ||
             generateSessionId(compressionInputBody, {

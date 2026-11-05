@@ -248,7 +248,7 @@
     "stopping": "Server dayandırılır (PID {pid})...",
     "stopped": "Server dayandırıldı.",
     "notRunning": "Server işləmir.",
-    "port": "Dinləniləcək port (standart: 20128)",
+    "port": "Dinləniləcək port (standart: 3020)",
     "no_open": "Brauzeri avtomatik açmayın",
     "daemon": "Serveri arxa plan demonu kimi işə salın",
     "log": "Server jurnallarını daxildə göstərin",

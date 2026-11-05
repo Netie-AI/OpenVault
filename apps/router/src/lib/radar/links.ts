@@ -1,13 +1,9 @@
 /**
  * links.ts — pure config for the two Radar "get a supporter key" outbound
- * links (F4/T7): the contributor-claim (GitHub OAuth) flow and the
- * supporter-plans (payment) page on the private radar.omniroute.online
- * server.
+ * links (F4/T7): the contributor-claim flow and the supporter-plans page of
+ * the operator's own feed server. Both are unset by default.
  *
- * DELIBERATELY DB-FREE and side-effect-free — same shape as the
- * `RADAR_FEED_URL` override already used by `./sync.ts`, so forks/self-hosters
- * point both links at their own deployment via env vars (see
- * docs/frameworks/RADAR.md).
+ * DELIBERATELY DB-FREE and side-effect-free, and driven by env vars only.
  *
  * These functions are read server-side only (inside a route handler) and the
  * resolved URLs are relayed to the client via GET /api/radar/settings — the
@@ -21,26 +17,21 @@
 
 import { parseRadarAdminUrl } from "@/shared/validation/radarAdminUrl";
 
-/** Default contributor-claim entry point — starts the GitHub OAuth flow. */
-const DEFAULT_CONTRIBUTOR_CLAIM_URL = "https://radar.omniroute.online/auth/github";
-
-/** Default supporter plans/payment page. */
-const DEFAULT_SUPPORTER_PLANS_URL = "https://radar.omniroute.online/planos";
-
 /**
- * URL that starts the "I'm a contributor" GitHub OAuth claim flow.
- * Override with `RADAR_CONTRIBUTOR_CLAIM_URL` for forks/self-hosters.
+ * URL that starts the "I'm a contributor" claim flow on the operator's own
+ * feed server. There is no default: without `RADAR_CONTRIBUTOR_CLAIM_URL` this
+ * is null and the dashboard shows no button.
  */
-export function getContributorClaimUrl(): string {
-  return process.env.RADAR_CONTRIBUTOR_CLAIM_URL || DEFAULT_CONTRIBUTOR_CLAIM_URL;
+export function getContributorClaimUrl(): string | null {
+  return process.env.RADAR_CONTRIBUTOR_CLAIM_URL?.trim() || null;
 }
 
 /**
- * URL for the "Support the project" plans/payment page.
- * Override with `RADAR_SUPPORTER_PLANS_URL` for forks/self-hosters.
+ * URL of the operator's own supporter plans page. No default: without
+ * `RADAR_SUPPORTER_PLANS_URL` this is null and the dashboard shows no button.
  */
-export function getSupporterPlansUrl(): string {
-  return process.env.RADAR_SUPPORTER_PLANS_URL || DEFAULT_SUPPORTER_PLANS_URL;
+export function getSupporterPlansUrl(): string | null {
+  return process.env.RADAR_SUPPORTER_PLANS_URL?.trim() || null;
 }
 
 /**

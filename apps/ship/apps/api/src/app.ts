@@ -39,7 +39,6 @@ import { jobRoutes } from "./modules/jobs/job.routes";
 import { noticeRoutes } from "./modules/notices/notice.routes";
 import { serviceRoutes } from "./modules/services/service.routes";
 import { analyticsRoutes } from "./modules/analytics/analytics.routes";
-import { billingPlansRoutes } from "./modules/billing/billing.routes";
 import { webhookRoutes } from "./modules/webhooks/webhook.routes";
 import { healthRoutes } from "./modules/health/health.routes";
 import { githubRoutes } from "./modules/github";
@@ -201,7 +200,9 @@ app.route("/api/analytics", analyticsRoutes);
 app.route("/api/settings", settingsRoutes);
 app.route("/api/tokens", tokenRoutes);
 app.route("/api/mcp", mcpRoutes);
-app.route("/api/billing", billingPlansRoutes);
+// Modified by Netie AI, 2026: GET /api/billing/plans is not mounted. It served the
+// hosted cloud's plan catalog (provider, subdomain suffix and sales contact of the
+// upstream project); it now falls through to hostedCloudDisabledRoutes below.
 app.route("/api/images", imageRoutes);
 app.route("/api", backupRoutes);
 app.route("/api/backup-destinations", backupDestinationRoutes);
@@ -351,8 +352,8 @@ if (env.CLOUD_MODE) {
   /**
    * FreeBuild is self-hosted only — there is no "connect this instance to
    * Openship Cloud" bridge and no cloud-proxied billing. Every path under
-   * /api/cloud and every /api/billing path other than the always-mounted
-   * GET /plans (billingPlansRoutes, above) answers `hosted_cloud_disabled`.
+   * /api/cloud and every /api/billing path, GET /plans included, answers
+   * `hosted_cloud_disabled`.
    * Modified by Netie AI, 2026: replaces Openship's cloud-local.routes /
    * billing-local.routes mounts (self-hosted-instance-proxies-to-SaaS).
    */

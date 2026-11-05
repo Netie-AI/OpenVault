@@ -44,7 +44,7 @@ export function ensureDockerBasePath(opts = {}) {
 
   if (!runtime && baked) {
     throw new Error(
-      `This OmniRoute image was built for subpath ${baked}, but OMNIROUTE_BASE_PATH is unset. ` +
+      `This FreeRoute image was built for subpath ${baked}, but OMNIROUTE_BASE_PATH is unset. ` +
         `Set OMNIROUTE_BASE_PATH=${baked} or rebuild without the build-arg.`
     );
   }

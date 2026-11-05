@@ -136,7 +136,7 @@ export async function syncClaudeProfilesFromModels(models, opts = {}) {
  * @returns {Promise<number>}
  */
 export async function runSetupClaudeCommand(opts = {}) {
-  const port = Number(opts.port ?? process.env.PORT ?? 20128) || 20128;
+  const port = Number(opts.port ?? process.env.PORT ?? 3020) || 3020;
   const baseUrl = (opts.remote ?? `http://localhost:${port}`)
     .replace(/\/+$/, "")
     .replace(/\/v1$/, "");
@@ -221,8 +221,8 @@ export function registerSetupClaude(program) {
       "Fetch the live model catalog from FreeRoute (local or remote VPS) and generate " +
         "~/.claude/profiles/<name>/ Claude Code profiles (CLAUDE_CONFIG_DIR) for each model"
     )
-    .option("--port <port>", "Local FreeRoute port (ignored when --remote is set)", "20128")
-    .option("--remote <url>", "Remote FreeRoute URL, e.g. http://192.168.0.15:20128")
+    .option("--port <port>", "Local FreeRoute port (ignored when --remote is set)", "3020")
+    .option("--remote <url>", "Remote FreeRoute URL, e.g. http://192.168.0.15:3020")
     .option("--api-key <key>", "FreeRoute API key (defaults to OMNIROUTE_API_KEY env var)")
     .option("--claude-home <dir>", "Claude home dir (default: ~/.claude)")
     .option(

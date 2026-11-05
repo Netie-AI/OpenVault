@@ -1,17 +1,30 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { fetchRemoteUncached } from "./useUpdates";
+import { fetchRemoteUncached, type ReleaseFeed } from "./useUpdates";
 
-const RELEASE_URL = "https://api.github.com/repos/oblien/openship/releases/latest";
-const CHANGELOG_URL = "https://raw.githubusercontent.com/oblien/openship/v0.6.9/CHANGELOG.md";
-const MANIFEST_URL =
-  "https://raw.githubusercontent.com/oblien/openship/v0.6.9/release-advisories.json";
+// Modified by Netie AI, 2026: the default feed is empty, so these cases pass a
+// test feed. Nothing here names the upstream project.
+const RELEASE_URL = "https://releases.example.test/latest";
+const CHANGELOG_URL = "https://releases.example.test/v0.6.9/CHANGELOG.md";
+const MANIFEST_URL = "https://releases.example.test/v0.6.9/release-advisories.json";
+const FEED: ReleaseFeed = {
+  latestApi: RELEASE_URL,
+  changelogUrl: (tag) => `https://releases.example.test/${tag}/CHANGELOG.md`,
+  advisoryUrl: (tag) => `https://releases.example.test/${tag}/release-advisories.json`,
+};
 
 function response(body: BodyInit, init?: ResponseInit): Response {
   return new Response(body, { status: 200, ...init });
 }
 
 describe("fetchRemoteUncached", () => {
+  it("makes no request with the default feed (no upstream releases, changelog or advisories)", async () => {
+    const fetcher = vi.fn(async () => response("{}"));
+    const result = await fetchRemoteUncached(fetcher as unknown as typeof fetch);
+    expect(result).toEqual({ latest: null, manifest: null });
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
   it("uses the tagged changelog instead of the GitHub release body", async () => {
     const fetcher = vi.fn(async (input: string | URL | Request) => {
       const url = String(input);
@@ -33,7 +46,7 @@ Older notes.`);
       return response("", { status: 404 });
     });
 
-    const result = await fetchRemoteUncached(fetcher as typeof fetch);
+    const result = await fetchRemoteUncached(fetcher as typeof fetch, FEED);
 
     expect(result.latest).toEqual({
       version: "0.6.9",
@@ -69,7 +82,7 @@ Older notes.`);
       return response("", { status: 404 });
     });
 
-    const result = await fetchRemoteUncached(fetcher as typeof fetch);
+    const result = await fetchRemoteUncached(fetcher as typeof fetch, FEED);
 
     expect(result.latest?.notes).toBe("");
     expect(result.manifest?.advisories[0]?.id).toBe("critical-update");
@@ -86,7 +99,7 @@ Older notes.`);
       return response("", { status: 404 });
     });
 
-    const result = await fetchRemoteUncached(fetcher as typeof fetch);
+    const result = await fetchRemoteUncached(fetcher as typeof fetch, FEED);
 
     expect(result.latest?.notes).toBe("Still visible.");
     expect(result.manifest).toBeNull();

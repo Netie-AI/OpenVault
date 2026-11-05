@@ -41,9 +41,9 @@ describe("changelog release details", () => {
     expect(extractChangelogSection(changelog, "0.6.9")).toBe("- **Dashboard** — useful details");
     expect(extractChangelogSection(changelog, "v0.6.9")).toBe("- **Dashboard** — useful details");
     expect(extractChangelogSection(changelog, "0.6.7")).toBe("");
-    expect(changelogMarkdownUrl("v0.6.9")).toBe(
-      "https://raw.githubusercontent.com/oblien/openship/v0.6.9/CHANGELOG.md",
-    );
+    // Modified by Netie AI, 2026: FreeBuild has no release feed, and must not
+    // point at the upstream project's repository.
+    expect(changelogMarkdownUrl("v0.6.9")).toBe("");
   });
 
   // Modified by Netie AI, 2026: BRAND_LINKS.site is now "" (openship.io was

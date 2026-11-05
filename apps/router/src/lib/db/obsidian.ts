@@ -1,6 +1,7 @@
 import { getDbInstance } from "./core";
 import { getApiKeyContextSource } from "./apiKeyContextSources";
 import { encrypt, decrypt } from "./encryption";
+import { KeysManagedByOpenVaultError } from "@/lib/netie/keyvault";
 
 const OBSIDIAN_NAMESPACE = "obsidian";
 const OBSIDIAN_TOKEN_KEY = "api_key";
@@ -26,6 +27,12 @@ export function getObsidianToken(): string | null {
 }
 
 export function setObsidianToken(token: string): void {
+  if (token) {
+    throw new KeysManagedByOpenVaultError(
+      ["token"],
+      "The Obsidian API token would be stored in FreeRoute's own database, and FreeRoute does not keep credentials."
+    );
+  }
   try {
     const db = getDbInstance();
     const encrypted = encrypt(token) ?? token;

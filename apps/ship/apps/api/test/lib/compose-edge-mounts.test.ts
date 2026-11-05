@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: the managed image is freebuild-edge and the default registry is local.
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -111,6 +112,6 @@ describe("docker/docker-compose.yml — edge mounts match EDGE_CONTAINER_MOUNTS"
     // and the only one that can't import the constant.
     const image = compose().services.edge?.image ?? "";
     expect(image).toContain(`:-${DEFAULT_IMAGE_REGISTRY}}`);
-    expect(image).toContain("/openship-edge:");
+    expect(image).toContain("/freebuild-edge:");
   });
 });

@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026
 /**
  * Who owns a host port, and what Openship is ALLOWED to stop to take it.
  *
@@ -224,7 +225,8 @@ export async function describeContainerById(
 export const EDGE_CONTAINER_NAME = "openship-edge";
 
 export function isOurEdgeContainer(name?: string, image?: string): boolean {
-  return /openship-edge/i.test(`${name ?? ""} ${image ?? ""}`);
+  // Accepts both: the container name stays `openship-edge`, the image is `freebuild-edge`.
+  return /(openship|freebuild)-edge/i.test(`${name ?? ""} ${image ?? ""}`);
 }
 
 /** A container Openship created — `openship.project` is stamped on every one. */

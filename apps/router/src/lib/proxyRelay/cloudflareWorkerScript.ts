@@ -54,7 +54,7 @@ export function buildCloudflareWorkerUploadRequest(
   workerScript: string,
   metadata: Record<string, unknown>
 ): { headers: Record<string, string>; body: Buffer } {
-  const boundary = `----OmniRouteCFWorker${randomUUID().replace(/-/g, "")}`;
+  const boundary = `----FreeRouteCFWorker${randomUUID().replace(/-/g, "")}`;
   const CRLF = "\r\n";
   const parts: Buffer[] = [
     Buffer.from(

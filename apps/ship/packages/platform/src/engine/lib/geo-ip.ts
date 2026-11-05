@@ -1,13 +1,12 @@
 /**
  * IP → ISO country code, for putting a flag on each server row.
  *
- * We own the data: a GeoLite2-Country database is vendored in the repo
- * (`apps/api/assets/geoip/`) and copied into `dist/assets` at build, so
- * production reads OUR shipped copy — no third-party dependency at runtime. The
- * only network path is a last-resort download when the asset is somehow absent,
- * and it points at OUR repo (overridable via OPENSHIP_GEOIP_URL), never an
- * upstream mirror. Refreshing the vendored copy is a maintainer action
- * (`npm run update:geoip`), not something the running server does.
+ * Modified by Netie AI, 2026: FreeBuild ships no GeoLite2-Country database and
+ * downloads none from the upstream project. Country lookups read a local file
+ * (OPENSHIP_GEOIP_DB) or a database the operator supplied at a mirror they run
+ * (OPENSHIP_GEOIP_URL, cached under ~/.openship/cache). With neither set, no
+ * network request is made and lookups report "unknown". A URL that points at the
+ * upstream project is refused.
  *
  * Everything is best-effort: a missing DB, no network, or a private/loopback IP
  * just yields `null`, and the UI falls back to a neutral glyph.
@@ -26,13 +25,24 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { isUpstreamUrl } from "@repo/core";
 
 const DB_FILE = "GeoLite2-Country.mmdb";
 
-/** Fallback download source — OUR repo copy, not a third party. */
-const DB_URL =
-  process.env.OPENSHIP_GEOIP_URL?.trim() ||
-  `https://raw.githubusercontent.com/oblien/openship/main/apps/api/assets/geoip/${DB_FILE}`;
+/**
+ * The operator's own mirror of the database, or null. There is no default: the
+ * upstream project's repository is never a source, and a configured URL that
+ * points at it is ignored.
+ */
+export function geoipDownloadUrl(): string | null {
+  const raw = process.env.OPENSHIP_GEOIP_URL?.trim();
+  if (!raw) return null;
+  if (isUpstreamUrl(raw)) {
+    console.warn("[geo-ip] OPENSHIP_GEOIP_URL points at the upstream project and is ignored.");
+    return null;
+  }
+  return raw;
+}
 
 const native = process.env.OPENSHIP_NATIVE === "true";
 const CACHE_PATH = native ? null : join(homedir(), ".openship", "cache", DB_FILE);
@@ -66,13 +76,13 @@ function warnMissingDbOnce(): void {
   warnedMissingDb = true;
   console.warn(
     "[geo-ip] No GeoLite2-Country.mmdb found (this fork does not vendor one — " +
-      "see apps/api/assets/geoip/README.md) and no fallback download succeeded. " +
+      "see apps/api/assets/geoip/README.md) and no operator mirror is configured. " +
       "Country lookups will report \"unknown\". Set OPENSHIP_GEOIP_DB to a local " +
-      "database file, or OPENSHIP_GEOIP_URL to a mirror, to enable them.",
+      "database file, or OPENSHIP_GEOIP_URL to a mirror you operate, to enable them.",
   );
 }
 
-/** First existing candidate, else download our copy into the cache. */
+/** First existing candidate, else the operator's mirror (if any) into the cache. */
 async function resolveDbPath(): Promise<string | null> {
   for (const p of candidatePaths()) {
     try {
@@ -83,9 +93,10 @@ async function resolveDbPath(): Promise<string | null> {
   }
   // An owned native instance uses its packaged asset. Missing optional geo data
   // must not initiate an unowned download or write into the embedding user's home.
-  if (!CACHE_PATH) return null;
+  const url = geoipDownloadUrl();
+  if (!CACHE_PATH || !url) return null;
   try {
-    const res = await fetch(DB_URL);
+    const res = await fetch(url);
     if (!res.ok) return null;
     const buf = Buffer.from(await res.arrayBuffer());
     await mkdir(dirname(CACHE_PATH), { recursive: true });
@@ -119,7 +130,7 @@ function getReader(): Promise<Reader<CountryResponse> | null> {
 
 /**
  * Warm the reader before a batch of sync lookups. Bounded by `timeoutMs` so the
- * rare cold path (asset missing → download from our repo) never blocks the
+ * rare cold path (asset missing → operator mirror download) never blocks the
  * request that long — flags simply appear once resolved on a later fetch.
  */
 export async function primeGeo(timeoutMs = 1500): Promise<void> {

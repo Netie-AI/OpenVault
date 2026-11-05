@@ -17,10 +17,13 @@ import {
 } from "@/lib/db/logExportDestinations";
 import { getLogExportDestinationType } from "@/lib/logExport/registry";
 import {
-  encryptDestinationConfig,
+  findIncomingSecretFields,
+  logExportCredentialMessage,
   mergeDestinationConfig,
-  requiresEncryptionKey,
+  withSecretPlaceholders,
+  withoutSecretFields,
 } from "@/lib/logExport/secrets";
+import { renderKeysManagedByOpenVault } from "@omniroute/open-sse/netie/policy.ts";
 import { toDestinationView } from "@/lib/logExport/presenter";
 
 const updateDestinationSchema = z.object({
@@ -78,10 +81,16 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
           { status: 400 }
         );
       }
-      // The UI sends back a placeholder for secrets it did not retype — keep the
-      // stored ciphertext for those instead of overwriting it with the placeholder.
-      // Ciphertext is a non-empty string, so presence checks in the schema still hold.
-      const merged = mergeDestinationConfig(existing.type, existing.config, data.config);
+      // FreeRoute keeps no credentials: the service account is read from OpenVault, so a
+      // config that carries one is refused before anything is written.
+      const heldSecrets = findIncomingSecretFields(existing.type, data.config);
+      if (heldSecrets.length > 0) {
+        return renderKeysManagedByOpenVault(logExportCredentialMessage(existing.type, heldSecrets));
+      }
+      const merged = withSecretPlaceholders(
+        existing.type,
+        mergeDestinationConfig(existing.type, existing.config, data.config)
+      );
       const parsedConfig = destinationType.configSchema.safeParse(merged);
       if (!parsedConfig.success) {
         return NextResponse.json(
@@ -97,18 +106,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
           { status: 400 }
         );
       }
-      if (requiresEncryptionKey(existing.type, parsedConfig.data as Record<string, unknown>)) {
-        return NextResponse.json(
-          {
-            error:
-              "This destination stores a credential, which requires STORAGE_ENCRYPTION_KEY to be " +
-              "configured. Without it the credential would be written to SQLite in plaintext.",
-          },
-          { status: 400 }
-        );
-      }
-
-      nextConfig = encryptDestinationConfig(
+      nextConfig = withoutSecretFields(
         existing.type,
         parsedConfig.data as Record<string, unknown>
       );

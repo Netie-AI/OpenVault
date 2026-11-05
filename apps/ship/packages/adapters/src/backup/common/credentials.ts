@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: also opens values sealed under the legacy placeholder secret.
 /**
  * `enc1:` envelope decrypt — matches apps/api/src/lib/credential-encryption.ts.
  *
@@ -24,20 +25,23 @@ const AUTH_TAG_LENGTH = 16;
 // populates, causing encrypt/decrypt to disagree). process.env is only a
 // fallback for entrypoints that don't inject (e.g. isolated tests).
 let injectedSecret: string | undefined;
+// Secrets an earlier build sealed under (the public placeholder). Tried after the main one.
+let injectedFallbacks: readonly string[] = [];
 
 /** Inject the API-resolved BETTER_AUTH_SECRET. Call once at app boot. */
-export function setBackupCredentialSecret(secret: string | undefined): void {
+export function setBackupCredentialSecret(secret: string | undefined, fallbackSecrets: readonly string[] = []): void {
   injectedSecret = secret || undefined;
+  injectedFallbacks = fallbackSecrets.filter((fallback) => fallback && fallback !== secret);
 }
 
-function deriveKey(): Buffer {
+function deriveKeys(): Buffer[] {
   const secret = injectedSecret ?? process.env.BETTER_AUTH_SECRET;
   if (!secret) {
     throw new Error(
       "BETTER_AUTH_SECRET is not set — cannot decrypt backup destination credentials.",
     );
   }
-  return createHash("sha256").update(secret).digest();
+  return [secret, ...injectedFallbacks].map((s) => createHash("sha256").update(s).digest());
 }
 
 export function decryptCredential(stored: string | null | undefined): string | undefined {
@@ -52,7 +56,15 @@ export function decryptCredential(stored: string | null | undefined): string | u
   const authTag = packed.subarray(IV_LENGTH, IV_LENGTH + AUTH_TAG_LENGTH);
   const ciphertext = packed.subarray(IV_LENGTH + AUTH_TAG_LENGTH);
 
-  const decipher = createDecipheriv(ALGORITHM, deriveKey(), iv);
-  decipher.setAuthTag(authTag);
-  return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString("utf8");
+  let failure: unknown;
+  for (const key of deriveKeys()) {
+    try {
+      const decipher = createDecipheriv(ALGORITHM, key, iv);
+      decipher.setAuthTag(authTag);
+      return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString("utf8");
+    } catch (error) {
+      failure ??= error;
+    }
+  }
+  throw failure;
 }

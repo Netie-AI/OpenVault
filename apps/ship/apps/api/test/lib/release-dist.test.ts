@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: the github fixtures use a neutral repo; an upstream-owned repo is refused (see test/netie).
 // Modified by Netie AI, 2026: expectations follow the FreeBuild product name.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
@@ -50,7 +51,7 @@ afterEach(() => {
 
 const github: ReleaseSource = {
   mode: "github",
-  repo: "oblien/openship",
+  repo: "example-org/releases",
   assetTemplate: "openship-{tag}-{os}-{arch}.tar.gz",
 };
 
@@ -140,7 +141,7 @@ describe("resolveReleaseDist — slot order", () => {
     expect(res.asset).toBe("openship-v5.0.0-linux-amd64.tar.gz");
     expect(fetchMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        repo: "oblien/openship",
+        repo: "example-org/releases",
         asset: "openship-v5.0.0-linux-amd64.tar.gz",
         tag: "v5.0.0",
       }),

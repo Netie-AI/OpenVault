@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026
 /**
  * DockerBackupExecutor — backup primitives for Docker-managed services.
  *
@@ -574,7 +575,7 @@ export class DockerBackupExecutor implements BackupExecutor {
             // the operator has `payloadConfig.sourceIds` to narrow the policy. Silence
             // is the only outcome that cannot be recovered from.
             `SRC=${shellQuote(sourceId)}`,
-            `[ -n "$(ls -A /mnt 2>/dev/null)" ] || { echo "openship: backup source $SRC is ` +
+            `[ -n "$(ls -A /mnt 2>/dev/null)" ] || { echo "freebuild: backup source $SRC is ` +
               `empty or missing on this host, so this archive would contain nothing. ` +
               `Refusing to record it as a backup. If it is a mount, check that it is ` +
               `mounted; if it is empty on purpose, narrow the policy's sourceIds." >&2; ` +
@@ -685,13 +686,13 @@ export class DockerBackupExecutor implements BackupExecutor {
     const prelude = [
       compression === "zstd" ? "apk add --no-cache zstd >/dev/null 2>&1 || true" : null,
       compression === "zstd"
-        ? 'command -v zstd >/dev/null 2>&1 || { echo "openship: zstd is not available in the ' +
+        ? 'command -v zstd >/dev/null 2>&1 || { echo "freebuild: zstd is not available in the ' +
           'restore helper and could not be installed (the host may have no egress). ' +
           'Refusing to clear the target: nothing was written and your data is untouched." >&2; ' +
           "exit 90; }"
         : null,
       compression === "gzip"
-        ? 'command -v gzip >/dev/null 2>&1 || { echo "openship: gzip is not available in the ' +
+        ? 'command -v gzip >/dev/null 2>&1 || { echo "freebuild: gzip is not available in the ' +
           'restore helper. Refusing to clear the target; your data is untouched." >&2; exit 90; }'
         : null,
       // Only now, with every tool proven present.

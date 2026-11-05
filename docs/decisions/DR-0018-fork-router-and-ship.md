@@ -76,12 +76,13 @@ FreeRoute and FreeBuild.
   (`authType: "oauth"`, `authHeader: "cookie"`, `-web` executors) plus a short override
   table. Gates: `getExecutor()`, `/v1/chat/completions`, and a path table in
   `src/lib/netie/hardDisabledRoutes.ts` run from `src/proxy.ts` before authz.
-- Disabled (counted over the 276 registry ids by `classifyProviderId`): 25 subscription
-  providers (21 `authType: "oauth"` plus four reached through the override table) and
-  their login and import routes (`/api/oauth/*`, `/api/codex/*`, `/api/cursor-cli/*`, CLI
-  credential import); 33 web-session providers plus MITM, agent bridge, traffic
-  inspector, VNC and session pools; one TLS-fingerprint provider (cloudflare-playground);
-  `packages/browser-pool` stubbed; `wreq-js` dependency removed.
+- Disabled (counted over the 276 registry ids by `classifyProviderId`): 26 subscription
+  providers (21 `authType: "oauth"`, qoder, and four reached through the override table)
+  and their login and import routes (`/api/oauth/*`, `/api/codex/*`, `/api/cursor-cli/*`,
+  CLI credential import); 33 web-session providers plus MITM, agent bridge, traffic
+  inspector, VNC and session pools; four client-impersonation providers
+  (cloudflare-playground, freebuff, cursor-api, muse-code); `packages/browser-pool`
+  stubbed; `wreq-js` dependency removed.
 - Also disabled because they couple FreeRoute to the upstream project:
   `upstream_updates_disabled` (version check, updater, changelog fetch) and
   `upstream_service_not_included` (the embedded 9router service).
@@ -91,7 +92,22 @@ FreeRoute and FreeBuild.
   `manage`); router-side key minting returns `keys_managed_by_openvault`.
 - Kept on purpose: the deploy-time env key (`OMNIROUTE_API_KEY`) as the operator's
   bootstrap credential, `X-OmniRoute-*` header names, the `/api/omniroute/status` path,
-  and internal identifiers.
+  and internal identifiers. Also kept, because clients and tool configs key on them:
+  the MCP tool names `omniroute_*`, the tool-config provider id `omniroute` and its
+  `omniroute/<model>` model ids, the default local key `sk_omniroute`, backup
+  directories `omniroute-backup-*`, plugin names `omniroute-cmd-*`, the `~/.omniroute`
+  data directory, the `omniroute-pwa-*` service-worker cache name, the Qdrant
+  collection `omniroute_memory`, and the Radar feed wire headers `x-omniroute-feed-*`
+  (used only against a feed URL an operator sets). The telemetry and control headers
+  that were renamed (26 `X-FreeRoute-*` names, from `X-FreeRoute-Response-Cost` to
+  `X-FreeRoute-Peer-Trace`) are sent together with their `X-OmniRoute-*` twin, same
+  value, and every reader accepts either name (`src/shared/constants/headers.ts`).
+  `netie/names.test.mjs` fails on any other upstream name in a shipped UI string, a
+  header or marker sent to a third party, a public asset, or `.env.example` prose.
+  Radar has no upstream default: `/api/radar/*` answers 501
+  `upstream_service_not_included`, the feed URL and the contributor and supporter
+  links default to nothing, and the OmniCopilot banner and the Kimi preset card are
+  removed.
 - Also off: the Dario and CLIProxyAPI sidecar families and `/api/version-manager`
   (`consumer_subscription_pooling_disabled`), Claude Code client impersonation and the
   Pollinations rotating fingerprint pool (`tls_fingerprint_stealth_disabled`). Aliases
@@ -124,12 +140,40 @@ FreeRoute and FreeBuild.
 - Open: `DATA_DIR/db_backups` is not scrubbed, so a backup taken by an earlier build can
   still hold key bytes. The CLI does not run on Node below 22.22.2 (its own version
   gate); the live test drives the CLI through the same loader on older Node.
-- Open: three more third-party credentials are still kept in FreeRoute's own database:
-  the BigQuery log-export service account, the Telegram bot token on a webhook
-  destination, and proxy logins. `bin/antigravity-bridge.mjs` and `src/mitm` are dormant
-  (their routes answer 501) but still in the tree. Management is anonymous on loopback
-  until onboarding completes. `OMNIROUTE_API_KEY` grants the management scope and skips
-  OpenVault (the operator's bootstrap credential, kept on purpose).
+- Second review round (2026-11-05), FreeRoute:
+  - Client emulation is off. The GLM Anthropic transport sends only `content-type`,
+    `accept`, `x-api-key`, `anthropic-version` and an honest `anthropic-beta`. freebuff,
+    cursor-api and muse-code answer `tls_fingerprint_stealth_disabled`, qoder answers
+    `consumer_subscription_pooling_disabled`, and all four are hidden in the catalog.
+    Command Code keeps only its documented API-key endpoint (the CLI fallback is gone),
+    the Cursor CLI build id is no longer scraped from cursor.com, and the gitlawb
+    providers send no OpenClaude CLI headers. `freeroute login antigravity` prints the
+    named 501 text and exits 1. The Client Identity presets and the VibeProxy preset are
+    removed, and `POST` and `PUT /api/provider-nodes` refuse a vendor CLI User-Agent,
+    `X-Stainless-*` or `X-Claude-Code-*` header. The open-wa (WhatsApp Web) sidecar
+    answers `consumer_session_relay_disabled`, the 9router sidecar is not supervised at
+    boot. The dormant executor files (freebuff, cursor, qoder, muse) are still in the
+    tree behind the gates.
+  - More local credential stores are refused with 501 `keys_managed_by_openvault`: proxy
+    usernames and passwords, the BigQuery service account and the Telegram bot token
+    (both read from the vault, provider `bigquery` and `telegram`, when it holds one),
+    the Obsidian token, and credential-looking values in provider-node custom headers
+    (which are also no longer echoed back). The import scrub and `export-json` cover
+    these stores and the Radar supporter key and Command Code key. The boot scrub
+    removes an authenticated proxy login an older build saved.
+  - `bin/` and the generated `server.env`: `server.env` is mode 0600, the CLI default
+    port is 3020, a literal `CHANGEME` password is treated as unset, and shipped scripts
+    print FreeRoute.
+  - Authenticated proxies, the Obsidian integration and the BigQuery/Telegram dashboard
+    forms can no longer save a credential from the UI. The Telegram webhook wizard still
+    asks for the token and then gets the 501; the vault path works through the API.
+- Open (FreeRoute): `bin/antigravity-bridge.mjs` and `src/mitm` are dormant (their routes
+  answer 501) but still in the tree. Management is anonymous on loopback until
+  onboarding completes. `OMNIROUTE_API_KEY` grants the management scope and skips
+  OpenVault (the operator's bootstrap credential, kept on purpose). A custom User-Agent
+  or header typed on a connection (not a node) is not checked for a vendor CLI identity.
+  `proxy_subscriptions.control_secret_enc` and the Radar supporter-key write path are not
+  gated yet. The login page still shows a "default password" hint.
 
 ### FreeBuild (`apps/ship`)
 
@@ -148,7 +192,23 @@ FreeRoute and FreeBuild.
   (`ensureOpenship*`, SQL `openship_` prefixes), `@repo/*` workspace paths. Mail
   hosting works (apps/email restored). Stores not moved: docker-registry auth,
   GitHub App identity, SSH keys (per-host file paths), SMTP relay creds, Stripe
-  billing key (already disabled), user sessions, deployment env vars.
+  billing key (already disabled), user sessions, deployment env vars, and these
+  third-party credentials, which FreeBuild keeps in its own database: S3 and SFTP
+  backup credentials (`backup_destination`), git clone tokens (user and project),
+  git source secrets, per-server GitHub tokens and deploy keys, the GitHub device
+  token, SSH passwords, private keys and passphrases of servers, webhook secrets,
+  and OAuth application client secrets. They are sealed with AES-256-GCM under a
+  per-install secret: an operator-set `BETTER_AUTH_SECRET` wins, otherwise a random
+  one is generated on first start into `~/.openship/auth-secret` (mode 0600;
+  `OPENSHIP_DATA_DIR` or `OPENSHIP_AUTH_SECRET_FILE` move it). Anyone who can read
+  both the database and that file can read these credentials, and losing the file
+  makes them unreadable. Earlier builds sealed them under the public placeholder
+  `change-me-in-production` when the variable was unset; those values still open
+  and are re-sealed under the install secret on their next write. A tunnel token
+  is no longer stored at all: saving one answers 501 `keys_managed_by_openvault`,
+  the onboarding step has no token field, and a boot scrub clears an old copy.
+  Moving the backup and clone credentials into OpenVault is a later decision for
+  the founder.
 - Kept: `X-Openship-Signature-256` is sent alongside its FreeBuild-named twin so
   existing webhook receivers keep verifying; receivers see both names, with the same
   HMAC (proven on the bytes on the wire).
@@ -162,6 +222,36 @@ FreeRoute and FreeBuild.
   `apps/email/scripts/postinstall.mjs` runs it only when bun exists. bun is still needed
   to develop or test `apps/email` (its tests run under bun); the mail image installs its
   own dependencies in its build stage. `npm run build` builds only the API and dashboard.
+- Runtime independence (2026-11-05): FreeBuild makes no request to the upstream
+  project's servers or repositories in its default configuration. The app catalog is the
+  bundled one; an operator can add an overlay with `FREEBUILD_CATALOG_URL` (https or
+  loopback only, upstream hosts refused, no redirects). The Update Center and Settings
+  Updates have no release feed (`GITHUB_REPO` is empty). `GET /api/billing/plans`
+  answers 501 `hosted_cloud_disabled`. The GeoIP database, the native-modules catalog
+  and the release dist come from operator-supplied sources only
+  (`OPENSHIP_GEOIP_URL`, `OPENSHIP_MODULE_CATALOG_BASE_URL`, `OPENSHIP_RELEASE_DIST_PATH`;
+  upstream URLs refused). Free project domains exist only under `HOST_DOMAIN`. The DNS
+  ownership TXT record is `_freebuild-challenge`, and the old name is still accepted.
+  Default image names are `localhost/freebuild/freebuild-*`; nothing is pulled from
+  `ghcr.io/oblien`. Container and compose-project names, and the backup key prefix,
+  keep `openship-*` so an existing install keeps working.
+- Upgrade note (install secret): the first start after this change replaces the public
+  placeholder `BETTER_AUTH_SECRET` with a generated one. Stored secrets sealed under the
+  placeholder still open (the database client, the platform cipher and the backup
+  adapters all fall back to it) and are re-sealed on their next write. Values derived
+  from the secret change: sessions end, the DNS ownership token is re-derived (a domain
+  verified before must be verified again if the record is checked again), and build-arg
+  fingerprints differ once. The compose file requires `BETTER_AUTH_SECRET`, so a
+  container cannot regenerate it on recreate.
+- Open: the Docker images do not build. The api and dashboard Dockerfiles are the
+  upstream project's and `COPY bun.lock` and `pnpm-workspace.yaml`, which this fork does
+  not have (it uses npm workspaces and `package-lock.json`); the edge Dockerfile copies
+  the GeoLite2 database, which is not shipped. `docker/docker-compose.yml` validates but
+  `up --build` fails until the Dockerfiles are ported. Run FreeBuild with `npm ci &&
+  npm run build` until then. No image is published.
+- Open: the webmail (`apps/email`) is the Zero mail client by Mail-0, rebranded to
+  FreeBuild Mail. It is credited in `apps/ship/NOTICE`, but its licence text is not in the
+  Openship snapshot and was not confirmed. Check it before the webmail ships.
 - Open: the host-channel advisory says "Re-run `freebuild up`", but this fork ships no CLI
   (`apps/cli` was not imported), so a host channel cannot be provisioned from FreeBuild.
   Restore a provisioning path or reword the advisory to say host-level operations are
@@ -225,7 +315,8 @@ forks are built not to have.
 
 - `OpenMW/tests/test_apikeys_verify.py` (verify route: admin or service Bearer, never loopback alone)
 - `apps/router/netie/keyvault.test.mjs` (admin token, named 503s, pooled-only, no custom-key borrowing, key released only to the provider's own endpoint, loopback-only `OPENVAULT_URL`, no redirects, service keys refused and scrubbed, `REQUIRE_API_KEY` default)
-- `apps/router/open-sse/netie/__tests__/policy.test.mjs` (route table incl. escaped paths and 400 `invalid_path_encoding`, no synthesized OpenCode identity)
+- `apps/router/open-sse/netie/__tests__/policy.test.mjs` (route table incl. escaped paths and 400 `invalid_path_encoding`, no synthesized OpenCode identity, no vendor CLI headers, disabled CLI-emulation providers and sidecars)
+- `apps/router/netie/names.test.mjs` and `apps/router/netie/bootstrap.test.mjs` (no upstream name in shipped strings, assets and third-party traffic; `server.env` mode, ports, `CHANGEME`)
 - `apps/router/netie/smoke.test.mjs` and `apps/ship/netie/smoke.test.mjs` (starts, named 501s)
 - `apps/router/netie/e2e-openvault.mjs` and `apps/ship/netie/e2e-openvault.mjs` (real OpenVault, vault key reaches the provider, secret absent from the fork's disk)
 - `apps/ship/netie/notice-check.mjs --check` (Apache change notices and NOTICE)

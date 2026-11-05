@@ -248,7 +248,7 @@
     "stopping": "Na-akwụsị sava (PID {pid})...",
     "stopped": "Akwụsịla sava.",
     "notRunning": "Sava anaghị arụ ọrụ.",
-    "port": "Port a ga-ege ntị na ya (ndabara: 20128)",
+    "port": "Port a ga-ege ntị na ya (ndabara: 3020)",
     "no_open": "Emeghela ihe nchọgharị na-akpaghị aka",
     "daemon": "Mee ka sava rụọ ọrụ dịka daemon n'azụ",
     "log": "Gosi ndekọ sava ozugbo",

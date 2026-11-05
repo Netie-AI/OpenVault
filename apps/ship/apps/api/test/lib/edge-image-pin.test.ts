@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
@@ -32,14 +33,14 @@ describe("pinnedEdgeImage", () => {
   it("pins the tag to this API's own version (no checkout → published tag)", () => {
     clearRefEnv();
     process.env.OPENSHIP_EDGE_BUILD_CONTEXT = NO_CHECKOUT;
-    expect(pinnedEdgeImage()).toBe(`ghcr.io/oblien/openship-edge:${APP_VERSION}`);
+    expect(pinnedEdgeImage()).toBe(`localhost/freebuild/freebuild-edge:${APP_VERSION}`);
   });
 
   it("honours a configured registry", () => {
     clearRefEnv();
     process.env.OPENSHIP_IMAGE_REGISTRY = "docker.io/oblien";
     process.env.OPENSHIP_EDGE_BUILD_CONTEXT = NO_CHECKOUT;
-    expect(pinnedEdgeImage()).toBe(`docker.io/oblien/openship-edge:${APP_VERSION}`);
+    expect(pinnedEdgeImage()).toBe(`docker.io/oblien/freebuild-edge:${APP_VERSION}`);
   });
 
   it("suffixes the tag with a content hash when a source checkout is present", () => {

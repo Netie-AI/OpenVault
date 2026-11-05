@@ -1,5 +1,3 @@
-import { getClaudeCodeUserAgent } from "@/shared/constants/claudeCodeClient";
-
 import { ANTHROPIC_VERSION_HEADER } from "./anthropicHeaders.ts";
 
 type JsonRecord = Record<string, unknown>;
@@ -255,16 +253,9 @@ export const GLMT_REQUEST_DEFAULTS = Object.freeze({
 });
 
 export const GLM_COUNT_TOKENS_TIMEOUT_MS = 3_000;
-/** Module-load snapshot. Wire UA uses getClaudeCodeUserAgent("sdk-cli"). */
-export const GLM_CLAUDE_CODE_USER_AGENT = getClaudeCodeUserAgent("sdk-cli");
-export const GLM_ANTHROPIC_BETA = [
-  "claude-code-20250219",
-  "interleaved-thinking-2025-05-14",
-  "context-management-2025-06-27",
-  "prompt-caching-scope-2026-01-05",
-  "advisor-tool-2026-03-01",
-  "effort-2025-11-24",
-].join(",");
+// Public API betas the GLM Anthropic transport needs: thinking blocks and the
+// effort selector. No client-identity beta (claude-code-*) is sent.
+export const GLM_ANTHROPIC_BETA = ["interleaved-thinking-2025-05-14", "effort-2025-11-24"].join(",");
 
 function asRecord(value: unknown): JsonRecord {
   return value && typeof value === "object" && !Array.isArray(value) ? (value as JsonRecord) : {};
@@ -617,13 +608,5 @@ export function buildGlmBaseHeaders(apiKey: string, stream = true): Record<strin
     "x-api-key": apiKey,
     "anthropic-version": ANTHROPIC_VERSION_HEADER,
     "anthropic-beta": GLM_ANTHROPIC_BETA,
-    "anthropic-dangerous-direct-browser-access": "true",
-    "User-Agent": getClaudeCodeUserAgent("sdk-cli"),
-    "X-Stainless-Lang": "js",
-    "X-Stainless-Runtime": "node",
-    "X-Stainless-Retry-Count": "0",
-    "accept-language": "*",
-    "accept-encoding": "gzip, deflate, br, zstd",
-    connection: "keep-alive",
   };
 }

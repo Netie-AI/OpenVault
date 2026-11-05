@@ -248,7 +248,7 @@
     "stopping": "Arresto del server (PID {pid})...",
     "stopped": "Server arrestato.",
     "notRunning": "Il server non è in esecuzione.",
-    "port": "Porta su cui restare in ascolto (predefinita: 20128)",
+    "port": "Porta su cui restare in ascolto (predefinita: 3020)",
     "no_open": "Non aprire automaticamente il browser",
     "daemon": "Esegui il server come demone in background",
     "log": "Mostra i log del server in linea",

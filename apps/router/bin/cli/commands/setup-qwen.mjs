@@ -36,7 +36,7 @@ export function resolveQwenTarget(opts = {}) {
 
   if (!root) root = context?.baseUrl || "";
   if (!root) {
-    const port = Number(opts.port ?? process.env.PORT ?? 20128) || 20128;
+    const port = Number(opts.port ?? process.env.PORT ?? 3020) || 3020;
     root = `http://localhost:${port}`;
   }
 
@@ -162,7 +162,7 @@ export function registerSetupQwen(program) {
   program
     .command("setup-qwen")
     .description("Configure Qwen Code's upstream V4 modelProviders format for FreeRoute")
-    .option("--port <port>", "Local FreeRoute port (ignored when --remote is set)", "20128")
+    .option("--port <port>", "Local FreeRoute port (ignored when --remote is set)", "3020")
     .option("--remote <url>", "Remote FreeRoute URL")
     .option("--api-key <key>", "FreeRoute API key")
     .option("--model <id>", "Model id for Qwen Code")

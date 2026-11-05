@@ -578,7 +578,7 @@ export function registerRun(program) {
     .option(
       "--port <port>",
       "Local FreeRoute port (ignored when --remote or --base-url is set)",
-      "20128"
+      "3020"
     )
     .option(
       "--remote <url>",

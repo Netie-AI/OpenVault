@@ -248,7 +248,7 @@
     "stopping": "Serveri peatamine (PID {pid})...",
     "stopped": "Server on peatatud.",
     "notRunning": "Server ei tööta.",
-    "port": "Kuulatav port (vaikimisi: 20128)",
+    "port": "Kuulatav port (vaikimisi: 3020)",
     "no_open": "Ära ava veebilehitsejat automaatselt",
     "daemon": "Käivita server taustaprotsessina",
     "log": "Kuva serveri logid otse",

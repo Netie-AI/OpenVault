@@ -4,6 +4,7 @@ import {
   type ApiKeyUsageLimitStatus,
 } from "@/lib/usage/apiKeyUsageLimits";
 import { buildErrorBody } from "@omniroute/open-sse/utils/error";
+import { readFreeRouteHeader } from "@/shared/constants/headers";
 
 export const INTERNAL_USAGE_COMMAND = "@@om-usage";
 export const USAGE_COMMAND_DISABLED_MESSAGE = "Usage command is disabled for this API key.";
@@ -625,13 +626,13 @@ function inferHttpUsageCommandSelection(request: Request): UsageCommandSelection
     return {
       preferredConnectionId:
         url.searchParams.get("connectionId")?.trim() ||
-        readHeader(request, "x-omniroute-connection")?.trim() ||
+        readFreeRouteHeader(request.headers, "x-omniroute-connection")?.trim() ||
         null,
       preferredProvider: url.searchParams.get("provider")?.trim() || null,
     };
   } catch {
     return {
-      preferredConnectionId: readHeader(request, "x-omniroute-connection")?.trim() || null,
+      preferredConnectionId: readFreeRouteHeader(request.headers, "x-omniroute-connection")?.trim() || null,
       preferredProvider: null,
     };
   }

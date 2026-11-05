@@ -248,7 +248,7 @@
     "stopping": "Đang dừng máy chủ (PID {pid})...",
     "stopped": "Máy chủ đã dừng.",
     "notRunning": "Máy chủ hiện không chạy.",
-    "port": "Cổng để lắng nghe (mặc định: 20128)",
+    "port": "Cổng để lắng nghe (mặc định: 3020)",
     "no_open": "Không tự động mở trình duyệt",
     "daemon": "Chạy máy chủ dưới dạng tiến trình nền",
     "log": "Hiển thị nhật ký máy chủ trực tiếp",

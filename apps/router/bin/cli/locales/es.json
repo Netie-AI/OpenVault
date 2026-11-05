@@ -248,7 +248,7 @@
     "stopping": "Deteniendo el servidor (PID {pid})...",
     "stopped": "Servidor detenido.",
     "notRunning": "El servidor no está en ejecución.",
-    "port": "Puerto en el que escuchar (predeterminado: 20128)",
+    "port": "Puerto en el que escuchar (predeterminado: 3020)",
     "no_open": "No abrir el navegador automáticamente",
     "daemon": "Ejecutar el servidor como un demonio en segundo plano",
     "log": "Mostrar los registros del servidor en línea",

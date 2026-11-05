@@ -42,7 +42,19 @@ import { snapshotToClass } from "./deployment-class";
 import { relayConfigEligible, resolveClonePlan } from "./clone-plan";
 import { hasLocalGitIdentity } from "../github/github.local-auth";
 import { isPublicRepo } from "../github/github.http";
+import { env } from "../../config/env";
 import { getRoutingBaseDomain } from "../../lib/routing-domains";
+
+/**
+ * Modified by Netie AI, 2026: with HOST_DOMAIN unset there is no base domain for
+ * free project domains (the fallback was the upstream project's cloud domain), so
+ * say that instead of naming a domain the operator does not own.
+ */
+export function freeDomainsOffMessage(): string | null {
+  return env.HOST_DOMAIN
+    ? null
+    : "Free project domains are disabled because HOST_DOMAIN is not set. Set HOST_DOMAIN to a domain you control (with a wildcard DNS record pointing at this server), or switch this project to a custom domain.";
+}
 import { resolveServerHost } from "../../lib/server-target";
 import {
   normalizeTargetPath,
@@ -1351,7 +1363,7 @@ async function checkCloudRuntime(
         label: "Free domain routing",
         status: "fail",
         code: PREFLIGHT_ERROR_CODES.CLOUD_REQUIRED_MANAGED_PROJECT_DOMAIN,
-        message: `Free .${getRoutingBaseDomain()} domains require the hosted cloud service for routing. To deploy to your own server, either connect the hosted cloud service or switch this project to a custom domain.`,
+        message: freeDomainsOffMessage() ?? `Free .${getRoutingBaseDomain()} domains require the hosted cloud service for routing. To deploy to your own server, either connect the hosted cloud service or switch this project to a custom domain.`,
       };
     }
 
@@ -1361,7 +1373,7 @@ async function checkCloudRuntime(
         label: "Free domain routing",
         status: "fail",
         code: PREFLIGHT_ERROR_CODES.CLOUD_REQUIRED_MANAGED_COMPOSE_DOMAINS,
-        message: `One or more exposed services use free .${getRoutingBaseDomain()} domains. Connect the hosted cloud service or switch those services to custom domains before deploying to your own server.`,
+        message: freeDomainsOffMessage() ?? `One or more exposed services use free .${getRoutingBaseDomain()} domains. Connect the hosted cloud service or switch those services to custom domains before deploying to your own server.`,
       };
     }
 

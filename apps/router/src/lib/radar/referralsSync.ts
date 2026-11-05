@@ -24,16 +24,11 @@ import { verifyFeedBytes } from "./verify";
 import { sanitizeErrorMessage } from "@omniroute/open-sse/utils/error";
 import { isFeatureFlagEnabled } from "@/shared/utils/featureFlags";
 import type { RadarSettingsSnapshot } from "./sync";
+import { RADAR_UPSTREAM_NOT_INCLUDED, getRadarFeedBaseUrl } from "./feedBaseUrl";
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
-
-/**
- * Default feed base URL — same default/override convention as `sync.ts`
- * (`RADAR_FEED_URL` env var points forks/self-hosters at their own server).
- */
-const DEFAULT_FEED_BASE_URL = "https://radar.omniroute.online";
 
 const SYNC_TIMEOUT_MS = 30_000;
 
@@ -181,7 +176,8 @@ export async function syncRadarReferrals(
     }
 
     // Step 3: Download feed
-    const baseUrl = (process.env.RADAR_FEED_URL || DEFAULT_FEED_BASE_URL).replace(/\/+$/, "");
+    const baseUrl = getRadarFeedBaseUrl();
+    if (!baseUrl) return { status: "error", reason: RADAR_UPSTREAM_NOT_INCLUDED };
     const url = `${baseUrl}/v1/referrals/latest`;
 
     const headers: Record<string, string> = {};

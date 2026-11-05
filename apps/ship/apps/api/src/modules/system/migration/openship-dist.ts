@@ -32,7 +32,10 @@ import {
  */
 const OPENSHIP_SOURCE: ReleaseSource = {
   mode: "github",
-  repo: "oblien/openship",
+  // Modified by Netie AI, 2026: empty on purpose. This was the upstream project's
+  // repository; FreeBuild publishes no release dist, so the download is refused
+  // and OPENSHIP_RELEASE_DIST_PATH (a local directory) is the way to supply one.
+  repo: "",
   assetTemplate: "openship-{tag}-linux-amd64.tar.gz",
 };
 

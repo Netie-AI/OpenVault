@@ -29,6 +29,10 @@
       "types": "./src/encryption.ts",
       "import": "./src/encryption.ts"
     },
+    "./install-secret": {
+      "types": "./src/install-secret.ts",
+      "import": "./src/install-secret.ts"
+    },
     "./configuration-secrets": {
       "types": "./src/configuration-secrets.ts",
       "import": "./src/configuration-secrets.ts"

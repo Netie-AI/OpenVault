@@ -5,6 +5,7 @@ import { buildClientRawRequest, resolveDispatchClientRawRequest } from "./chat/c
 export { buildClientRawRequest, resolveDispatchClientRawRequest };
 import { normalizeReasoningRequest } from "@/shared/reasoning/effortStandardization";
 import { isDetailedLoggingEnabled } from "@/lib/db/detailedLogs";
+import { FREEROUTE_REQUEST_HEADERS, readFreeRouteHeader } from "@/shared/constants/headers";
 import { resolvePreviousResponseState } from "@/lib/db/responsesContinuationStore";
 import { normalizeResponsesPreviousResponseIdMode } from "@omniroute/open-sse/utils/responsesStatePolicy.ts";
 import { FORMATS } from "@omniroute/open-sse/translator/formats.ts";
@@ -695,7 +696,8 @@ async function handleChatImplementation(
   const externalSessionId = extractExternalSessionId(request.headers);
   const sessionId = externalSessionId || generateStableSessionId(body);
   const sessionAffinityKey = extractSessionAffinityKey(body, request.headers) || sessionId;
-  const requestedConnectionId = request.headers.get("x-omniroute-connection")?.trim() || null;
+  const requestedConnectionId =
+    readFreeRouteHeader(request.headers, FREEROUTE_REQUEST_HEADERS.connection)?.trim() || null;
   if (sessionId) {
     touchSession(sessionId);
   }
@@ -863,7 +865,8 @@ async function handleChatImplementation(
   // incoming HTTP request, before combo dispatch / credential retries, so
   // every attempt for this request shares the same id and the
   // agentic_conversations row is only touched once.
-  const clientConversationHeader = request.headers.get("x-omniroute-session-id")?.trim() || null;
+  const clientConversationHeader =
+    readFreeRouteHeader(request.headers, "x-omniroute-session-id")?.trim() || null;
   let conversationId: string | null = null;
   try {
     ({ conversationId } = await resolveConversationId({

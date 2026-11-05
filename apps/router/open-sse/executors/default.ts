@@ -66,6 +66,7 @@ import { acquireNvidiaConcurrencySlot } from "./default/nvidiaConcurrencyGate.ts
 import { resolveAlibabaProviderBaseUrl } from "@/shared/constants/alibabaProviderRegions";
 import { xiaomiAlternateUrl, xiaomiMimoChatUrl } from "./default/xiaomiTokenPlan.ts";
 import { usesCcWireImage } from "../services/ccWireImageBuiltins.ts";
+import { findClientImpersonationHeaders } from "../netie/policy.ts";
 
 const NVIDIA_TOOL_CALL_ID_PATTERN = /^[A-Za-z0-9]{9}$/;
 const PERPLEXITY_AGENT_DEFAULT_MAX_OUTPUT_TOKENS = 4096;
@@ -205,9 +206,13 @@ function applyCustomHeaders(headers: Record<string, string>, rawCustomHeaders: u
     }
   }
   if (!customHeaders) return;
+  // A node saved before the Client Identity presets were removed can still hold a
+  // vendor CLI's user agent or SDK headers: they are not sent.
+  const cliIdentityHeaders = new Set(findClientImpersonationHeaders(customHeaders));
   for (const [k, v] of Object.entries(customHeaders)) {
     if (typeof k !== "string" || typeof v !== "string") continue;
     if (isForbiddenCustomHeaderName(k)) continue;
+    if (cliIdentityHeaders.has(k)) continue;
     if (/[\r\n\0]/.test(k) || /[\r\n]/.test(v)) continue;
     const lower = k.toLowerCase();
     for (const existing of Object.keys(headers)) {

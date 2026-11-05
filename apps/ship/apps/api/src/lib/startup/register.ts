@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: registers the tunnel token scrub.
 /**
  * Startup-hook registration — Self-hosted only (never SaaS).
  *
@@ -13,6 +14,7 @@ import { registerInfraReconcile } from "./infra-reconcile";
 import { registerAppServiceRowReconcile } from "@repo/platform/engine/modules/services/service.service";
 import { registerCustomCommandRestoreBackfill } from "@repo/platform/engine/modules/backups/restore-command-backfill";
 import { registerCredentialBackfill } from "./credential-backfill";
+import { registerTunnelTokenScrub } from "./tunnel-token-scrub";
 import { registerNetworkSetupRecovery } from "@repo/platform/engine/lib/startup/network-setups";
 
 export function registerStartupHooks(): void {
@@ -40,4 +42,6 @@ export function registerStartupHooks(): void {
   // encryption envelopes wrap different things and only the app holds the key — so a
   // `DROP TABLE` in this release would have destroyed every token before it was copied.
   registerCredentialBackfill();
+  // Clear a tunnel token an earlier build stored; FreeBuild keeps none.
+  registerTunnelTokenScrub();
 }

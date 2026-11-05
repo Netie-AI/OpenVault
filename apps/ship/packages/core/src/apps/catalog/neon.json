@@ -83,7 +83,7 @@
       "label": "Console admin email",
       "help": "The first account is created for you and is the instance admin. Sign-up closes as soon as it exists.",
       "type": "text",
-      "default": "admin@openship.local",
+      "default": "admin@freebuild.local",
       "required": true
     },
     {

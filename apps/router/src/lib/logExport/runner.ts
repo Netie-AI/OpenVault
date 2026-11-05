@@ -1,7 +1,7 @@
 /**
  * Log-export runner — the destination-agnostic half of the pipeline.
  *
- * Per destination: resolve its type, decrypt its config, build a client, then drain
+ * Per destination: resolve its type, read its credential from OpenVault, build a client, then drain
  * `call_logs` forward from the persisted cursor in batches. The cursor advances only
  * after `send()` resolves, so a crashed or failing run resumes at the last row the
  * destination actually accepted; BigQuery-style `insertId` de-duplication covers the
@@ -24,7 +24,7 @@ import {
 } from "@/lib/usage/callLogExportSource";
 import { sanitizeErrorMessage } from "@omniroute/open-sse/utils/error";
 import { getLogExportDestinationType } from "./registry";
-import { decryptDestinationConfig } from "./secrets";
+import { resolveVaultDestinationConfig } from "./secrets";
 import type { LogExportClient } from "./types";
 
 export interface DestinationRunResult {
@@ -55,11 +55,14 @@ function errMessage(err: unknown): string {
  * Build a live client for a stored destination row. Throws when the type is unknown or
  * the stored config no longer satisfies the type's schema (e.g. after a downgrade).
  */
-export function createClientForDestination(destination: LogExportDestinationRow): LogExportClient {
+export async function createClientForDestination(
+  destination: LogExportDestinationRow
+): Promise<LogExportClient> {
   const type = getLogExportDestinationType(destination.type);
   if (!type) throw new Error(`Unknown log export destination type "${destination.type}"`);
+  // The credential comes from OpenVault, never from this database.
   const parsed = type.configSchema.safeParse(
-    decryptDestinationConfig(destination.type, destination.config)
+    await resolveVaultDestinationConfig(destination.type, destination.config)
   );
   if (!parsed.success) {
     throw new Error(`Stored configuration for "${destination.name}" is invalid or incomplete`);
@@ -116,7 +119,7 @@ export async function runDestinationExport(
   inFlight.add(destination.id);
 
   try {
-    const client = createClientForDestination(destination);
+    const client = await createClientForDestination(destination);
     let cursor = reconcileCursor(destination);
     result.cursorRowId = cursor;
 

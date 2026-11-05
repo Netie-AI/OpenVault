@@ -10,7 +10,7 @@
  * directly from the request header. Existing header values from the inner pipeline
  * (which carry richer `tokens=...; rules: ...` annotations) are never overwritten.
  */
-import { OMNIROUTE_RESPONSE_HEADERS } from "@/shared/constants/headers";
+import { OMNIROUTE_RESPONSE_HEADERS, setHeaderWithTwin } from "@/shared/constants/headers";
 
 const COMPRESSION_REQUEST_HEADER = "x-omniroute-compression";
 const COMPRESSION_RESPONSE_HEADER = OMNIROUTE_RESPONSE_HEADERS.compression;
@@ -50,7 +50,7 @@ export function withCompressionHeaderEcho(
   if (response.headers.has(COMPRESSION_RESPONSE_HEADER)) return response;
   const mode = normalizeRequestValue(requestHeaderValue);
   const headers = new Headers(response.headers);
-  headers.set(COMPRESSION_RESPONSE_HEADER, `${mode}; source=request-header`);
+  setHeaderWithTwin(headers, COMPRESSION_RESPONSE_HEADER, `${mode}; source=request-header`);
   return new Response(response.body, {
     status: response.status,
     statusText: response.statusText,

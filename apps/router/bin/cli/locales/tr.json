@@ -248,7 +248,7 @@
     "stopping": "Sunucu durduruluyor (PID {pid})...",
     "stopped": "Sunucu durduruldu.",
     "notRunning": "Sunucu çalışmıyor.",
-    "port": "Dinlenecek port (varsayılan: 20128)",
+    "port": "Dinlenecek port (varsayılan: 3020)",
     "no_open": "Tarayıcıyı otomatik olarak açma",
     "daemon": "Sunucuyu arka plan hizmeti olarak çalıştır",
     "log": "Sunucu günlüklerini satır içinde göster",

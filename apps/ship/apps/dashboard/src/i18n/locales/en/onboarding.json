@@ -95,13 +95,10 @@
       },
       "ngrok": {
         "title": "ngrok",
-        "desc": "Expose services with your ngrok auth token."
+        "desc": "Expose services through ngrok. FreeBuild does not store the auth token."
       }
     },
-    "cloudflareTokenLabel": "Cloudflare Tunnel Token",
-    "ngrokTokenLabel": "ngrok Auth Token",
-    "cloudflarePlaceholder": "Paste your tunnel token",
-    "ngrokPlaceholder": "Paste your ngrok auth token",
+    "cloudflareVaultHint": "FreeBuild does not store a tunnel token. Cloudflare secrets are kept in OpenVault.",
     "edgeHint": "FreeBuild Edge requires a FreeBuild account. You'll sign in to continue.",
     "signInContinue": "Sign In & Continue"
   },

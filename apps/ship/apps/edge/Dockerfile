@@ -1,5 +1,6 @@
 # syntax=docker/dockerfile:1
-# ─── openship-edge ──────────────────────────────────────────────────────────
+# Modified by Netie AI, 2026
+# ─── freebuild-edge ──────────────────────────────────────────────────────────
 # The routing/TLS edge, run as a CONTAINER on :80/:443 (network_mode: host)
 # instead of bare OpenResty on the host. Cleaner than apt-installing OpenResty +
 # certbot on the box: the edge ships as an image.
@@ -82,7 +83,7 @@ RUN mkdir -p /usr/local/openresty/nginx/conf/sites-enabled /var/www/acme /etc/le
 # agrees with it.
 RUN mkdir -p /usr/local/openresty/nginx/conf/openship-default-cert && \
     openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:P-256 -nodes -days 3650 \
-      -subj /CN=openship-edge-default \
+      -subj /CN=freebuild-edge-default \
       -keyout /usr/local/openresty/nginx/conf/openship-default-cert/privkey.pem \
       -out /usr/local/openresty/nginx/conf/openship-default-cert/fullchain.pem && \
     chmod 600 /usr/local/openresty/nginx/conf/openship-default-cert/privkey.pem

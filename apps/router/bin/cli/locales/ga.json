@@ -248,7 +248,7 @@
     "stopping": "Ag stopadh freastalaí (PID {pid})...",
     "stopped": "Tá an freastalaí stoptha.",
     "notRunning": "Níl an freastalaí ag rith.",
-    "port": "Port le éisteacht air (réamhshocrú: 20128)",
+    "port": "Port le éisteacht air (réamhshocrú: 3020)",
     "no_open": "Ná oscail an brabhsálaí go huathoibríoch",
     "daemon": "Rith an freastalaí mar deamhan cúlra",
     "log": "Taispeáin logaí an fhreastalaí inlíne",

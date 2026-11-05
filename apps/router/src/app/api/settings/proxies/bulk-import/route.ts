@@ -3,6 +3,7 @@ import { bulkImportProxiesSchema } from "@/shared/validation/schemas";
 import { isValidationFailure, validateBody } from "@/shared/validation/helpers";
 import { createErrorResponse, createErrorResponseFromUnknown } from "@/lib/api/errorResponse";
 import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
+import { rejectProxyLoginsInBody } from "@/lib/netie/providerGuards";
 
 export async function POST(request: Request) {
   const authError = await requireManagementAuth(request);
@@ -18,6 +19,10 @@ export async function POST(request: Request) {
       type: "invalid_request",
     });
   }
+
+  // FreeRoute keeps no proxy logins: an item with a username or password answers keys_managed_by_openvault.
+  const refusal = rejectProxyLoginsInBody(rawBody);
+  if (refusal) return refusal;
 
   try {
     const validation = validateBody(bulkImportProxiesSchema, rawBody);

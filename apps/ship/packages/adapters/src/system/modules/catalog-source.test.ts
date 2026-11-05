@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: the default config makes no remote request; the remote cases set an operator URL.
 import { describe, it, expect, afterEach } from "vitest";
 import { createHash, generateKeyPairSync, sign as cryptoSign } from "node:crypto";
 import { verifyAndBuild, fetchRemoteCatalog } from "./catalog-source";
@@ -123,11 +124,26 @@ describe("fetchRemoteCatalog shape refusals", () => {
   const realFetch = globalThis.fetch;
   afterEach(() => {
     globalThis.fetch = realFetch;
+    delete process.env.OPENSHIP_MODULE_CATALOG_BASE_URL;
+  });
+
+  it("makes no request without an operator remote, or when it names the upstream project", async () => {
+    const fetched: string[] = [];
+    globalThis.fetch = (async (url: string) => {
+      fetched.push(url);
+      return { ok: false, status: 404 } as unknown as Response;
+    }) as unknown as typeof fetch;
+    delete process.env.OPENSHIP_MODULE_CATALOG_BASE_URL;
+    expect(await fetchRemoteCatalog("openresty")).toEqual({});
+    process.env.OPENSHIP_MODULE_CATALOG_BASE_URL = "https://raw.githubusercontent.com/openship/native-modules";
+    expect(await fetchRemoteCatalog("openresty")).toEqual({});
+    expect(fetched).toEqual([]);
   });
 
   it("refuses a malformed remote manifest instead of walking it for assets", async () => {
     const body = JSON.stringify({ ...manifest(), versions: [{ version: "1.0.0", apply: "auto", steps: 7 }] });
     const fetched: string[] = [];
+    process.env.OPENSHIP_MODULE_CATALOG_BASE_URL = "https://modules.example.test/native-modules";
     globalThis.fetch = (async (url: string) => {
       fetched.push(url);
       if (url.endsWith("catalog.json")) {
@@ -142,5 +158,6 @@ describe("fetchRemoteCatalog shape refusals", () => {
     );
     // Nothing beyond the manifest + its signature was fetched.
     expect(fetched.every((u) => u.endsWith("catalog.json") || u.endsWith("catalog.json.sig"))).toBe(true);
+    expect(fetched.every((u) => u.startsWith("https://modules.example.test/"))).toBe(true);
   });
 });

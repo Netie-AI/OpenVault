@@ -19,6 +19,7 @@ import {
 } from "@/lib/api/errorResponse";
 import type { z } from "zod";
 import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
+import { netieErrorResponse, rejectProxyLoginsInBody } from "@/lib/netie/providerGuards";
 
 const BASE_SUPPORTED_PROXY_TYPES = new Set(["http", "https"]);
 type UpdateProxyConfigInput = z.infer<typeof updateProxyConfigSchema>;
@@ -234,6 +235,10 @@ export async function PUT(request: Request) {
     });
   }
 
+  // FreeRoute keeps no proxy logins: a username or password answers keys_managed_by_openvault.
+  const refusal = rejectProxyLoginsInBody(rawBody);
+  if (refusal) return refusal;
+
   try {
     const validation = validateBody(updateProxyConfigSchema, rawBody);
     if (isValidationFailure(validation)) {
@@ -250,6 +255,8 @@ export async function PUT(request: Request) {
     clearDispatcherCache();
     return Response.json(updated);
   } catch (error) {
+    const named = netieErrorResponse(error);
+    if (named) return named;
     const routeError = toApiRouteError(error);
     const status = Number(routeError.status) || 500;
     const type = (routeError.type ||

@@ -12,7 +12,7 @@ import { getWebhook, updateWebhook as updateWebhookRecord, deleteWebhook } from 
 import { validateBody, isValidationFailure } from "@/shared/validation/helpers";
 import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
 import { encryptMetadata } from "@/lib/webhookDispatcher";
-import { isEncryptionEnabled } from "@/lib/db/encryption";
+import { rejectSecretWebhookMetadata } from "@/lib/netie/providerGuards";
 import { parseAndValidateWebhookUrl } from "@/shared/network/outboundUrlGuardPolicy";
 
 import { WEBHOOK_EVENT_VALUES } from "@/lib/webhooks/eventDescriptions";
@@ -73,12 +73,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: "Webhook not found" }, { status: 404 });
     }
     const effectiveKind = rest.kind ?? existingWebhook.kind;
-    if (effectiveKind === "telegram" && metadata?.botToken && !isEncryptionEnabled()) {
-      return NextResponse.json(
-        { error: "Telegram webhooks require STORAGE_ENCRYPTION_KEY to be configured" },
-        { status: 400 }
-      );
-    }
+    // FreeRoute keeps no credentials: the Telegram bot token is read from OpenVault
+    // (provider telegram), so metadata that carries one is refused before it is stored.
+    const refusal = rejectSecretWebhookMetadata(metadata);
+    if (refusal) return refusal;
 
     if (rest.url !== undefined && effectiveKind !== "telegram") {
       try {

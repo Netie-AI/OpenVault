@@ -201,12 +201,32 @@ const RULES: HardDisabledRule[] = [
       "restart, release check), the same sidecar as /api/services/cliproxy.",
   },
   {
+    prefix: "/api/services/openwa",
+    code: SESSION_RELAY,
+    message: SESSION_RELAY_MESSAGE,
+    reason:
+      "Managed open-wa sidecar: a paired WhatsApp Web login held in a headless Chromium " +
+      "that runs a stealth plugin. Includes install, start, stop, restart, update, " +
+      "status, auto-start and auto-restart-adopted.",
+  },
+  {
     prefix: "/api/services/9router",
     code: UPSTREAM_SERVICE_NOT_INCLUDED,
     message: UPSTREAM_SERVICE_NOT_INCLUDED_MESSAGE,
     reason:
       "Installs/starts/stops/adopts a separate upstream product (9router) as a managed " +
       "child service, a distinct product FreeRoute does not bundle or manage.",
+  },
+  {
+    prefix: "/api/radar",
+    code: UPSTREAM_SERVICE_NOT_INCLUDED,
+    message:
+      "Radar is a catalog, offers and referral feed run by the upstream project's own server. " +
+      "That service is not included in this edition of FreeRoute.",
+    reason:
+      "Radar syncs a signed feed from the upstream operator's host and stores a supporter " +
+      "key for it. Every route under it (catalog, intel, offers, referrals, settings, sync) " +
+      "answers 501 whatever RADAR_ENABLED says.",
   },
 ];
 

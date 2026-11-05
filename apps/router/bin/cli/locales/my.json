@@ -248,7 +248,7 @@
     "stopping": "server (PID {pid}) ကို ရပ်တန့်နေသည်...",
     "stopped": "server ရပ်တန့်ပြီးပါပြီ။",
     "notRunning": "server လည်ပတ်နေခြင်းမရှိပါ။",
-    "port": "နားထောင်မည့် port (မူလသတ်မှတ်ချက်: 20128)",
+    "port": "နားထောင်မည့် port (မူလသတ်မှတ်ချက်: 3020)",
     "no_open": "browser ကို အလိုအလျောက် မဖွင့်ရန်",
     "daemon": "server ကို နောက်ခံ daemon အဖြစ် လည်ပတ်ရန်",
     "log": "server log များကို inline ပြသရန်",

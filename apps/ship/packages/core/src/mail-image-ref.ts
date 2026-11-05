@@ -1,3 +1,5 @@
+// Modified by Netie AI, 2026: the managed image names are FreeBuild names (MANAGED_IMAGE_NAMES).
+import { MANAGED_IMAGE_NAMES } from "./constants";
 import { buildImageRef } from "./image-ref";
 
 /**
@@ -5,7 +7,7 @@ import { buildImageRef } from "./image-ref";
  * `pinnedMailImage` (apps/api) and `resolveMailImage` (packages/adapters) so the
  * two can never drift — the same trap `buildEdgeImageRef` fixed for the edge. Order:
  *
- *   explicit → OPENSHIP_MAIL_IMAGE → injectedDefault → `<registry>/openship-mail:<tag>`
+ *   explicit → OPENSHIP_MAIL_IMAGE → injectedDefault → `<registry>/freebuild-mail:<tag>`
  *
  * where `registry = OPENSHIP_IMAGE_REGISTRY || DEFAULT_IMAGE_REGISTRY` and
  *       `tag      = OPENSHIP_MAIL_TAG || OPENSHIP_VERSION || fallbackTag || "latest"`.
@@ -25,7 +27,7 @@ export function buildMailImageRef(opts?: {
   fallbackTag?: string;
 }): string {
   return buildImageRef(opts, {
-    name: "openship-mail",
+    name: MANAGED_IMAGE_NAMES.mail,
     imageOverride: process.env.OPENSHIP_MAIL_IMAGE,
     tagOverride: process.env.OPENSHIP_MAIL_TAG,
   });

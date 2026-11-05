@@ -178,7 +178,7 @@ out.push(
 out.push(`<rect width="900" height="${CANVAS}" rx="16" fill="#0d1117"/>`);
 out.push(`<rect x="16" y="16" width="868" height="${H}" rx="13" fill="#161b22" stroke="#30363d"/>`);
 out.push(
-  `<text x="868" y="${(H + 8).toFixed(0)}" fill="#484f58" font-size="10.5" text-anchor="end">OmniRoute · /dashboard/free-tiers · preview mockup</text>`
+  `<text x="868" y="${(H + 8).toFixed(0)}" fill="#484f58" font-size="10.5" text-anchor="end">FreeRoute · /dashboard/free-tiers · preview mockup</text>`
 );
 out.push(...B);
 out.push(`</svg>`);

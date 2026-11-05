@@ -94,7 +94,7 @@ async function runConfigSetCommand(toolId, opts = {}) {
     return 1;
   }
 
-  const baseUrl = opts.baseUrl || "http://localhost:20128/v1";
+  const baseUrl = opts.baseUrl || "http://localhost:3020/v1";
   const apiKey = opts.apiKey;
   const model = opts.model;
 
@@ -159,7 +159,7 @@ async function runConfigValidateCommand(toolId, opts = {}) {
     return 1;
   }
 
-  const baseUrl = opts.baseUrl || "http://localhost:20128/v1";
+  const baseUrl = opts.baseUrl || "http://localhost:3020/v1";
   const apiKey = opts.apiKey || "test-key";
   const model = opts.model;
 

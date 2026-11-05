@@ -248,7 +248,7 @@
     "stopping": "Itinitigil ang server (PID {pid})...",
     "stopped": "Itinigil na ang server.",
     "notRunning": "Hindi tumatakbo ang server.",
-    "port": "Port na pakikinggan (default: 20128)",
+    "port": "Port na pakikinggan (default: 3020)",
     "no_open": "Huwag awtomatikong buksan ang browser",
     "daemon": "Patakbuhin ang server bilang background daemon",
     "log": "Ipakita ang mga log ng server nang inline",

@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { buildMailImageRef } from "./mail-image-ref";
@@ -47,25 +48,25 @@ describe("buildMailImageRef", () => {
   it("constructs from registry + OPENSHIP_MAIL_TAG (ahead of OPENSHIP_VERSION)", () => {
     process.env.OPENSHIP_MAIL_TAG = "1.2.3";
     process.env.OPENSHIP_VERSION = "9.9.9";
-    expect(buildMailImageRef()).toBe(`${DEFAULT_IMAGE_REGISTRY}/openship-mail:1.2.3`);
+    expect(buildMailImageRef()).toBe(`${DEFAULT_IMAGE_REGISTRY}/freebuild-mail:1.2.3`);
   });
 
   it("falls back to OPENSHIP_VERSION, then fallbackTag, then latest", () => {
     process.env.OPENSHIP_VERSION = "0.5.0";
     expect(buildMailImageRef({ fallbackTag: "app-v" })).toBe(
-      `${DEFAULT_IMAGE_REGISTRY}/openship-mail:0.5.0`,
+      `${DEFAULT_IMAGE_REGISTRY}/freebuild-mail:0.5.0`,
     );
 
     delete process.env.OPENSHIP_VERSION;
     expect(buildMailImageRef({ fallbackTag: "app-v" })).toBe(
-      `${DEFAULT_IMAGE_REGISTRY}/openship-mail:app-v`,
+      `${DEFAULT_IMAGE_REGISTRY}/freebuild-mail:app-v`,
     );
-    expect(buildMailImageRef()).toBe(`${DEFAULT_IMAGE_REGISTRY}/openship-mail:latest`);
+    expect(buildMailImageRef()).toBe(`${DEFAULT_IMAGE_REGISTRY}/freebuild-mail:latest`);
   });
 
   it("honors a custom registry", () => {
     process.env.OPENSHIP_IMAGE_REGISTRY = "registry.example.com/team";
     process.env.OPENSHIP_MAIL_TAG = "edge";
-    expect(buildMailImageRef()).toBe("registry.example.com/team/openship-mail:edge");
+    expect(buildMailImageRef()).toBe("registry.example.com/team/freebuild-mail:edge");
   });
 });

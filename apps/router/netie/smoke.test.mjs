@@ -769,3 +769,59 @@ test("the semantic-cache embedding key cannot be saved or probed with, and can s
   );
   assert.equal(settings.semanticCacheEmbeddingApiKey, "");
 });
+
+// ── Round 4 regressions (CLI emulation, impersonation and sidecars) ─────────
+
+test("providers that play another vendor's CLI answer a named 501 on validate and create", async () => {
+  for (const [provider, code] of [
+    ["freebuff", "tls_fingerprint_stealth_disabled"],
+    ["fb", "tls_fingerprint_stealth_disabled"],
+    ["cursor-api", "tls_fingerprint_stealth_disabled"],
+    ["cua", "tls_fingerprint_stealth_disabled"],
+    ["muse-code", "tls_fingerprint_stealth_disabled"],
+    ["qoder", "consumer_subscription_pooling_disabled"],
+  ]) {
+    await expectNamed(await postJson("/api/providers/validate", { provider, apiKey: "sk-test" }), 501, code);
+    await expectNamed(await postJson("/api/providers", { provider, name: `smoke-${provider}` }), 501, code);
+  }
+});
+
+test("the open-wa sidecar answers consumer_session_relay_disabled on every service route", async () => {
+  for (const [method, path] of [
+    ["GET", "/api/services/openwa/status"],
+    ["POST", "/api/services/openwa/install"],
+    ["POST", "/api/services/openwa/start"],
+    ["POST", "/api/services/openwa/auto-start"],
+    ["POST", "/api/services/openwa/auto-restart-adopted"],
+  ]) {
+    const res = await fetch(`${baseUrl()}${path}`, {
+      method,
+      headers: managementHeaders({ "content-type": "application/json" }),
+      body: method === "GET" ? undefined : "{}",
+    });
+    await expectNamed(res, 501, "consumer_session_relay_disabled");
+  }
+});
+
+test("a custom provider node cannot copy a vendor CLI's identity, and the VibeProxy preset is refused", async () => {
+  const node = {
+    type: "openai-compatible",
+    name: "smoke-identity",
+    prefix: "smokeid",
+    apiType: "chat",
+    baseUrl: "https://gateway.example.invalid/v1",
+  };
+  await expectNamed(
+    await postJson("/api/provider-nodes", {
+      ...node,
+      customHeaders: { "User-Agent": "claude-cli/2.1.258 (external, cli)", "X-App": "cli" },
+    }),
+    501,
+    "tls_fingerprint_stealth_disabled"
+  );
+  await expectNamed(
+    await postJson("/api/provider-nodes", { preset: "vibeproxy-openai", baseUrl: "http://127.0.0.1:8318" }),
+    501,
+    "consumer_subscription_pooling_disabled"
+  );
+});

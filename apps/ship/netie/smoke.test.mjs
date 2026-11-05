@@ -7,6 +7,9 @@
 // new keyvault cases cover custody, the custom-only label fallback, the 5s
 // request timeout, ~ expansion and expiry of the in-memory secret cache.
 //
+// Modified by Netie AI, 2026: the API process runs under netie/fetch-log.mjs, and new
+// cases cover the billing plan catalog (501) and the bundled-only app catalog.
+//
 // FreeBuild smoke test (node:test, plain Node — no test framework dependency).
 // Run with `npm run test:smoke` from the repo root.
 //
@@ -39,7 +42,7 @@ import { test, describe, before, after, mock } from "node:test";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { spawn } from "node:child_process";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { randomBytes } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
@@ -158,6 +161,7 @@ let apiProcess;
 let apiBaseUrl;
 let dataDir;
 let adminTokenPath;
+let fetchLogPath;
 
 // Stub OpenVault and the token file serve every test. The API process is
 // started only by the "API process" suite below, so the keyvault cases run
@@ -185,9 +189,14 @@ before(async () => {
   const apiPort = 30000 + Math.floor(Math.random() * 10000);
   apiBaseUrl = `http://127.0.0.1:${apiPort}`;
 
+  // Every fetch() the API makes is logged (netie/fetch-log.mjs), and fetches to the
+  // upstream project's repositories are refused; the cases below read the log.
+  fetchLogPath = join(dataDir, "fetch.log");
+  await writeFile(fetchLogPath, "");
+
   apiProcess = spawn(
     process.execPath,
-    ["--import", "tsx", "dist/index.js"],
+    ["--import", "tsx", "--import", join(HERE, "fetch-log.mjs"), "dist/index.js"],
     {
       cwd: API_DIR,
       env: {
@@ -199,6 +208,7 @@ before(async () => {
         PGLITE_DATA_DIR: join(dataDir, "pglite"),
         OPENVAULT_URL: openVaultUrl,
         OPENVAULT_ADMIN_TOKEN_PATH: adminTokenPath,
+        FREEBUILD_FETCH_LOG: fetchLogPath,
         // Disposable, isolated smoke-test instance only — lets an
         // unauthenticated loopback request act as admin so this script can
         // exercise an admin-gated route (POST /api/credentials) without
@@ -239,6 +249,30 @@ test("a hosted-cloud (SaaS) route answers 501 hosted_cloud_disabled", async () =
   const body = await res.json();
   assert.equal(body.error.code, "hosted_cloud_disabled");
   assert.match(body.error.message, /self-hosted/i);
+});
+
+test("the billing plan catalog answers 501 hosted_cloud_disabled, not the upstream's plans", async () => {
+  const res = await fetch(`${apiBaseUrl}/api/billing/plans`);
+  assert.equal(res.status, 501);
+  const text = await res.text();
+  assert.equal(JSON.parse(text).error.code, "hosted_cloud_disabled");
+  assert.doesNotMatch(text, /oblien|opsh|openship/i);
+});
+
+test("the app catalog is the bundled FreeBuild one and nothing reaches the upstream repositories", async () => {
+  const res = await fetch(`${apiBaseUrl}/api/apps/catalog`);
+  assert.equal(res.status, 200);
+  const text = await res.text();
+  assert.match(text, /FreeBuild Mail/);
+  assert.doesNotMatch(text, /Openship Mail/);
+  // The overlay refresh used to be armed at import and fire within seconds.
+  await new Promise((r) => setTimeout(r, 1500));
+  const logged = await readFile(fetchLogPath, "utf8");
+  assert.doesNotMatch(
+    logged,
+    /(raw\.githubusercontent\.com|github\.com|ghcr\.io)\/(oblien|openship)|opsh\.io/i,
+    `the API fetched from the upstream project:\n${logged}`,
+  );
 });
 
 test("saving a provider key (Cloudflare) answers 501 keys_managed_by_openvault", async () => {

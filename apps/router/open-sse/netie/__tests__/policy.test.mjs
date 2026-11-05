@@ -6,7 +6,7 @@
 
 import { test, after } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -368,7 +368,7 @@ test("the Dario and CLIProxyAPI sidecar families and the version manager answer 
   }
 });
 
-test("assertServiceToolAllowed refuses dario, cliproxy and cliproxyapi and nothing else", () => {
+test("assertServiceToolAllowed refuses dario, cliproxy, cliproxyapi, openwa and 9router and nothing else", () => {
   for (const tool of ["dario", "cliproxy", "cliproxyapi", " Dario ", "CLIPROXY"]) {
     assert.equal(isServiceToolDisabled(tool), true, tool);
     assert.throws(
@@ -377,7 +377,27 @@ test("assertServiceToolAllowed refuses dario, cliproxy and cliproxyapi and nothi
       tool
     );
   }
-  for (const tool of ["mux", "bifrost", "openwa", "", null, undefined]) {
+  for (const tool of ["openwa", " OpenWa "]) {
+    assert.equal(isServiceToolDisabled(tool), true, tool);
+    assert.throws(
+      () => assertServiceToolAllowed(tool),
+      (error) => isNetieDisabledError(error) && error.code === DISABLED.sessionRelay,
+      tool
+    );
+  }
+  for (const tool of ["9router", " 9ROUTER "]) {
+    assert.equal(isServiceToolDisabled(tool), true, tool);
+    assert.throws(
+      () => assertServiceToolAllowed(tool),
+      (error) =>
+        isNetieDisabledError(error) &&
+        error.code === "upstream_service_not_included" &&
+        error.status === 501 &&
+        !/omniroute|9router|openship|oblien/i.test(error.message),
+      tool
+    );
+  }
+  for (const tool of ["mux", "bifrost", "", null, undefined]) {
     assert.equal(isServiceToolDisabled(tool), false, String(tool));
     assertServiceToolAllowed(tool);
   }
@@ -434,15 +454,16 @@ test("no code path can supervise, install or spawn the Dario or CLIProxyAPI side
   await assertDisabledRejection(() => binaryManager.installVersion("0.0.0"), "installVersion");
 });
 
-test("the startup bootstrap never supervises or auto-starts dario or cliproxy, whatever the stored row says", async () => {
+test("the startup bootstrap never supervises or auto-starts dario, cliproxy, open-wa or 9router, whatever the stored row says", async () => {
   const { upsertVersionManagerTool } = await import(`${SRC}lib/db/versionManager.ts`);
-  for (const tool of ["dario", "cliproxy"]) {
+  const seededPorts = { dario: 3456, cliproxy: 8317, openwa: 8323, "9router": 20130 };
+  for (const [tool, port] of Object.entries(seededPorts)) {
     await upsertVersionManagerTool({
       tool,
       installedVersion: "1.0.0",
       status: "stopped",
       autoStart: true,
-      port: tool === "dario" ? 3456 : 8317,
+      port,
     });
   }
   // Control: an ordinary installed service is still supervised, so the bootstrap ran.
@@ -459,6 +480,8 @@ test("the startup bootstrap never supervises or auto-starts dario or cliproxy, w
   assert.ok(getSupervisor("mux"), "the bootstrap must still supervise an installed mux");
   assert.equal(getSupervisor("dario") ?? null, null, "dario must not be supervised");
   assert.equal(getSupervisor("cliproxy") ?? null, null, "cliproxy must not be supervised");
+  assert.equal(getSupervisor("openwa") ?? null, null, "open-wa must not be supervised");
+  assert.equal(getSupervisor("9router") ?? null, null, "9router must not be supervised");
 });
 
 test("setting an upstream proxy mode that routes through a sidecar answers 501", async () => {
@@ -667,4 +690,371 @@ test("header and body re-ordering to look like a client binary is off, whatever 
       else process.env[name] = value;
     }
   }
+});
+
+// ── Round 4: consumer paths (CLI emulation and impersonation) ───────────────
+
+// Item 2: the GLM Anthropic transport sends honest headers only.
+
+test("the GLM Anthropic transport sends no Claude Code client identity", async () => {
+  const { GlmExecutor } = await import(`${OPEN_SSE}executors/glm.ts`);
+  const glmProvider = await import(`${OPEN_SSE}config/glmProvider.ts`);
+  const executor = new GlmExecutor("glm");
+  const allowed = new Set(["content-type", "accept", "x-api-key", "anthropic-version", "anthropic-beta"]);
+  const forbidden =
+    /^x-stainless-|^x-claude-code-|^x-client-request-id$|^x-app$|^user-agent$|dangerous-direct-browser-access/i;
+  const variants = [
+    [{ apiKey: "sk-test", providerSpecificData: { primaryTransport: "anthropic" } }, true],
+    [{ apiKey: "sk-test", providerSpecificData: { baseUrl: "https://api.z.ai/api/anthropic" } }, false],
+  ];
+  for (const [credentials, stream] of variants) {
+    const headers = executor.buildHeaders(credentials, stream);
+    assert.equal(headers["x-api-key"], "sk-test");
+    assert.equal(headers["anthropic-version"], "2023-06-01");
+    for (const name of Object.keys(headers)) {
+      assert.ok(allowed.has(name.toLowerCase()), `unexpected GLM Anthropic header ${name}`);
+      assert.doesNotMatch(name, forbidden, name);
+    }
+    assert.doesNotMatch(headers["anthropic-beta"], /claude-code/i);
+  }
+  const direct = glmProvider.buildGlmBaseHeaders("sk-test", true);
+  assert.deepEqual(Object.keys(direct).map((name) => name.toLowerCase()).sort(), [...allowed].sort());
+  assert.doesNotMatch(glmProvider.GLM_ANTHROPIC_BETA, /claude-code/i);
+  for (const file of ["config/glmProvider.ts", "executors/glm.ts"]) {
+    const source = readFileSync(`${OPEN_SSE}${file}`, "utf8");
+    assert.doesNotMatch(source, /claudeCodeClient|getClaudeCodeUserAgent|X-Claude-Code|X-Stainless/, file);
+  }
+});
+
+// Items 3 and 4: providers that play another vendor's CLI.
+
+test("freebuff, cursor-api, qoder and muse-code answer a named 501, and are hidden from pickers", async () => {
+  const expected = [
+    ["freebuff", DISABLED.tlsStealth],
+    ["fb", DISABLED.tlsStealth],
+    ["Freebuff", DISABLED.tlsStealth],
+    ["cursor-api", DISABLED.tlsStealth],
+    ["cua", DISABLED.tlsStealth],
+    ["muse-code", DISABLED.tlsStealth],
+    ["mc", DISABLED.tlsStealth],
+    ["qoder", DISABLED.consumerSubscription],
+    ["if", DISABLED.consumerSubscription],
+  ];
+  const executors = await import(`${OPEN_SSE}executors/index.ts`);
+  for (const [id, code] of expected) {
+    assert.equal(classifyProviderId(id), code, id);
+    assert.equal(isProviderHidden(id), true, id);
+    assert.throws(
+      () => assertProviderAllowed(id),
+      (error) => isNetieDisabledError(error) && error.code === code,
+      id
+    );
+  }
+  for (const id of ["freebuff", "fb", "cursor-api", "cua", "qoder"]) {
+    await assert.rejects(
+      executors.getExecutor(id),
+      (error) => isNetieDisabledError(error) && error.code === classifyProviderId(id),
+      `getExecutor(${id})`
+    );
+  }
+  // Control: the documented API-key providers next to them stay allowed.
+  for (const id of ["command-code", "cmd", "glm", "gitlawb", "gitlawb-gmi", "openai"]) {
+    assert.equal(classifyProviderId(id), null, id);
+  }
+  const catalog = await import(`${SRC}lib/providers/catalog.ts`);
+  const listed = new Set();
+  for (const category of ["apikey", "oauth"]) {
+    for (const id of Object.keys(catalog.getStaticProviderCatalogGroup(category).providers)) listed.add(id);
+  }
+  assert.ok(listed.size > 50, `expected the catalog to list 50+ providers, saw ${listed.size}`);
+  for (const id of ["freebuff", "cursor-api", "qoder", "muse-code"]) {
+    assert.ok(!listed.has(id), `${id} must not be offered in the Add Connection picker`);
+  }
+  assert.ok(listed.has("command-code"), "control: command-code stays listed");
+});
+
+test("the Cursor Agent CLI build id is never scraped from cursor.com", async () => {
+  const version = await import(`${OPEN_SSE}utils/cursorAgentCliVersion.ts`);
+  assert.equal(version.refreshCursorAgentCliVersionFromInstaller, undefined);
+  assert.equal(version.extractVersionIdFromInstallerScript, undefined);
+  const source = readFileSync(`${OPEN_SSE}utils/cursorAgentCliVersion.ts`, "utf8");
+  assert.doesNotMatch(source, /cursor\.com\/install|fetchImpl|globalThis\.fetch|\bfetch\(/);
+  // Without a local install or env override the pin is returned, with no timer or request queued.
+  const saved = { env: process.env.CURSOR_AGENT_CLI_VERSION, home: process.env.HOME };
+  const realFetch = globalThis.fetch;
+  let fetched = 0;
+  globalThis.fetch = (...args) => {
+    fetched += 1;
+    return realFetch(...args);
+  };
+  try {
+    delete process.env.CURSOR_AGENT_CLI_VERSION;
+    process.env.HOME = ROUND3_DATA_DIR;
+    version.resetCursorAgentCliVersionCache();
+    assert.equal(version.getCursorAgentCliVersion(), version.CURSOR_AGENT_CLI_VERSION);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    assert.equal(fetched, 0);
+  } finally {
+    globalThis.fetch = realFetch;
+    version.resetCursorAgentCliVersionCache();
+    for (const [name, value] of [["CURSOR_AGENT_CLI_VERSION", saved.env], ["HOME", saved.home]]) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
+  }
+});
+
+test("Command Code never replays the CLI wire protocol: a 403 from the provider endpoint is the answer", async () => {
+  const { CommandCodeExecutor } = await import(`${OPEN_SSE}executors/commandCode.ts`);
+  const realFetch = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url: String(url), headers: { ...(init?.headers ?? {}) } });
+    return new Response("denied", { status: 403, headers: { "content-type": "text/plain" } });
+  };
+  try {
+    const result = await new CommandCodeExecutor().execute({
+      model: "deepseek/deepseek-v4-flash",
+      body: { messages: [{ role: "user", content: "hi" }] },
+      stream: false,
+      credentials: { apiKey: "cc-key" },
+    });
+    assert.equal(result.response.status, 403);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+  assert.equal(calls.length, 1, `expected one request, saw ${calls.map((call) => call.url).join(", ")}`);
+  assert.match(calls[0].url, /\/provider\/v1\/chat\/completions$/);
+  const names = Object.keys(calls[0].headers).map((name) => name.toLowerCase());
+  for (const name of names) assert.doesNotMatch(name, /^x-command-code-|^x-cli-environment$|^x-project-slug$/);
+  for (const file of [`${OPEN_SSE}executors/commandCode.ts`, `${SRC}lib/providers/validation/openaiFormat.ts`]) {
+    const source = readFileSync(file, "utf8");
+    assert.doesNotMatch(source, /x-command-code-version|x-cli-environment|executeCliFallback|buildCliUrl/, file);
+  }
+});
+
+test("Gitlawb sends no OpenClaude CLI identity", async () => {
+  const { REGISTRY } = await import(`${OPEN_SSE}config/providerRegistry.ts`);
+  for (const id of ["gitlawb", "gitlawb-gmi"]) {
+    const names = Object.keys(REGISTRY[id].headers ?? {}).map((name) => name.toLowerCase());
+    assert.ok(!names.includes("user-agent") && !names.includes("x-title"), `${id}: ${names}`);
+    assert.doesNotMatch(JSON.stringify(REGISTRY[id].headers ?? {}), /openclaude/i, id);
+  }
+});
+
+// Item 5: the CLI login for a consumer subscription.
+
+test("`freeroute login antigravity` prints the named 501 text and exits non-zero without running a flow", async () => {
+  const login = await import("../../../bin/cli/commands/login.mjs");
+  const { Command } = await import("commander");
+  const program = new Command();
+  program.exitOverride();
+  login.registerLogin(program);
+
+  const realWrite = process.stderr.write.bind(process.stderr);
+  const realExit = process.exit;
+  const written = [];
+  let exitCode = null;
+  process.stderr.write = (text) => {
+    written.push(String(text));
+    return true;
+  };
+  process.exit = (code) => {
+    exitCode = code;
+    return undefined;
+  };
+  try {
+    await program.parseAsync(["node", "freeroute", "login", "antigravity", "--no-browser"]);
+  } finally {
+    process.stderr.write = realWrite;
+    process.exit = realExit;
+  }
+  assert.equal(exitCode, 1);
+  const output = written.join("");
+  assert.match(output, /consumer_subscription_pooling_disabled/);
+  assert.ok(output.includes(login.LOGIN_DISABLED_MESSAGE));
+  assert.doesNotMatch(output, /omniroute|openship|oblien/i);
+
+  const source = readFileSync(new URL("../../../bin/cli/commands/login.mjs", import.meta.url), "utf8");
+  assert.doesNotMatch(source, /createServer|accounts\.google\.com|buildAuthUrl|exchangeToken|paste-credentials|import\("open"\)/);
+  assert.equal(login.runAntigravityLogin, undefined);
+  assert.equal(login.buildAntigravityAuthRequest, undefined);
+});
+
+// Items 6 and 8: the open-wa and 9router sidecars.
+
+test("open-wa and 9router cannot be supervised, installed or spawned, and their routes answer a named 501", async () => {
+  const { ServiceSupervisor } = await import(`${SRC}lib/services/ServiceSupervisor.ts`);
+  const config = (tool) => ({
+    tool,
+    port: 1,
+    spawnArgs: () => ({ command: process.execPath, args: ["-e", "0"], env: {}, cwd: "." }),
+    healthUrl: () => "http://127.0.0.1:1/health",
+    healthIntervalMs: 60_000,
+    stopTimeoutMs: 1,
+    logsBufferBytes: 1024,
+  });
+  const cases = [
+    ["openwa", DISABLED.sessionRelay],
+    ["9router", "upstream_service_not_included"],
+  ];
+  for (const [tool, code] of cases) {
+    assert.throws(
+      () => new ServiceSupervisor(config(tool)),
+      (error) => isNetieDisabledError(error) && error.code === code,
+      tool
+    );
+  }
+  const refuses = (code) => (error) => isNetieDisabledError(error) && error.code === code;
+  const openwa = await import(`${SRC}lib/services/installers/openwa.ts`);
+  await assert.rejects(() => openwa.install(), refuses(DISABLED.sessionRelay), "openwa install");
+  await assert.rejects(() => openwa.update(), refuses(DISABLED.sessionRelay), "openwa update");
+  assert.throws(() => openwa.resolveSpawnArgs("k", 8323), refuses(DISABLED.sessionRelay), "openwa spawn args");
+  const ninerouter = await import(`${SRC}lib/services/installers/ninerouter.ts`);
+  const notIncluded = refuses("upstream_service_not_included");
+  await assert.rejects(() => ninerouter.install(), notIncluded, "9router install");
+  await assert.rejects(() => ninerouter.update(), notIncluded, "9router update");
+  assert.throws(() => ninerouter.resolveSpawnArgs("k", 20130), notIncluded, "9router spawn args");
+
+  const executors = await import(`${OPEN_SSE}executors/index.ts`);
+  for (const alias of ["9router", "nr"]) {
+    await assert.rejects(executors.getExecutor(alias), notIncluded, `getExecutor(${alias})`);
+  }
+
+  for (const path of [
+    "/api/services/openwa/install",
+    "/api/services/openwa/start",
+    "/api/services/openwa/stop",
+    "/api/services/openwa/restart",
+    "/api/services/openwa/update",
+    "/api/services/openwa/status",
+    "/api/services/openwa/auto-start",
+    "/api/services/openwa/auto-restart-adopted",
+    "/API/Services/OpenWa/Install",
+    "/api/%73ervices/openwa/start",
+  ]) {
+    const match = matchHardDisabledRoute(path);
+    assert.ok(match, path);
+    assert.equal(match.status, 501, path);
+    assert.equal(match.body.error.code, "consumer_session_relay_disabled", path);
+  }
+  assert.equal(matchHardDisabledRoute("/api/services/openwatch/status"), null);
+
+  const page = readFileSync(`${SRC}app/(dashboard)/dashboard/providers/services/page.tsx`, "utf8");
+  assert.doesNotMatch(page, /OpenwaServiceTab|"openwa"/);
+  assert.equal(
+    existsSync(`${SRC}app/(dashboard)/dashboard/providers/services/tabs/OpenwaServiceTab.tsx`),
+    false
+  );
+});
+
+// Items 7 and 9: client identity presets and the VibeProxy preset.
+
+test("the Client Identity presets are gone from the UI and a CLI identity header is refused", async () => {
+  assert.equal(existsSync(`${SRC}shared/constants/clientIdentityProfiles.ts`), false);
+  const modal = readFileSync(
+    `${SRC}app/(dashboard)/dashboard/providers/components/AddCompatibleProviderModal.tsx`,
+    "utf8"
+  );
+  assert.doesNotMatch(modal, /clientIdentity|ClientIdentity/);
+  const messages = JSON.parse(readFileSync(`${SRC}i18n/messages/en.json`, "utf8"));
+  assert.doesNotMatch(JSON.stringify(messages), /clientIdentityLabel|clientIdentityHint|Client Identity/);
+
+  const { findClientImpersonationHeaders, rejectClientImpersonationHeaders } = await import("../policy.ts");
+  const cliHeaders = [
+    { "User-Agent": "claude-cli/2.1.258 (external, cli)", "X-App": "cli" },
+    { "User-Agent": "codex_cli_rs/0.1.0", originator: "codex_cli_rs" },
+    { "user-agent": "GeminiCLI/0.1.0 (linux; x64)" },
+    { "User-Agent": "MuseCodeCLI/0.1.0 (linux; x64)" },
+    { "X-Stainless-Lang": "js" },
+    { "X-Claude-Code-Session-Id": "abc" },
+  ];
+  for (const headers of cliHeaders) {
+    assert.notDeepEqual(findClientImpersonationHeaders(headers), [], JSON.stringify(headers));
+    const refusal = rejectClientImpersonationHeaders(headers);
+    assert.equal(refusal.status, 501);
+    assert.equal((await refusal.json()).error.code, "tls_fingerprint_stealth_disabled");
+  }
+  for (const headers of [
+    {},
+    null,
+    { "User-Agent": "acme-gateway-client/1.0", "X-Team": "platform" },
+    { "X-App": "dashboard" },
+    { originator: "internal-tool" },
+  ]) {
+    assert.deepEqual(findClientImpersonationHeaders(headers), [], JSON.stringify(headers));
+    assert.equal(rejectClientImpersonationHeaders(headers), null);
+  }
+});
+
+test("provider-nodes create and update refuse a CLI identity header, and the VibeProxy preset answers a named 501", async () => {
+  const create = await import(`${SRC}app/api/provider-nodes/route.ts`);
+  const update = await import(`${SRC}app/api/provider-nodes/[id]/route.ts`);
+  const post = (body) =>
+    create.POST(
+      new Request("http://127.0.0.1/api/provider-nodes", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      })
+    );
+  const node = { type: "openai-compatible", name: "gw", prefix: "gwtest", apiType: "chat", baseUrl: "https://gw.example.invalid/v1" };
+
+  for (const customHeaders of [
+    { "User-Agent": "claude-cli/2.1.258 (external, cli)", "X-App": "cli" },
+    { "User-Agent": "codex_cli_rs/0.1.0", originator: "codex_cli_rs" },
+  ]) {
+    const res = await post({ ...node, customHeaders });
+    assert.equal(res.status, 501, JSON.stringify(customHeaders));
+    assert.equal((await res.json()).error.code, "tls_fingerprint_stealth_disabled");
+    const put = await update.PUT(
+      new Request("http://127.0.0.1/api/provider-nodes/openai-compatible-chat-x", {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: "gw", prefix: "gwtest", apiType: "chat", baseUrl: node.baseUrl, customHeaders }),
+      }),
+      { params: Promise.resolve({ id: "openai-compatible-chat-x" }) }
+    );
+    assert.equal(put.status, 501, JSON.stringify(customHeaders));
+    assert.equal((await put.json()).error.code, "tls_fingerprint_stealth_disabled");
+  }
+
+  // Control: an ordinary custom header still creates the node.
+  const ok = await post({ ...node, customHeaders: { "User-Agent": "acme-gateway-client/1.0" } });
+  assert.equal(ok.status, 201);
+
+  for (const preset of ["vibeproxy-openai", "anything"]) {
+    const res = await post({ preset, baseUrl: "http://127.0.0.1:8318" });
+    assert.equal(res.status, 501, preset);
+    assert.equal((await res.json()).error.code, "consumer_subscription_pooling_disabled");
+  }
+  const schemas = await import(`${SRC}shared/validation/schemas/provider.ts`);
+  const parsed = schemas.createProviderNodeSchema.safeParse({ ...node, preset: "vibeproxy-openai" });
+  assert.equal(parsed.success, true);
+  assert.equal("preset" in parsed.data, false, "the schema no longer carries a preset field");
+  const routeSource = readFileSync(`${SRC}app/api/provider-nodes/route.ts`, "utf8");
+  assert.doesNotMatch(routeSource, /vibeproxy-openai|VIBEPROXY_OPENAI|sanitizeVibeProxy/);
+});
+
+test("a stored CLI identity header on a custom node is not sent", async () => {
+  const { DefaultExecutor } = await import(`${OPEN_SSE}executors/default.ts`);
+  const executor = new DefaultExecutor("openai-compatible-chat-legacy");
+  const headers = executor.buildHeaders(
+    {
+      apiKey: "sk-test",
+      providerSpecificData: {
+        baseUrl: "https://gw.example.invalid/v1",
+        customHeaders: {
+          "User-Agent": "claude-cli/2.1.258 (external, cli)",
+          "X-App": "cli",
+          "X-Team": "platform",
+        },
+      },
+    },
+    false
+  );
+  const names = Object.keys(headers).map((name) => name.toLowerCase());
+  assert.ok(names.includes("x-team"), "an ordinary custom header is still applied");
+  assert.ok(!names.includes("x-app"));
+  assert.doesNotMatch(String(headers["User-Agent"] ?? headers["user-agent"] ?? ""), /claude-cli/);
 });

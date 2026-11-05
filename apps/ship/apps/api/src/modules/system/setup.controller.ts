@@ -12,7 +12,7 @@
  */
 
 import { getPlatformKernel } from "@repo/platform/engine/lib/platform";
-import { getSetup as readSetup, validateAuthModeChange } from "@repo/platform/engine/modules/system/settings.operations";
+import { assertNoTunnelToken, getSetup as readSetup, validateAuthModeChange } from "@repo/platform/engine/modules/system/settings.operations";
 import { operationContext, operationData } from "../../lib/operation-context";
 import type { Context } from "hono";
 import { setSignedCookie } from "hono/cookie";
@@ -52,6 +52,8 @@ export async function setup(c: Context) {
   if (cloudGuard) return cloudGuard;
 
   const body = await c.req.json();
+  // Refused before anything is written: a tunnel token is not stored (keys_managed_by_openvault).
+  assertNoTunnelToken(body.tunnelToken);
 
   let sshTransport;
   try {
@@ -70,7 +72,7 @@ export async function setup(c: Context) {
   // so the canonical getAuthMode() default applies (self-hosted → "local").
   const settingsPatch: Record<string, unknown> = {
     tunnelProvider: body.tunnelProvider || null,
-    tunnelToken: body.tunnelToken || null,
+    tunnelToken: null,
     defaultBuildMode: body.defaultBuildMode || "auto",
     defaultRollbackWindow: normalizeRollbackWindow(body.defaultRollbackWindow),
   };

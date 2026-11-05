@@ -248,7 +248,7 @@
     "stopping": "A parar o servidor (PID {pid})...",
     "stopped": "Servidor parado.",
     "notRunning": "O servidor não está em execução.",
-    "port": "Porta de escuta (predefinição: 20128)",
+    "port": "Porta de escuta (predefinição: 3020)",
     "no_open": "Não abrir o navegador automaticamente",
     "daemon": "Executar o servidor como daemon em segundo plano",
     "log": "Mostrar os registos do servidor em linha",

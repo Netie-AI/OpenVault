@@ -35,6 +35,11 @@ import {
 } from "@omniroute/open-sse/netie/policy.ts";
 import { getRegistryEntry } from "@omniroute/open-sse/config/providerRegistry.ts";
 import {
+  HEADER_VALUE_PLACEHOLDER,
+  looksLikeCredentialValue,
+  redactHeaderValues,
+} from "../../shared/constants/upstreamHeaders";
+import {
   isKeysManagedByOpenVaultError,
   isOpenVaultKeyVaultError,
   KeysManagedByOpenVaultError,
@@ -229,6 +234,15 @@ function asRecord(value: unknown): JsonRecord {
   return {};
 }
 
+// A providerSpecificData key that holds a header map (customHeaders, extraHeaders,
+// upstreamHeaders, headers). Its entries are judged as headers, not as field names:
+// the header name can be anything (X-Auth-Token, X-Custom-Auth), so the value counts.
+const HEADER_MAP_KEY = /headers$/i;
+
+function isHeaderMapEntry(parentKey: string, value: unknown): boolean {
+  return HEADER_MAP_KEY.test(parentKey) && !!value && typeof value === "object" && !Array.isArray(value);
+}
+
 /** Walk a providerSpecificData value; call `visit(path, key, value)` for every secret-named key that holds a value. */
 function walkSecretFields(
   value: unknown,
@@ -245,7 +259,10 @@ function walkSecretFields(
   const record = value as JsonRecord;
   for (const key of Object.keys(record)) {
     const path = prefix ? `${prefix}.${key}` : key;
-    if (isSecretFieldName(key) && hasValue(record[key])) {
+    if (isHeaderMapEntry(key, record[key])) {
+      const headers = record[key] as JsonRecord;
+      for (const name of findCredentialHeaders(headers)) visit(`${path}.${name}`, headers, name);
+    } else if (isSecretFieldName(key) && hasValue(record[key])) {
       visit(path, record, key);
     } else {
       walkSecretFields(record[key], path, depth + 1, visit);
@@ -270,6 +287,10 @@ function stripSecretKeys(value: unknown, depth: number): unknown {
   if (!value || typeof value !== "object") return value;
   const out: JsonRecord = {};
   for (const [key, item] of Object.entries(value as JsonRecord)) {
+    if (isHeaderMapEntry(key, item)) {
+      out[key] = stripCredentialHeaders(item);
+      continue;
+    }
     if (isSecretFieldName(key)) continue;
     out[key] = stripSecretKeys(item, depth + 1);
   }
@@ -402,6 +423,171 @@ export function rejectServiceSecretsInBody(
   return renderKeysManagedByOpenVault(
     `${held.join(", ")} would be stored in FreeRoute's own database. Service keys are stored in ` +
       "OpenVault. Add them at http://127.0.0.1:3010/keys."
+  );
+}
+
+// ── Header maps ───────────────────────────────────────────────────────────
+
+const AUTH_HEADER_NAMES = new Set([
+  "authorization",
+  "proxy-authorization",
+  "x-api-key",
+  "x-goog-api-key",
+  "api-key",
+  "cookie",
+]);
+
+/**
+ * True when a header NAME says it carries a credential: an auth header the
+ * credential layer owns, a secret field word (token, secret, cookie, ...), or an
+ * "auth" word (X-Auth, X-Custom-Auth, but not X-Auth-Mode).
+ */
+export function isSecretHeaderName(name: string): boolean {
+  if (AUTH_HEADER_NAMES.has(name.trim().toLowerCase())) return true;
+  if (isSecretFieldName(name)) return true;
+  const words = fieldWords(name);
+  const last = words[words.length - 1];
+  if (!last || METADATA_LAST_WORDS.has(last)) return false;
+  return words.includes("auth") || words.includes("authentication");
+}
+
+/**
+ * Names of the entries in a header map that would store a credential: a
+ * credential-looking value under any name, or a non-empty value under a name
+ * that says it is one. The placeholder a form sends back for an untouched value
+ * is not a new write.
+ */
+export function findCredentialHeaders(headers: unknown): string[] {
+  if (!headers || typeof headers !== "object" || Array.isArray(headers)) return [];
+  const found: string[] = [];
+  for (const [name, value] of Object.entries(headers as JsonRecord)) {
+    if (typeof value !== "string" || value.trim().length === 0) continue;
+    if (value === HEADER_VALUE_PLACEHOLDER) continue;
+    if (isSecretHeaderName(name) || looksLikeCredentialValue(value)) found.push(name);
+  }
+  return found;
+}
+
+function stripCredentialHeaders(headers: unknown): JsonRecord {
+  const bad = new Set(findCredentialHeaders(headers));
+  const out: JsonRecord = {};
+  for (const [name, value] of Object.entries(headers as JsonRecord)) {
+    if (!bad.has(name)) out[name] = value;
+  }
+  return out;
+}
+
+/** Header map with credential entries removed, for the scrub. */
+export function stripCredentialHeaderMap(headers: unknown): JsonRecord {
+  return headers && typeof headers === "object" && !Array.isArray(headers)
+    ? stripCredentialHeaders(headers)
+    : {};
+}
+
+/** Provider node for a response: header values are replaced by a placeholder, names stay. */
+export function redactProviderNode<T>(node: T): T {
+  if (!node || typeof node !== "object" || Array.isArray(node)) return node;
+  const record = node as unknown as JsonRecord;
+  if (!("customHeaders" in record)) return node;
+  return { ...record, customHeaders: redactHeaderValues(record.customHeaders) } as unknown as T;
+}
+
+const HEADER_REFUSAL_MESSAGE =
+  "would store a credential in FreeRoute's own database. Custom headers are for non-secret " +
+  "values only. Provider keys are stored in OpenVault. Add them at http://127.0.0.1:3010/keys.";
+
+/** Throws KeysManagedByOpenVaultError when `headers` holds a credential. The error names headers, never values. */
+export function assertNoCredentialHeaders(headers: unknown): void {
+  const found = findCredentialHeaders(headers);
+  if (found.length > 0) {
+    throw new KeysManagedByOpenVaultError(
+      found.map((name) => `customHeaders.${name}`),
+      `Header ${found.join(", ")} ${HEADER_REFUSAL_MESSAGE}`
+    );
+  }
+}
+
+/** 501 keys_managed_by_openvault when `headers` holds a credential, else null. */
+export function rejectCredentialHeaders(headers: unknown): Response | null {
+  const found = findCredentialHeaders(headers);
+  if (found.length === 0) return null;
+  return renderKeysManagedByOpenVault(`Header ${found.join(", ")} ${HEADER_REFUSAL_MESSAGE}`);
+}
+
+// ── Proxy logins ──────────────────────────────────────────────────────────
+
+const PROXY_LOGIN_MESSAGE =
+  "FreeRoute does not store proxy usernames or passwords: they would be kept in its own " +
+  "database. Use a proxy that needs no login, such as one on this machine or an allowlisted " +
+  "address. Clearing a stored login is still allowed.";
+
+function isNonEmptyString(value: unknown): boolean {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+/** URL with a user or user:password part, such as http://user:pass@host:8080. */
+function hasUrlUserinfo(value: unknown): boolean {
+  return typeof value === "string" && /^[a-z][a-z0-9+.-]*:\/\/[^/?#\s]*@/i.test(value.trim());
+}
+
+/**
+ * Fields of one proxy value (registry row, legacy proxyConfig entry, or a proxy
+ * URL string) that would store a login. Blank values are not a write.
+ */
+export function findProxyLoginFields(value: unknown): string[] {
+  if (typeof value === "string") return hasUrlUserinfo(value) ? ["url"] : [];
+  if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+  const record = value as JsonRecord;
+  const found: string[] = [];
+  if (isNonEmptyString(record.username)) found.push("username");
+  if (isNonEmptyString(record.password)) found.push("password");
+  if (typeof record.host === "string" && record.host.includes("@")) found.push("host");
+  if (hasUrlUserinfo(record.url) || hasUrlUserinfo(record.proxyUrl)) found.push("url");
+  return found;
+}
+
+/** Throws KeysManagedByOpenVaultError when `proxy` would store a login. DB-layer guard for proxy_registry and proxyConfig writes. */
+export function assertProxyLoginWriteAllowed(proxy: unknown): void {
+  const found = findProxyLoginFields(proxy);
+  if (found.length > 0) throw new KeysManagedByOpenVaultError(found, PROXY_LOGIN_MESSAGE);
+}
+
+/**
+ * Route-level check for a proxy write body: one registry proxy, `items[]` of a bulk
+ * import, or a legacy proxy config (`proxy`, `global`, and the providers, combos
+ * and keys maps). The named 501 to send, or null when the body carries no login.
+ */
+export function rejectProxyLoginsInBody(body: unknown): Response | null {
+  const root = asRecord(body);
+  const candidates: unknown[] = [root, root.proxy, root.global];
+  if (Array.isArray(root.items)) candidates.push(...root.items);
+  for (const mapKey of ["providers", "combos", "keys"]) {
+    candidates.push(...Object.values(asRecord(root[mapKey])));
+  }
+  for (const candidate of candidates) {
+    if (findProxyLoginFields(candidate).length > 0) {
+      return renderKeysManagedByOpenVault(PROXY_LOGIN_MESSAGE);
+    }
+  }
+  return null;
+}
+
+// ── Credentials in a webhook's metadata ───────────────────────────────────
+
+/** Metadata keys (botToken, apiKey, ...) that would store a credential. */
+export function findSecretMetadataFields(metadata: unknown): string[] {
+  return Object.entries(asRecord(metadata))
+    .filter(([key, value]) => isSecretFieldName(key) && isNonEmptyString(value))
+    .map(([key]) => key);
+}
+
+/** 501 keys_managed_by_openvault when webhook `metadata` holds a credential, else null. */
+export function rejectSecretWebhookMetadata(metadata: unknown): Response | null {
+  const found = findSecretMetadataFields(metadata);
+  if (found.length === 0) return null;
+  return renderKeysManagedByOpenVault(
+    `${found.join(", ")} would be stored in FreeRoute's own database. The Telegram bot token ` +
+      "is stored in OpenVault with provider telegram. Add it at http://127.0.0.1:3010/keys."
   );
 }
 

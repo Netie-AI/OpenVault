@@ -248,7 +248,7 @@
     "stopping": "server நிறுத்தப்படுகிறது (PID {pid})...",
     "stopped": "server நிறுத்தப்பட்டது.",
     "notRunning": "server இயங்கவில்லை.",
-    "port": "கேட்க வேண்டிய port (இயல்புநிலை: 20128)",
+    "port": "கேட்க வேண்டிய port (இயல்புநிலை: 3020)",
     "no_open": "browser-ஐத் தானாகத் திறக்க வேண்டாம்",
     "daemon": "server-ஐ background daemon ஆக இயக்கு",
     "log": "server logs-ஐ inline-ஆகக் காட்டு",

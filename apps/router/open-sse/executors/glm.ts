@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import type { KeyHealth } from "../services/apiKeyRotator.ts";
 
 import { DefaultExecutor } from "./default.ts";
@@ -22,12 +21,6 @@ import {
 import { applyProviderRequestDefaults } from "../services/providerRequestDefaults.ts";
 import { stripUnsupportedParams } from "../translator/paramSupport.ts";
 import { getRotatingApiKey } from "../services/apiKeyRotator.ts";
-import { CLAUDE_CLI_STAINLESS_PACKAGE_VERSION } from "../config/anthropicHeaders.ts";
-import {
-  getRuntimeVersion,
-  normalizeStainlessArch,
-  normalizeStainlessPlatform,
-} from "../config/providerHeaderProfiles.ts";
 import { translateNonStreamingResponse } from "../handlers/responseTranslator.ts";
 import { translateRequest } from "../translator/index.ts";
 import { FORMATS } from "../translator/formats.ts";
@@ -285,15 +278,7 @@ export class GlmExecutor extends DefaultExecutor {
       return buildGlmCodingHeaders(getEffectiveKey(credentials), stream);
     }
 
-    return {
-      ...buildGlmBaseHeaders(getEffectiveKey(credentials), stream),
-      "X-Stainless-Arch": normalizeStainlessArch(),
-      "X-Stainless-OS": normalizeStainlessPlatform(),
-      "X-Stainless-Runtime-Version": getRuntimeVersion(),
-      "X-Stainless-Package-Version": CLAUDE_CLI_STAINLESS_PACKAGE_VERSION,
-      "X-Claude-Code-Session-Id": randomUUID(),
-      "x-client-request-id": randomUUID(),
-    };
+    return buildGlmBaseHeaders(getEffectiveKey(credentials), stream);
   }
 
   transformRequest(

@@ -116,7 +116,7 @@ function defaultConfig() {
     version: CONFIG_VERSION,
     currentContext: "default",
     contexts: {
-      default: { baseUrl: `http://localhost:${process.env.PORT || "20128"}`, apiKey: null },
+      default: { baseUrl: `http://localhost:${process.env.PORT || "3020"}`, apiKey: null },
     },
   };
 }
@@ -295,7 +295,7 @@ export function resolveActiveContext(overrideName) {
   const found = contexts[name] || contexts.default;
   if (found) return applyCachedCredential(found);
   if (cfg.baseUrl) return { baseUrl: cfg.baseUrl };
-  return { baseUrl: `http://localhost:${process.env.PORT || "20128"}` };
+  return { baseUrl: `http://localhost:${process.env.PORT || "3020"}` };
 }
 
 /** Async variant for callers that need to observe a just-created keychain entry. */

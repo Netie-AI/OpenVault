@@ -1021,7 +1021,7 @@
     "cloudAgents": "Cloud Agents",
     "memory": "Memory",
     "skills": "Skills",
-    "omniSkills": "OmniSkills",
+    "omniSkills": "FreeRoute Skills",
     "agentSkills": "AgentSkills",
     "chaosConfig": "Chaos Mode",
     "docs": "Docs",
@@ -1110,7 +1110,7 @@
     "contextLite": "Lite",
     "contextAggressive": "Aggressive",
     "contextUltra": "Ultra",
-    "contextOmniglyph": "OmniGlyph",
+    "contextOmniglyph": "FreeRoute Glyph",
     "contextSettings": "Compression Settings",
     "contextHeadroom": "Headroom",
     "contextSessionDedup": "Session Dedup",
@@ -1179,7 +1179,7 @@
     "settingsResilience": "Resilience",
     "modelLockout": "Model Lockout",
     "settingsAdvanced": "Advanced",
-    "omniProxySection": "OmniProxy",
+    "omniProxySection": "FreeRoute Proxy",
     "quotaTracker": "Provider Quota",
     "providerQuota": "Provider Quota",
     "runtime": "Runtime",
@@ -1759,7 +1759,7 @@
     "headroom": "Headroom",
     "lite": "Lite",
     "llmlingua": "LLMLingua",
-    "omniglyph": "OmniGlyph",
+    "omniglyph": "FreeRoute Glyph",
     "rtk": "RTK",
     "sessionDedup": "Session Dedup",
     "ultra": "Ultra",
@@ -3800,9 +3800,6 @@
     "connectionAwareExpansionOn": "On",
     "connectionAwareExpansionOff": "Off",
     "promptCacheAffinityHint": "Prompt-cache locality routing takes precedence over round-robin/weighted rotation across pinned accounts. Turn it off under Settings, Combo defaults, if you need strict rotation.",
-    "kimiPresetTitle": "Kimi Coding preset",
-    "kimiPresetDescription": "Kimi K3 as the primary model (Moonshot API), with automatic fallback to your Kimi Code connections (kimi-coding, kimi-web) when configured.",
-    "kimiPresetCta": "Add preset",
     "intelligentComboCount": "{count, plural, one {# intelligent combo} other {# intelligent combos}}",
     "providersInScope": "{count, plural, one {# provider in scope} other {# providers in scope}}",
     "savingModePack": "Saving {pack}…",
@@ -5783,8 +5780,6 @@
     "modelsPathLabel": "Models Endpoint Path",
     "modelsPathPlaceholder": "/models",
     "modelsPathHint": "Custom models path for validation (e.g. /v4/models)",
-    "clientIdentityLabel": "Client Identity",
-    "clientIdentityHint": "Optional. Adds client fingerprint headers (e.g. User-Agent) matching a known CLI for compatible gateways that expect one.",
     "statusDeactivated": "Deactivated (Manual)",
     "statusBanned": "Banned / Sandbox Violation",
     "statusCreditsExhausted": "Insufficient Balance / Quota Exhausted",
@@ -7963,7 +7958,7 @@
         "description": "Heuristic token pruning with an optional SLM."
       },
       "omniglyph": {
-        "label": "OmniGlyph",
+        "label": "FreeRoute Glyph",
         "description": "Context as an image (Claude Fable 5, direct route)."
       }
     },
@@ -8818,7 +8813,7 @@
   },
   "omniglyph": {
     "preview": "Preview",
-    "description": "Context-as-image compression. Renders the system prompt, tool documentation, and dense history as compact PNG pages for the measured Claude Fable 5 path. The published OmniGlyph package also exposes native GPT 5.6 transformers, but FreeRoute keeps those routes fail-closed until provider fidelity and reading receipts exist.",
+    "description": "Context-as-image compression. Renders the system prompt, tool documentation, and dense history as compact PNG pages for the measured Claude Fable 5 path. The published FreeRoute Glyph package also exposes native GPT 5.6 transformers, but FreeRoute keeps those routes fail-closed until provider fidelity and reading receipts exist.",
     "economicsTitle": "The economics",
     "economics": {
       "fewerTokens": "fewer tokens on the converted block",
@@ -8878,11 +8873,11 @@
         "description": "Routes without transforming. The engine is skipped and the request is forwarded untouched."
       }
     },
-    "profileAria": "Select the OmniGlyph compression profile",
+    "profileAria": "Select the FreeRoute Glyph compression profile",
     "saved": "Saved.",
     "saveFailed": "Could not save.",
-    "enableAria": "Enable the OmniGlyph engine",
-    "title": "OmniGlyph"
+    "enableAria": "Enable the FreeRoute Glyph engine",
+    "title": "FreeRoute Glyph"
   },
   "embeddedServices": {
     "title": "Embedded Services",
@@ -9948,7 +9943,7 @@
     "backToLogin": "Back to Login",
     "forgotPassword": "Forgot password?",
     "continueWithOidc": "Continue with OIDC",
-    "defaultPasswordHint": "Default password: CHANGEME (unless INITIAL_PASSWORD was set)",
+    "defaultPasswordHint": "There is no default password. Set one in the first-run onboarding, or use the INITIAL_PASSWORD you configured.",
     "Authorization": "Authorization",
     "Content-Disposition": "Content-Disposition",
     "waitingForAuthorization": "Waiting for authorization...",
@@ -12383,20 +12378,20 @@
       "open": "Open →",
       "code": {
         "title": "Code tool",
-        "desc": "Points to Omni",
-        "flow": "you → CLI → Omni → provider",
+        "desc": "Points to FreeRoute",
+        "flow": "you → CLI → FreeRoute → provider",
         "examples": "e.g.: claude, codex"
       },
       "agent": {
         "title": "Broad autonomous agent",
-        "desc": "Points to Omni",
-        "flow": "you → agent → Omni",
+        "desc": "Points to FreeRoute",
+        "flow": "you → agent → FreeRoute",
         "examples": "e.g.: hermes, goose"
       },
       "acp": {
-        "title": "CLI used as backend by Omni",
+        "title": "CLI used as backend by FreeRoute",
         "desc": "Reverse execution",
-        "flow": "Omni → spawn CLI → resp",
+        "flow": "FreeRoute → spawn CLI → resp",
         "examples": "e.g.: claude, codex (ACP)"
       }
     },
@@ -12656,7 +12651,7 @@
       },
       "cli-plugins-skills": {
         "name": "CLI: Plugins, Skills & Memory",
-        "description": "Manage Omni Skills (list, install, test, remove), plugins (create, configure), and persistent memory (search, add, clear) from the CLI."
+        "description": "Manage FreeRoute Skills (list, install, test, remove), plugins (create, configure), and persistent memory (search, add, clear) from the CLI."
       },
       "cli-setup": {
         "name": "CLI: Setup & Config",
@@ -12684,13 +12679,13 @@
         "crossLinkLabel": "Understand the difference →"
       },
       "omni": {
-        "title": "Omni Skills — Inbound",
-        "description": "Omni Skills are sandbox tools that FreeRoute injects into the model's context on every request. They are executed by FreeRoute, not read by the agent.",
+        "title": "FreeRoute Skills, inbound",
+        "description": "FreeRoute Skills are sandbox tools that FreeRoute injects into the model's context on every request. They are executed by FreeRoute, not read by the agent.",
         "crossLinkLabel": "Understand the difference →"
       },
       "comparison": {
         "colAgent": "Agent Skills",
-        "colOmni": "Omni Skills",
+        "colOmni": "FreeRoute Skills",
         "whatIs": {
           "label": "What it is",
           "agent": "Machine-readable SKILL.md that teaches an external agent to operate FreeRoute",
@@ -13653,13 +13648,6 @@
     "running": "Running...",
     "testFailed": "Test failed"
   },
-  "vscodeCopilotBanner": {
-    "title": "FreeRoute now runs inside VS Code Copilot Chat",
-    "description": "Install the free OmniCopilot extension and every FreeRoute model shows up right in the Copilot Chat model picker you already use.",
-    "cta": "Get the Extension",
-    "secondaryNote": "Also on Open VSX (Cursor, Windsurf, VSCodium…)",
-    "dismissAriaLabel": "Dismiss"
-  },
   "featureFlagExposeFunctionalGatewayMirrorsDescription": "Advertise <gateway-alias>/<model> mirror ids on /v1/models for models whose canonical owner has no active credential but a passthrough gateway with an active credential routes them. Warning: adds catalog entries for all clients when enabled globally.",
   "radarPage": {
     "title": "Radar Catalog",
@@ -14228,7 +14216,7 @@
   },
   "conductor": {
     "title": "Conductor — CLI-agent fleet",
-    "subtitle": "OmniConductor hub: runners, task queue and councils, live",
+    "subtitle": "FreeRoute Conductor hub: runners, task queue and councils, live",
     "runners": "Runners",
     "tasks": "Tasks",
     "colName": "Name",

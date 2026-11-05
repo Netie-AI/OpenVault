@@ -192,7 +192,7 @@ export const COMPRESSION_CONTEXT_GROUP: SidebarItemGroup = {
       id: "context-omniglyph",
       href: "/dashboard/context/omniglyph",
       i18nKey: "contextOmniglyph",
-      labelFallback: "OmniGlyph",
+      labelFallback: "FreeRoute Glyph",
       subtitleKey: "contextOmniglyphSubtitle",
       subtitleFallback: "Context-as-image",
       icon: "grain",
@@ -828,7 +828,7 @@ export const SIDEBAR_SECTIONS: readonly SidebarSectionDefinition[] = [
   {
     id: "omni-proxy",
     titleKey: "omniProxySection",
-    titleFallback: "OmniProxy",
+    titleFallback: "FreeRoute Proxy",
     children: [
       ...OMNI_PROXY_ITEMS,
       COMPRESSION_CONTEXT_GROUP,

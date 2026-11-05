@@ -228,7 +228,7 @@ const isMain = process.argv[1]?.endsWith("_vpsClient.mjs") ||
 
 if (isMain) {
   (async () => {
-    console.log("=== OmniRoute VPS Phase-3 Preflight ===");
+    console.log("=== FreeRoute VPS Phase-3 Preflight ===");
     console.log(`Base URL: ${BASE_URL}`);
     console.log(`API key: ${API_KEY ? "set (Bearer)" : "not set (REQUIRE_API_KEY=false)"}`);
     console.log();

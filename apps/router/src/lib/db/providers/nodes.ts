@@ -8,6 +8,7 @@ import { selectProviderNodeForConnection } from "../providerNodeSelect";
 import { backupDbFile } from "../backup";
 import { invalidateDbCache } from "../readCache";
 import { toRecord, type JsonRecord } from "./columns";
+import { assertNoCredentialHeaders } from "@/lib/netie/providerGuards";
 
 function normalizeDailyQuotaResetHour(value: unknown): number | null {
   return value === 0 || value ? Number(value) : null;
@@ -93,6 +94,8 @@ export async function createProviderNode(data: JsonRecord) {
   const db = getDbInstance() as unknown as DbLike;
   const now = new Date().toISOString();
 
+  // A header map is not a place for a provider key: those live in OpenVault.
+  assertNoCredentialHeaders(data.customHeaders);
   const customHeadersJson = data.customHeaders ? JSON.stringify(data.customHeaders) : null;
 
   const node = {
@@ -130,6 +133,7 @@ export async function updateProviderNode(id: string, data: JsonRecord) {
   const db = getDbInstance() as unknown as DbLike;
   const existing = db.prepare("SELECT * FROM provider_nodes WHERE id = ?").get(id);
   if (!existing) return null;
+  assertNoCredentialHeaders(data.customHeaders);
 
   const merged: JsonRecord = {
     ...toRecord(rowToCamel(existing)),

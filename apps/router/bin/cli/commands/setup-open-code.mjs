@@ -283,7 +283,7 @@ export function runOpenCodeAuth(providerId) {
  *
  * @param {object} opts
  * @param {string} [opts.providerId="omniroute"]
- * @param {string} [opts.baseURL="http://localhost:20128"]  (Commander camelCases
+ * @param {string} [opts.baseURL="http://localhost:3020"]  (Commander camelCases
  *   `--base-url` into `baseUrl`, so both spellings are accepted.)
  * @param {string} [opts.configDir]  Override the OpenCode config dir (tests / non-standard installs).
  * @param {string} [opts.displayName]
@@ -303,7 +303,7 @@ export async function runSetupOpenCodeCommand(opts = {}) {
       /* no context */
     }
   }
-  if (!baseURL) baseURL = "http://localhost:20128";
+  if (!baseURL) baseURL = "http://localhost:3020";
   const displayName = opts.displayName || null;
   const wantsAuth = Boolean(opts.auth);
   const nonInteractive = Boolean(opts.nonInteractive);
@@ -414,11 +414,11 @@ export function registerSetupOpenCode(setupCommand) {
     )
     .option(
       "--base-url <url>",
-      "FreeRoute base URL the plugin should talk to (default: active context or http://localhost:20128)"
+      "FreeRoute base URL the plugin should talk to (default: active context or http://localhost:3020)"
     )
     .option(
       "--remote <url>",
-      "Remote FreeRoute URL, e.g. http://192.168.0.15:20128 (overrides --base-url and the context)"
+      "Remote FreeRoute URL, e.g. http://192.168.0.15:3020 (overrides --base-url and the context)"
     )
     .option("--display-name <name>", "Display name in the OpenCode UI (optional)")
     .option(

@@ -33,6 +33,7 @@ import { isCodexNativeResponsesRequest } from "./requestShapeGuards";
 import { HTTP_STATUS } from "@omniroute/open-sse/config/constants.ts";
 import { getRegistryEntry } from "@omniroute/open-sse/config/providerRegistry.ts";
 import { getCachedProviderNodes } from "@/lib/db/readCache";
+import { FREEROUTE_ROUTING_RESPONSE_HEADERS, setHeaderWithTwin } from "@/shared/constants/headers";
 import {
   runWithProxyContext,
   runWithAppliedProxyCapture,
@@ -1156,7 +1157,7 @@ export function withSessionHeader(response: Response, sessionId: string | null):
   if (!response || !sessionId) return response;
 
   try {
-    response.headers.set("X-FreeRoute-Session-Id", sessionId);
+    setHeaderWithTwin(response.headers, FREEROUTE_ROUTING_RESPONSE_HEADERS.sessionId, sessionId);
     return response;
   } catch {
     const cloned = new Response(response.body, {
@@ -1164,7 +1165,7 @@ export function withSessionHeader(response: Response, sessionId: string | null):
       statusText: response.statusText,
       headers: response.headers,
     });
-    cloned.headers.set("X-FreeRoute-Session-Id", sessionId);
+    setHeaderWithTwin(cloned.headers, FREEROUTE_ROUTING_RESPONSE_HEADERS.sessionId, sessionId);
     return inheritTrustedLocalRateLimitResponse(response, cloned);
   }
 }
@@ -1235,7 +1236,7 @@ export function withSelectedConnectionHeader(
   if (!response || !connectionId) return response;
 
   try {
-    response.headers.set("X-FreeRoute-Selected-Connection-Id", connectionId);
+    setHeaderWithTwin(response.headers, FREEROUTE_ROUTING_RESPONSE_HEADERS.selectedConnectionId, connectionId);
     return response;
   } catch {
     const cloned = new Response(response.body, {
@@ -1243,7 +1244,7 @@ export function withSelectedConnectionHeader(
       statusText: response.statusText,
       headers: response.headers,
     });
-    cloned.headers.set("X-FreeRoute-Selected-Connection-Id", connectionId);
+    setHeaderWithTwin(cloned.headers, FREEROUTE_ROUTING_RESPONSE_HEADERS.selectedConnectionId, connectionId);
     return inheritTrustedLocalRateLimitResponse(response, cloned);
   }
 }

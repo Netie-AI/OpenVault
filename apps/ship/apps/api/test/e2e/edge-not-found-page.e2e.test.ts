@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026
 /**
  * The unrouted-host page (#431), against a real OpenResty.
  *
@@ -61,7 +62,7 @@ const CLAIMED_HOST = "box.example.com";
 /** A hostname nothing on the box knows: the case the page exists for. */
 const UNROUTED_HOST = "nope.example";
 const TOKEN = "openship-e2e-token";
-const CERT_CN = "openship-edge-default";
+const CERT_CN = "freebuild-edge-default";
 
 const PLACEHOLDER_SUBJ = `/CN=${CERT_CN}`;
 const { certPath, keyPath } = edgeDefaultCertPaths(OPENRESTY_DEFAULT_PATHS.confDir);

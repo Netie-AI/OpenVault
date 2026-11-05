@@ -56,7 +56,7 @@ export function selectLiveModel(
   for (const [normalized, ids] of normalizedCatalog) {
     if (ids.length > 1) {
       throw new Error(
-        `Ambiguous OmniRoute catalog normalization for ${normalized}: ${ids.join(", ")}`
+        `Ambiguous FreeRoute catalog normalization for ${normalized}: ${ids.join(", ")}`
       );
     }
   }
@@ -79,7 +79,7 @@ export function selectLiveModel(
     const prefix = "devin-cli-agentic/";
     const modelId = configured.startsWith(prefix) ? configured.slice(prefix.length) : "";
     if (!modelId || !catalogIds.has(modelId) || !available.includes(modelId)) {
-      throw new Error(`${name} is not a model returned by Devin and present in OmniRoute`);
+      throw new Error(`${name} is not a model returned by Devin and present in FreeRoute`);
     }
   }
 
@@ -90,7 +90,7 @@ export function selectLiveModel(
     available[0];
 
   if (!selected) {
-    throw new Error("Devin returned no model identifier present in OmniRoute's Devin catalog");
+    throw new Error("Devin returned no model identifier present in FreeRoute's Devin catalog");
   }
   return selected;
 }

@@ -203,7 +203,8 @@ export class SemanticCacheManager {
   }
 
   private isBypassed(headers: unknown, body: Record<string, unknown>): boolean {
-    const noCacheHeader = getHeader(headers, "x-omniroute-no-cache");
+    const noCacheHeader =
+      getHeader(headers, "x-freeroute-no-cache") || getHeader(headers, "x-omniroute-no-cache");
     if (noCacheHeader && noCacheHeader.toLowerCase() === "true") {
       return true;
     }

@@ -594,7 +594,7 @@ async function scenarioFailover(healthy) {
 // Main
 // ---------------------------------------------------------------------------
 async function main() {
-  console.log("=== OmniRoute combo-live-vps scenario driver ===");
+  console.log("=== FreeRoute combo-live-vps scenario driver ===");
   if (onlyScenario) console.log(`Filtering to scenario: ${onlyScenario}`);
   console.log();
 

@@ -248,7 +248,7 @@
     "stopping": "Server wird beendet (PID {pid}) ...",
     "stopped": "Server wurde beendet.",
     "notRunning": "Server läuft nicht.",
-    "port": "Port, auf dem gelauscht werden soll (Standard: 20128)",
+    "port": "Port, auf dem gelauscht werden soll (Standard: 3020)",
     "no_open": "Browser nicht automatisch öffnen",
     "daemon": "Server als Hintergrunddienst ausführen",
     "log": "Serverprotokolle direkt anzeigen",

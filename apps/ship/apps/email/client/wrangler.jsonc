@@ -32,17 +32,5 @@
         "VITE_PUBLIC_BACKEND_URL": "http://localhost:3030",
       },
     },
-    "staging": {
-      "name": "zero-staging",
-      "vars": {
-        "VITE_PUBLIC_BACKEND_URL": "https://sapi.0.email",
-      },
-    },
-    "production": {
-      "name": "zero-production",
-      "vars": {
-        "VITE_PUBLIC_BACKEND_URL": "https://api.0.email",
-      },
-    },
   },
 }

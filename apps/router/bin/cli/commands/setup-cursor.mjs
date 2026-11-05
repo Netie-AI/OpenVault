@@ -27,7 +27,7 @@ export function resolveCursorTarget(opts = {}) {
     } catch {
       /* none */
     }
-    if (!root) root = `http://localhost:${Number(opts.port ?? process.env.PORT ?? 20128) || 20128}`;
+    if (!root) root = `http://localhost:${Number(opts.port ?? process.env.PORT ?? 3020) || 3020}`;
   }
   let apiKey = opts.apiKey ?? opts["api-key"];
   if (!apiKey) {
@@ -111,8 +111,8 @@ export function registerSetupCursor(program) {
     .description(
       "Print the steps to point Cursor at FreeRoute (chat panel; Cursor config is not file-writable)"
     )
-    .option("--port <port>", "Local FreeRoute port (ignored when --remote is set)", "20128")
-    .option("--remote <url>", "Remote FreeRoute URL, e.g. http://192.168.0.15:20128")
+    .option("--port <port>", "Local FreeRoute port (ignored when --remote is set)", "3020")
+    .option("--remote <url>", "Remote FreeRoute URL, e.g. http://192.168.0.15:3020")
     .option("--api-key <key>", "FreeRoute API key (defaults to OMNIROUTE_API_KEY env var)")
     .option("--only <patterns>", "Comma-separated substrings — suggest only matching model IDs")
     .action(async (opts) => {

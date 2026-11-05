@@ -17,10 +17,10 @@ if (!support.nodeCompatible) {
 
 if (process.versions.bun) {
   console.log(
-    `Bun ${process.versions.bun} (${support.nodeVersion}) satisfies OmniRoute secure runtime policy.`
+    `Bun ${process.versions.bun} (${support.nodeVersion}) satisfies FreeRoute secure runtime policy.`
   );
 } else {
   console.log(
-    `Node.js ${support.nodeVersion} satisfies OmniRoute secure runtime policy (${support.supportedRange}).`
+    `Node.js ${support.nodeVersion} satisfies FreeRoute secure runtime policy (${support.supportedRange}).`
   );
 }

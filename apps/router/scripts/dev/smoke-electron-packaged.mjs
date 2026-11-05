@@ -13,7 +13,7 @@ const ROOT = join(__dirname, "..", "..");
 
 const DEFAULT_TIMEOUT_MS = 45_000;
 const DEFAULT_SETTLE_MS = 2_000;
-const DEFAULT_URL = "http://127.0.0.1:20128/login";
+const DEFAULT_URL = "http://127.0.0.1:3020/login";
 export const LINUX_EXECUTABLE_NAMES = ["omniroute-desktop", "omniroute", "OmniRoute"];
 export const FATAL_LOG_PATTERNS = [
   /Cannot find module/i,
@@ -184,7 +184,7 @@ async function assertPortIsFree(url) {
   try {
     const response = await fetchWithTimeout(url, 1_000);
     throw new Error(
-      `Smoke URL already responded with HTTP ${response.status}: ${url}. Stop the existing OmniRoute process before running this check.`
+      `Smoke URL already responded with HTTP ${response.status}: ${url}. Stop the existing FreeRoute process before running this check.`
     );
   } catch (error) {
     if (error instanceof Error && error.message.startsWith("Smoke URL already responded")) {
@@ -470,7 +470,7 @@ function assertExecutableExists(appExecutable) {
   if (existsSync(appExecutable)) return;
 
   throw new Error(
-    `Packaged OmniRoute executable not found at ${appExecutable}. Build it first with \`npm run build:<target> --prefix electron\` or set ELECTRON_SMOKE_APP_EXECUTABLE.`
+    `Packaged FreeRoute executable not found at ${appExecutable}. Build it first with \`npm run build:<target> --prefix electron\` or set ELECTRON_SMOKE_APP_EXECUTABLE.`
   );
 }
 

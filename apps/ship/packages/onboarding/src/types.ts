@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: the tunnel token field is gone (keys_managed_by_openvault).
 // ─── System / SSH settings ───────────────────────────────────────────────────
 
 export interface SystemSettings {
@@ -16,7 +17,6 @@ export interface SystemSettings {
 
 export interface TunnelConfig {
   provider: "edge" | "cloudflare" | "ngrok";
-  token?: string;
 }
 
 // ─── SSH payload (collected from user input, before normalisation) ────────────
@@ -83,7 +83,6 @@ export interface SetupPayload {
   sshTransport?: "direct" | "cloudflare";
   sshArgs?: string;
   tunnelProvider?: string;
-  tunnelToken?: string;
 }
 
 // ─── Platform adapter (implemented per host: Electron, CLI, etc.) ────────────

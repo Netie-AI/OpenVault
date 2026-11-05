@@ -14,7 +14,13 @@ import {
   getLogExportDestinations,
 } from "@/lib/db/logExportDestinations";
 import { getLogExportDestinationType } from "@/lib/logExport/registry";
-import { encryptDestinationConfig, requiresEncryptionKey } from "@/lib/logExport/secrets";
+import {
+  findIncomingSecretFields,
+  logExportCredentialMessage,
+  withSecretPlaceholders,
+  withoutSecretFields,
+} from "@/lib/logExport/secrets";
+import { renderKeysManagedByOpenVault } from "@omniroute/open-sse/netie/policy.ts";
 import { toDestinationView } from "@/lib/logExport/presenter";
 
 const createDestinationSchema = z.object({
@@ -63,7 +69,16 @@ export async function POST(request: Request) {
       );
     }
 
-    const parsedConfig = destinationType.configSchema.safeParse(data.config);
+    // FreeRoute keeps no credentials: the service account is read from OpenVault, so a
+    // config that carries one is refused before anything is written.
+    const heldSecrets = findIncomingSecretFields(data.type, data.config);
+    if (heldSecrets.length > 0) {
+      return renderKeysManagedByOpenVault(logExportCredentialMessage(data.type, heldSecrets));
+    }
+
+    const parsedConfig = destinationType.configSchema.safeParse(
+      withSecretPlaceholders(data.type, data.config)
+    );
     if (!parsedConfig.success) {
       return NextResponse.json(
         {
@@ -79,22 +94,11 @@ export async function POST(request: Request) {
       );
     }
 
-    if (requiresEncryptionKey(data.type, parsedConfig.data as Record<string, unknown>)) {
-      return NextResponse.json(
-        {
-          error:
-            "This destination stores a credential, which requires STORAGE_ENCRYPTION_KEY to be " +
-            "configured. Without it the credential would be written to SQLite in plaintext.",
-        },
-        { status: 400 }
-      );
-    }
-
     const created = createLogExportDestination({
       name: data.name,
       type: data.type,
       enabled: data.enabled,
-      config: encryptDestinationConfig(data.type, parsedConfig.data as Record<string, unknown>),
+      config: withoutSecretFields(data.type, parsedConfig.data as Record<string, unknown>),
       batchSize: data.batchSize,
       includeBodies: data.includeBodies,
       maxBodyBytes: data.maxBodyBytes,

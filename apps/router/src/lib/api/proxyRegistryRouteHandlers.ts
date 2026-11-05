@@ -11,6 +11,7 @@ import { createErrorResponse, createErrorResponseFromUnknown } from "@/lib/api/e
 import { createProxyRegistrySchema, updateProxyRegistrySchema } from "@/shared/validation/schemas";
 import { isValidationFailure, validateBody } from "@/shared/validation/helpers";
 import { clearDispatcherCache } from "@omniroute/open-sse/utils/proxyDispatcher";
+import { netieErrorResponse, rejectProxyLoginsInBody } from "@/lib/netie/providerGuards";
 
 async function readJsonBody(request: Request) {
   try {
@@ -53,6 +54,9 @@ export async function resolveProxyLookupResponse(
 export async function handleProxyCreate(request: Request) {
   const parsed = await readJsonBody(request);
   if (!parsed.ok) return parsed.response;
+  // FreeRoute keeps no proxy logins: a username or password answers keys_managed_by_openvault.
+  const refusal = rejectProxyLoginsInBody(parsed.body);
+  if (refusal) return refusal;
 
   try {
     const validation = validateBody(createProxyRegistrySchema, parsed.body);
@@ -75,6 +79,8 @@ export async function handleProxyCreate(request: Request) {
     const created = await createProxy(proxyFields);
     return Response.json(created, { status: 201 });
   } catch (error) {
+    const named = netieErrorResponse(error);
+    if (named) return named;
     return createErrorResponseFromUnknown(error, "Failed to create proxy");
   }
 }
@@ -82,6 +88,9 @@ export async function handleProxyCreate(request: Request) {
 export async function handleProxyUpdate(request: Request) {
   const parsed = await readJsonBody(request);
   if (!parsed.ok) return parsed.response;
+  // Blank username and password still clear a stored login; a non-empty one is refused.
+  const refusal = rejectProxyLoginsInBody(parsed.body);
+  if (refusal) return refusal;
 
   try {
     const validation = validateBody(updateProxyRegistrySchema, parsed.body);
@@ -118,6 +127,8 @@ export async function handleProxyUpdate(request: Request) {
 
     return Response.json(updated);
   } catch (error) {
+    const named = netieErrorResponse(error);
+    if (named) return named;
     return createErrorResponseFromUnknown(error, "Failed to update proxy");
   }
 }

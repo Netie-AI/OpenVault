@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026: the tunnel token is no longer sent (keys_managed_by_openvault).
 import type { SystemSettings, TunnelConfig, SetupPayload } from "./types";
 
 type FetchFn = typeof globalThis.fetch;
@@ -52,7 +53,6 @@ export function buildSetupPayload(settings: {
 
   if (settings.tunnel) {
     payload.tunnelProvider = settings.tunnel.provider;
-    if (settings.tunnel.token) payload.tunnelToken = settings.tunnel.token;
   }
 
   return payload;

@@ -10,7 +10,7 @@ import type {
  *
  * `serializeBoundedToolResult` serializes one executed tool result to JSON text
  * and, when it exceeds a UTF-8 byte budget, truncates it at code-point
- * boundaries with a `[TRUNCATED N BYTES BY OMNIROUTE]` marker whose own bytes
+ * boundaries with a `[TRUNCATED N BYTES BY FREEROUTE]` marker whose own bytes
  * count against the budget.
  *
  * `buildFollowUpSourceBody` appends the assistant tool-call turn and the
@@ -31,7 +31,7 @@ function assertValidBudget(name: string, value: number): void {
 }
 
 function markerFor(droppedBytes: number): string {
-  return `[TRUNCATED ${droppedBytes} BYTES BY OMNIROUTE]`;
+  return `[TRUNCATED ${droppedBytes} BYTES BY FREEROUTE]`;
 }
 
 /**

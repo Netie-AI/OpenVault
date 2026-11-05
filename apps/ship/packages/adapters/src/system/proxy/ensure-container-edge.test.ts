@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -235,7 +236,7 @@ describe("resolveEdgeImage", () => {
     process.env.OPENSHIP_IMAGE_REGISTRY = "docker.io/oblien";
     process.env.OPENSHIP_VERSION = "9.9.9";
     delete process.env.OPENSHIP_EDGE_IMAGE;
-    expect(resolveEdgeImage()).toBe("docker.io/oblien/openship-edge:9.9.9");
+    expect(resolveEdgeImage()).toBe("docker.io/oblien/freebuild-edge:9.9.9");
     process.env = prev;
   });
 });

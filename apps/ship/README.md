@@ -71,6 +71,18 @@ put them — moving those into a keys vault meant for provider API tokens would
 not be a clean fit. See "Stores not moved" under FreeBuild in
 [DR-0018](../../docs/decisions/DR-0018-fork-router-and-ship.md) for the list.
 
+Some third-party credentials are stored locally. S3 and SFTP backup credentials,
+git clone tokens, git source secrets, GitHub tokens and deploy keys, and the SSH
+credentials of servers you add are saved in FreeBuild's own database, not in
+OpenVault. They are encrypted with AES-256-GCM under a per-install secret:
+`BETTER_AUTH_SECRET` if you set one, otherwise a random value FreeBuild generates
+on first start in `~/.openship/auth-secret` (mode 0600; `OPENSHIP_DATA_DIR` or
+`OPENSHIP_AUTH_SECRET_FILE` move it). Whoever can read both the database and that
+file can read those credentials. Back the file up with the database, and in a
+container keep it on a volume or set `BETTER_AUTH_SECRET`: without it the stored
+credentials cannot be read. A Cloudflare or ngrok tunnel token is not stored at
+all (501 `keys_managed_by_openvault`); keep Cloudflare tokens in OpenVault.
+
 ## Tests
 
 ```bash

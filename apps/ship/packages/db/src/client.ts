@@ -1,7 +1,9 @@
+// Modified by Netie AI, 2026: the storage key is the per-install secret, not the public placeholder.
 /** HTTP/CLI process composition. Native embedders import @repo/db/factory. */
 import { createDatabase, PG_POOL_MAX, type DatabaseOptions } from "./connection";
 import { resolve } from "node:path";
 import { createEncryption, DEFAULT_ENCRYPTION_SECRET } from "./encryption";
+import { resolveInstallSecretOnce } from "./install-secret";
 export { PG_POOL_MAX, type Database, type DatabaseTransaction, type Driver } from "./connection";
 export { awaitPgReady } from "./pg-ready";
 
@@ -85,7 +87,16 @@ const options: DatabaseOptions = {
   lockWaitMs: process.env.OPENSHIP_NATIVE === "true" ? 0 : undefined,
   takeover: process.env.OPENSHIP_NATIVE !== "true" && (process.execArgv.includes("--watch") || process.env.OPENSHIP_DEV_LOCK_TAKEOVER === "true"),
 };
-export const storageEncryption = createEncryption(process.env.BETTER_AUTH_SECRET ?? DEFAULT_ENCRYPTION_SECRET);
+// BETTER_AUTH_SECRET when the operator set one, else the per-install secret file. Values an
+// earlier build sealed under the public placeholder still open and are re-sealed on write.
+const installSecret = resolveInstallSecretOnce(process.env.BETTER_AUTH_SECRET);
+if (installSecret.source === "generated") {
+  console.warn(
+    `[db] generated a new install secret at ${installSecret.path}. Every stored secret is sealed under it: ` +
+      `back it up, and in a container keep it on a volume (OPENSHIP_AUTH_SECRET_FILE) or set BETTER_AUTH_SECRET.`,
+  );
+}
+export const storageEncryption = createEncryption(installSecret.secret, { fallbackSecrets: [DEFAULT_ENCRYPTION_SECRET] });
 const connection = await createDatabase(options).catch(error => {
   storageEncryption.close();
   throw error;

@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { DATA_DIR } from "@/lib/db/core";
 import { upsertVersionManagerTool } from "@/lib/db/versionManager";
+import { assertServiceToolAllowed } from "@omniroute/open-sse/netie/policy.ts";
 import { runNpm, InstallError } from "./utils";
 
 export const NINEROUTER_PACKAGE = "9router";
@@ -59,6 +60,9 @@ export async function getLatestVersion(): Promise<string | null> {
 }
 
 export async function install(version = "latest"): Promise<InstallResult> {
+  // FreeRoute: 9router is a separate upstream product that is not included in this
+  // edition, so it cannot be installed or spawned (open-sse/netie/policy.ts).
+  assertServiceToolAllowed("9router");
   const startMs = Date.now();
 
   // Create install dir + minimal package.json (idempotent)
@@ -127,6 +131,8 @@ export async function uninstall(): Promise<void> {
 }
 
 export function resolveSpawnArgs(apiKey: string, port: number): SpawnArgs {
+  // FreeRoute: see install() above.
+  assertServiceToolAllowed("9router");
   const serverPath = getServerPath();
   // Next.js standalone dir ships its own node_modules — include them in NODE_PATH
   // so native addons (better-sqlite3) resolve correctly.

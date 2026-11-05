@@ -2624,7 +2624,7 @@
           "label": "Console admin email",
           "help": "The first account is created for you and is the instance admin. Sign-up closes as soon as it exists.",
           "type": "text",
-          "default": "admin@openship.local",
+          "default": "admin@freebuild.local",
           "required": true
         },
         {
@@ -3837,7 +3837,7 @@
       "services": [
         {
           "name": "webmail",
-          "image": "ghcr.io/oblien/openship-webmail:latest",
+          "image": "localhost/freebuild/freebuild-webmail:latest",
           "exposedPort": 4080,
           "exposed": true,
           "volumes": [
@@ -4504,7 +4504,7 @@
           "label": "Superuser email",
           "help": "Email for the superuser created during the first deployment.",
           "type": "text",
-          "default": "admin@openship.local",
+          "default": "admin@freebuild.local",
           "required": true
         }
       ],

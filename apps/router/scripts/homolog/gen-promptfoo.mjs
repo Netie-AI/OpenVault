@@ -30,7 +30,7 @@ const providers = picks
   }));
 
 const config = {
-  description: "OmniRoute homolog — smoke real 1 request/provider crítico",
+  description: "FreeRoute homolog: smoke real 1 request/provider crítico",
   prompts: ["Reply with exactly: OK"],
   providers,
   // O smoke valida o WIRING do provider (respondeu sem erro), não o comportamento

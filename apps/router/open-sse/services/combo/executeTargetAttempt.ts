@@ -5,6 +5,7 @@
  *
  * @internal — not part of the public combo.ts barrel.
  */
+import { readSelectedConnectionId } from "../../../src/shared/constants/headers.ts";
 import {
   checkFallbackError,
   classifyLockoutReason,
@@ -368,9 +369,7 @@ export async function executeTargetAttempt(opts: {
     // Success — validate response quality before returning
     if (result.ok) {
       const selectedConnectionId =
-        result.headers?.get("X-OmniRoute-Selected-Connection-Id") ||
-        result.headers?.get("x-omniroute-selected-connection-id") ||
-        undefined;
+        readSelectedConnectionId(result.headers);
       const effectiveConnectionId = selectedConnectionId || target.connectionId || "";
 
       // Clone BEFORE quality check — validateResponseQuality reads the body
@@ -879,9 +878,7 @@ export async function executeTargetAttempt(opts: {
     // but the operator cap still bounds them.
     const lockoutHintVerified = retryHintBypassesMaxCooldownMs(fallbackResult.retryHintSource);
     const selectedConnectionId =
-      result.headers?.get("X-OmniRoute-Selected-Connection-Id") ||
-      result.headers?.get("x-omniroute-selected-connection-id") ||
-      undefined;
+      readSelectedConnectionId(result.headers);
     const targetWithConnection = selectedConnectionId
       ? { ...target, connectionId: selectedConnectionId }
       : target;

@@ -1,3 +1,8 @@
+import {
+  netieErrorResponse,
+  redactProviderNode,
+  rejectCredentialHeaders,
+} from "@/lib/netie/providerGuards";
 import { NextResponse } from "next/server";
 import { createProviderNode, getProviderNodes } from "@/models";
 import { getProviderNodesCount } from "@/lib/db/providers/nodes";
@@ -6,7 +11,11 @@ import {
   ANTHROPIC_COMPATIBLE_PREFIX,
 } from "@/shared/constants/providers";
 import { generateId } from "@/shared/utils";
-import { DISABLED, renderDisabled } from "@omniroute/open-sse/netie/policy.ts";
+import {
+  DISABLED,
+  rejectClientImpersonationHeaders,
+  renderDisabled,
+} from "@omniroute/open-sse/netie/policy.ts";
 import { createProviderNodeSchema, paginationSchema } from "@/shared/validation/schemas";
 import { isValidationFailure, validateBody } from "@/shared/validation/helpers";
 import { validateProviderNodeBaseUrl } from "./urlGuard";
@@ -18,34 +27,6 @@ const OPENAI_COMPATIBLE_DEFAULTS = {
 const ANTHROPIC_COMPATIBLE_DEFAULTS = {
   baseUrl: "https://api.anthropic.com/v1",
 };
-
-// #6874: VibeProxy (github.com/automazeio/vibeproxy) — local OpenAI-compatible
-// gateway. baseUrl has no default (operator-specific host/port); name/prefix/
-// apiType are filled in when the caller omits them.
-const VIBEPROXY_OPENAI_DEFAULTS = {
-  name: "VibeProxy",
-  prefix: "vibeproxy",
-  apiType: "chat" as const,
-};
-
-/**
- * Normalize a caller-supplied VibeProxy base URL down to its `/v1` root,
- * mirroring `sanitizeAnthropicBaseUrl`:
- * strip trailing slash + known OpenAI-compatible suffixes, then ensure the
- * result ends at `/v1` (append if absent, guard against double `/v1/v1`).
- */
-function sanitizeVibeProxyBaseUrl(baseUrl: string) {
-  let base = (baseUrl || "")
-    .trim()
-    .replace(/\/$/, "")
-    .replace(/\/chat\/completions$/i, "")
-    .replace(/\/completions$/i, "");
-  // Guard against a literal "scheme://v1" authority so we never strip the host itself.
-  if (base.endsWith("/v1") && !base.endsWith("://v1")) {
-    return base;
-  }
-  return `${base}/v1`;
-}
 
 async function registerMoonshotFetchersForCreatedNode(node: {
   id?: unknown;
@@ -95,7 +76,8 @@ export async function GET(request?: Request) {
     const total = getProviderNodesCount();
     const nodes = await getProviderNodes({}, limit, offset);
     return NextResponse.json({
-      nodes,
+      // Header values are never echoed: names only.
+      nodes: nodes.map((node) => redactProviderNode(node)),
       total,
       // FreeRoute: the CC Compatible node type is never offered (tls_fingerprint_stealth_disabled).
       ccCompatibleProviderEnabled: false,
@@ -123,6 +105,14 @@ export async function POST(request) {
     );
   }
 
+  // FreeRoute: provider presets are not offered. The only one was VibeProxy, a local
+  // proxy for a user's Claude, ChatGPT and Gemini subscription logins, which is the
+  // pooling the CLIProxyAPI and Dario sidecars were removed for.
+  const requestedPreset = (rawBody as { preset?: unknown } | null)?.preset;
+  if (requestedPreset !== undefined && requestedPreset !== null && requestedPreset !== "") {
+    return renderDisabled(DISABLED.consumerSubscription);
+  }
+
   try {
     const validation = validateBody(createProviderNodeSchema, rawBody);
     if (isValidationFailure(validation)) {
@@ -135,7 +125,6 @@ export async function POST(request) {
       baseUrl,
       type,
       compatMode,
-      preset,
       chatPath,
       modelsPath,
       customHeaders,
@@ -144,30 +133,11 @@ export async function POST(request) {
       dailyQuotaResetHour,
     } = validation.data;
 
-    if (preset === "vibeproxy-openai") {
-      // Schema guarantees baseUrl is non-empty for this preset.
-      const sanitizedBaseUrl = sanitizeVibeProxyBaseUrl(baseUrl as string);
-      const baseUrlError = validateProviderNodeBaseUrl(sanitizedBaseUrl);
-      if (baseUrlError) return baseUrlError;
-
-      const node = await createProviderNode({
-        id: `${OPENAI_COMPATIBLE_PREFIX}${VIBEPROXY_OPENAI_DEFAULTS.apiType}-${generateId()}`,
-        type: "openai-compatible",
-        prefix: (prefix?.trim() || VIBEPROXY_OPENAI_DEFAULTS.prefix).trim(),
-        apiType: apiType || VIBEPROXY_OPENAI_DEFAULTS.apiType,
-        baseUrl: sanitizedBaseUrl,
-        name: (name?.trim() || VIBEPROXY_OPENAI_DEFAULTS.name).trim(),
-        chatPath: chatPath || null,
-        modelsPath: modelsPath || null,
-        iconUrl: iconUrl?.trim() || null,
-        customHeaders: customHeaders || null,
-        dailyQuotaResetTimezone: dailyQuotaResetTimezone?.trim() || null,
-        dailyQuotaResetHour:
-          dailyQuotaResetHour === 0 || dailyQuotaResetHour != null ? dailyQuotaResetHour : null,
-      });
-      await registerMoonshotFetchersForCreatedNode(node);
-      return NextResponse.json({ node }, { status: 201 });
-    }
+    // Provider keys live in OpenVault: a header that carries one, under any name, is refused.
+    const headerRefusal = rejectCredentialHeaders(customHeaders);
+    if (headerRefusal) return headerRefusal;
+    const identityRefusal = rejectClientImpersonationHeaders(customHeaders);
+    if (identityRefusal) return identityRefusal;
 
     // Determine type
     const nodeType = type || "openai-compatible";
@@ -195,7 +165,7 @@ export async function POST(request) {
           dailyQuotaResetHour === 0 || dailyQuotaResetHour != null ? dailyQuotaResetHour : null,
       });
       await registerMoonshotFetchersForCreatedNode(node);
-      return NextResponse.json({ node }, { status: 201 });
+      return NextResponse.json({ node: redactProviderNode(node) }, { status: 201 });
     }
 
     if (nodeType === "anthropic-compatible") {
@@ -225,11 +195,13 @@ export async function POST(request) {
           dailyQuotaResetHour === 0 || dailyQuotaResetHour != null ? dailyQuotaResetHour : null,
       });
       await registerMoonshotFetchersForCreatedNode(node);
-      return NextResponse.json({ node }, { status: 201 });
+      return NextResponse.json({ node: redactProviderNode(node) }, { status: 201 });
     }
 
     return NextResponse.json({ error: "Invalid provider node type" }, { status: 400 });
   } catch (error) {
+    const named = netieErrorResponse(error);
+    if (named) return named;
     console.log("Error creating provider node:", error);
     return NextResponse.json({ error: "Failed to create provider node" }, { status: 500 });
   }

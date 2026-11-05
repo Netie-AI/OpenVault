@@ -162,7 +162,7 @@ function removeEmptyDirectories(dir: string): boolean {
   return hasFiles;
 }
 
-console.log("🔨 OmniRoute — Building for npm publish...\n");
+console.log("🔨 FreeRoute: building for npm publish...\n");
 
 // ── Step 1: Clean previous dist/ directory ─────────────────
 if (existsSync(DIST_DIR)) {

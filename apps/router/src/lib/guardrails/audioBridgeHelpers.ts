@@ -216,7 +216,7 @@ function buildTranscriptionMultipartBody(
   // open-sse tsconfig, and this body is passed straight to fetch() below (#11654).
 ): { body: Buffer<ArrayBuffer>; boundary: string } {
   const fileName = `audio.${format.replace(/[^a-z0-9]/g, "") || "wav"}`;
-  const boundary = `----OmniRouteAudioBridge${randomUUID().replace(/-/g, "")}`;
+  const boundary = `----FreeRouteAudioBridge${randomUUID().replace(/-/g, "")}`;
   const CRLF = "\r\n";
   const extraFieldParts = Object.entries(extraFields).map(([name, value]) =>
     Buffer.from(

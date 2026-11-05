@@ -4,14 +4,11 @@ import { isAuthenticated } from "@/shared/utils/apiAuth";
 import {
   clearObsidianToken,
   getObsidianConfig,
-  getObsidianBaseUrl,
   getObsidianVaultPath,
-  setObsidianToken,
-  setObsidianBaseUrl,
   setObsidianVaultPath,
 } from "@/lib/db/obsidian";
-import { createObsidianClient } from "@/lib/obsidian/api";
 import { sanitizeErrorMessage } from "@omniroute/open-sse/utils/error";
+import { KeysManagedByOpenVaultError, netieErrorResponse } from "@/lib/netie/providerGuards";
 import {
   CLOUD_METADATA_BLOCKED_MESSAGE,
   parseAndValidateNonMetadataUrl,
@@ -87,52 +84,17 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  let urlToUse = parsed.data.baseUrl;
-
-  if (!urlToUse) {
-    urlToUse = getObsidianBaseUrl();
-  }
-
-  if (urlToUse && /:27124(?:\/|$)/.test(urlToUse)) {
-    return NextResponse.json(
-      {
-        error:
-          "URL uses port 27124, which is the MCP endpoint (HTTPS, self-signed cert). " +
-          "The Obsidian Local REST API uses plain HTTP on port 27123. " +
-          "Please use http://<ip>:27123 instead.",
-        connected: false,
-      },
-      { status: 400 }
-    );
-  }
-
-  try {
-    const client = createObsidianClient(parsed.data.token, urlToUse);
-    const result = await client.checkStatus();
-    const authResult = result as Record<string, unknown>;
-    if (authResult?.authenticated === false) {
-      return NextResponse.json(
-        { error: "Token validation failed: invalid token", connected: false },
-        { status: 400 }
-      );
-    }
-
-    setObsidianToken(parsed.data.token);
-    if (parsed.data.baseUrl) {
-      setObsidianBaseUrl(parsed.data.baseUrl);
-    }
-
-    return NextResponse.json({
-      connected: true,
-      message: "Obsidian API token saved and validated",
-    });
-  } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
-    return NextResponse.json(
-      { error: sanitizeErrorMessage(msg), connected: false },
-      { status: 400 }
-    );
-  }
+  // FreeRoute keeps no credentials, and the Obsidian client reads its token from this
+  // database only, so saving one is disabled. Nothing is written or echoed back.
+  return (
+    netieErrorResponse(
+      new KeysManagedByOpenVaultError(
+        ["token"],
+        "The Obsidian API token would be stored in FreeRoute's own database, and FreeRoute does " +
+          "not keep credentials. Saving it here is disabled."
+      )
+    ) ?? NextResponse.json({ error: "keys_managed_by_openvault" }, { status: 501 })
+  );
 }
 
 export async function DELETE(request: NextRequest) {

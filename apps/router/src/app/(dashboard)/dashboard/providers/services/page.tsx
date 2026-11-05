@@ -5,19 +5,19 @@ import { useTranslations } from "next-intl";
 import { cn } from "@/shared/utils/cn";
 import { MuxServiceTab } from "./tabs/MuxServiceTab";
 import { BifrostServiceTab } from "./tabs/BifrostServiceTab";
-import { OpenwaServiceTab } from "./tabs/OpenwaServiceTab";
 
-// FreeRoute: the "9router", "cliproxy" and "dario" tabs are removed. Installing
-// or adopting 9router (a separate upstream product) answers
-// upstream_service_not_included, and the CLIProxyAPI and Dario sidecars (Claude
-// subscription pooling) answer consumer_subscription_pooling_disabled, at every
-// /api/services/{9router,cliproxy,dario}/* route (src/lib/netie/hardDisabledRoutes.ts).
-type Tab = "mux" | "bifrost" | "openwa";
+// FreeRoute: the "9router", "cliproxy", "dario" and "open-wa" tabs are removed.
+// Installing or adopting 9router (a separate upstream product) answers
+// upstream_service_not_included, the CLIProxyAPI and Dario sidecars (Claude
+// subscription pooling) answer consumer_subscription_pooling_disabled, and open-wa
+// (a paired WhatsApp Web session on a stealth browser) answers
+// consumer_session_relay_disabled, at every
+// /api/services/{9router,cliproxy,dario,openwa}/* route (src/lib/netie/hardDisabledRoutes.ts).
+type Tab = "mux" | "bifrost";
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: "mux", label: "Mux", icon: "hub" },
   { id: "bifrost", label: "Bifrost", icon: "bolt" },
-  { id: "openwa", label: "open-wa", icon: "chat" },
 ];
 
 export default function ServicesPage() {
@@ -62,7 +62,6 @@ export default function ServicesPage() {
       <div>
         {active === "mux" && <MuxServiceTab />}
         {active === "bifrost" && <BifrostServiceTab />}
-        {active === "openwa" && <OpenwaServiceTab />}
       </div>
     </div>
   );

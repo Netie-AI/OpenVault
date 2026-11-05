@@ -8,6 +8,15 @@ vi.mock("@/hooks/useDeploymentInfo", () => ({
   useDeploymentInfo: () => deployment,
 }));
 vi.mock("@/lib/api/urls", () => ({ getRestApiBaseUrl: () => "http://localhost:4000/api" }));
+// Modified by Netie AI, 2026: the default release feed is empty (FreeBuild must not
+// read the upstream project's releases), so the web-dashboard case below runs
+// against a test feed to exercise request coalescing.
+vi.mock("@repo/core", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@repo/core")>()),
+  RELEASES_LATEST_API: "https://releases.example.test/latest",
+  changelogMarkdownUrl: (tag: string) => `https://releases.example.test/${tag}/CHANGELOG.md`,
+  advisoryManifestUrl: (tag: string) => `https://releases.example.test/${tag}/release-advisories.json`,
+}));
 
 const snapshot = {
   latest: { tag: "v99.0.0", version: "99.0.0", notes: "Product notes." },
@@ -42,7 +51,7 @@ async function mount() {
     ),
   );
 }
-const releaseRequests = () => fetcher.mock.calls.filter(([url]) => String(url).includes("github"));
+const releaseRequests = () => fetcher.mock.calls.filter(([url]) => String(url).includes("releases.example.test"));
 
 beforeEach(async () => {
   vi.resetModules();

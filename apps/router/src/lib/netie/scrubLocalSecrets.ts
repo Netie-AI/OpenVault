@@ -19,10 +19,16 @@
 // are deleted too. OpenVault issues those; an import must not bring back local
 // ones. Boot does not pass it.
 //
-// Three other places held a key and are cleared the same way: the cloud agent
+// Other places held a key and are cleared the same way: the cloud agent
 // table (cloud_agent_credentials, Devin/Jules/Codex-cloud/Cursor-cloud API
 // keys), the semantic-cache embedding API key kept in key_value, and the service
 // keys in the flat settings (SkillsMP, CLIProxyAPI, Qdrant) and the Notion token.
+// The remaining third-party credentials are cleared too: proxy logins
+// (proxy_registry username and password, proxyConfig entries), the log-export
+// service account (log_export_destinations.config), a webhook's Telegram bot token
+// (webhooks.metadata_encrypted), the Obsidian token, the Radar supporter key, a
+// Command Code key (command_code_auth_sessions.encrypted_api_key), and credential
+// headers on provider nodes (provider_nodes.custom_headers_json).
 //
 // Clearing a column or deleting a row does not remove the bytes from the SQLite
 // file: the old cell stays in the page until something overwrites it. So the
@@ -37,7 +43,9 @@
 import {
   SERVICE_SECRET_SETTING_FIELDS,
   classifyConnection,
+  findCredentialHeaders,
   findSecretProviderSpecificFields,
+  stripCredentialHeaderMap,
   stripSecretProviderSpecificData,
 } from "./providerGuards";
 
@@ -70,6 +78,8 @@ export interface ScrubResult {
   droppedAgentCredentials: number;
   clearedEmbeddingKeys: number;
   clearedServiceSecrets: number;
+  /** Proxy logins, log-export service accounts, webhook bot tokens, Obsidian, Radar, Command Code keys, node credential headers. */
+  clearedThirdPartySecrets: number;
   /** True when the scrub changed something and the file was VACUUMed after it. */
   vacuumed: boolean;
 }
@@ -189,6 +199,206 @@ function clearServiceSecrets(db: DbLike): number {
   }
 }
 
+/**
+ * Config keys of a log-export destination that hold a credential. Kept in step with
+ * each destination type's `secretFields` (netie/keyvault.test.mjs checks it).
+ */
+export const LOG_EXPORT_SECRET_FIELDS: readonly string[] = ["serviceAccountJson"];
+
+const USERINFO_RE = /^([a-z][a-z0-9+.-]*:\/\/)[^/?#\s]*@/i;
+
+type Counter = (db: DbLike) => number;
+
+/** Run one table's cleanup; a table an older schema lacks is not an error. */
+function guarded(db: DbLike, clear: Counter): number {
+  try {
+    return clear(db);
+  } catch {
+    return 0;
+  }
+}
+
+function countRows(db: DbLike, sql: string): number {
+  const counted = db.prepare(sql).all() as Array<{ n: number }>;
+  return Number(counted[0]?.n ?? 0);
+}
+
+/** Remove the login from one proxyConfig value (an object, or a URL string). Returns the new value and whether it changed. */
+function stripProxyLogin(value: unknown): { value: unknown; changed: boolean } {
+  if (typeof value === "string") {
+    const next = value.replace(USERINFO_RE, "$1");
+    return { value: next, changed: next !== value };
+  }
+  if (!value || typeof value !== "object" || Array.isArray(value)) return { value, changed: false };
+  const record = { ...(value as Record<string, unknown>) };
+  let changed = false;
+  for (const field of ["username", "password"]) {
+    if (typeof record[field] === "string" && (record[field] as string).trim()) {
+      delete record[field];
+      changed = true;
+    }
+  }
+  for (const field of ["url", "proxyUrl"]) {
+    if (typeof record[field] === "string") {
+      const next = (record[field] as string).replace(USERINFO_RE, "$1");
+      if (next !== record[field]) {
+        record[field] = next;
+        changed = true;
+      }
+    }
+  }
+  return { value: record, changed };
+}
+
+/** proxy_registry logins, and the legacy proxyConfig entries (global, providers, combos, keys). */
+function clearProxyLogins(db: DbLike): number {
+  let cleared = guarded(db, (d) => {
+    const n = countRows(
+      d,
+      "SELECT COUNT(*) AS n FROM proxy_registry WHERE " +
+        "(password IS NOT NULL AND password != '') OR (username IS NOT NULL AND username != '')"
+    );
+    if (n > 0) {
+      d.prepare(
+        "UPDATE proxy_registry SET username = '', password = '' WHERE " +
+          "(password IS NOT NULL AND password != '') OR (username IS NOT NULL AND username != '')"
+      ).run();
+    }
+    return n;
+  });
+  cleared += guarded(db, (d) => {
+    const rows = d
+      .prepare(
+        "SELECT key, value FROM key_value WHERE namespace = 'proxyConfig' " +
+          "AND key IN ('global', 'providers', 'combos', 'keys')"
+      )
+      .all() as Array<{ key: string; value: string | null }>;
+    const update = d.prepare(
+      "UPDATE key_value SET value = ? WHERE namespace = 'proxyConfig' AND key = ?"
+    );
+    let n = 0;
+    for (const row of rows) {
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(row.value ?? "null");
+      } catch {
+        continue;
+      }
+      let changed = false;
+      if (row.key === "global") {
+        const stripped = stripProxyLogin(parsed);
+        parsed = stripped.value;
+        changed = stripped.changed;
+      } else if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        const map = parsed as Record<string, unknown>;
+        for (const [id, entry] of Object.entries(map)) {
+          const stripped = stripProxyLogin(entry);
+          if (stripped.changed) {
+            map[id] = stripped.value;
+            changed = true;
+          }
+        }
+      }
+      if (changed) {
+        update.run(JSON.stringify(parsed), row.key);
+        n += 1;
+      }
+    }
+    return n;
+  });
+  return cleared;
+}
+
+/** The credential keys of every log_export_destinations.config. */
+function clearLogExportCredentials(db: DbLike): number {
+  const rows = db
+    .prepare("SELECT id, config FROM log_export_destinations WHERE config IS NOT NULL")
+    .all() as Array<{ id: string; config: string | null }>;
+  const update = db.prepare("UPDATE log_export_destinations SET config = ? WHERE id = ?");
+  let n = 0;
+  for (const row of rows) {
+    let config: Record<string, unknown>;
+    try {
+      const parsed = JSON.parse(row.config ?? "null");
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) continue;
+      config = parsed as Record<string, unknown>;
+    } catch {
+      continue;
+    }
+    let changed = false;
+    for (const field of LOG_EXPORT_SECRET_FIELDS) {
+      if (field in config) {
+        delete config[field];
+        changed = true;
+      }
+    }
+    if (changed) {
+      update.run(JSON.stringify(config), row.id);
+      n += 1;
+    }
+  }
+  return n;
+}
+
+/** Credential headers stored on provider nodes (custom_headers_json). */
+function clearNodeCredentialHeaders(db: DbLike): number {
+  const rows = db
+    .prepare("SELECT id, custom_headers_json FROM provider_nodes WHERE custom_headers_json IS NOT NULL")
+    .all() as Array<{ id: string; custom_headers_json: string | null }>;
+  const update = db.prepare("UPDATE provider_nodes SET custom_headers_json = ? WHERE id = ?");
+  let n = 0;
+  for (const row of rows) {
+    let headers: unknown;
+    try {
+      headers = JSON.parse(row.custom_headers_json ?? "null");
+    } catch {
+      continue;
+    }
+    if (findCredentialHeaders(headers).length === 0) continue;
+    const kept = stripCredentialHeaderMap(headers);
+    update.run(Object.keys(kept).length > 0 ? JSON.stringify(kept) : null, row.id);
+    n += 1;
+  }
+  return n;
+}
+
+/**
+ * The third-party credentials FreeRoute no longer keeps, other than the service
+ * keys in the flat settings: see the header comment for the list.
+ */
+function clearThirdPartySecrets(db: DbLike): number {
+  let cleared = clearProxyLogins(db);
+  cleared += guarded(db, clearLogExportCredentials);
+  cleared += guarded(db, (d) => {
+    const n = countRows(d, "SELECT COUNT(*) AS n FROM webhooks WHERE metadata_encrypted IS NOT NULL");
+    if (n > 0) d.prepare("UPDATE webhooks SET metadata_encrypted = NULL WHERE metadata_encrypted IS NOT NULL").run();
+    return n;
+  });
+  cleared += guarded(db, (d) => {
+    const n = countRows(d, "SELECT COUNT(*) AS n FROM key_value WHERE namespace = 'obsidian' AND key = 'api_key'");
+    if (n > 0) d.prepare("DELETE FROM key_value WHERE namespace = 'obsidian' AND key = 'api_key'").run();
+    return n;
+  });
+  cleared += guarded(db, (d) => {
+    const n = countRows(
+      d,
+      "SELECT COUNT(*) AS n FROM radar_settings WHERE supporter_key_encrypted IS NOT NULL AND supporter_key_encrypted != ''"
+    );
+    if (n > 0) d.prepare("UPDATE radar_settings SET supporter_key_encrypted = NULL").run();
+    return n;
+  });
+  cleared += guarded(db, (d) => {
+    const n = countRows(
+      d,
+      "SELECT COUNT(*) AS n FROM command_code_auth_sessions WHERE encrypted_api_key IS NOT NULL AND encrypted_api_key != ''"
+    );
+    if (n > 0) d.prepare("UPDATE command_code_auth_sessions SET encrypted_api_key = NULL").run();
+    return n;
+  });
+  cleared += guarded(db, clearNodeCredentialHeaders);
+  return cleared;
+}
+
 /** Delete every row of cloud_agent_credentials (Devin, Jules, Codex cloud, Cursor cloud keys). */
 function dropAgentCredentials(db: DbLike): number {
   try {
@@ -236,6 +446,7 @@ export function scrubLocalProviderSecrets(
     droppedAgentCredentials: 0,
     clearedEmbeddingKeys: 0,
     clearedServiceSecrets: 0,
+    clearedThirdPartySecrets: 0,
     vacuumed: false,
   };
 
@@ -292,6 +503,7 @@ export function scrubLocalProviderSecrets(
   result.droppedAgentCredentials = dropAgentCredentials(db);
   result.clearedEmbeddingKeys = clearEmbeddingKeys(db);
   result.clearedServiceSecrets = clearServiceSecrets(db);
+  result.clearedThirdPartySecrets = clearThirdPartySecrets(db);
 
   const touched =
     result.clearedApiKeys +
@@ -300,7 +512,8 @@ export function scrubLocalProviderSecrets(
     result.droppedClientKeys +
     result.droppedAgentCredentials +
     result.clearedEmbeddingKeys +
-    result.clearedServiceSecrets;
+    result.clearedServiceSecrets +
+    result.clearedThirdPartySecrets;
   if (touched > 0) {
     result.vacuumed = vacuumAfterScrub(db);
     console.warn(
@@ -309,7 +522,8 @@ export function scrubLocalProviderSecrets(
         `${result.disabledClassified} disabled subscription/session connection(s), ` +
         `${result.droppedClientKeys} local client key(s), ${result.droppedAgentCredentials} ` +
         `cloud agent key(s), ${result.clearedEmbeddingKeys} embedding key(s), ` +
-        `${result.clearedServiceSecrets} service key(s). Provider keys ` +
+        `${result.clearedServiceSecrets} service key(s), ${result.clearedThirdPartySecrets} ` +
+        `other third-party credential(s). Provider keys ` +
         `belong in OpenVault (http://127.0.0.1:3010/keys).`
     );
   }
@@ -331,7 +545,12 @@ export function scrubLocalProviderSecrets(
  * dropped. Used by src/lib/db/jsonMigration.ts runJsonMigration.
  */
 export function sanitizeImportedConnections<
-  T extends { providerConnections?: Record<string, unknown>[]; apiKeys?: Record<string, unknown>[] },
+  T extends {
+    providerConnections?: Record<string, unknown>[];
+    apiKeys?: Record<string, unknown>[];
+    settings?: Record<string, unknown>;
+    proxyConfig?: Record<string, unknown>;
+  },
 >(data: T): T {
   const providerConnections = (data.providerConnections ?? []).map((conn) => {
     const authType = typeof conn.authType === "string" ? conn.authType : "oauth";
@@ -351,5 +570,37 @@ export function sanitizeImportedConnections<
     }
     return { ...conn, apiKey: null, providerSpecificData };
   });
-  return { ...data, providerConnections, apiKeys: [] };
+  // Service keys in the flat settings (SkillsMP, CLIProxyAPI, Qdrant) are not imported either.
+  const settings =
+    data.settings && typeof data.settings === "object"
+      ? Object.fromEntries(
+          Object.entries(data.settings).filter(([key]) => !SERVICE_SECRET_SETTING_FIELDS.includes(key))
+        )
+      : data.settings;
+  // Proxy logins in the legacy proxyConfig are not imported either.
+  const proxyConfig =
+    data.proxyConfig && typeof data.proxyConfig === "object"
+      ? stripProxyConfigLogins(data.proxyConfig)
+      : data.proxyConfig;
+  return {
+    ...data,
+    providerConnections,
+    apiKeys: [],
+    ...(settings === undefined ? {} : { settings }),
+    ...(proxyConfig === undefined ? {} : { proxyConfig }),
+  };
+}
+
+function stripProxyConfigLogins(config: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...config };
+  if ("global" in out) out.global = stripProxyLogin(out.global).value;
+  for (const mapKey of ["providers", "combos", "keys"]) {
+    const map = out[mapKey];
+    if (map && typeof map === "object" && !Array.isArray(map)) {
+      out[mapKey] = Object.fromEntries(
+        Object.entries(map as Record<string, unknown>).map(([id, entry]) => [id, stripProxyLogin(entry).value])
+      );
+    }
+  }
+  return out;
 }

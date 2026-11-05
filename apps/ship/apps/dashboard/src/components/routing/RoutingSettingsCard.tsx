@@ -139,8 +139,13 @@ export function RoutingSettingsCard({
     [ports],
   );
 
+  // Modified by Netie AI, 2026: without HOST_DOMAIN there is no base domain to
+  // hang a free subdomain on, so the Free option is not offered.
+  const freeDomainsAvailable = baseDomain !== "";
   const previewHostname = domainType === "custom" ? draftCustomDomain : "";
-  const freePreview = `${draftDomain || projectName || "my-project"}.${baseDomain}`;
+  const freePreview = freeDomainsAvailable
+    ? `${draftDomain || projectName || "my-project"}.${baseDomain}`
+    : "";
 
   const fetchRecords = useCallback(async (hostname: string) => {
     if (!hostname || hostname.length < 3 || !hostname.includes(".")) return;
@@ -343,7 +348,7 @@ export function RoutingSettingsCard({
           {(!hideTypeToggle || (!portInline && actionSlot)) && (
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                {!hideTypeToggle && (
+                {!hideTypeToggle && freeDomainsAvailable && (
                   <>
                     <button
                       type="button"
@@ -372,7 +377,7 @@ export function RoutingSettingsCard({
             </div>
           )}
 
-          {domainType === "free" ? (
+          {domainType === "free" && freeDomainsAvailable ? (
             <div className="flex items-end gap-2">
               <div className="min-w-0 flex-1 flex items-center gap-2">
                 <div className="flex-1 flex items-center rounded-2xl border border-border/50 bg-background/60 overflow-hidden h-11">

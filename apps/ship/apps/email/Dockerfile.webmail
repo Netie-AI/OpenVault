@@ -1,10 +1,11 @@
 # syntax=docker/dockerfile:1
-# ─── openship-webmail ────────────────────────────────────────────────────────
+# Modified by Netie AI, 2026
+# ─── freebuild-webmail ────────────────────────────────────────────────────────
 # Zero webmail as a self-contained image: the pre-built client SPA plus the
 # Hono/Bun server that serves it and talks IMAP/SMTP.
 #
 # This is the WEBMAIL CLIENT, not the mail engine. `apps/email/Dockerfile` (no
-# suffix) builds `openship-mail` — the iRedMail daemon set. The two share this
+# suffix) builds `freebuild-mail`, the iRedMail daemon set. The two share this
 # directory and nothing else: webmail speaks only IMAP/SMTP, so it runs against
 # any backend (our engine, Gmail, Fastmail, a corporate Exchange) and is
 # versioned as its own product. It is installed like every other catalog app
@@ -23,7 +24,7 @@
 # catalog names and redeploy:
 #
 #     docker build -f apps/email/Dockerfile.webmail \
-#       -t ghcr.io/oblien/openship-webmail:latest .
+#       -t localhost/freebuild/freebuild-webmail:latest .
 #
 # Context is the repo root only because .github/workflows/docker-images.yml
 # builds every image with `context: .`; the COPYs below take four paths.

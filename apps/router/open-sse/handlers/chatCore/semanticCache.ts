@@ -10,7 +10,7 @@ import { finalizePendingScope, type PendingRequestScope } from "@/lib/usage/pend
 import { synthesizeOpenAiSseFromJson } from "../../utils/jsonToSse.ts";
 import { attachOmniRouteMetaHeaders } from "@/domain/omnirouteResponseMeta";
 import { extractUsageFromResponse } from "../usageExtractor.ts";
-import { OMNIROUTE_RESPONSE_HEADERS } from "@/shared/constants/headers";
+import { OMNIROUTE_RESPONSE_HEADERS, withLegacyHeaderTwins } from "@/shared/constants/headers";
 import { getSemanticCacheManager } from "../../services/cache/semanticCacheManager.ts";
 
 export async function checkSemanticCache({
@@ -183,7 +183,7 @@ export async function checkSemanticCache({
       return {
         success: true,
         response: new Response(cachedSse || JSON.stringify(cached), {
-          headers,
+          headers: withLegacyHeaderTwins(headers),
         }),
       };
     }

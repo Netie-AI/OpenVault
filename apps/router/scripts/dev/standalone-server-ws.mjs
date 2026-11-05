@@ -46,7 +46,7 @@ const { wrapRequestListenerWithHeadResponseGuard } = headResponseGuard;
 const tlsOptions = resolveTlsOptions(process.env);
 process.env.OMNIROUTE_INTERNAL_SCHEME = tlsOptions ? "https" : "http";
 if (tlsOptions) {
-  console.log(`[omniroute][tls] HTTPS enabled — terminating TLS with cert=${tlsOptions.certPath}`);
+  console.log(`[freeroute][tls] HTTPS enabled, terminating TLS with cert=${tlsOptions.certPath}`);
 }
 
 process.env.OMNIROUTE_WS_BRIDGE_SECRET ||= randomUUID();

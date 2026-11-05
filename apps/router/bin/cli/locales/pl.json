@@ -248,7 +248,7 @@
     "stopping": "Zatrzymywanie serwera (PID {pid})...",
     "stopped": "Serwer został zatrzymany.",
     "notRunning": "Serwer nie jest uruchomiony.",
-    "port": "Port nasłuchiwania (domyślnie: 20128)",
+    "port": "Port nasłuchiwania (domyślnie: 3020)",
     "no_open": "Nie otwieraj automatycznie przeglądarki",
     "daemon": "Uruchom serwer jako demon w tle",
     "log": "Wyświetlaj logi serwera bezpośrednio",

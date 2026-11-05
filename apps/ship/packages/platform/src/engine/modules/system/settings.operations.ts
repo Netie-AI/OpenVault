@@ -1,8 +1,10 @@
+// Modified by Netie AI, 2026: a tunnel token is a third-party secret FreeBuild no longer
+// stores (keys_managed_by_openvault).
 /** Instance settings logic retained from the HTTP setup controller. */
 import type { ExecutionContext } from "../../../context";
 import { OperationError, type SystemOperations, type UpdateInstanceSettingsInput, type UpdateInstanceEmailSettingsInput } from "@repo/contracts";
 import { repos } from "@repo/db";
-import { normalizeRollbackWindow } from "@repo/core";
+import { KeysManagedByOpenVaultError, normalizeRollbackWindow } from "@repo/core";
 import { env } from "../../config";
 import { audit, operationAuditContext } from "../../lib/audit-emitter";
 import { AUTH_MODES, clearAuthModeCache, pinnedAuthMode, type AuthMode as AuthModeType } from "../../lib/auth-mode";
@@ -19,6 +21,18 @@ import { assertSelfHosted } from "./server-access";
 
 function failSettings(body: { error: string }, status: number): never {
   throw new OperationError(body.error, status, "INVALID_INSTANCE_SETTINGS", body);
+}
+/**
+ * A tunnel token (Cloudflare Tunnel, ngrok) is a third-party secret. Cloudflare secrets
+ * are vault-only (DR-0018) and nothing in FreeBuild reads `instance_settings.tunnel_token`,
+ * so a non-empty value would be a dead write of a secret to disk. It is refused with 501
+ * keys_managed_by_openvault. An empty value is still accepted: it clears a copy an earlier
+ * build stored.
+ */
+export function assertNoTunnelToken(raw: unknown): void {
+  if (raw === undefined || raw === null || raw === false) return;
+  if (typeof raw === "string" && raw.trim() === "") return;
+  throw new KeysManagedByOpenVaultError();
 }
 const SMTP_HOST_RE = /^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$/i;
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
@@ -170,7 +184,10 @@ export async function updateSettings(ctx: ExecutionContext, body: UpdateInstance
     };
   }
   if (body.tunnelProvider !== undefined) patch.tunnelProvider = body.tunnelProvider || null;
-  if (body.tunnelToken !== undefined) patch.tunnelToken = body.tunnelToken || null;
+  if (body.tunnelToken !== undefined) {
+    assertNoTunnelToken(body.tunnelToken);
+    patch.tunnelToken = null;
+  }
   if (body.defaultBuildMode !== undefined) patch.defaultBuildMode = body.defaultBuildMode || "auto";
   if (body.defaultRollbackWindow !== undefined) {
     patch.defaultRollbackWindow = normalizeRollbackWindow(body.defaultRollbackWindow);

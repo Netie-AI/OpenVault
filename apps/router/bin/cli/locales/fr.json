@@ -248,7 +248,7 @@
     "stopping": "Arrêt du serveur (PID {pid})...",
     "stopped": "Serveur arrêté.",
     "notRunning": "Le serveur n’est pas en cours d’exécution.",
-    "port": "Port d’écoute (par défaut : 20128)",
+    "port": "Port d’écoute (par défaut : 3020)",
     "no_open": "Ne pas ouvrir automatiquement le navigateur",
     "daemon": "Exécuter le serveur en tant que démon en arrière-plan",
     "log": "Afficher les journaux du serveur en ligne",

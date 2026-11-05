@@ -481,7 +481,10 @@ export function getCacheStats() {
  * because the provider default may be non-deterministic (e.g. random/creative tasks).
  */
 export function isCacheableForRead(body, headers) {
-  if ((getHeaderValue(headers, "x-omniroute-no-cache") || "").toLowerCase() === "true") {
+  const noCache =
+    getHeaderValue(headers, "x-freeroute-no-cache") ||
+    getHeaderValue(headers, "x-omniroute-no-cache");
+  if ((noCache || "").toLowerCase() === "true") {
     return false;
   }
   const cacheControl = (getHeaderValue(headers, "cache-control") || "").toLowerCase();
@@ -499,7 +502,10 @@ export function isCacheableForRead(body, headers) {
  * because the provider default may be non-deterministic.
  */
 export function isCacheableForWrite(body, headers) {
-  if ((getHeaderValue(headers, "x-omniroute-no-cache") || "").toLowerCase() === "true") {
+  const noCache =
+    getHeaderValue(headers, "x-freeroute-no-cache") ||
+    getHeaderValue(headers, "x-omniroute-no-cache");
+  if ((noCache || "").toLowerCase() === "true") {
     return false;
   }
   const cacheControl = (getHeaderValue(headers, "cache-control") || "").toLowerCase();

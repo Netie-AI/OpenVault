@@ -1,7 +1,6 @@
 "use client";
 
 import { Icon as UiIcon, type IconName } from "@repo/ui/icons";
-import { SYSTEM } from "@repo/core";
 
 /**
  * Team-mode migration wizard. Promotes a single_user instance into a
@@ -20,6 +19,7 @@ import { SYSTEM } from "@repo/core";
 
 import { useEffect, useState } from "react";
 import { BlurIp } from "@/components/BlurIp";
+import { usePlatform } from "@/context/PlatformContext";
 import { migrationApi, systemApi, getApiErrorMessage } from "@/lib/api";
 import type {
   DomainChoice,
@@ -331,6 +331,8 @@ function ServerForm({
   // Modified by Netie AI, 2026: the free subdomain lives on the hosted cloud
   // edge, which FreeBuild does not ship, so only a custom domain is offered.
   const [domainKind, setDomainKind] = useState<"custom" | "free">("custom");
+  // Modified by Netie AI, 2026: the suffix is HOST_DOMAIN, never the upstream cloud domain.
+  const { baseDomain } = usePlatform();
   const [customHost, setCustomHost] = useState("");
   const [freeSlug, setFreeSlug] = useState("");
   const [preflight, setPreflight] = useState<PreflightResult | null>(null);
@@ -482,7 +484,7 @@ function ServerForm({
               className="w-full ps-3 pe-24 py-2 bg-muted/30 border border-border/50 rounded-xl text-sm text-foreground font-mono"
             />
             <span className="absolute end-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-mono">
-              .{SYSTEM.DOMAINS.CLOUD_DOMAIN}
+              .{baseDomain}
             </span>
           </div>
         ) : (

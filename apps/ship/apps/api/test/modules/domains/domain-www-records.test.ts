@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026
 import "../mail/_setup-env";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -118,7 +119,7 @@ describe("previewRecords — cloud", () => {
     expect(records[2]).toMatchObject({ name: "www.freshs.hekai.org", value: "edge.opsh.io" });
     expect(records[3]).toMatchObject({
       type: "TXT",
-      name: "_openship-challenge.www.freshs.hekai.org",
+      name: "_freebuild-challenge.www.freshs.hekai.org",
     });
     // Each hostname proves ownership with its OWN token.
     expect(records[3]!.value).not.toBe(records[1]!.value);

@@ -108,16 +108,25 @@ export interface UpdateState {
   latestChangelogUrl: string;
 }
 
-export const GITHUB_REPO = "oblien/openship";
+// Modified by Netie AI, 2026: these named the upstream project's GitHub
+// repository, so a FreeBuild install compared itself with the upstream's latest
+// release and showed its changelog and advisories. FreeBuild has no published
+// release feed yet, so there is no default: an empty repo means "do not check".
+// Set it only to a repository FreeBuild itself publishes releases from.
+export const GITHUB_REPO: string = "";
 
-/** GitHub API: the latest published (non-prerelease) release. */
-export const RELEASES_LATEST_API = `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`;
+/** GitHub API: the latest published (non-prerelease) release, or "" when there is no feed. */
+export const RELEASES_LATEST_API: string = GITHUB_REPO
+  ? `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`
+  : "";
 
 /**
  * Raw advisory manifest URL, PINNED to a release tag. Because it's pinned to a
  * tag (not a branch), it only changes when a version is released — commits to
- * `main` are invisible to clients. Returns null for an empty tag.
+ * `main` are invisible to clients. Returns "" when there is no release feed.
  */
 export function advisoryManifestUrl(tag: string): string {
-  return `https://raw.githubusercontent.com/${GITHUB_REPO}/${encodeURIComponent(tag)}/release-advisories.json`;
+  return GITHUB_REPO
+    ? `https://raw.githubusercontent.com/${GITHUB_REPO}/${encodeURIComponent(tag)}/release-advisories.json`
+    : "";
 }

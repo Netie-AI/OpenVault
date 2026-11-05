@@ -1,9 +1,13 @@
+// Modified by Netie AI, 2026: DEFAULT_ENCRYPTION_SECRET is only the legacy key an
+// earlier build used when BETTER_AUTH_SECRET was unset. A fresh install now gets a
+// random per-install secret (install-secret.ts), and createEncryption() can keep
+// opening values sealed under the legacy key through `fallbackSecrets`.
 /**
  * Application-level encryption for sensitive data (env vars, secrets).
  *
  * Uses AES-256-GCM (authenticated encryption) via Node.js built-in crypto.
- * The encryption key is derived from BETTER_AUTH_SECRET (which every install
- * already has) - no extra env var needed.
+ * The encryption key is derived from BETTER_AUTH_SECRET, or from the per-install
+ * secret the app generates when that variable is unset (install-secret.ts).
  *
  * Format:  base64( iv:16 || authTag:16 || ciphertext )
  *
@@ -15,6 +19,11 @@
 
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 
+/**
+ * The placeholder secret an earlier build used when BETTER_AUTH_SECRET was unset. It is
+ * public (it ships in .env.example), so it must never seal a new value. It stays only so
+ * values sealed under it keep opening: pass it as a fallback, never as the primary secret.
+ */
 export const DEFAULT_ENCRYPTION_SECRET = "change-me-in-production";
 
 // ─── Key derivation ──────────────────────────────────────────────────────────
@@ -68,11 +77,23 @@ export function decryptBytesWithKey(key: Buffer, sealed: Uint8Array): Buffer {
   return Buffer.concat([decipher.update(ciphertext), decipher.final()]);
 }
 
+export interface EncryptionOptions {
+  /**
+   * Secrets an earlier build sealed values under. `decrypt()` tries the primary secret, then
+   * each of these in order. They are never used to encrypt, so the next write of a value
+   * re-seals it under the primary secret.
+   */
+  readonly fallbackSecrets?: readonly string[];
+}
+
 /** One installation's secrets. The existing ciphertext format and key derivation are unchanged. */
-export function createEncryption(secret: string) {
+export function createEncryption(secret: string, options: EncryptionOptions = {}) {
   if (typeof secret !== "string" || !secret)
     throw new TypeError("An explicit encryption secret is required");
   const key = createHash("sha256").update(secret).digest();
+  const fallbackKeys = [...new Set(options.fallbackSecrets ?? [])]
+    .filter((fallback) => typeof fallback === "string" && fallback !== "" && fallback !== secret)
+    .map((fallback) => createHash("sha256").update(fallback).digest());
   let closed = false;
   function getKey(): Buffer {
     if (closed) throw new Error("Encryption context is closed");
@@ -88,10 +109,22 @@ export function createEncryption(secret: string) {
 
   /**
    * Decrypt a value produced by `encrypt()`.
-   * Throws if the data is tampered with or the key is wrong.
+   * Throws if the data is tampered with or no known key opens it.
    */
   function decrypt(sealed: string): string {
-    return decryptWithKey(getKey(), sealed);
+    const primary = getKey();
+    try {
+      return decryptWithKey(primary, sealed);
+    } catch (error) {
+      for (const fallback of fallbackKeys) {
+        try {
+          return decryptWithKey(fallback, sealed);
+        } catch {
+          // Not sealed under this key either; try the next one.
+        }
+      }
+      throw error;
+    }
   }
 
   /**
@@ -122,6 +155,7 @@ export function createEncryption(secret: string) {
       if (!closed) {
         closed = true;
         key.fill(0);
+        for (const fallback of fallbackKeys) fallback.fill(0);
       }
     },
   });

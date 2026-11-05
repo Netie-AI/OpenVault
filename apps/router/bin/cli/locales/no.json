@@ -248,7 +248,7 @@
     "stopping": "Stopper serveren (PID {pid})...",
     "stopped": "Serveren er stoppet.",
     "notRunning": "Serveren kjører ikke.",
-    "port": "Port som skal lyttes på (standard: 20128)",
+    "port": "Port som skal lyttes på (standard: 3020)",
     "no_open": "Ikke åpne nettleseren automatisk",
     "daemon": "Kjør serveren som en bakgrunnsprosess",
     "log": "Vis serverlogger fortløpende",

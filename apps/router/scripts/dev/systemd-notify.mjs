@@ -37,7 +37,7 @@ export function buildNotifyMessage(kind) {
     case "stopping":
       return "STOPPING=1";
     default:
-      throw new Error(`[omniroute][sd_notify] unknown message kind: ${kind}`);
+      throw new Error(`[freeroute][sd_notify] unknown message kind: ${kind}`);
   }
 }
 
@@ -67,7 +67,7 @@ export function createSystemdNotifier({
         watchdogTimer = null;
       }
       onWarn(
-        `[omniroute][sd_notify] failed to send '${kind}' (${err?.code ?? err?.message ?? err}); sd_notify disabled for this process`
+        `[freeroute][sd_notify] failed to send '${kind}' (${err?.code ?? err?.message ?? err}); sd_notify disabled for this process`
       );
     });
   };

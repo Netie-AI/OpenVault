@@ -7,6 +7,10 @@
  */
 
 import { EXECUTOR_CONTRACT_VIOLATION_CODE } from "../../config/constants.ts";
+import {
+  FREEROUTE_ROUTING_RESPONSE_HEADERS,
+  readFreeRouteHeader,
+} from "@/shared/constants/headers";
 import { remainingPercentFromQuotaWindows } from "../antigravityQuotaFamily.ts";
 import { errorResponse } from "../../utils/error.ts";
 import { parseModel } from "../model.ts";
@@ -67,7 +71,7 @@ export function isAllAccountsRateLimitedResponse(
   return ALL_ACCOUNTS_RATE_LIMITED_PATTERNS.some((p) => p.test(errorText));
 }
 
-// #1731v2 guard: a provider circuit-breaker-open response (503 + `X-OmniRoute-Provider-Breaker`
+// #1731v2 guard: a provider circuit-breaker-open response (503 + `X-FreeRoute-Provider-Breaker`
 // header / `provider_circuit_open` error code, see providerCircuitOpenResponse) is an OmniRoute
 // resilience signal, NOT a per-connection upstream failure. It must keep being treated as an
 // ordinary target failure (try the next target, including same-provider ones) — so it must NOT
@@ -77,7 +81,10 @@ export function isProviderCircuitOpenResult(
   result: { headers?: Headers | null; status?: number },
   errorText: string
 ): boolean {
-  const breakerHeader = result.headers?.get?.("x-omniroute-provider-breaker");
+  const breakerHeader = readFreeRouteHeader(
+    result.headers,
+    FREEROUTE_ROUTING_RESPONSE_HEADERS.providerBreaker
+  );
   if (typeof breakerHeader === "string" && breakerHeader.toLowerCase() === "open") return true;
   return /provider_circuit_open/i.test(errorText);
 }

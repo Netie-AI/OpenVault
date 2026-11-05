@@ -248,7 +248,7 @@
     "stopping": "Menghentikan pelayan (PID {pid})...",
     "stopped": "Pelayan dihentikan.",
     "notRunning": "Pelayan tidak sedang berjalan.",
-    "port": "Port untuk menerima sambungan (lalai: 20128)",
+    "port": "Port untuk menerima sambungan (lalai: 3020)",
     "no_open": "Jangan buka pelayar secara automatik",
     "daemon": "Jalankan pelayan sebagai daemon latar belakang",
     "log": "Tunjukkan log pelayan sebaris",

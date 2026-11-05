@@ -38,7 +38,7 @@ export function resolveTlsOptions(
   // Only one of the pair → never half-enable TLS. Warn + fall back to HTTP.
   if (!certPath || !keyPath) {
     warn(
-      `[omniroute][tls] HTTPS not enabled: both OMNIROUTE_TLS_CERT and OMNIROUTE_TLS_KEY ` +
+      `[freeroute][tls] HTTPS not enabled: both OMNIROUTE_TLS_CERT and OMNIROUTE_TLS_KEY ` +
         `are required (only ${certPath ? "cert" : "key"} provided). Serving HTTP.`
     );
     return null;
@@ -52,7 +52,7 @@ export function resolveTlsOptions(
     return { cert, key, certPath, keyPath };
   } catch (err) {
     warn(
-      `[omniroute][tls] HTTPS not enabled: could not read TLS cert/key ` +
+      `[freeroute][tls] HTTPS not enabled: could not read TLS cert/key ` +
         `(${err?.code || err?.message || String(err)}). Serving HTTP.`
     );
     return null;

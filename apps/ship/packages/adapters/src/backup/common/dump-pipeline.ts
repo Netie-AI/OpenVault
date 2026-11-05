@@ -1,3 +1,4 @@
+// Modified by Netie AI, 2026
 /**
  * Shared plumbing for anything that pipes a payload out of a container: how it is
  * compressed, and how its exit status survives being piped.
@@ -213,8 +214,8 @@ export function safePipelineFragment(
     // A status we could not parse is a failure, never an implicit success.
     "case \"$d\" in ''|*[!0-9]*) d=1 ;; esac",
     "case \"$c\" in ''|*[!0-9]*) c=1 ;; esac",
-    `[ "$c" = 0 ] || { echo "openship: ${labels.right} failed with status $c" >&2; exit "$c"; }`,
-    `[ "$d" = 0 ] || { echo "openship: ${labels.left} failed with status $d" >&2; exit "$d"; }`,
+    `[ "$c" = 0 ] || { echo "freebuild: ${labels.right} failed with status $c" >&2; exit "$c"; }`,
+    `[ "$d" = 0 ] || { echo "freebuild: ${labels.left} failed with status $d" >&2; exit "$d"; }`,
   ].join("\n");
 }
 
