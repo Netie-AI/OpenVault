@@ -1,0 +1,102 @@
+/**
+ * Apps routes — mounted at /api/apps in app.ts.
+ *
+ * The one-click app catalog + installer. Works on self-hosted and cloud (apps
+ * install as normal services projects), so NOT gated localOnly.
+ */
+
+import { Hono } from "hono";
+import { AppHostFitInputSchema, InstallAppBody, AddCustomAppBody } from "@repo/contracts";
+import { secureRouter } from "../../lib/secure-router";
+import * as ctrl from "./app.controller";
+
+const r = secureRouter(new Hono(), {
+  module: "apps",
+  basePath: "/api/apps",
+});
+
+r.get(
+  "/catalog",
+  {
+    tag: "project:list",
+     mcp: { description: "List the one-click app catalog (Convex, WordPress, mail, …).",
+   },
+  },
+  ctrl.catalog,
+);
+r.get(
+  "/catalog/:id",
+  {
+    tag: "project:list",
+     mcp: { description: "Get one app's full template (services, config, endpoints) by id.",
+   },
+  },
+  ctrl.catalogEntry,
+);
+r.get(
+  "/catalog/:id/host-fit",
+  {
+    tag: "project:list",
+    mcp: {
+      description:
+        "Check whether a destination meets an app's declared minimum resources, before installing. Query: deployTarget, serverId.",
+    },
+    query: AppHostFitInputSchema,
+  },
+  ctrl.hostFit,
+);
+r.get(
+  "/custom",
+  {
+    tag: "project:list",
+     mcp: { description: "List this org's custom (user-uploaded, unverified) apps.",
+   },
+  },
+  ctrl.listCustom,
+);
+r.post(
+  "/custom",
+  {
+    tag: "project:write",
+    collection: true,
+    body: AddCustomAppBody,
+    auditHandledByOperation: true,
+    mcp: {
+      description:
+        "Add a custom app from an uploaded JSON definition (stored per-org, unverified).",
+    },
+  },
+  ctrl.addCustom,
+);
+r.delete(
+  "/custom/:appId",
+  {
+    tag: "project:write",
+    // `:appId` names a per-org catalog entry, not a project row, so there is no
+    // resource id for the permission layer to check — without `collection` the
+    // middleware demands a `:id` this route doesn't have and 400s every call.
+    // Org scoping happens in the handler, exactly like the POST above.
+    collection: true,
+     mcp: { description: "Remove a custom app from this org's catalog.",
+   },
+    auditHandledByOperation: true,
+  },
+  ctrl.removeCustom,
+);
+r.post(
+  "/",
+  {
+    tag: "project:write",
+    collection: true,
+    projectCreate: true,
+    body: InstallAppBody,
+    auditHandledByOperation: true,
+    mcp: {
+      description:
+        "Install an app from the catalog as a project (or return a flow route for wizard apps). Public hostnames come ONLY from `routes` — omit it and the app installs port-only (no domain is invented).",
+    },
+  },
+  ctrl.install,
+);
+
+export const appRoutes = r.hono;

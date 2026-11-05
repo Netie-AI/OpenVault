@@ -54,3 +54,8 @@ vendor/
 
 # Claude Code agent worktrees (session-local, never committed)
 .claude/worktrees/
+
+# Forked apps (DR-0018): their source trees contain dirs named build/ and vendor/
+!apps/router/**/build/
+!apps/router/**/vendor/
+!apps/ship/**/build/

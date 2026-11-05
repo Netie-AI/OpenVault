@@ -1,0 +1,1 @@
+ALTER TABLE "instance_settings" ADD COLUMN "invitation_mail_source" text DEFAULT 'platform' NOT NULL;

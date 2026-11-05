@@ -1,0 +1,1223 @@
+/**
+ * Bare runtime - lightweight process management without Docker.
+ *
+ * Runs applications directly on the target server via shell commands.
+ * All operations go through a CommandExecutor, so the bare runtime
+ * works identically on the local machine and on remote servers via SSH.
+ *
+ * Architecture:
+ *   BUILD  → BareRuntime owns clone/install/build (via executor + build-pipeline)
+ *   DEPLOY → delegated to a ProcessSupervisor (systemd on Linux, nohup on macOS)
+ *
+ * The supervisor is auto-detected at construction time based on the
+ * target machine's capabilities - no per-deploy branching.
+ *
+ * buildStrategy support:
+ *   "server" → clone + build on the target machine (via executor)
+ *   "local"  → clone + build on the API host, then transfer output to target
+ */
+
+import { randomUUID } from "node:crypto";
+import type {
+  BuildConfig,
+  CommandExecutor,
+  DeployConfig,
+  BuildResult,
+  DeploymentResult,
+  LogEntry,
+  LogCallback,
+  RuntimeLogStreamOptions,
+  ContainerInfo,
+  ResourceUsage,
+} from "../types";
+
+import { LocalExecutor, wrapLocalBuildCommand } from "../system/executor";
+import { ensureOwnedDir } from "../system/elevated-executor";
+import { execReliable } from "../system/remote-journal";
+import { STACKS, appVolumeTargets, buildOutputTransferExcludes, safeErrorMessage, missingOutputDirectoryMessage, packageManagerEnsureCommand, nodeBinPathExport, withTimeout, type StackId, type StackDefinition } from "@repo/core";
+import { checkToolchainForStack, installTools } from "../toolchain";
+import type {
+  RuntimeAdapter,
+  RuntimeCapability,
+  ReleaseCommandOptions,
+  DeploymentRef,
+  RollbackInput,
+  MakeActiveResult,
+} from "./types";
+import {
+  BuildCancelledError,
+  BuildLogger,
+  detectBuildKillHint,
+  killProcessesUnderDir,
+  runBuildPipeline,
+  sq,
+  type BuildEnvironment,
+} from "./build-pipeline";
+import { runLocalBuild } from "./local-build";
+import { transferLocalDirectory } from "./transfer";
+import { prepareStackOutput, resolveProjectDir, resolveStaticOutputPath } from "./stack-output";
+import { isExcludedDocRootEntry } from "./docker-build-plan";
+import { isArtifactPathRef, removeManagedArtifact } from "./managed-artifact";
+import type { ProcessSupervisor } from "./supervisor/types";
+import { detectSupervisor } from "./supervisor/detect";
+import { probeListeningPort } from "./port-conflict";
+import { splitRuntimeEnv, droppedRuntimeEnvMessage } from "./runtime-env";
+import { releaseCommandDeadline } from "./release-command-deadline";
+
+/** Parent of a POSIX path on the TARGET machine — node:path would resolve
+ *  against the local platform's separator, which is wrong over SSH from Windows. */
+function parentPath(path: string): string {
+  const idx = path.replace(/\/+$/, "").lastIndexOf("/");
+  return idx > 0 ? path.slice(0, idx) : "/";
+}
+
+// ─── Config ──────────────────────────────────────────────────────────────────
+
+interface BareSystemManager {
+  ensureComponents(names: string[], onLog?: (log: LogEntry) => void): Promise<void>;
+}
+
+export interface BareRuntimeOptions {
+  /** Base directory for project working directories (default: /opt/openship) */
+  workDir?: string;
+  /** Max time for build commands in ms (default: 10 min) */
+  buildTimeout?: number;
+  /**
+   * Command executor - local or SSH.
+   *
+   * When provided, ALL commands and file operations are routed through
+   * the executor. This is what makes bare runtime work on remote servers.
+   * When omitted, a LocalExecutor is created automatically (same machine).
+   */
+  executor?: CommandExecutor;
+  /** Optional system manager for ensuring remote runtime prerequisites. */
+  systemManager?: BareSystemManager;
+}
+
+const DEFAULT_WORK_DIR = "/opt/openship";
+const DEFAULT_BUILD_TIMEOUT = 10 * 60 * 1000;
+
+/**
+ * Dedicated base for static doc-roots — deliberately separate from
+ * DEFAULT_WORK_DIR. Static sites build in a Docker sandbox and serve their
+ * extracted files from here; this is the ONE directory shared into the edge
+ * container (bind-mounted at the same path) in docker-edge mode, so it must
+ * NOT contain server bundles, node_modules, or release secrets. A static-serve
+ * BareRuntime is constructed with `workDir = STATIC_RELEASE_BASE` so its
+ * releases/.builds subdirs confine here and promote stays same-FS.
+ */
+export const STATIC_RELEASE_BASE = "/opt/openship/static";
+
+
+
+// ─── Bare runtime ────────────────────────────────────────────────────────────
+
+/**
+ * The env a bare deployment's processes get: the supervised app (`deploy`) and its
+ * release commands (`runReleaseCommand`) both take it from here, so a migration
+ * can never resolve a different DSN, PATH or PORT than the app it prepares.
+ * `dropped` is what `splitRuntimeEnv` refused, returned so each caller can say so.
+ */
+function bareProcessEnv(config: DeployConfig): { env: Record<string, string>; dropped: string[] } {
+  const projectEnv = splitRuntimeEnv(
+    Object.fromEntries(Object.entries(config.envVars ?? {}).map(([k, v]) => [k, String(v)])),
+  );
+  return {
+    env: {
+      ...Object.fromEntries(projectEnv.entries),
+      PORT: String(config.port),
+      NODE_ENV: config.environment === "production" ? "production" : "development",
+    },
+    dropped: projectEnv.dropped,
+  };
+}
+
+export class BareRuntime implements RuntimeAdapter {
+  readonly name = "bare";
+  readonly capabilities: ReadonlySet<RuntimeCapability> = new Set<RuntimeCapability>([
+    "build",
+    "deploy",
+    "stop",
+    "start",
+    "restart",
+    "destroy",
+    "runtimeLogs",
+    "streamLogs",
+    // Real measurements now (cgroup → /proc → ps, via the supervisor), so this can
+    // finally be declared. It was absent while getUsage returned a zeros stub — but
+    // nothing checked, so callers rendered those zeros as data. Anything reading
+    // usage should gate on supports("usage") rather than trust the numbers.
+    // Network is the one gap: per-process rx/tx needs eBPF or a netns, so it stays 0.
+    "usage",
+    "containerIp",
+    "rollback",
+    // Systemd releases support a unit swap. canRestoreUnit verifies that this
+    // host's supervisor and the particular release still support it.
+    "unitRestore",
+    "inContainerExec",
+    "releaseCommand",
+  ]);
+
+  private readonly workDir: string;
+  private readonly buildTimeout: number;
+  private executor: CommandExecutor;
+  private readonly systemManager: BareSystemManager | null;
+  /** True if we created the executor ourselves (must dispose on cleanup) */
+  private readonly ownsExecutor: boolean;
+  /** Track active builds by sessionId for cancellation */
+  private readonly activeBuilds = new Map<string, AbortController>();
+  /** Process lifecycle delegate - resolved lazily on first deploy/stop/etc. */
+  private _supervisor: ProcessSupervisor | null = null;
+  private _supervisorPromise: Promise<ProcessSupervisor> | null = null;
+
+  constructor(opts?: BareRuntimeOptions) {
+    this.workDir = opts?.workDir ?? DEFAULT_WORK_DIR;
+    this.buildTimeout = opts?.buildTimeout ?? DEFAULT_BUILD_TIMEOUT;
+
+    if (opts?.executor) {
+      this.executor = opts.executor;
+      this.ownsExecutor = false;
+    } else {
+      this.executor = new LocalExecutor();
+      this.ownsExecutor = true;
+    }
+
+    this.systemManager = opts?.systemManager ?? null;
+  }
+
+  /** The underlying command executor (local or SSH). Exposed so the
+   *  backup subsystem's bare executor can stream commands over the same
+   *  connection (mirrors how DockerRuntime exposes its client). */
+  get commandExecutor(): CommandExecutor {
+    return this.executor;
+  }
+
+  /** A bare deployment is a host process, so "inside the instance" == the host.
+   *  The host executor already sees the process's listeners (shared netns). */
+  async inContainerExecutor(): Promise<CommandExecutor> {
+    return this.executor;
+  }
+
+  /**
+   * Resolve a retained application release for an env-only refresh.
+   * Deployment ids originate in our database, but reject path-shaped input at
+   * this boundary so an imported/corrupt row cannot escape releases/.
+   */
+  async retainedReleaseArtifact(deploymentId: string): Promise<string | null> {
+    if (!deploymentId || deploymentId.includes("/") || deploymentId.includes("\\")) return null;
+    const path = this.releaseDir(deploymentId);
+    return (await this.executor.exists(path).catch(() => false)) ? path : null;
+  }
+
+  /** Get or lazily initialise the process supervisor. */
+  private async supervisor(): Promise<ProcessSupervisor> {
+    if (this._supervisor) return this._supervisor;
+    if (!this._supervisorPromise) {
+      this._supervisorPromise = detectSupervisor(this.executor, this.workDir).then((s) => {
+        this._supervisor = s;
+        return s;
+      });
+    }
+    return this._supervisorPromise;
+  }
+
+  supports(cap: RuntimeCapability): boolean {
+    return this.capabilities.has(cap);
+  }
+
+  async dispose(): Promise<void> {
+    if (this.ownsExecutor) {
+      await this.executor.dispose();
+    }
+  }
+
+  // ─── Path helpers ────────────────────────────────────────────────────
+
+  private projectDir(projectId: string): string {
+    return `${this.workDir}/${projectId}`;
+  }
+
+  private buildDir(sessionId: string): string {
+    return `${this.workDir}/.builds/${sessionId}`;
+  }
+
+  private releaseDir(deploymentId: string): string {
+    return `${this.workDir}/releases/${deploymentId}`;
+  }
+
+  private isRetainedArtifact(path: string): boolean {
+    return path.startsWith(`${this.workDir}/releases/`);
+  }
+
+  /** Per-project directory holding the paths that must survive a release swap.
+   *  The `shared/` half of the Capistrano layout `releases/` already implements. */
+  private sharedDir(projectId: string): string {
+    return `${this.workDir}/shared/${projectId}`;
+  }
+
+  /**
+   * Repoint the release's persistent paths at `shared/`, so a redeploy doesn't
+   * take the app's data with the old release.
+   *
+   * Docker gets this from a volume; bare has no mount to hang it on, so the
+   * equivalent is the deploy convention: keep the state outside the release tree
+   * and symlink it in. The first release that ships the path SEEDS the shared
+   * copy from it — frameworks ship a skeleton there (Laravel's `storage/` has
+   * `framework/cache`, `framework/sessions`, …) and an app handed an empty
+   * directory instead would fail on write.
+   *
+   * Best-effort per path: a box without the shared dir writable is a storage
+   * problem to report, not a reason to fail an otherwise good release.
+   */
+  private async linkPersistentPaths(
+    releaseDir: string,
+    projectId: string,
+    volumes: string[] | undefined,
+    log?: LogCallback,
+    strict = false,
+    signal?: AbortSignal,
+  ): Promise<void> {
+    const targets = appVolumeTargets(volumes ?? []);
+    if (targets.length === 0) return;
+
+    const shared = this.sharedDir(projectId);
+    for (const relative of targets) {
+      signal?.throwIfAborted();
+      const sharedPath = `${shared}/${relative}`;
+      const releasePath = `${releaseDir}/${relative}`;
+      try {
+        if (!(await this.executor.exists(sharedPath))) {
+          await this.executor.mkdir(parentPath(sharedPath));
+          if (await this.executor.exists(releasePath)) {
+            await this.executor.exec(`cp -a ${sq(releasePath)} ${sq(sharedPath)}`);
+          } else {
+            await this.executor.mkdir(sharedPath);
+          }
+        }
+        signal?.throwIfAborted();
+        await this.executor.rm(releasePath);
+        await this.executor.mkdir(parentPath(releasePath));
+        // -n so a pre-existing symlink is replaced rather than followed into
+        // (which would nest shared/storage/storage on the second deploy).
+        await this.executor.exec(`ln -sfn ${sq(sharedPath)} ${sq(releasePath)}`);
+        log?.({
+          timestamp: new Date().toISOString(),
+          message: `Persistent path ${relative} → ${sharedPath}\n`,
+          level: "info",
+        });
+      } catch (err) {
+        signal?.throwIfAborted();
+        if (strict) throw new Error(`Could not persist ${relative}: ${safeErrorMessage(err)}`);
+        log?.({
+          timestamp: new Date().toISOString(),
+          message: `Could not persist ${relative}: ${safeErrorMessage(err)}\n`,
+          level: "warn",
+        });
+      }
+    }
+  }
+
+  private async promoteBuildArtifact(
+    artifactPath: string,
+    deploymentId: string,
+    previousDeploymentId?: string,
+  ): Promise<string> {
+    const releaseDir = this.releaseDir(deploymentId);
+    if (artifactPath === releaseDir) return releaseDir;
+
+    /**
+     * Whether the source is ours to destroy.
+     *
+     * This function was written for `.builds/<session>` staging dirs, which are
+     * disposable — so it `rm`s the source after the rsync and `mv`s it outright in
+     * the fallback. But a static ROLLBACK hands back ANOTHER DEPLOYMENT'S retained
+     * release directory as the artifact (restore-plan's `handoverStaticDir` →
+     * `reuseRetainedArtifact` → `deployStatic`), and the only guard here was
+     * `artifactPath === releaseDir`, which never matches because the release id is
+     * the NEW deployment's.
+     *
+     * So rolling back a static site DELETED the release it rolled back to. The
+     * content survived (the new release hard-links it), but the old row went on
+     * advertising `artifact_retained_at` — and `pinned`, which retention purge
+     * deliberately exempts — while a second rollback to it needed a full clone and
+     * rebuild, or was impossible for a release with no commit (upload / localPath).
+     * The same path fires on a scoped compose deploy that carries an untargeted
+     * static sub-app forward.
+     */
+    const consumeSource = !this.isRetainedArtifact(artifactPath);
+
+    await ensureOwnedDir(this.executor, `${this.workDir}/releases`);
+    await this.executor.rm(releaseDir);
+
+    // Capistrano-style hard-link dedup: when we know the previous
+    // release exists, stage the new one with `rsync --link-dest`. Files
+    // byte-identical to the previous release share inodes (zero extra
+    // disk); changed files get a fresh copy. For Node projects this is
+    // a massive win — `node_modules` typically changes very little
+    // between deploys, so 5 retained releases cost ~1× node_modules
+    // on disk instead of 5×.
+    //
+    // Safety: rsync's default behavior on a change is replace-by-rename
+    // (write `.tmp`, then atomic rename). That gives the changed file a
+    // NEW inode — the hard-link to the previous release is broken, so
+    // the old release stays bit-for-bit identical to what it was. We
+    // pass --delete so files removed in the new build vanish from the
+    // new release (but stay in the old, again because of the inode
+    // split). Net effect: each release is a self-contained snapshot.
+    const previousReleaseDir = previousDeploymentId
+      ? this.releaseDir(previousDeploymentId)
+      : undefined;
+    // Release staging is the deploy COMMIT — journal it exactly-once so a
+    // mid-copy SSH drop re-attaches and harvests instead of re-running (and,
+    // for the non-idempotent `mv`, never double-applies). rsync and the mv
+    // fallback use distinct opIds so the fallback can't collide with a
+    // partially-recorded rsync op.
+    if (previousReleaseDir && (await this.executor.exists(previousReleaseDir))) {
+      try {
+        await execReliable(
+          this.executor,
+          `deploy:${deploymentId}:promote-rsync`,
+          `rsync -a --delete --link-dest=${sq(previousReleaseDir)} ${sq(artifactPath)}/ ${sq(releaseDir)}/`,
+        );
+        if (consumeSource) await this.executor.rm(artifactPath).catch(() => {});
+        return releaseDir;
+      } catch {
+        // rsync missing or failed (older minimal images) — fall back to
+        // plain move below. We log nothing because either the move
+        // succeeds (no user impact) or the move fails and the outer
+        // deploy() reports it.
+        await this.executor.rm(releaseDir).catch(() => {});
+      }
+    }
+
+    if (!consumeSource) {
+      // A COPY, not a move: `mv` would rename another deployment's retained release
+      // away, which is the same destruction the rsync branch avoids above. Distinct
+      // opId so execReliable's journal can't confuse it with the mv variant.
+      await execReliable(
+        this.executor,
+        `deploy:${deploymentId}:promote-copy`,
+        `mkdir -p ${sq(releaseDir)} && cp -a ${sq(artifactPath)}/. ${sq(releaseDir)}/`,
+      );
+      return releaseDir;
+    }
+
+    await execReliable(
+      this.executor,
+      `deploy:${deploymentId}:promote-mv`,
+      `mv ${sq(artifactPath)} ${sq(releaseDir)}`,
+    );
+    return releaseDir;
+  }
+
+  // ── File transfer ──────────────────────────────────────────────────────
+
+  /**
+   * Transfer files from a local path on the API server into the build/deploy dir.
+   *
+   * Delegates entirely to the executor - LocalExecutor does cp,
+   * SshExecutor does tar+pipe. No branching here.
+   */
+  async transferFiles(
+    localPath: string,
+    remotePath: string,
+    logger: BuildLogger,
+  ): Promise<void> {
+    // The executor packs the source into a single archive and uploads that one
+    // file (ssh2 SFTP, or a cat stream over the OpenSSH ControlMaster), then
+    // verifies + extracts it on the target. No rsync: it delta-syncs a tree
+    // against an existing copy, which buys nothing for one fresh archive.
+    await transferLocalDirectory(
+      localPath,
+      {
+        kind: "executor",
+        executor: this.executor,
+        path: remotePath,
+      },
+      logger,
+    );
+  }
+
+  // ── Build lifecycle ────────────────────────────────────────────────────
+
+  async build(config: BuildConfig, logger?: BuildLogger): Promise<BuildResult> {
+    const log = logger ?? new BuildLogger();
+
+    // "local" = build on the API host, then transfer output to the target.
+    // "server" (default) = build directly on the target via the executor.
+    // When the executor is already local, both modes are equivalent.
+    const buildLocally =
+      config.buildStrategy === "local" &&
+      !(this.executor instanceof LocalExecutor);
+
+    const abort = new AbortController();
+    this.activeBuilds.set(config.sessionId, abort);
+
+    try {
+      if (buildLocally) {
+        return await this.buildLocally(config, log, abort);
+      }
+      return await this.buildOnTarget(config, log, abort);
+    } finally {
+      this.activeBuilds.delete(config.sessionId);
+    }
+  }
+
+  /** Build on the API host, then transfer output to the target server. */
+  private async buildLocally(
+    config: BuildConfig,
+    log: BuildLogger,
+    abort: AbortController,
+  ): Promise<BuildResult> {
+    log.log("Build strategy: local (build on API host, transfer to server)\n");
+    const remoteDir = this.buildDir(config.sessionId);
+
+    const stackDef: StackDefinition | undefined = STACKS[config.stack as StackId];
+    // Set by transferOutput when a Next.js standalone bundle is detected — the
+    // build then dictates the start command (`node server.js`), overriding the
+    // snapshot's `next start`. Surfaced on the BuildResult below.
+    let standaloneStartCommand: string | undefined;
+
+    let result: Awaited<ReturnType<typeof runLocalBuild>>;
+    try {
+      result = await runLocalBuild({
+        config,
+        logger: log,
+        abort: abort.signal,
+        preflight: async (cfg, plog, localExec) => {
+          await this.ensureToolchain(localExec, cfg.stack, plog);
+          plog.log("Checking runtime tools on target server...\n");
+          await this.ensureToolchain(this.executor, cfg.stack, plog);
+          if (this.systemManager) {
+            plog.log("Ensuring rsync is installed on target server...\n");
+            await this.systemManager.ensureComponents(["rsync"], (entry) => plog.callback(entry));
+          }
+        },
+        transferOutput: async (buildDir) => {
+          await this.executor.rm(remoteDir);
+          await this.executor.mkdir(remoteDir);
+
+          // Self-contained build output (detect-only): if this stack's build
+          // emitted a wholesale-shippable bundle (e.g. Next's `output:'standalone'`),
+          // ship it as-is — traced node_modules included — and skip the on-target
+          // install. Absent → falls through to host mode.
+          const selfContained = await prepareStackOutput(
+            config.stack,
+            resolveProjectDir(buildDir, config.rootDirectory),
+          );
+          if (selfContained) {
+            log.log("Detected self-contained build output — shipping the bundle (no install on target).\n");
+            await transferLocalDirectory(
+              selfContained.bundleDir,
+              { kind: "executor", executor: this.executor, path: remoteDir },
+              log,
+              { excludes: [] }, // ship everything, incl. traced node_modules
+            );
+            standaloneStartCommand = selfContained.startCommand;
+            return;
+          }
+
+          // Default ("auto") mode - rsync over system `ssh` first, tar
+          // through ssh2 only as fallback. See transferFiles above for
+          // the full rationale (system ssh ≫ Node ssh2 on the wire).
+          if (stackDef?.productionPaths?.length) {
+            // Compiled stacks (Go, Rust, .NET, etc.) - transfer only production artifacts
+            log.log(`Transferring production paths: ${stackDef.productionPaths.join(", ")}\n`);
+            await transferLocalDirectory(
+              buildDir,
+              { kind: "executor", executor: this.executor, path: remoteDir },
+              log,
+              { includes: [...stackDef.productionPaths] },
+            );
+          } else {
+            // Runtime stacks (JS/TS, Python, …): ship the tracked source PLUS
+            // the build output, drop deps/caches. The build dir is a git clone,
+            // so packing uses git-truth — which omits the (gitignored) build
+            // output — hence `alsoInclude: [outputDirectory]` re-adds it there.
+            // `excludes` covers the no-git fallback (local-path/upload sources),
+            // where buildOutputTransferExcludes keeps the output by name.
+            await transferLocalDirectory(
+              buildDir,
+              { kind: "executor", executor: this.executor, path: remoteDir },
+              log,
+              {
+                excludes: buildOutputTransferExcludes(stackDef),
+                alsoInclude: stackDef?.outputDirectory ? [stackDef.outputDirectory] : undefined,
+              },
+            );
+          }
+
+          // Install production dependencies on target if needed
+          const installCmd = config.installCommand?.trim();
+          if (installCmd) {
+            // Ensure the package manager exists before install (corepack for pnpm/yarn).
+            const pmEnsure = packageManagerEnsureCommand(config.packageManager);
+            const fullInstall = pmEnsure ? `${pmEnsure} && ${installCmd}` : installCmd;
+            log.log("Installing production dependencies on target...\n");
+            const { code } = await this.executor.streamExec(
+              `cd ${sq(remoteDir)} && ${fullInstall}`,
+              log.callback,
+            );
+            if (code !== 0) {
+              throw new Error("Failed to install production dependencies on target");
+            }
+            log.log("Production dependencies installed.\n");
+          }
+        },
+      });
+    } catch (err) {
+      const msg = safeErrorMessage(err);
+      log.log(`Failed to transfer local build output: ${msg}`, "error");
+      return {
+        sessionId: config.sessionId,
+        status: "failed",
+        imageRef: remoteDir,
+        errorMessage: `Failed to transfer build output: ${msg}`,
+      };
+    }
+
+    return {
+      sessionId: config.sessionId,
+      status: result.status,
+      imageRef: remoteDir,
+      durationMs: result.durationMs,
+      errorMessage: result.errorMessage,
+      startCommand: standaloneStartCommand,
+    };
+  }
+
+  /** Build directly on the target machine via the executor. */
+  private async buildOnTarget(
+    config: BuildConfig,
+    log: BuildLogger,
+    abort: AbortController,
+  ): Promise<BuildResult> {
+    log.log("Build strategy: server (build on target)\n");
+    const dir = this.buildDir(config.sessionId);
+    await this.executor.rm(dir);
+    await this.executor.mkdir(dir);
+
+    const buildEnv: BuildEnvironment = {
+      projectDir: dir,
+      exec: async (command, logCb) => {
+        if (abort.signal.aborted) throw new BuildCancelledError();
+        const effectiveCommand = this.executor instanceof LocalExecutor
+          ? wrapLocalBuildCommand(command)
+          : command;
+        const { code, output } = await this.executor.streamExec(effectiveCommand, logCb);
+        if (abort.signal.aborted) throw new BuildCancelledError();
+        if (code !== 0) {
+          const hint = detectBuildKillHint(output);
+          throw new Error(
+            `Command failed with exit code ${code}${hint ? ` - ${hint}` : ""}`,
+          );
+        }
+      },
+      preflight: async (cfg, plog) => {
+        if (abort.signal.aborted) throw new BuildCancelledError();
+        await this.ensureToolchain(this.executor, cfg.stack, plog);
+        if (cfg.localPath) {
+          await this.transferFiles(cfg.localPath, dir, plog);
+        }
+      },
+      // Out-of-band secret write (SSH key + known_hosts) — goes through the
+      // executor's file channel, never the streamed `exec`, so key bytes never
+      // reach the build log. Works for both local and SSH executors.
+      writeSecretFile: (p, content) => this.executor.writeFile(p, content),
+    };
+
+    const result = await runBuildPipeline(buildEnv, config, log);
+    return {
+      sessionId: config.sessionId,
+      status: result.status,
+      imageRef: dir,
+      durationMs: result.durationMs,
+      errorMessage: result.errorMessage,
+    };
+  }
+
+  /**
+   * Check that the target executor has the required toolchain for a stack,
+   * and install any missing or outdated tools.
+   */
+  private async ensureToolchain(
+    executor: CommandExecutor,
+    stack: string,
+    plog: BuildLogger,
+  ): Promise<void> {
+    const toolcheck = await checkToolchainForStack(executor, stack);
+    if (toolcheck.ready) return;
+
+    const requiredTools = toolcheck.tools.filter((tool) => !tool.healthy);
+    // Make the one-time nature explicit: this only installs on a fresh server;
+    // subsequent deploys find the tools present and skip straight past prepare.
+    plog.log("Installing build tools (one-time server setup)…\n");
+    plog.log(`${requiredTools.map((tool) => tool.message).join("\n")}\n`);
+
+    const results = await installTools(
+      executor,
+      requiredTools.map((tool) => tool.name),
+      plog.callback,
+      Object.fromEntries(
+        requiredTools
+          .filter((tool) => tool.requiredVersion)
+          .map((tool) => [tool.name, tool.requiredVersion!]),
+      ),
+    );
+    const failed = results.filter((r) => !r.success);
+    if (failed.length > 0) {
+      throw new Error(
+        `Failed to install required tools: ${failed.map((f) => `${f.tool} (${f.error})`).join(", ")}`,
+      );
+    }
+  }
+
+  async cancelBuild(sessionId: string): Promise<void> {
+    const abort = this.activeBuilds.get(sessionId);
+    if (abort) {
+      abort.abort();
+      this.activeBuilds.delete(sessionId);
+    }
+    // Aborting only gates the API BETWEEN commands — the in-flight remote command
+    // (git/npm/vite) keeps running on the target until killed. Shared with the
+    // docker runtime so both remote-build cancels kill the same way.
+    await killProcessesUnderDir(this.executor, this.buildDir(sessionId));
+  }
+
+  async getBuildLogs(sessionId: string): Promise<LogEntry[]> {
+    void sessionId;
+    return [];
+  }
+
+  // ── Deploy lifecycle ───────────────────────────────────────────────────
+
+  async deploy(config: DeployConfig, _onLog?: LogCallback): Promise<DeploymentResult> {
+    // Adopt mode: attach to an already-running, externally-supervised process
+    // (e.g. the Openship control plane launched by `openship up`). We never
+    // promote a build artifact or start a supervisor unit — that would bind a
+    // second process to the port. We only health-probe and return a running
+    // result so the routing/SSL pipeline can own this deployment. containerId is
+    // set to the deploymentId (same convention as a real bare deploy) so the
+    // route-registration containerId guard is satisfied.
+    if (config.adopt) {
+      const occupant = await probeListeningPort(this.executor, config.port);
+      _onLog?.({
+        timestamp: new Date().toISOString(),
+        level: occupant ? "info" : "warn",
+        message: occupant
+          ? `[adopt] attached to process on port ${config.port}: ${occupant.command}\n`
+          : `[adopt] no process is listening on port ${config.port} yet — routing will attach when it comes up\n`,
+      });
+      return {
+        deploymentId: config.deploymentId,
+        containerId: config.deploymentId,
+        status: "running",
+      };
+    }
+
+    const stagedDir = config.imageRef ?? this.projectDir(config.projectId);
+    const workDir = config.imageRef
+      ? await this.promoteBuildArtifact(
+          stagedDir,
+          config.deploymentId,
+          config.previousDeploymentId,
+        )
+      : stagedDir;
+
+    // Before the process starts, not after: the app may open a file under one of
+    // these paths on boot, and it must already be the shared one.
+    await this.linkPersistentPaths(workDir, config.projectId, config.volumes, _onLog);
+
+    const sv = await this.supervisor();
+
+    // A project PATH is worse here than on docker, not better: systemd emits it as
+    // `Environment="PATH=…"` (no `$PATH` expansion, so it REPLACES) and nohup emits
+    // `export PATH=…;` ahead of the start command, making it the base our prelude
+    // below prepends to. The dependency binary would still resolve, but the
+    // interpreter behind its shebang (`#!/usr/bin/env node`) would not once
+    // /usr/bin is gone.
+    const { env, dropped } = bareProcessEnv(config);
+    if (dropped.length > 0) {
+      _onLog?.({
+        timestamp: new Date().toISOString(),
+        level: "warn",
+        message: droppedRuntimeEnvMessage(dropped),
+      });
+    }
+
+    // `next start` / `gatsby serve` / `remix-serve` name a DEPENDENCY binary, and
+    // the supervisor hands the command to a bare `sh -lc` — nothing prepends
+    // `node_modules/.bin` the way `npm run` would, so the binary is unresolvable
+    // even though it sits right there in workDir. Exactly openship#623, one
+    // surface later: that fix reached the two BUILD paths and no start path
+    // outside docker. Reachable because the registry start defaults for nextjs /
+    // remix / gatsby are bare binaries and the default `buildOnTarget` strategy
+    // never applies the standalone rewrite that would have dodged it.
+    //
+    // A shell prelude, NOT a supervisor env var: systemd `Environment=` does no
+    // `$PATH` expansion, so setting PATH there replaces the system PATH instead
+    // of extending it. Both supervisors wrap in `sh -lc`, so one prelude covers
+    // systemd's ExecStart and nohup's shell body.
+    const startBinPath = nodeBinPathExport(config.packageManager, [workDir]);
+    const resolvedStart = config.startCommand || "npm start";
+
+    try {
+      await sv.deploy({
+        deploymentId: config.deploymentId,
+        projectId: config.projectId,
+        workDir,
+        startCommand: startBinPath ? `${startBinPath} && ${resolvedStart}` : resolvedStart,
+        port: config.port,
+        env,
+      });
+    } catch (err) {
+      if (workDir !== stagedDir) {
+        await sv.destroy(config.deploymentId).catch(() => {});
+        await this.executor.rm(workDir).catch(() => {});
+      }
+      throw err;
+    }
+
+    return {
+      deploymentId: config.deploymentId,
+      containerId: config.deploymentId,
+      status: "running",
+    };
+  }
+
+  /**
+   * Run one release command in the STAGED artifact directory, before it is
+   * promoted to a release and before the supervisor starts anything.
+   *
+   * That directory is the exact tree `deploy` promotes seconds later, so the
+   * command sees the code it is migrating for. It runs through a login shell
+   * (`sh -lc`, via the same wrap the build steps use) with the deploy's env
+   * exported — the closest match available to what `ExecStart=/bin/sh -lc` gives
+   * the start command.
+   *
+   * Persistent paths are attached before execution, using the same helper as
+   * deploy. A storage failure must stop the command before it migrates a copy
+   * that would be discarded when the real shared path is attached later.
+   */
+  async runReleaseCommand(
+    config: DeployConfig,
+    command: string,
+    onLog: LogCallback,
+    opts?: ReleaseCommandOptions,
+  ): Promise<void> {
+    const artifactPath = config.imageRef;
+    if (!artifactPath) throw new Error("Release commands require a staged build artifact");
+    // A forward deploy may reuse the active release for an environment refresh.
+    // Never run against its live files (or hard-link them into the scratch copy).
+    const temporaryCopy = this.isRetainedArtifact(artifactPath);
+    const workDir = temporaryCopy
+      ? this.buildDir(`${config.buildSessionId}-release-${randomUUID()}`)
+      : artifactPath;
+
+    // The start command's env, from the same function deploy uses. Logged here
+    // too: this phase runs, and can fail, before deploy ever gets to say it.
+    // Non-identifier keys are dropped rather than breaking the `export` prefix,
+    // matching the build pipeline's env handling.
+    const { env, dropped } = bareProcessEnv(config);
+    if (dropped.length > 0) {
+      onLog({
+        timestamp: new Date().toISOString(),
+        level: "warn",
+        message: droppedRuntimeEnvMessage(dropped),
+      });
+    }
+    const envPrefix = Object.entries(env)
+      .filter(([k]) => /^[A-Za-z_][A-Za-z0-9_]*$/.test(k))
+      .map(([k, v]) => `export ${k}=${sq(v)}`)
+      .join(" && ");
+    // The same dependency-binary resolution the start command gets (see deploy):
+    // `prisma migrate deploy` names a node_modules/.bin binary exactly the way
+    // `next start` does, and nothing else puts that directory on PATH here.
+    const binPath = nodeBinPathExport(config.packageManager, [workDir]);
+    const full =
+      `${envPrefix ? `${envPrefix} && ` : ""}cd ${sq(workDir)} && ` +
+      `${binPath ? `${binPath} && ` : ""}${command}`;
+    // Login-shell wrap for a LOCAL target only — same rule buildOnTarget applies,
+    // and the reason a version-managed toolchain (nvm, rbenv) is on PATH at all.
+    const effective = this.executor instanceof LocalExecutor ? wrapLocalBuildCommand(full) : full;
+    const deadline = releaseCommandDeadline(opts);
+    let execution: Promise<{ code: number; output: string }> | undefined;
+    const execute = (shellCommand: string) => deadline.wait(() => {
+      execution = this.executor instanceof LocalExecutor
+        ? this.executor.streamExec(shellCommand, onLog, { signal: deadline.signal, killProcessTree: true })
+        : this.executor.streamExec(shellCommand, onLog, { signal: deadline.signal });
+      return execution;
+    });
+
+    try {
+      deadline.signal.throwIfAborted();
+      // Scope remote filesystem work to the same deadline as execution, and
+      // await preparation to settle before acknowledging cancellation.
+      const prepare = async () => {
+        if (temporaryCopy) {
+          await this.executor.mkdir(workDir);
+          const copy = await execute(`cd ${sq(workDir)} && cp -a ${sq(artifactPath)}/. .`);
+          if (copy.code !== 0) throw new Error(`Could not stage retained release: ${copy.output.trim().slice(-1000)}`);
+        }
+        await this.linkPersistentPaths(
+          workDir, config.projectId, config.volumes, onLog, true, deadline.signal,
+        );
+      };
+      if (this.executor.runWithAbortSignal) await this.executor.runWithAbortSignal(deadline.signal, prepare);
+      else await prepare();
+      const result = await execute(effective);
+      deadline.signal.throwIfAborted();
+      if (result.code !== 0) {
+        const tail = result.output.trim().slice(-1000);
+        throw new Error(`Release command failed with exit code ${result.code}${tail ? `\n${tail}` : ""}`);
+      }
+    } finally {
+      deadline.dispose();
+      if (deadline.signal.aborted && execution) {
+        const cleanup: Promise<unknown> = this.executor instanceof LocalExecutor
+          ? execution
+          : Promise.all([killProcessesUnderDir(this.executor, workDir), execution]);
+        await withTimeout(cleanup, 5_000,
+          "Release command cleanup could not be confirmed").catch(error => onLog({
+          timestamp: new Date().toISOString(), level: "warn", message: `${safeErrorMessage(error)}\n`,
+        }));
+      }
+      if (temporaryCopy) {
+        await withTimeout(removeManagedArtifact(this.executor, workDir, this.workDir), 5_000,
+          "Release scratch directory cleanup could not be confirmed").catch(error => onLog({
+          timestamp: new Date().toISOString(), level: "warn", message: `${safeErrorMessage(error)}\n`,
+        }));
+      }
+    }
+  }
+
+  async deployStatic(config: DeployConfig & { outputDirectory: string }): Promise<DeploymentResult> {
+    const workDir = await this.promoteStaticRelease({
+      artifactPath: config.imageRef ?? this.projectDir(config.projectId),
+      releaseId: config.deploymentId,
+      previousReleaseId: config.previousDeploymentId,
+      outputDirectory: config.outputDirectory,
+      promote: Boolean(config.imageRef),
+    });
+    return {
+      deploymentId: config.deploymentId,
+      containerId: workDir,
+      status: "running",
+    };
+  }
+
+  /**
+   * Promote an extracted static build into a stable release directory and PROVE it
+   * can serve, returning the release dir.
+   *
+   * Split out of `deployStatic` so the compose/monorepo static path reuses the
+   * identical promote + validation instead of registering a vhost straight at the
+   * `.builds/<session>` staging dir. Two things came from that shortcut: the
+   * public doc-root of a compose static sub-app was a per-build-session scratch
+   * directory (nothing owned its lifetime, so superseded copies accumulated and
+   * any sweep of `.builds` would take the live site down), and it skipped the only
+   * HARD deploy-time output gate we have — so an extract that produced nothing
+   * deployed green and 404'd.
+   *
+   * `releaseId` is the release's identity, not necessarily a deployment id: the
+   * compose path passes `<deploymentId>-<serviceId>` so each static sub-app owns
+   * its own release dir under one deployment.
+   */
+  async promoteStaticRelease(opts: {
+    /** Where the build output currently sits (a `.builds/…` staging dir). */
+    artifactPath: string;
+    /** Names the release directory: `<workDir>/releases/<releaseId>`. */
+    releaseId: string;
+    /** Enables rsync hard-link dedup against the previous release. */
+    previousReleaseId?: string;
+    /** Doc-root offset inside the artifact. "" when the extract already landed
+     *  the doc-root's contents directly (every Docker-sandbox static build). */
+    outputDirectory: string;
+    /** False = the artifact IS already the release dir; skip the promote. */
+    promote?: boolean;
+  }): Promise<string> {
+    const stagedDir = opts.artifactPath;
+    const workDir =
+      opts.promote === false
+        ? stagedDir
+        : await this.promoteBuildArtifact(stagedDir, opts.releaseId, opts.previousReleaseId);
+    const staticRoot = resolveStaticOutputPath(workDir, opts.outputDirectory);
+
+    const abort = async (message: string): Promise<never> => {
+      if (workDir !== stagedDir) {
+        await this.executor.rm(workDir).catch(() => {});
+      }
+      throw new Error(message);
+    };
+
+    if (!(await this.executor.exists(staticRoot))) {
+      return abort(missingOutputDirectoryMessage(opts.outputDirectory));
+    }
+
+    // When the doc root IS the release root — outputDirectory "." or "", which is
+    // what the plain `static` stack detects to — the tree we are about to serve is
+    // the promoted SOURCE tree, and for a bare build that is the git clone itself.
+    // Serving it publishes `.git`: full source history at /.git/objects, and for a
+    // private repo cloned in token mode a `.git/config` containing
+    // `https://x-access-token:<TOKEN>@github.com/...` — a live installation token
+    // readable over plain HTTP.
+    //
+    // The Docker sandbox path already guards this and says why
+    // (`pruneBuildFilesFromDocRoot` / DOC_ROOT_EXCLUDED), but that prune lives inside
+    // DockerRuntime, so the bare twin never had one. Same predicate, applied at the
+    // choke point BOTH static paths pass through, so they cannot drift apart again.
+    // A no-op for the sandbox path, which arrives already pruned.
+    if (staticRoot === workDir) {
+      const undeleted = await this.pruneBuildFilesFromDocRoot(staticRoot);
+      if (undeleted.length > 0) {
+        return abort(
+          `Refusing to publish ${staticRoot}: could not remove ${undeleted.join(", ")} from the ` +
+            `document root. Serving them would expose the repository (and, for a private repo, ` +
+            `the access token in .git/config) at the site's public URL.`,
+        );
+      }
+    }
+
+    // Present but EMPTY is unambiguously broken — no path under an empty root can
+    // serve anything, so unlike a missing index.html (which is legitimate when the
+    // site is routed only at a subpath) this needs no knowledge of the routes to
+    // call. Catches the common "build wrote nothing" / "wrong output directory"
+    // case at deploy time, where the error can still name the cause, instead of
+    // deploying green and 404ing. Index presence is left to the route-aware
+    // post-deploy audit, which is advisory by design.
+    if (await this.isEmptyDir(staticRoot)) {
+      return abort(
+        `The output directory "${opts.outputDirectory || "."}" is empty — the build produced ` +
+          `no files to serve, so every request would 404. Check the build command and the ` +
+          `Output Directory setting.`,
+      );
+    }
+
+    return workDir;
+  }
+
+  /**
+   * Remove top-level build inputs from a doc root, returning the names it could NOT
+   * remove (empty on success, and on "there was nothing to remove").
+   *
+   * Reuses `isExcludedDocRootEntry` rather than re-listing the names, because the
+   * Docker sandbox already owns that list and two copies of "what must not be
+   * served" is precisely how the bare path came to serve `.git`.
+   *
+   * An unreadable listing returns empty — a probe that cannot read must not fail a
+   * deploy — but a listed entry that survives its `rm` is reported, because the
+   * caller must refuse to publish rather than expose a token.
+   */
+  private async pruneBuildFilesFromDocRoot(root: string): Promise<string[]> {
+    const listed = await this.executor
+      .exec(`ls -A ${sq(root)} 2>/dev/null; true`)
+      .catch(() => null);
+    if (listed === null) return [];
+    const doomed = listed
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .filter(isExcludedDocRootEntry);
+    if (doomed.length === 0) return [];
+    await this.executor
+      .exec(`rm -rf ${doomed.map((n) => sq(`${root}/${n}`)).join(" ")}`)
+      .catch(() => {});
+    // Verify rather than trust the exit status: this is the difference between a
+    // pruned doc root and a published access token.
+    const survivors: string[] = [];
+    for (const name of doomed) {
+      if (await this.executor.exists(`${root}/${name}`)) survivors.push(name);
+    }
+    return survivors;
+  }
+
+  /**
+   * Is this an existing directory with no entries? Any inconclusive answer (not a
+   * directory, unreadable, exec failed) returns false — a probe that can't read
+   * must never be the thing that fails a deploy.
+   */
+  private async isEmptyDir(path: string): Promise<boolean> {
+    // Explicit tokens + forced exit 0, same discipline as probeStaticOutput: absence
+    // is an ANSWER here, not a command failure. A plain file (legitimately its own
+    // index) prints no DIR and is therefore never reported empty.
+    const p = sq(path);
+    const out = await this.executor
+      .exec(`if [ -d ${p} ]; then echo DIR; ls -A ${p} 2>/dev/null | head -1; fi; true`)
+      .catch(() => null);
+    if (out === null) return false; // inconclusive → never fail the deploy
+    const lines = out.split("\n").map((l) => l.trim()).filter(Boolean);
+    return lines.length === 1 && lines[0] === "DIR";
+  }
+
+  async stop(containerId: string): Promise<void> {
+    const sv = await this.supervisor();
+    await sv.stop(containerId);
+  }
+
+  async start(containerId: string): Promise<void> {
+    const sv = await this.supervisor();
+    if (await sv.isRunning(containerId)) return;
+    await sv.start(containerId);
+  }
+
+  async restart(containerId: string): Promise<void> {
+    const sv = await this.supervisor();
+    await sv.restart(containerId);
+  }
+
+  async destroy(containerId: string): Promise<void> {
+    // A path-shaped id is a release/build DIRECTORY, not a supervisor unit — the
+    // release dir IS the artifact for this runtime. Tightened from `includes("/")`
+    // to a leading slash: every ref this runtime produces is absolute
+    // (`${workDir}/releases/…`, `${workDir}/.builds/…`), while `includes("/")`
+    // also matched a supervisor unit name that happened to carry one.
+    //
+    // `removeManagedArtifact` (not `executor.rm`) because `rm` swallows every
+    // error on both executors by design — which made this operation incapable of
+    // reporting a failure, so a teardown blocked by a root-owned tree looked
+    // identical to a clean one.
+    if (isArtifactPathRef(containerId)) {
+      await removeManagedArtifact(this.executor, containerId, this.workDir);
+      return;
+    }
+
+    const sv = await this.supervisor();
+    await sv.destroy(containerId);
+  }
+
+  // ── Rollback primitives ──────────────────────────────────────────────
+  //
+  // Bare semantics:
+  //   The release dir at workDir/releases/<deploymentId> IS the artifact.
+  //   The supervisor unit is the activation. Rollback flips which
+  //   release the supervisor unit serves by stop/start sequencing.
+  //
+  //   makeActive — stop `from`'s supervisor unit, then start `to`'s.
+  //     The release dirs are stable on disk; we're just changing which
+  //     unit is running. Matches the user's "mv path + reload" mental
+  //     model — the path doesn't physically move, but the active one
+  //     swaps via the supervisor.
+  //   archive   — stop the supervisor unit. Release dir stays on disk
+  //     (the actual rollback-restorable artifact).
+  //   purge     — destroy the supervisor unit + rm -rf the release dir.
+
+  async canRestoreUnit(deployment: DeploymentRef): Promise<boolean> {
+    if (!deployment.containerId || isArtifactPathRef(deployment.containerId)) return false;
+    const sv = await this.supervisor();
+    return await sv.canStart(deployment.containerId) && !!await this.retainedReleaseArtifact(deployment.id);
+  }
+
+  async makeActive(input: RollbackInput): Promise<MakeActiveResult> {
+    // Nohup has no saved restart configuration; a removed systemd unit cannot
+    // restart either. Refuse before stopping the currently serving process.
+    if (!await this.canRestoreUnit(input.to)) {
+      throw new Error(`Cannot restart deployment ${input.to.id} from its retained unit. Redeploy it from source.`);
+    }
+    if (input.from?.containerId) {
+      try {
+        await this.stop(input.from.containerId);
+      } catch {
+        // already stopped / gone — ignore
+      }
+    }
+    await this.start(input.to.containerId!);
+    return { containerId: input.to.containerId! };
+  }
+
+  async archive(deployment: DeploymentRef): Promise<void> {
+    // Stop the supervisor unit. Release dir is intentionally NOT
+    // removed — it's the artifact for future makeActive.
+    if (!deployment.containerId) return;
+    try {
+      await this.stop(deployment.containerId);
+    } catch {
+      // already stopped — ignore
+    }
+  }
+
+  async purge(deployment: DeploymentRef): Promise<void> {
+    // Destroy the supervisor unit, then drop the release directory (derived from
+    // deployment.id by the same `releaseDir` helper deploy() used).
+    //
+    // Neither failure is swallowed, and the removal goes through
+    // `removeManagedArtifact` rather than `executor.rm`: the caller reads a
+    // resolved purge as "the artifact is gone" and clears `artifact_retained_at`
+    // on the row, so a catch-all here is how a release still on disk gets
+    // recorded as reclaimed. Both verbs already treat already-absent as SUCCESS
+    // (`systemctl disable` runs under `|| true`, `rm -rf` exits 0 on a missing
+    // path), so nothing that reaches here is an idempotent replay — it is a
+    // root-owned tree, a read-only mount, or a host channel that never answered.
+    //
+    // Both are attempted even when the first fails: a supervisor we cannot reach
+    // must not keep the disk from being reclaimed.
+    const failures: unknown[] = [];
+    if (deployment.containerId) {
+      await this.destroy(deployment.containerId).catch((err: unknown) => failures.push(err));
+    }
+    // For a static release the two are the SAME directory — `containerId` is the
+    // doc-root — and `destroy` above already removed it, and already reported its
+    // failure.
+    const releaseDir = this.releaseDir(deployment.id);
+    if (releaseDir !== deployment.containerId) {
+      await removeManagedArtifact(this.executor, releaseDir, this.workDir).catch((err: unknown) =>
+        failures.push(err),
+      );
+    }
+    if (failures.length === 1) throw failures[0];
+    if (failures.length > 1) {
+      // Rethrowing the first would hide the other; a purge failure is read by a
+      // human out of a log line, so both reasons have to be in it.
+      throw new Error(
+        failures.map((err) => (err instanceof Error ? err.message : String(err))).join("; "),
+      );
+    }
+  }
+
+  // ── Observability ──────────────────────────────────────────────────────
+
+  async getContainerInfo(containerId: string): Promise<ContainerInfo> {
+    const sv = await this.supervisor();
+    const running = await sv.isRunning(containerId);
+
+    return {
+      containerId,
+      status: running ? "running" : "stopped",
+    };
+  }
+
+  async getRuntimeLogs(containerId: string, tail?: number): Promise<LogEntry[]> {
+    const sv = await this.supervisor();
+    return sv.getLogs(containerId, tail);
+  }
+
+  async streamRuntimeLogs(
+    containerId: string,
+    onLog: LogCallback,
+    opts?: RuntimeLogStreamOptions,
+  ): Promise<() => void> {
+    const sv = await this.supervisor();
+    return sv.streamLogs(containerId, onLog, opts);
+  }
+
+  /**
+   * CPU / memory / disk-IO for the deployment's process.
+   *
+   * `containerId` is the DEPLOYMENT id here, not a docker container id — that's the
+   * bare runtime's convention throughout (it's what the supervisor keys units and
+   * PID files on).
+   *
+   * The supervisor owns the measurement because the identity differs: systemd has a
+   * unit and a cgroup, nohup has a PID file. Both land on the same probe.
+   */
+  async getUsage(containerId: string): Promise<ResourceUsage> {
+    const sv = await this.supervisor();
+    return sv.getUsage(containerId);
+  }
+
+  // ── Network ────────────────────────────────────────────────────────────
+
+  async getContainerIp(_containerId: string): Promise<string | null> {
+    // Bare processes run directly on the target host
+    return "127.0.0.1";
+  }
+}

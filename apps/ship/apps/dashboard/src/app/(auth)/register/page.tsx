@@ -1,0 +1,172 @@
+"use client";
+
+import { Icon as UiIcon } from "@repo/ui/icons";
+
+import { Suspense, useState } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { signUp } from "@/lib/auth-client";
+import { signUpNext } from "./signup-next";
+import { useToast } from "@/components/toast";
+import { useI18n } from "@/components/i18n-provider";
+import { AuthShell } from "@/components/auth-shell";
+import { OAuthButtons } from "@/components/oauth-buttons";
+import { useAuthContext } from "../providers";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { isNetworkError } from "@/lib/api";
+import { buildAuthPageHref, getPostAuthRedirect } from "@/lib/cloud-auth";
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={
+      <AuthShell>
+        <div className="flex justify-center py-8"><UiIcon name="spinner" className="size-6 animate-spin text-muted-foreground" /></div>
+      </AuthShell>
+    }>
+      <RegisterPageInner />
+    </Suspense>
+  );
+}
+
+function RegisterPageInner() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { toast } = useToast();
+  const { t } = useI18n();
+  const { authProviders } = useAuthContext();
+
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const postLoginUrl = getPostAuthRedirect(searchParams);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+
+    if (password.length < 8) {
+      toast("error", t.auth.errors.passwordMin);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const result = await signUp.email({
+        name,
+        email,
+        password,
+      });
+      const next = signUpNext(result, { email, postLoginUrl });
+      if (next.kind === "error") {
+        toast("error", next.message ?? t.auth.errors.createFailed);
+      } else if (next.kind === "verify") {
+        router.push(next.href);
+        return;
+      } else if (postLoginUrl) {
+        // Full navigation, not router.push: the post-login target may be outside
+        // this app (the cloud-authorize handoff), which the router cannot reach.
+        window.location.href = next.href;
+      } else {
+        router.push(next.href);
+      }
+    } catch (err) {
+      toast("error", isNetworkError(err)
+        ? t.auth.errors.serverUnreachable
+        : t.auth.errors.generic);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <AuthShell>
+      <div className="mb-6">
+        <h1 className="text-xl font-semibold tracking-tight text-foreground">
+          {t.auth.register.title}
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {t.auth.register.subtitle}
+        </p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-3">
+        <div className="space-y-1.5">
+          <Label htmlFor="reg-name">{t.auth.register.nameLabel}</Label>
+          <Input
+            id="reg-name"
+            type="text"
+            autoComplete="name"
+            placeholder={t.auth.register.namePlaceholder}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="reg-email">{t.auth.register.emailLabel}</Label>
+          <Input
+            id="reg-email"
+            type="email"
+            autoComplete="email"
+            placeholder={t.auth.register.emailPlaceholder}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="reg-password">{t.auth.register.passwordLabel}</Label>
+          <div className="relative">
+            <Input
+              id="reg-password"
+              type={showPassword ? "text" : "password"}
+              autoComplete="new-password"
+              placeholder={t.auth.register.passwordPlaceholder}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={8}
+              className="pe-10"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              tabIndex={-1}
+              className="absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+              aria-label={showPassword ? t.auth.hidePassword : t.auth.showPassword}
+            >
+              {showPassword ? <UiIcon name="eye-off" className="size-4" /> : <UiIcon name="eye" className="size-4" />}
+            </button>
+          </div>
+        </div>
+
+        <Button type="submit" disabled={loading} className="mt-1 w-full">
+          {loading && <UiIcon name="spinner" className="animate-spin" />}
+          {loading ? t.auth.register.submitting : t.auth.register.submit}
+        </Button>
+      </form>
+
+      {/* Mirrors the login page: render the providers the SERVER advertises as
+          configured, not a `!selfHosted` guess. A self-hosted operator who HAS
+          set GITHUB_/GOOGLE_ client creds gets working buttons; one who hasn't
+          gets nothing rendered, exactly as before. */}
+      <OAuthButtons providers={authProviders} callbackURL={postLoginUrl ?? "/"} />
+
+      <p className="mt-8 text-center text-sm text-muted-foreground">
+        {t.auth.register.hasAccount}{" "}
+        <Link
+          href={buildAuthPageHref("/login", searchParams)}
+          className="font-medium text-foreground transition-colors hover:underline"
+        >
+          {t.auth.register.signIn}
+        </Link>
+      </p>
+    </AuthShell>
+  );
+}

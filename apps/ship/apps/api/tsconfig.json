@@ -1,0 +1,20 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "lib": ["ES2022"],
+    "types": ["node"],
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    "outDir": "dist",
+    // App leaf, not a consumed library — no need to emit .d.ts. This also
+    // avoids declaration-emit "cannot be named" errors for the complex inferred
+    // type of the Better Auth `auth` instance (plugin option types like
+    // MCPOptions aren't publicly exported).
+    "declaration": false,
+    "declarationMap": false
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}

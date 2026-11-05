@@ -2,6 +2,41 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-11-05 - Forks: second review round, remaining hard-line findings closed (DR-0018, Refs #99)
+
+- FreeRoute: client emulation is off. The GLM Anthropic transport sends only honest headers. freebuff, cursor-api and muse-code answer `tls_fingerprint_stealth_disabled`, qoder answers `consumer_subscription_pooling_disabled`, and all four are hidden in the catalog. Command Code keeps only its API-key endpoint, the Cursor CLI build id is no longer scraped, `freeroute login antigravity` prints the named 501, the Client Identity and VibeProxy presets are gone, and `provider-nodes` refuse a vendor CLI header. The open-wa sidecar answers `consumer_session_relay_disabled` and the 9router sidecar is not started at boot.
+- FreeRoute: proxy logins, the BigQuery service account, the Telegram bot token and the Obsidian token are refused with 501 `keys_managed_by_openvault` (BigQuery and Telegram read the vault); credential-looking custom header values are refused and no longer echoed; the import scrub and `export-json` cover these stores. `server.env` is mode 0600, the CLI default port is 3020, a literal `CHANGEME` password is treated as unset, and the login page no longer shows a default password.
+- FreeRoute names: the renamed `X-FreeRoute-*` telemetry headers are sent with their `X-OmniRoute-*` twin and read under either name (they had disagreed); the OmniCopilot banner, the Kimi promo card, the Radar upstream defaults, the sponsor logo and the upstream tray icon are gone; `.env.example`, UI strings and third-party multipart markers say FreeRoute. `netie/names.test.mjs` and `netie/bootstrap.test.mjs` guard these.
+- FreeBuild: no default request to the upstream project. The app catalog is the bundled one (optional `FREEBUILD_CATALOG_URL` overlay), the Update Center has no release feed, `GET /api/billing/plans` answers 501 `hosted_cloud_disabled`, the GeoIP database, native-modules catalog and release dist are operator-supplied, free domains need `HOST_DOMAIN`, and default image names are `localhost/freebuild/freebuild-*`. The DNS ownership TXT record is `_freebuild-challenge` and the old name is still accepted. The webmail is rebranded to FreeBuild Mail.
+- FreeBuild secrets: a Cloudflare tunnel token is no longer stored (501 `keys_managed_by_openvault`). A fresh install generates a per-install secret in place of the public `BETTER_AUTH_SECRET` placeholder (mode 0600); values sealed under the placeholder still open through the database client, the platform cipher and the backup adapters. The platform cipher had missed the fallback, which would have made stored env vars and SSH credentials unreadable after an upgrade; a test now covers it. The compose file requires `BETTER_AUTH_SECRET`.
+- Corrected: the FreeBuild live test passes 36 steps, not 37 (the earlier count included the summary line). Open: the FreeBuild Docker images do not build yet.
+
+## 2026-11-05 - Forks: the three Security NO blockers closed (DR-0018, Refs #99)
+
+- FreeRoute no longer hands a provider's pooled key to a connection aimed at another host. `resolveProviderApiKey` releases a key by provider name only to an endpoint the provider registry lists for that provider; any other `providerSpecificData.baseUrl` gets no key and OpenVault is not asked. A key stored in OpenVault for an exact URL still serves that URL. With the check removed from the built server the live test fails and the foreign host receives the vault key on a model-sync request.
+- `REQUIRE_API_KEY` defaults to true, so anonymous `/v1` and invalid bearers get 401 unless an operator turns it off.
+- The hard-disable table matches the decoded, dot-resolved path (`/api/%6fauth/...`, `/api/tools/%61gent-bridge/...` and the like now answer their named 501), and an unreadable escape answers 400 `invalid_path_encoding`.
+- Both KeyVault clients refuse an `OPENVAULT_URL` that is not on this machine and treat a redirect as a failure. Provider limits and registered-key routes need the management scope.
+- SkillsMP, CLIProxyAPI, Qdrant and Notion keys are not stored in FreeRoute's database any more (501 `keys_managed_by_openvault`; SkillsMP and Notion read the vault; the scrub deletes older copies). The OpenCode free tier no longer gets a synthesized OpenCode client identity. `.env.example` no longer ships `INITIAL_PASSWORD=CHANGEME`.
+- `apps/ship/netie/e2e-openvault.mjs` prints `N/N steps passed`. STATUS, PARKING_LOT and DR-0018 say "provider key" where they said "key", name the stores that still keep other secrets, and carry the classifier's real counts.
+
+## 2026-10-30 - Forks: review findings closed, install without bun (DR-0018, Refs #99)
+
+- FreeRoute: the Dario and CLIProxyAPI sidecars and `/api/version-manager` answer 501 `consumer_subscription_pooling_disabled`; Claude Code client impersonation and the Pollinations fingerprint pool are off; aliases resolve before classification. `keys add`, `setup`, `providers rotate`, `/api/v1/agents/credentials` and the semantic-cache settings can no longer store a key locally (`keys_managed_by_openvault`). The scrub runs `secure_delete` and `VACUUM`; a test reads the raw database, WAL and journal bytes. A verify 429 is named `openvault_verify_rate_limited`, uncached and fail-closed. OmniRoute's sponsor banners are removed.
+- FreeBuild: export files are stamped `freebuild-instance-export` and `freebuild-project-export`; the importer still reads the `openship-*` names. Webhooks send `X-FreeBuild-Signature-256` and `X-Openship-Signature-256` with the same HMAC. The mail container logs as `[freebuild-mail]`.
+- `npm ci` in `apps/ship` failed with exit 127 where bun is absent, because the mail app's postinstall ran `bun install`. `apps/email/scripts/postinstall.mjs` now runs it only when bun exists.
+- The `POSTGRES_PASSWORD` message in `docker/docker-compose.yml` once contained a bare `: `, which made the file invalid YAML. The live prove step caught it and it is fixed.
+- `apps/ship/netie/notice-check.mjs` reads the tree git sees, so gitignored build output cannot flip `NOTICE` to stale.
+
+## 2026-10-30 - FreeRoute and FreeBuild forks (DR-0018, Refs #99)
+
+- `apps/router` is FreeRoute, a fork of diegosouzapw/OmniRoute @ `ae2ba35` (MIT). `apps/ship` is FreeBuild, a fork of oblien/openship @ `aba12c8` (Apache-2.0). Upstream licenses stay verbatim; root `THIRD_PARTY_NOTICES.md` records sources, commits and what was pruned; `apps/ship/NOTICE` is generated by `apps/ship/netie/notice-check.mjs` and lists every modified file that cannot carry a change notice.
+- Hard-disabled with a named 501: `consumer_subscription_pooling_disabled`, `consumer_session_relay_disabled`, `tls_fingerprint_stealth_disabled`, `upstream_updates_disabled`, `upstream_service_not_included`, `hosted_cloud_disabled`. API-key routing stays.
+- Provider keys live only in the vault. Each fork reads pooled keys over loopback with `X-OpenVault-Admin` (`openvault_admin_token_unavailable`, `openvault_admin_token_rejected`, `openvault_keyvault_sealed`, `openvault_keyvault_unreachable` are the named 503s) and answers 501 `keys_managed_by_openvault` on every path that would store one. FreeRoute verifies client tokens on `POST /api/apikeys/verify` and caches a verdict 60 s.
+- Both forks bind `127.0.0.1` by default. Neither binds `:5000`.
+- Each fork has `npm test` and `npm run test:e2e`; the latter starts a real OpenVault, proves the vault key reaches the provider, and greps the fork's data directory for the secret.
+- `CLAUDE.md` allows npm in `apps/router` and `apps/ship`. DR-0003 is superseded in part. The `PARKING_LOT.md` row for these trees is unlocked by the founder's 2026-10-22 re-ask.
+
 ## 2026-10-30 - Localhost unseal without an admin paste (OpenVault #123)
 
 - When the request `Host` header is loopback (`127.0.0.1`, `localhost`, `[::1]`, any port) and the middleware URL host is loopback, the :3010 console attaches `X-OpenVault-Admin` from the local admin token file for vault status, passphrase unseal, Hello unseal, and `GET /api/keys`. The token is not written into the page. Next strips it from the browser response.

@@ -1,0 +1,14 @@
+{
+    "name": "FreeBuild",
+    "short_name": "FreeBuild",
+    "icons": [
+        {
+            "src": "/favicon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml"
+        }
+    ],
+    "theme_color": "#111111",
+    "background_color": "#ffffff",
+    "display": "standalone"
+}
