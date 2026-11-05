@@ -64,7 +64,9 @@ FreeRoute and FreeBuild.
 
 ### What changed in OpenVault itself
 
-- `POST /api/apikeys/verify` (loopback only): a fork checks a client's bearer token here
+- `POST /api/apikeys/verify` (admin token from a loopback or allowlisted peer, or a service
+  Bearer listed in `OPENVAULT_VERIFY_SERVICES`; 60 calls a minute per caller; loopback
+  alone is 401): a fork checks a client's bearer token here
   instead of keeping its own key table. Unknown and revoked return the same answer.
 - `CLAUDE.md`: npm is allowed in `apps/router` and `apps/ship`.
 
@@ -74,10 +76,12 @@ FreeRoute and FreeBuild.
   (`authType: "oauth"`, `authHeader: "cookie"`, `-web` executors) plus a short override
   table. Gates: `getExecutor()`, `/v1/chat/completions`, and a path table in
   `src/lib/netie/hardDisabledRoutes.ts` run from `src/proxy.ts` before authz.
-- Disabled: 21 subscription-OAuth providers and their login and import routes
-  (`/api/oauth/*`, `/api/codex/*`, `/api/cursor-cli/*`, CLI credential import); 32
-  web-session providers plus MITM, agent bridge, traffic inspector, VNC and session
-  pools; `packages/browser-pool` stubbed; `wreq-js` dependency removed.
+- Disabled (counted over the 276 registry ids by `classifyProviderId`): 25 subscription
+  providers (21 `authType: "oauth"` plus four reached through the override table) and
+  their login and import routes (`/api/oauth/*`, `/api/codex/*`, `/api/cursor-cli/*`, CLI
+  credential import); 33 web-session providers plus MITM, agent bridge, traffic
+  inspector, VNC and session pools; one TLS-fingerprint provider (cloudflare-playground);
+  `packages/browser-pool` stubbed; `wreq-js` dependency removed.
 - Also disabled because they couple FreeRoute to the upstream project:
   `upstream_updates_disabled` (version check, updater, changelog fetch) and
   `upstream_service_not_included` (the embedded 9router service).

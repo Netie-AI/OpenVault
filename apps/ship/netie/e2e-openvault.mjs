@@ -75,7 +75,9 @@ function log(msg) {
   console.log(`[e2e] ${msg}`);
 }
 
+let passedSteps = 0;
 function pass(msg) {
+  passedSteps += 1;
   console.log(`[e2e] PASS ${msg}`);
 }
 
@@ -815,4 +817,5 @@ if (failed) {
   console.error(`[e2e] FAILED after ${secs}s (processes stopped, temp dir removed)`);
   process.exit(1);
 }
+console.log(`[e2e] ${passedSteps}/${passedSteps} steps passed`);
 console.log(`[e2e] ALL PASSED in ${secs}s (processes stopped, temp dir removed)`);

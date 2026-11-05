@@ -2,6 +2,15 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-11-05 - Forks: the three Security NO blockers closed (DR-0018, Refs #99)
+
+- FreeRoute no longer hands a provider's pooled key to a connection aimed at another host. `resolveProviderApiKey` releases a key by provider name only to an endpoint the provider registry lists for that provider; any other `providerSpecificData.baseUrl` gets no key and OpenVault is not asked. A key stored in OpenVault for an exact URL still serves that URL. With the check removed from the built server the live test fails and the foreign host receives the vault key on a model-sync request.
+- `REQUIRE_API_KEY` defaults to true, so anonymous `/v1` and invalid bearers get 401 unless an operator turns it off.
+- The hard-disable table matches the decoded, dot-resolved path (`/api/%6fauth/...`, `/api/tools/%61gent-bridge/...` and the like now answer their named 501), and an unreadable escape answers 400 `invalid_path_encoding`.
+- Both KeyVault clients refuse an `OPENVAULT_URL` that is not on this machine and treat a redirect as a failure. Provider limits and registered-key routes need the management scope.
+- SkillsMP, CLIProxyAPI, Qdrant and Notion keys are not stored in FreeRoute's database any more (501 `keys_managed_by_openvault`; SkillsMP and Notion read the vault; the scrub deletes older copies). The OpenCode free tier no longer gets a synthesized OpenCode client identity. `.env.example` no longer ships `INITIAL_PASSWORD=CHANGEME`.
+- `apps/ship/netie/e2e-openvault.mjs` prints `N/N steps passed`. STATUS, PARKING_LOT and DR-0018 say "provider key" where they said "key", name the stores that still keep other secrets, and carry the classifier's real counts.
+
 ## 2026-10-30 - Forks: review findings closed, install without bun (DR-0018, Refs #99)
 
 - FreeRoute: the Dario and CLIProxyAPI sidecars and `/api/version-manager` answer 501 `consumer_subscription_pooling_disabled`; Claude Code client impersonation and the Pollinations fingerprint pool are off; aliases resolve before classification. `keys add`, `setup`, `providers rotate`, `/api/v1/agents/credentials` and the semantic-cache settings can no longer store a key locally (`keys_managed_by_openvault`). The scrub runs `secure_delete` and `VACUUM`; a test reads the raw database, WAL and journal bytes. A verify 429 is named `openvault_verify_rate_limited`, uncached and fail-closed. OmniRoute's sponsor banners are removed.

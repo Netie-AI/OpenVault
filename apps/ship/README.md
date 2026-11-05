@@ -76,7 +76,8 @@ not be a clean fit. See "Stores not moved" under FreeBuild in
 ```bash
 npm ci            # plain npm ci works from a fresh clone; no extra flags
 npm run build
-npm test          # every workspace's vitest suite, then test:scripts and test:smoke
+npm test          # every workspace's vitest suite, then test:scripts and test:smoke (needs bun for apps/email)
+# without bun: npx turbo run test --filter='!@repo/email'
 npm run test:e2e  # end to end against a real OpenVault (below)
 ```
 
