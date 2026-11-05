@@ -39,7 +39,7 @@ import structlog
 
 log = structlog.get_logger()
 
-ROUTE_ROLES: tuple[str, ...] = ("sql", "tool", "reason", "summarize")
+ROUTE_ROLES: tuple[str, ...] = ("sql", "tool", "reason", "summarize", "grain", "ontology")
 POLICY_ENV = "OPENVAULT_ROUTE_POLICY"
 DEFAULT_POLICY_PATH = Path(__file__).with_name("route_policy.json")
 

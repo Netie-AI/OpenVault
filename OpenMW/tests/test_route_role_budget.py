@@ -51,6 +51,7 @@ _HOSTS = {
     "nvidia": "https://integrate.api.nvidia.com/v1",
     "sea_lion": "https://api.sea-lion.ai/v1",
     "openai": "https://api.openai.com/v1",
+    "deepseek": "https://api.deepseek.com/v1",
 }
 _ALLOWED_PROVIDERS = {"groq", "openrouter", "sambanova", "google", "nvidia", "sea_lion"}
 _BANNED_NAMES = ("deepseek", "kimi", "moonshot", "glm", "z-ai", "minimax", "siliconflow")
@@ -206,6 +207,65 @@ def test_default_policy_maps_every_role_to_free_allowed_models() -> None:
     assert policy.max_tokens_per_request is None
     assert policy.key_caps == {}
     assert policy.caller_caps == {}
+
+
+_DMS_ROLES = ("grain", "ontology")
+_DMS_PINNED_PROVIDERS = {"groq", "google", "openrouter"}
+
+
+def test_dms_roles_resolve_to_groq_google_openrouter_only() -> None:
+    policy = load_route_policy()
+    for role in _DMS_ROLES:
+        assert role in ROUTE_ROLES, role
+        assert parse_route_role(role) == role
+        hops = policy.hops_for(role)
+        assert hops, role
+        for hop in hops:
+            assert hop.provider in _DMS_PINNED_PROVIDERS, (role, hop)
+            assert "deepseek" not in hop.model.lower(), (role, hop)
+            assert policy.price_for(hop.provider, hop.model).free, (role, hop)
+            if hop.provider == "openrouter":
+                assert hop.model.endswith(":free"), (role, hop)
+    assert [(h.provider, h.model) for h in policy.hops_for("grain")] == [
+        ("groq", "openai/gpt-oss-20b"),
+        ("google", "gemini-3.1-flash-lite"),
+        ("openrouter", "google/gemma-4-31b-it:free"),
+    ]
+    assert [(h.provider, h.model) for h in policy.hops_for("ontology")] == [
+        ("groq", "openai/gpt-oss-120b"),
+        ("openrouter", "nvidia/nemotron-3-ultra-550b-a55b:free"),
+        ("google", "gemini-3.5-flash"),
+    ]
+
+
+@pytest.mark.parametrize("role", _DMS_ROLES)
+def test_dms_role_never_walks_to_deepseek_even_when_every_hop_fails(
+    vault: KeyVault, role: str
+) -> None:
+    for provider in (*_DMS_PINNED_PROVIDERS, "deepseek", "nvidia", "sambanova", "sea_lion"):
+        _key(vault, provider)
+    hops = load_route_policy().hops_for(role)
+    rec = _Recorder(*[_fail(503) for _ in hops])
+    resp = _post(_client(vault), rec, {"role": role, "model": "auto"})
+
+    assert resp.status_code >= 400, resp.text
+    assert rec.providers == [h.provider for h in hops]
+    assert set(rec.providers) <= _DMS_PINNED_PROVIDERS
+    assert all("deepseek" not in url for url in rec.urls)
+    assert all("deepseek" not in m.lower() for m in rec.models)
+
+
+@pytest.mark.parametrize("bad", ["Grain", "ONTOLOGY", "grain ", "deepseek", "ontology2"])
+def test_roles_near_the_dms_names_are_still_a_named_422(vault: KeyVault, bad: str) -> None:
+    for provider in _DMS_PINNED_PROVIDERS:
+        _key(vault, provider)
+    rec = _Recorder()
+    resp = _post(_client(vault), rec, {"role": bad})
+    assert resp.status_code == 422
+    err = resp.json()["error"]
+    assert err["type"] == "openvault_unknown_role"
+    assert {"grain", "ontology"} <= set(err["allowed"])
+    assert rec.urls == []
 
 
 def test_default_policy_file_has_no_banned_model_names() -> None:

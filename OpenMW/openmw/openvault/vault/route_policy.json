@@ -22,6 +22,16 @@
       {"provider": "groq", "model": "openai/gpt-oss-20b"},
       {"provider": "openrouter", "model": "google/gemma-4-31b-it:free"},
       {"provider": "sambanova", "model": "gemma-4-31B-it"}
+    ],
+    "grain": [
+      {"provider": "groq", "model": "openai/gpt-oss-20b"},
+      {"provider": "google", "model": "gemini-3.1-flash-lite"},
+      {"provider": "openrouter", "model": "google/gemma-4-31b-it:free"}
+    ],
+    "ontology": [
+      {"provider": "groq", "model": "openai/gpt-oss-120b"},
+      {"provider": "openrouter", "model": "nvidia/nemotron-3-ultra-550b-a55b:free"},
+      {"provider": "google", "model": "gemini-3.5-flash"}
     ]
   },
   "models": {

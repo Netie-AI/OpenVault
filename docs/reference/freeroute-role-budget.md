@@ -8,9 +8,9 @@ Contract for Cortex #303/#304 on `POST /v1/chat/completions`. Code:
 
 | Field | Values | Behaviour |
 |---|---|---|
-| `role` | `sql` \| `tool` \| `reason` \| `summarize` | Walks that role's ordered model list from the policy. Free models come first. On a provider failure the walk moves to the next entry in order. `model` is not used to pick the hop. |
+| `role` | `sql` \| `tool` \| `reason` \| `summarize` \| `grain` \| `ontology` | Walks that role's ordered model list from the policy. Free models come first. On a provider failure the walk moves to the next entry in order. `model` is not used to pick the hop. |
 | `role` omitted or `null` | - | Unchanged: the pre-role pool walk. Configured caps still apply. |
-| `role` anything else (`""`, `"SQL"`, `"chat"`, `7`) | - | **422** `openvault_unknown_role`, with `allowed: ["sql","tool","reason","summarize"]`. No upstream call. |
+| `role` anything else (`""`, `"SQL"`, `"chat"`, `7`) | - | **422** `openvault_unknown_role`, with `allowed: ["sql","tool","reason","summarize","grain","ontology"]`. No upstream call. |
 | `role` with `strict` (or `X-OpenVault-Strict`) or `local_only` | - | **422** `openvault_role_conflict`, with `conflicts_with`. |
 | `service_id` | string, max 128 | Budget scope for a loopback caller, e.g. `cortex`. An issued `ov_` key is always its own scope (its key id), and this field is ignored for keyed callers. Default: the loopback host. |
 
@@ -86,6 +86,13 @@ catalog ids.
 | `tool` | groq `openai/gpt-oss-20b`, google `gemini-3.1-flash-lite`, nvidia `openai/gpt-oss-20b` |
 | `reason` | groq `openai/gpt-oss-120b`, sambanova `gpt-oss-120b`, nvidia `nvidia/nemotron-3-super-120b-a12b`, openrouter `nvidia/nemotron-3-ultra-550b-a55b:free` |
 | `summarize` | google `gemini-3.1-flash-lite`, groq `openai/gpt-oss-20b`, openrouter `google/gemma-4-31b-it:free`, sambanova `gemma-4-31B-it` |
+| `grain` | groq `openai/gpt-oss-20b`, google `gemini-3.1-flash-lite`, openrouter `google/gemma-4-31b-it:free` |
+| `ontology` | groq `openai/gpt-oss-120b`, openrouter `nvidia/nemotron-3-ultra-550b-a55b:free`, google `gemini-3.5-flash` |
+
+`grain` (DMS grain AI: short classification and mapping) and `ontology` (DMS
+ontology compile: structured JSON generation) are pinned to groq, google and
+openrouter only, by the 2026-08-22 decision that DMS model calls never reach
+DeepSeek. They carry no nvidia, sambanova or sea_lion hop.
 
 The defaults mark these providers' models free: `groq/*`, `google/*`, `nvidia/*`,
 `sambanova/*`, `sea_lion/*`, `openrouter/*:free`, and `local_qwen/*`. Every other
