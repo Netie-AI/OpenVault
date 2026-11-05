@@ -185,9 +185,16 @@ function messageFromDetail(detail: unknown, fallback: string): string {
   }
   if (detail && typeof detail === "object") {
     const obj = detail as Record<string, unknown>;
-    for (const key of ["message", "error", "reason", "detail"]) {
+    for (const key of ["message", "error", "reason", "detail", "msg"]) {
       const value = obj[key];
       if (typeof value === "string" && value.trim()) return value;
+    }
+    // Leave-gate denials (ship/gate.py GateDecision) carry reasons and no message.
+    if (Array.isArray(obj.reasons)) {
+      const reasons = obj.reasons.filter(
+        (item): item is string => typeof item === "string" && item.trim() !== "",
+      );
+      if (reasons.length) return reasons.join("; ");
     }
   }
   return fallback;
