@@ -1,12 +1,12 @@
 """Anthropic Messages API adapter for the OpenAI-shaped chat proxy.
 
-Pure functions plus one async ``call``. Nothing imports this module yet: it is
-not reachable from any route, so no request can be served through it and
-outside models stay off (BANK-03). Wiring and the opt-in gate land after #154
-through ``route_policy.json``.
+Pure functions plus one async ``call``. The proxy imports this only for an
+explicit ``route_policy.json`` hop, and only when a vault key whose provider
+is ``anthropic`` exists. With no such hop the free pins stay the path that
+runs. This module translates; it does not decide whether to run.
 
 Founder decision 2026-10-29: Claude is an opt-in escalation tier. The free pins
-stay the default. This module only translates; it never decides whether to run.
+stay the default.
 
 Request mapping (OpenAI chat body -> ``POST /v1/messages``):
 

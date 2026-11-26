@@ -31,6 +31,7 @@ Building the product comes before cleanup.
 - #158 merged at `c990103e` (FreeBuild path named, rules point at the agent index).
 - #149 merged at `35ae6ac8` (live sentinel, observe, health and control kept).
 - #154 merged at `cf12ec9d` (FreeRoute role routing, hard spend caps, cost stamps).
+- Anthropic Messages is an opt-in `/v1` hop (Refs #169). Default role lists do not name it. It runs only from an explicit `route_policy.json` entry plus a vault key with provider `anthropic`. No policy entry keeps the previous walk. Streaming is a 400 when that hop is the only one.
 - #125 merged at `3ba51cdc` (localhost unseal without pasting the admin token). Gating and R-0003 on `3ba51cdc` passed (R-0003 2026-11-06, #125, #154, #168, #149, #158).
 - #143 is closed unmerged, superseded by #141.
 - Full tier is auth, HttpGuard, `admin_token`, keys, custody, unseal, FreeRoute routing, prove-host redeploys, and #135. The order is PR Bot CLEAR, then Security YES, then PR Bot undrafts and squashes (`--match-head-commit`), then R-0003 (Estate Verify) and Gating on the merge SHA, then a prove-host redeploy only with founder GO. A head move voids the CLEAR and Security YES.

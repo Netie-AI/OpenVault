@@ -117,6 +117,42 @@ model priced at 0 never moves a cap.
 }
 ```
 
+## Anthropic opt-in
+
+Anthropic is not in any shipped role list. A vault key with `provider: anthropic`
+does not receive `/v1/chat/completions` traffic on its own. The historical
+pool-walk skip (`anthropic chat not via /v1 proxy yet`) stays in that case.
+
+To turn it on, set `OPENVAULT_ROUTE_POLICY` to a file that:
+
+1. Puts `{"provider": "anthropic", "model": "<id>"}` on a role. Catalog ids,
+   strongest first: `claude-opus-5-5`, `claude-sonnet-5-5`, `claude-haiku-5-5`.
+2. Prices that id. No paid price ships. Without `usd_per_1m_in` and
+   `usd_per_1m_out` the hop is refused as unpriced (`requested: null`) and
+   nothing is posted.
+3. Sets a `daily_usd` or `monthly_usd` cap on that vault key or on the caller.
+   The same #148 caps and `model` / `provider` / `tokens_in` / `tokens_out` /
+   `est_cost_usd` stamps apply. A 401, 429, or 529 (overload, mapped to 503)
+   walks to the next hop in that role.
+
+The vault key's `provider` must be `anthropic`. The free-text label is not a
+gate. The key is sent as `x-api-key` and is not logged.
+
+`stream: true` is not translated. If a later hop can stream, the walk uses it.
+If anthropic was the only hop, the response is 400
+`openvault_anthropic_unsupported`.
+
+```text
+{
+  "roles": {"reason": [
+    {"provider": "anthropic", "model": "claude-sonnet-5-5"},
+    {"provider": "groq", "model": "openai/gpt-oss-120b"}
+  ]},
+  "models": {"anthropic/claude-sonnet-5-5": {"usd_per_1m_in": <in>, "usd_per_1m_out": <out>}},
+  "caps": {"callers": {"cortex": {"daily_usd": 2}}}
+}
+```
+
 ## Cap rules
 
 - A model is paid unless the policy marks it `"free": true`.

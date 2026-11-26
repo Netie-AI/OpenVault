@@ -55,7 +55,7 @@ def _body(**over: Any) -> dict[str, Any]:
 # -- off by default: the module is not reachable ----------------------------------
 
 
-def test_module_is_not_imported_by_any_other_source_file() -> None:
+def test_only_the_catalog_and_proxy_import_the_adapter() -> None:
     root = Path(__file__).resolve().parents[1] / "openmw"
     me = Path(am.__file__).resolve()
     offenders: list[str] = []
@@ -71,18 +71,24 @@ def test_module_is_not_imported_by_any_other_source_file() -> None:
                 names = [a.name for a in node.names]
             if any("anthropic_messages" in n for n in names):
                 offenders.append(str(path.relative_to(root)))
-    assert offenders == []
+                break
+    assert sorted(set(offenders)) == [
+        "openvault/vault/providers.py",
+        "openvault/vault/proxy.py",
+    ]
 
 
-def test_provider_and_proxy_are_unchanged_so_nothing_is_served() -> None:
+def test_catalog_lists_models_but_the_default_walk_still_skips() -> None:
     from openmw.openvault.vault.providers import get_provider
     from openmw.openvault.vault.proxy import _compat_skip
 
     spec = get_provider("anthropic")
     assert spec is not None
     assert spec.openai_compatible is False
-    assert not spec.chat_models
-    assert _compat_skip("A", "anthropic") is not None
+    assert spec.chat_models == am.CHAT_MODELS
+    assert spec.to_dict()["spendable"] is False
+    assert _compat_skip("A", "anthropic") == "A: anthropic chat not via /v1 proxy yet"
+    assert _compat_skip("A", "anthropic", anthropic_enabled=True) is None
 
 
 # -- request mapping ---------------------------------------------------------------
@@ -350,6 +356,7 @@ def test_key_never_reaches_logs_results_or_exceptions(caplog: pytest.LogCaptureF
         captured.append(dict(event))
         raise structlog.DropEvent
 
+    saved = structlog.get_config()
     structlog.configure(processors=[processor])
     caplog.set_level(logging.DEBUG)
     try:
@@ -371,7 +378,7 @@ def test_key_never_reaches_logs_results_or_exceptions(caplog: pytest.LogCaptureF
         )
         assert FAKE_KEY not in rendered
     finally:
-        structlog.reset_defaults()
+        structlog.configure(**saved)
 
     assert captured, "adapter logged nothing; the leak check would be vacuous"
     assert FAKE_KEY not in json.dumps(captured, default=str)
