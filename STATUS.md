@@ -2,7 +2,7 @@
 
 What is true now. History: [CHANGELOG.md](CHANGELOG.md). Deferred: [PARKING_LOT.md](PARKING_LOT.md). Map: [docs/ACTIVE.md](docs/ACTIVE.md). Rules: [AGENTS.md](AGENTS.md).
 
-Last reconciled: 2026-10-06. Main is `dd8f1d88`.
+Last reconciled: 2026-11-06. Main is `3ba51cdc`.
 
 Building the product comes before cleanup.
 
@@ -17,7 +17,7 @@ Building the product comes before cleanup.
 - One vault: `E:\OpenVault\.openvault`. No second vault.
 - HUMAN_STOP: do not bind `:5000` on a public or LAN interface.
 - HT1-HT5 on epic 18 are cleared (founder 2026-09-04; boxes ticked 2026-09-07). The epic is closed.
-- test-openmw 1329 passed / 7 skipped, run 37414951161 @ 19446b7b
+- test-openmw 1504 passed / 7 skipped, run 40998550545 @ 3ba51cdc
 - CI job `test-web` runs `apps/web` `npm test` on ubuntu-latest with Node 20 (`.github/workflows/ci.yml`).
 - #136 merged at `2483c6c3` (apps/web source-map-js 1.2.2).
 - #142 merged at `122c07e8` (unreferenced real-device smoke script deleted).
@@ -26,10 +26,16 @@ Building the product comes before cleanup.
 - #146 merged at `9b81b463` (access gate reads mesh peers without importing local_mesh).
 - #139 merged at `dd8f1d88` (SEA-LION key import).
 - #160 single-kid lease merged at `0f187792`. Space is the Bearer `dms:<space>`, created only by admin on loopback, lowercase. R-0003 forward fix is pending.
+- #163 merged at `b5a13a26` (Gemini per-minute 429 is a short park).
+- #168 merged at `626d023a` (no kid in lease log lines).
+- #158 merged at `c990103e` (FreeBuild path named, rules point at the agent index).
+- #149 merged at `35ae6ac8` (live sentinel, observe, health and control kept).
+- #154 merged at `cf12ec9d` (FreeRoute role routing, hard spend caps, cost stamps).
+- #125 merged at `3ba51cdc` (localhost unseal without pasting the admin token). Gating and R-0003 on `3ba51cdc` passed (R-0003 2026-11-06, #125, #154, #168, #149, #158).
 - #143 is closed unmerged, superseded by #141.
 - Full tier is auth, HttpGuard, `admin_token`, keys, custody, unseal, FreeRoute routing, prove-host redeploys, and #135. The order is PR Bot CLEAR, then Security YES, then PR Bot undrafts and squashes (`--match-head-commit`), then R-0003 (Estate Verify) and Gating on the merge SHA, then a prove-host redeploy only with founder GO. A head move voids the CLEAR and Security YES.
-- Open drafts from `gh pr list --state open --draft`: #99, #125, #140, #141, #144, #147, #149, #150.
-- GitHub is the queue: 46 open issues at this reconcile. Landed behavior is in CHANGELOG.md.
+- Open drafts from `gh pr list --state open --draft`: #99, #169, #170, #171, #172, #173, #174.
+- GitHub is the queue: 57 open issues at this reconcile. Landed behavior is in CHANGELOG.md.
 - Usage $/unit is still NEEDS-YOU. Display SKUs stay locked (DR-0013).
 
 ## Verify
