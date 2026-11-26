@@ -104,7 +104,7 @@ jobs:
           --cov-report=term-missing
           --cov-fail-under=75
 
-  # apps/web npm test. Node 20: no .nvmrc and no engines field.
+  # apps/web npm test and tsc. Node 20: no .nvmrc and no engines field.
   test-web:
     runs-on: ubuntu-latest
     steps:
@@ -125,3 +125,8 @@ jobs:
       - name: Test
         working-directory: apps/web
         run: npm test
+
+      # tsx runs the tests without type-checking. next build does type-check.
+      - name: Type-check
+        working-directory: apps/web
+        run: npx tsc --noEmit

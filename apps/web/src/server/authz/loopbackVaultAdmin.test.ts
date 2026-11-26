@@ -123,12 +123,12 @@ test("bootstrap paths are exact", () => {
 
 test("token path follows the vault home override", () => {
   const home = localAdminTokenPath(
-    { OPENVAULT_HOME: "~/vault-home", OPENVAULT_ADMIN_TOKEN_PATH: "" },
+    { NODE_ENV: "test", OPENVAULT_HOME: "~/vault-home", OPENVAULT_ADMIN_TOKEN_PATH: "" },
     "/home/founder",
   );
   assert.equal(home, path.join("/home/founder", "vault-home", "admin_token"));
   const override = localAdminTokenPath(
-    { OPENVAULT_ADMIN_TOKEN_PATH: "~/secret-file" },
+    { NODE_ENV: "test", OPENVAULT_ADMIN_TOKEN_PATH: "~/secret-file" },
     "/home/founder",
   );
   assert.equal(override, path.join("/home/founder", "secret-file"));
