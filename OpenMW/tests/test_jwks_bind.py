@@ -138,6 +138,7 @@ def test_freeroute_status_reports_kids_and_spendable(home: Path) -> None:
     assert "together" in spendable_ids
     assert "siliconflow" in spendable_ids
     assert "github_models" not in spendable_ids
+    assert "litellm" not in spendable_ids
 
 
 def test_jwks_pin_kid_matches_root_document(home: Path) -> None:

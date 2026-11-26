@@ -15,7 +15,7 @@
  * OpenMW/tests/test_key_ui.py reads this file's source to lock it.
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +27,7 @@ import { apiPost, isApiError } from "@/lib/api/client";
 import { createKey, listRoutePacks, type RoutePack } from "@/lib/api/keys";
 import { guessByokProvider, honestByokLabel } from "@/keys/byok";
 import { VaultSealBar } from "@/components/vault/VaultSealBar";
+import { looksLikeSitePasswordKey } from "@/lib/vault/inferProvider";
 import { FreeKeysWizard } from "./FreeKeysWizard";
 
 type KeyPath = "subscribe" | "byok" | "free" | "operator";
@@ -100,10 +101,13 @@ export default function KeysPage() {
   const [focusProvider, setFocusProvider] = useState("");
   const [sealed, setSealed] = useState(true);
 
-  useEffect(() => {
-    setPath(pathFromHash(window.location.hash));
+  useLayoutEffect(() => {
+    const apply = () => setPath(pathFromHash(window.location.hash));
+    apply();
     const q = new URLSearchParams(window.location.search).get("provider");
     if (q) setFocusProvider(q);
+    window.addEventListener("hashchange", apply);
+    return () => window.removeEventListener("hashchange", apply);
   }, []);
 
   useEffect(() => {
@@ -167,6 +171,10 @@ export default function KeysPage() {
     const guess = guessByokProvider(secret);
     const label = typed || guess.displayName || "Brought key";
     const provider = typed ? providerIdFromName(typed) : (guess.providerId ?? FALLBACK_PROVIDER);
+    if (looksLikeSitePasswordKey(label, provider, "")) {
+      setByokMsg("Site passwords belong on /vault (Add password), not as an LLM hop.");
+      return;
+    }
     setBusy("byok");
     try {
       await createKey({ label, provider, secret, role: "backup" });

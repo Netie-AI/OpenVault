@@ -25,7 +25,7 @@ import {
   ingestEnv,
   listKeys,
   listProviders,
-  precheckAll,
+  migrateSitePasswords,
   precheckKey,
   revealSecret,
   revokeKey,
@@ -53,6 +53,7 @@ import { KeyHealthSpark } from "@/components/vault/KeyHealthSpark";
 import { SecretsPanel } from "@/components/vault/SecretsPanel";
 import { EnvTextImport } from "@/components/vault/EnvTextImport";
 import { VaultSealBar } from "@/components/vault/VaultSealBar";
+import { looksLikeSitePasswordKey } from "@/lib/vault/inferProvider";
 import { AddKeyDialog } from "./AddKeyDialog";
 
 const ROLE_BLURB: Record<KeyRole, string> = {
@@ -71,6 +72,9 @@ const STATUS_STYLE: Record<PrecheckStatus, { label: string; className: string }>
 };
 
 function statusOf(key: KeyRow) {
+  if (!key.enabled) {
+    return { label: "Off", className: "border-border text-muted-foreground" };
+  }
   if (
     key.precheck_status === "ok" &&
     (key.last_error || "").toLowerCase().includes("probe mismatch")
@@ -78,6 +82,40 @@ function statusOf(key: KeyRow) {
     return { label: "Probe warn", className: "border-warning-border bg-warning-bg text-warning" };
   }
   return STATUS_STYLE[key.precheck_status] ?? STATUS_STYLE.unknown;
+}
+
+function skipHopPrecheck(key: KeyRow): boolean {
+  if (key.provider === "litellm" && !key.enabled) return true;
+  return looksLikeSitePasswordKey(key.label, key.provider, key.base_url || "");
+}
+
+function hopErrorText(key: KeyRow): string | null {
+  const last = key.last_error ?? null;
+  if (key.provider === "litellm") {
+    if (!key.enabled) {
+      return "LiteLLM proxy not running on :4000";
+    }
+    if (last && /all connection attempts failed/i.test(last)) {
+      return "LiteLLM proxy not running on :4000";
+    }
+  }
+  if (!key.enabled) {
+    return null;
+  }
+  if (
+    key.precheck_status === "auth_fail" ||
+    key.precheck_status === "error" ||
+    key.precheck_status === "rate_limit"
+  ) {
+    return key.last_error ?? null;
+  }
+  if (
+    key.precheck_status === "ok" &&
+    (key.last_error || "").toLowerCase().includes("probe mismatch")
+  ) {
+    return key.last_error ?? null;
+  }
+  return null;
 }
 
 export default function VaultPage() {
@@ -95,7 +133,7 @@ export default function VaultPage() {
   const [coverage, setCoverage] = useState<CoverageReport | null>(null);
   const [budget, setBudget] = useState<OpenFreeBudget | null>(null);
   const [healthById, setHealthById] = useState<Record<string, KeyHealth>>({});
-  const [vaultSealed, setVaultSealed] = useState(true);
+  const [vaultSealed, setVaultSealed] = useState<boolean | null>(null);
 
   const refresh = useCallback(async () => {
     setKeys(await listKeys());
@@ -104,6 +142,11 @@ export default function VaultPage() {
   useEffect(() => {
     const ac = new AbortController();
     void (async () => {
+      try {
+        await migrateSitePasswords(ac.signal);
+      } catch {
+        // Sealed or older API: hop list still filters SITE_* client-side.
+      }
       try {
         const [keyRows, catalog] = await Promise.all([
           listKeys(ac.signal),
@@ -143,15 +186,24 @@ export default function VaultPage() {
     setPendingRegister(readRegisterIntent());
   }, [addOpen]);
 
+  const hopKeys = useMemo(
+    () =>
+      keys.filter(
+        (key) =>
+          !looksLikeSitePasswordKey(key.label, key.provider, key.base_url || ""),
+      ),
+    [keys],
+  );
+
   useEffect(() => {
-    if (keys.length === 0) {
+    if (hopKeys.length === 0) {
       setHealthById({});
       return;
     }
     const ac = new AbortController();
     void (async () => {
       const entries = await Promise.all(
-        keys.slice(0, 40).map(async (k) => {
+        hopKeys.slice(0, 40).map(async (k) => {
           try {
             const h = await fetchKeyHealth(k.id, "24h", ac.signal);
             return [k.id, h] as const;
@@ -168,7 +220,7 @@ export default function VaultPage() {
       setHealthById(next);
     })();
     return () => ac.abort();
-  }, [keys]);
+  }, [hopKeys]);
 
   function openAdd(secret?: string) {
     setClipSecret(secret ?? null);
@@ -198,7 +250,7 @@ export default function VaultPage() {
 
   const grouped = useMemo(() => {
     const groups: Record<string, KeyRow[]> = {};
-    for (const key of keys) {
+    for (const key of hopKeys) {
       const role = (KEY_ROLES as readonly string[]).includes(key.role) ? key.role : "other";
       (groups[role] ||= []).push(key);
     }
@@ -206,13 +258,15 @@ export default function VaultPage() {
       rows.sort((a, b) => a.priority - b.priority || a.label.localeCompare(b.label));
     }
     return groups;
-  }, [keys]);
+  }, [hopKeys]);
 
-  const working = keys.filter((k) => k.precheck_status === "ok").length;
-  const failing = keys.filter(
-    (k) => k.precheck_status === "auth_fail" || k.precheck_status === "error",
+  const working = hopKeys.filter((k) => k.enabled && k.precheck_status === "ok").length;
+  const failing = hopKeys.filter(
+    (k) =>
+      k.enabled &&
+      (k.precheck_status === "auth_fail" || k.precheck_status === "error"),
   ).length;
-  const hasFreeFallback = keys.some(
+  const hasFreeFallback = hopKeys.some(
     (k) =>
       k.enabled &&
       (k.role === "free" ||
@@ -246,7 +300,10 @@ export default function VaultPage() {
       setEnvCandidates([]);
       await refresh();
       setNotice("Imported. Testing them now…");
-      await precheckAll();
+      const hops = (await listKeys()).filter((k) => !skipHopPrecheck(k));
+      for (const key of hops) {
+        await precheckKey(key.id);
+      }
       await refresh();
     } catch (err) {
       setNotice(isApiError(err) ? err.message : "Import failed");
@@ -287,7 +344,7 @@ export default function VaultPage() {
           Parsed in this browser. Masked preview, then one add per known key.
         </p>
         <EnvTextImport
-          disabled={vaultSealed}
+          disabled={vaultSealed !== false}
           onImported={() => {
             void refresh().catch(() => undefined);
           }}
@@ -349,10 +406,11 @@ export default function VaultPage() {
             {failing} key{failing === 1 ? "" : "s"} need attention
           </p>
           <ul className="mt-2 space-y-1.5 text-sm text-foreground">
-            {keys
+            {hopKeys
               .filter(
                 (k) =>
-                  k.precheck_status === "auth_fail" || k.precheck_status === "error",
+                  k.enabled &&
+                  (k.precheck_status === "auth_fail" || k.precheck_status === "error"),
               )
               .map((k) => (
                 <li key={k.id} className="flex flex-wrap gap-x-2 gap-y-0.5">
@@ -394,7 +452,7 @@ export default function VaultPage() {
         </div>
       ) : null}
 
-      {keys.length === 0 ? (
+      {hopKeys.length === 0 ? (
         <div className="mb-5 space-y-4">
           <ClipDropZone
             hero
@@ -404,7 +462,7 @@ export default function VaultPage() {
             providerNames={providerNames}
           />
           <div className="flex flex-wrap items-center justify-center gap-2">
-            <Button variant="outline" onClick={() => openAdd()} disabled={vaultSealed}>
+            <Button variant="outline" onClick={() => openAdd()} disabled={vaultSealed !== false}>
               Type a key instead
             </Button>
           </div>
@@ -423,10 +481,21 @@ export default function VaultPage() {
             providerNames={providerNames}
           />
           <div className="flex flex-wrap items-center gap-2">
-            <Button onClick={() => openAdd()} disabled={vaultSealed}>Add key</Button>
+            <Button onClick={() => openAdd()} disabled={vaultSealed !== false}>Add key</Button>
             <Button
               variant="outline"
-              onClick={() => void run("all", precheckAll, "All keys tested")}
+              onClick={() =>
+                void run(
+                  "all",
+                  async () => {
+                    for (const key of hopKeys) {
+                      if (skipHopPrecheck(key)) continue;
+                      await precheckKey(key.id);
+                    }
+                  },
+                  "All keys tested",
+                )
+              }
               disabled={busy === "all"}
             >
               {busy === "all" ? "Testing…" : "Test all"}
@@ -471,7 +540,7 @@ export default function VaultPage() {
             </Button>
             <div className="ml-auto flex flex-wrap gap-2 text-xs">
               <span className="rounded-full border border-border px-2.5 py-1 text-muted-foreground">
-                {keys.length} total
+                {hopKeys.length} hops
               </span>
               {working > 0 ? (
                 <span className="rounded-full border border-success-border bg-success-bg px-2.5 py-1 text-success">
@@ -528,6 +597,12 @@ export default function VaultPage() {
                   <ul>
                     {rows.map((key) => {
                       const status = statusOf(key);
+                      const hopErr = hopErrorText(key);
+                      const hopWarn =
+                        Boolean(hopErr) &&
+                        key.enabled &&
+                        key.precheck_status === "ok" &&
+                        (hopErr ?? "").toLowerCase().includes("probe mismatch");
                       return (
                         <li
                           key={key.id}
@@ -549,17 +624,12 @@ export default function VaultPage() {
                                 {revealed[key.id] ?? key.masked_secret ?? "••••"}
                               </span>
                             </p>
-            {key.last_error &&
-            (key.precheck_status === "auth_fail" ||
-              key.precheck_status === "error" ||
-              key.precheck_status === "rate_limit") ? (
-              <p className="mt-1 break-words text-xs text-destructive">
-                {key.last_error}
+            {hopErr ? (
+              <p
+                className={`mt-1 break-words text-xs ${hopWarn ? "text-warning" : key.enabled ? "text-destructive" : "text-muted-foreground"}`}
+              >
+                {hopErr}
               </p>
-            ) : key.last_error &&
-              key.precheck_status === "ok" &&
-              key.last_error.toLowerCase().includes("probe mismatch") ? (
-              <p className="mt-1 break-words text-xs text-warning">{key.last_error}</p>
             ) : null}
                             {healthById[key.id] ? (
                               <KeyHealthSpark
@@ -605,9 +675,17 @@ export default function VaultPage() {
                               variant="ghost"
                               size="sm"
                               disabled={busy === key.id}
-                              onClick={() =>
-                                void run(key.id, () => precheckKey(key.id), "Tested")
-                              }
+                              onClick={() => {
+                                if (skipHopPrecheck(key)) {
+                                  setNotice(
+                                    key.provider === "litellm"
+                                      ? "LiteLLM proxy not running on :4000"
+                                      : "Site passwords are not hops",
+                                  );
+                                  return;
+                                }
+                                void run(key.id, () => precheckKey(key.id), "Tested");
+                              }}
                             >
                               Test
                             </Button>
@@ -649,7 +727,7 @@ export default function VaultPage() {
           })}
       </div>
 
-      <SecretsPanel sealed={vaultSealed} />
+      <SecretsPanel sealed={vaultSealed === true} mutateLocked={vaultSealed !== false} />
 
       <AddKeyDialog
         isOpen={addOpen}

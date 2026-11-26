@@ -90,7 +90,13 @@ from openmw.openvault.ship.github_auth import (
     save_pat,
     start_gh_login,
 )
-from openmw.openvault.ship.inject import InjectError, ShipEnvRef, resolve_ship_env, scrub_mapping
+from openmw.openvault.ship.inject import (
+    InjectError,
+    ShipEnvRef,
+    resolve_ship_env,
+    scrub_mapping,
+    vault_host_env,
+)
 from openmw.openvault.ship.library import (
     create_upload_session,
     inspect_folder,
@@ -139,6 +145,7 @@ from openmw.openvault.vault.http_guard import (
     install_lease_access_filter,
 )
 from openmw.openvault.vault.local_hop import served_response_headers
+from openmw.openvault.vault.migrate_passwords import migrate_site_password_keys
 from openmw.openvault.vault.pm_import import ingest_import_dir, ingest_pm_csv
 from openmw.openvault.vault.precheck import PrecheckLoop, precheck_all, precheck_one
 from openmw.openvault.vault.providers import (
@@ -534,6 +541,43 @@ def _resolve_ship_inject(
     return result.env, summary
 
 
+def _merge_ship_host_env(
+    target: str,
+    request_env: dict[str, str],
+    *,
+    vault: KeyVault,
+    request: Request,
+) -> dict[str, str]:
+    """Ship env for the engine: request bindings, then vault host credentials on top.
+
+    Vault host rows are decrypted only for a target that leaves the machine
+    (``_mutates_remote_host``). ``local_demo`` and ``aws_guide`` never use a host
+    credential, so they decrypt nothing and write no audit line. For a remote
+    target each decrypted credential gets one ``ship_host_credential`` secret-audit
+    line carrying the label and an 8-char key ref, never the value.
+
+    The vault wins over a request binding of the same host label. Otherwise a
+    caller could bind ``COOLIFY_URL`` or ``SPACESHIP_FTP_HOST`` to an address it
+    controls and have the vault-held token or password sent there. A binding for
+    a host label the vault does not hold still passes through as the fallback.
+    """
+    merged = dict(request_env)
+    if not _mutates_remote_host(target):
+        return merged
+
+    def _audit_host_credential(label: str, key_ref: str) -> None:
+        _audit_custody(
+            "ship_host_credential",
+            request,
+            target=target,
+            label=label,
+            key_ref=key_ref,
+        )
+
+    merged.update(vault_host_env(vault, on_decrypt=_audit_host_credential))
+    return merged
+
+
 def _audit_secret_reveal(key_id: str, client_host: str, user_agent: str) -> None:
     _write_secret_audit(
         {
@@ -699,6 +743,16 @@ class RecoveryCodesCreate(BaseModel):
 
     label: str
     codes: list[str] | str
+    username: str = ""
+    url: str = ""
+    account_id: str | None = None
+
+
+class TotpCreate(BaseModel):
+    """TOTP seed. Raw base32 or a small otpauth:// URI. Seed is never listed."""
+
+    label: str
+    seed: str
     username: str = ""
     url: str = ""
     account_id: str | None = None
@@ -1213,7 +1267,11 @@ def create_app(
     # One process Seal for ship PAT custody (same keys.db row, no pat.json SoT).
     github_auth_mod.bind_vault(state_vault)
     state_accounts = accounts if accounts is not None else AccountStore()
-    state_secrets = secrets if secrets is not None else SecretStore(seal=state_seal)
+    state_secrets = (
+        secrets
+        if secrets is not None
+        else SecretStore(db_path=state_vault.db_path, seal=state_seal)
+    )
     # Who is calling the gateway, and what did it cost them. Both live in the
     # same keys.db as the vault - one backup surface, no second store.
     state_api_keys = ApiKeyStore()
@@ -1706,7 +1764,14 @@ def create_app(
 
     @app.get("/api/keys")
     def list_keys(account_id: str | None = None) -> dict[str, Any]:
-        return {"keys": [asdict(k) for k in state_vault.list_keys(account_id=account_id)]}
+        hops = [
+            k
+            for k in state_vault.list_keys(account_id=account_id)
+            if not looks_like_site_password_key(
+                label=k.label, provider=k.provider, base_url=k.base_url or ""
+            )
+        ]
+        return {"keys": [asdict(k) for k in hops]}
 
     @app.get("/api/keyvault/snapshot")
     def api_keyvault_snapshot() -> dict[str, Any]:
@@ -1987,6 +2052,17 @@ def create_app(
     def patch_key(key_id: str, body: KeyUpdate, request: Request) -> dict[str, Any]:
         _require_loopback(request, "key update")
         _require_unsealed(state_seal, "key update")
+        current = state_vault.get(key_id)
+        if current is None:
+            raise HTTPException(status_code=404, detail="key not found")
+        label = body.label if body.label is not None else current.label
+        provider = body.provider if body.provider is not None else current.provider
+        base_url = body.base_url if body.base_url is not None else current.base_url
+        if looks_like_site_password_key(label=label, provider=provider, base_url=base_url or ""):
+            raise HTTPException(
+                status_code=400,
+                detail="site passwords go to POST /api/secrets/passwords, not /api/keys",
+            )
         record = state_vault.update(
             key_id,
             label=body.label,
@@ -2163,6 +2239,26 @@ def create_app(
         )
         return asdict(record)
 
+    @app.post("/api/secrets/totp")
+    def create_totp(body: TotpCreate, request: Request) -> dict[str, Any]:
+        """Store a TOTP seed. Masked list never includes the seed."""
+        _require_loopback(request, "totp create")
+        _require_unsealed(state_seal, "totp create")
+        if body.account_id and state_accounts.get(body.account_id) is None:
+            raise HTTPException(status_code=404, detail="account not found")
+        try:
+            record = state_secrets.create_totp(
+                label=body.label,
+                seed=body.seed,
+                username=body.username,
+                url=body.url,
+                account_id=body.account_id,
+            )
+        except SecretValidationError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        _audit_custody("totp_create", request, secret_id=record.id, label=record.label)
+        return asdict(record)
+
     @app.post("/api/secrets/{secret_id}/consume-code")
     def consume_recovery_code(secret_id: str, request: Request) -> dict[str, Any]:
         """Spend the next unused backup code and return it.
@@ -2215,6 +2311,40 @@ def create_app(
             }
         )
         return {"id": secret_id, "kind": record.kind, "code": code, "remaining": remaining}
+
+    @app.get("/api/secrets/{secret_id}/current-code")
+    def current_totp_code(secret_id: str, request: Request) -> dict[str, Any]:
+        """Return current RFC 6238 digits. Never the seed."""
+        client_host = _require_loopback(request, "totp current-code")
+        _require_reveal_intent(request)
+        _require_unsealed(state_seal, "totp current-code")
+        record = state_secrets.get(secret_id)
+        if record is None:
+            raise HTTPException(status_code=404, detail="secret not found")
+        if record.kind != "totp":
+            raise HTTPException(
+                status_code=409, detail=f"secret {secret_id} is a {record.kind}, not totp"
+            )
+        try:
+            code = state_secrets.current_totp_code(secret_id)
+        except SecretValidationError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        except VaultSealedError as exc:
+            raise HTTPException(status_code=403, detail=_VAULT_SEALED_DETAIL) from exc
+        except VaultCryptoError as exc:
+            raise HTTPException(status_code=409, detail="unable to decrypt vault secret") from exc
+        if code is None:
+            raise HTTPException(status_code=404, detail="secret not found")
+        _write_secret_audit(
+            {
+                "event": "totp_current_code",
+                "secret_id": secret_id,
+                "label": record.label,
+                "client": client_host,
+                "user_agent": request.headers.get("user-agent", "")[:200],
+            }
+        )
+        return {"id": secret_id, "kind": "totp", "code": code, "digits": len(code)}
 
     @app.post("/api/secrets/identity")
     def create_identity(body: IdentityCreate, request: Request) -> dict[str, Any]:
@@ -2898,6 +3028,13 @@ def create_app(
             secrets=state_secrets,
             request=request,
         )
+        request_env = ship_env
+        ship_env = _merge_ship_host_env(
+            body.target,
+            request_env,
+            vault=state_vault,
+            request=request,
+        )
         try:
             payload = run_ship_engine(
                 target=body.target,
@@ -2924,8 +3061,10 @@ def create_app(
                     "since": exc.since,
                 },
             ) from exc
-        if ship_env:
-            payload = scrub_mapping(payload, list(ship_env.values()))
+        if ship_env or request_env:
+            # Scrub the request bindings too: a binding the vault overrode is
+            # not sent to the host but is still a secret the caller selected.
+            payload = scrub_mapping(payload, [*ship_env.values(), *request_env.values()])
         if inject_summary.get("count"):
             payload["secrets_injected"] = inject_summary
         return payload
@@ -3271,6 +3410,26 @@ def create_app(
             _audit_custody("env_ingest", request, imported=result.get("imported", 0))
         return result
 
+    @app.post("/api/vault/migrate-site-passwords")
+    def vault_migrate_site_passwords(request: Request) -> dict[str, Any]:
+        """Move SITE_/password KeyVault rows into /api/secrets. Loopback + unsealed."""
+        _require_loopback(request, "site password migrate")
+        _require_unsealed(state_seal, "site password migrate")
+        try:
+            result = migrate_site_password_keys(state_vault, state_secrets)
+        except VaultSealedError as exc:
+            raise HTTPException(status_code=403, detail=str(exc)) from exc
+        _audit_custody(
+            "site_password_migrate",
+            request,
+            migrated=result["migrated"],
+            already_in_secrets=result["already_in_secrets"],
+            failed=result["failed"],
+            skipped_inactive=result["skipped_inactive"],
+            remaining_site_keys=result["remaining_site_keys"],
+        )
+        return result
+
     @app.post("/api/vault/ingest-pm")
     def vault_ingest_pm(body: PmIngestBody, request: Request) -> dict[str, Any]:
         """Import Google / Apple / Chrome password CSVs into sealed secrets."""
@@ -3316,6 +3475,12 @@ def create_app(
             state_seal.unseal(body.passphrase)
         except VaultCryptoError as exc:
             raise HTTPException(status_code=401, detail=str(exc)) from exc
+        try:
+            migrate_site_password_keys(state_vault, state_secrets)
+        except VaultSealedError:
+            pass
+        except Exception as exc:
+            log.warning("openvault_site_password_migrate_unseal_hook", error=str(exc))
         _audit_custody("vault_unseal", request, ok=True)
         return _vault_status_payload()
 

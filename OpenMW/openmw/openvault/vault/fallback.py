@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Literal
 
 from openmw.openvault.paths import fallback_path
+from openmw.openvault.vault.free_keys_onboard import looks_like_site_password_key
 from openmw.openvault.vault.parks import (
     clip_error_text,
     delete_park,
@@ -296,6 +297,10 @@ class FallbackManager:
         # path runs through, so a future caller that forgets to source from
         # pooled_ordered() still cannot reach a tenant key (DR-0009, #36).
         if record.custody != "pooled":
+            return False
+        if looks_like_site_password_key(
+            label=record.label, provider=record.provider, base_url=record.base_url
+        ):
             return False
         if not record.enabled:
             return False

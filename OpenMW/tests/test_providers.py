@@ -47,6 +47,8 @@ def test_seed_essentials_local_and_pending(tmp_path: Path) -> None:
     assert any(c["provider"] == "ollama" for c in result["created_local"])
     assert any(c["provider"] == "cortex" for c in result["created_local"])
     assert all(c["provider"] != "local_qwen" for c in result["created_local"])
+    litellm = next(k for k in vault.list_keys() if k.provider == "litellm")
+    assert litellm.enabled is False
     assert any(p["provider"] == "openrouter" for p in result["pending_register"])
     assert all("register_url" in p for p in result["pending_register"])
 
@@ -95,3 +97,48 @@ def test_providers_api(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     assert down.status_code == 200
     assert "online" in down.json()
     assert get_provider("ollama") is not None
+
+
+def test_litellm_connect_fail_is_proxy_down_not_all_attempts(tmp_path: Path) -> None:
+    import asyncio
+
+    from openmw.openvault.vault.precheck import LITELLM_PROXY_DOWN, probe_key
+
+    seal = Seal(Fernet.generate_key())
+    vault = KeyVault(db_path=tmp_path / "keys.db", seal=seal)
+    record = vault.create(
+        label="LiteLLM Proxy (seeded)",
+        provider="litellm",
+        secret="sk-litellm",
+        role="backup",
+        base_url="http://127.0.0.1:9/v1",
+        enabled=True,
+    )
+    result = asyncio.run(probe_key(record, "sk-litellm"))
+    assert result.status == "error"
+    assert result.error == LITELLM_PROXY_DOWN
+    assert "connection attempts" not in (result.error or "").lower()
+
+
+def test_disabled_litellm_precheck_does_not_connect(tmp_path: Path) -> None:
+    import asyncio
+
+    from openmw.openvault.vault.precheck import LITELLM_PROXY_DOWN, precheck_one
+
+    seal = Seal(Fernet.generate_key())
+    vault = KeyVault(db_path=tmp_path / "keys.db", seal=seal)
+    record = vault.create(
+        label="LiteLLM Proxy (seeded)",
+        provider="litellm",
+        secret="sk-litellm",
+        role="backup",
+        base_url="http://127.0.0.1:9/v1",
+        enabled=False,
+    )
+    result = asyncio.run(precheck_one(vault, record.id))
+    assert result.status == "unknown"
+    assert result.error == LITELLM_PROXY_DOWN
+    stored = vault.get(record.id)
+    assert stored is not None
+    assert stored.precheck_status == "unknown"
+    assert stored.last_error == LITELLM_PROXY_DOWN

@@ -115,6 +115,16 @@ export function looksLikeApiSecret(text: string): boolean {
   return RULES.some((rule) => rule.test.test(value));
 }
 
+export function looksLikeSitePasswordKey(
+  label: string,
+  provider: string,
+  baseUrl: string,
+): boolean {
+  if ((baseUrl || "").trim()) return false;
+  if (provider !== "custom") return false;
+  return /(PASSWORD|PASSWD)|^SITE_/i.test((label || "").trim());
+}
+
 /**
  * A label the user did not have to think of.
  *

@@ -14,6 +14,7 @@ from openmw.openvault.vault.crypto import VaultCryptoError, VaultSealedError
 from openmw.openvault.vault.free_keys_onboard import (
     CF_MODELS_405_WARN,
     is_cloudflare_workers_ai_base,
+    looks_like_site_password_key,
 )
 from openmw.openvault.vault.health_store import HealthStore, HistoryStatus
 from openmw.openvault.vault.openrouter_probe import (
@@ -30,6 +31,8 @@ DEFAULT_TIMEOUT_S = 8.0
 # Credit limit lives here. GET /models does not report it, and answers without a key.
 OPENROUTER_KEY_URL = "https://openrouter.ai/api/v1/key"
 _HISTORY_STATUSES = frozenset({"ok", "auth_fail", "rate_limit", "error", "timeout"})
+SITE_PASSWORD_NOT_HOP = "site password, not an LLM hop"
+LITELLM_PROXY_DOWN = "LiteLLM proxy not running on :4000"
 
 
 @dataclass(frozen=True)
@@ -86,6 +89,10 @@ async def probe_key(
     timeout_s: float = DEFAULT_TIMEOUT_S,
 ) -> PrecheckResult:
     """Probe a provider key with a lightweight authenticated request."""
+    if looks_like_site_password_key(
+        label=record.label, provider=record.provider, base_url=record.base_url
+    ):
+        return PrecheckResult(record.id, "unknown", None, SITE_PASSWORD_NOT_HOP)
     base = _default_base_url(record.provider, record.base_url)
     if not base:
         return PrecheckResult(record.id, "error", None, "missing base_url for custom provider")
@@ -172,7 +179,8 @@ async def probe_key(
     except httpx.TimeoutException:
         return PrecheckResult(record.id, "timeout", None, "timeout")
     except httpx.HTTPError as exc:
-        return PrecheckResult(record.id, "error", None, str(exc))
+        err = LITELLM_PROXY_DOWN if record.provider == "litellm" else str(exc)
+        return PrecheckResult(record.id, "error", None, err)
     finally:
         if owns_client:
             await http.aclose()
@@ -197,6 +205,46 @@ async def precheck_one(vault: KeyVault, key_id: str) -> PrecheckResult:
             error="key not found",
         )
         return PrecheckResult(key_id, "error", None, "key not found")
+    if looks_like_site_password_key(
+        label=record.label, provider=record.provider, base_url=record.base_url
+    ):
+        result = PrecheckResult(key_id, "unknown", None, SITE_PASSWORD_NOT_HOP)
+        vault.set_precheck(
+            key_id,
+            status=result.status,
+            latency_ms=None,
+            error=result.error,
+        )
+        log.info(
+            "openvault_precheck",
+            key_ref=_key_ref(key_id),
+            label=record.label,
+            provider=record.provider,
+            role=record.role,
+            status=result.status,
+            latency_ms=None,
+            error=result.error,
+        )
+        return result
+    if not record.enabled and record.provider == "litellm":
+        result = PrecheckResult(key_id, "unknown", None, LITELLM_PROXY_DOWN)
+        vault.set_precheck(
+            key_id,
+            status=result.status,
+            latency_ms=None,
+            error=result.error,
+        )
+        log.info(
+            "openvault_precheck",
+            key_ref=_key_ref(key_id),
+            label=record.label,
+            provider=record.provider,
+            role=record.role,
+            status=result.status,
+            latency_ms=None,
+            error=result.error,
+        )
+        return result
     try:
         secret = vault.get_secret(key_id)
     except VaultSealedError:

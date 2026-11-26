@@ -43,7 +43,10 @@ def _http(client: TestClient):
         if parsed.query:
             path = f"{path}?{parsed.query}"
         call = getattr(client, method.lower())
-        resp = call(path, headers=headers or {})
+        kwargs: dict = {"headers": headers or {}}
+        if _body:
+            kwargs["content"] = _body
+        resp = call(path, **kwargs)
         payload: dict = {}
         try:
             loaded = resp.json()
@@ -97,6 +100,36 @@ def test_retrieves_api_key_and_password(tmp_path: Path, monkeypatch: pytest.Monk
     assert not any(p.name.endswith(".password") for p in tmp_path.rglob("*"))
 
 
+def test_list_omits_cards_and_plaintext(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    retrieve = _load_retrieve()
+    client = _client(tmp_path, monkeypatch)
+    pw = client.post(
+        "/api/secrets/passwords",
+        json={"label": "Netie Space", "password": "correct-horse-battery"},
+    ).json()
+    totp = client.post(
+        "/api/secrets/totp",
+        json={"label": "GitHub", "seed": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"},
+    ).json()
+    client.post(
+        "/api/secrets/cards",
+        json={"label": "Personal Visa", "pan": VISA_PAN, "exp_month": 11, "exp_year": 2029},
+    )
+    listed = retrieve.list_secrets("http://127.0.0.1:5000", http=_http(client))
+    kinds = {row["kind"] for row in listed["secrets"]}
+    labels = {row["label"] for row in listed["secrets"]}
+    assert listed["count"] == 2
+    assert kinds == {"password", "totp"}
+    assert "Netie Space" in labels and "GitHub" in labels
+    blob = str(listed)
+    assert "correct-horse-battery" not in blob
+    assert VISA_PAN not in blob
+    assert totp["id"] in {row["id"] for row in listed["secrets"]}
+    assert pw["id"] in {row["id"] for row in listed["secrets"]}
+    with pytest.raises(retrieve.RetrieveError, match="PAN"):
+        retrieve.list_secrets("http://127.0.0.1:5000", kind_hint="payment_card", http=_http(client))
+
+
 def test_hard_denies_payment_card(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     retrieve = _load_retrieve()
     client = _client(tmp_path, monkeypatch)
@@ -136,3 +169,83 @@ def test_sealed_fails_closed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) ->
     http = _http(client)
     with pytest.raises(retrieve.RetrieveError, match="sealed"):
         retrieve.retrieve_secret("http://127.0.0.1:5000", key["id"], kind_hint="key", http=http)
+
+
+def test_unique_substring_get_and_list_query(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    retrieve = _load_retrieve()
+    client = _client(tmp_path, monkeypatch)
+    client.post(
+        "/api/secrets/passwords",
+        json={
+            "label": "SITE_accounts_google_com",
+            "password": "site-login-not-an-api-key",
+            "url": "https://accounts.google.com",
+        },
+    )
+    client.post(
+        "/api/secrets/passwords",
+        json={
+            "label": "SITE_github_com",
+            "password": "other-site-login",
+            "url": "https://github.com",
+        },
+    )
+    client.post(
+        "/api/secrets/totp",
+        json={"label": "GitHub OTP", "seed": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"},
+    )
+    http = _http(client)
+    listed = retrieve.list_secrets(
+        "http://127.0.0.1:5000", kind_hint="password", query="google", http=http
+    )
+    assert listed["count"] == 1
+    assert listed["secrets"][0]["label"] == "SITE_accounts_google_com"
+    assert "site-login-not-an-api-key" not in str(listed)
+    got = retrieve.retrieve_secret(
+        "http://127.0.0.1:5000", "accounts.google.com", kind_hint="password", http=http
+    )
+    assert got["kind"] == "password"
+    assert got["secret"] == "site-login-not-an-api-key"
+    totp = retrieve.retrieve_secret(
+        "http://127.0.0.1:5000", "GitHub OTP", kind_hint="totp", http=http
+    )
+    assert totp["kind"] == "totp"
+    assert str(totp["code"]).isdigit()
+    with pytest.raises(retrieve.RetrieveError, match="ambiguous"):
+        retrieve.retrieve_secret("http://127.0.0.1:5000", "SITE_", kind_hint="password", http=http)
+
+
+def test_site_target_does_not_fall_through_to_leftover_hop(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from cryptography.fernet import Fernet
+
+    from openmw.openvault.vault.crypto import Seal
+    from openmw.openvault.vault.store import KeyVault
+
+    retrieve = _load_retrieve()
+    vault = KeyVault(db_path=tmp_path / "keys.db", seal=Seal(Fernet.generate_key()))
+    leftover = vault.create(
+        label="SITE_PASSWORD",
+        provider="custom",
+        secret="leftover-site-as-hop",
+        role="free",
+        base_url="",
+    )
+    client = TestClient(
+        create_app(vault=vault, mock_health=True, enable_precheck_loop=False),
+        client=("127.0.0.1", 5555),
+    )
+    http = _http(client)
+    listed = {row["id"] for row in client.get("/api/keys").json()["keys"]}
+    assert leftover.id not in listed
+    got = retrieve.retrieve_secret("http://127.0.0.1:5000", "SITE_PASSWORD", http=http)
+    assert got["kind"] == "password"
+    assert got["secret"] == "leftover-site-as-hop"
+    assert leftover.id not in {row["id"] for row in client.get("/api/keys").json()["keys"]}
+    with pytest.raises(retrieve.RetrieveError, match="site passwords are /api/secrets"):
+        retrieve.retrieve_secret(
+            "http://127.0.0.1:5000", "SITE_PASSWORD", kind_hint="key", http=http
+        )

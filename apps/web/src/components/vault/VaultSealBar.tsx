@@ -298,7 +298,7 @@ export function VaultSealBar({
   );
 
   return (
-    <div className="mb-5 space-y-3">
+    <div className={`mb-5 space-y-3 ${sealed ? "sticky top-0 z-20" : ""}`}>
       {!status && unauthorized ? (
         <div
           data-glass

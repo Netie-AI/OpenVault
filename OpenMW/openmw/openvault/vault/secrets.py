@@ -28,20 +28,25 @@ PCI posture, stated plainly because it constrains the whole module:
 
 from __future__ import annotations
 
+import base64
 import contextlib
+import hashlib
+import hmac
 import json
 import re
 import sqlite3
+import struct
 import time
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, cast
+from urllib.parse import parse_qs, urlparse
 
 from openmw.openvault.paths import keys_db_path
 from openmw.openvault.vault.crypto import Seal
 
-SecretKind = Literal["password", "payment_card", "recovery_codes", "identity"]
+SecretKind = Literal["password", "payment_card", "recovery_codes", "identity", "totp"]
 SecretLifecycle = Literal["active", "revoked", "rotated", "compromised"]
 
 # Government and institutional identifiers. Deliberately not "PII" as a blanket:
@@ -139,6 +144,80 @@ def mask_password(password: str) -> str:
     if not password:
         return ""
     return "•" * min(len(password), 12)
+
+
+def mask_totp(digits: int) -> str:
+    """Chooser text. Must never contain the seed."""
+    return f"TOTP {digits}-digit"
+
+
+def parse_totp_input(raw: str) -> dict[str, object]:
+    """Accept raw base32 or a small otpauth:// URI. Never log the seed."""
+    text = (raw or "").strip()
+    if not text:
+        raise SecretValidationError("TOTP seed must not be empty")
+    digits = 6
+    period = 30
+    algorithm = "SHA1"
+    secret = text.replace(" ", "").replace("-", "")
+    if text.lower().startswith("otpauth://"):
+        parsed = urlparse(text)
+        query = parse_qs(parsed.query)
+        secret = (query.get("secret") or [""])[0].strip()
+        if not secret:
+            raise SecretValidationError("otpauth URI is missing secret=")
+        if query.get("digits"):
+            try:
+                digits = int(query["digits"][0])
+            except ValueError as exc:
+                raise SecretValidationError("TOTP digits must be 6 or 8") from exc
+        if query.get("period"):
+            try:
+                period = int(query["period"][0])
+            except ValueError as exc:
+                raise SecretValidationError("TOTP period must be an integer") from exc
+        algorithm = (query.get("algorithm") or ["SHA1"])[0].upper().replace("HMAC-", "")
+    if digits not in (6, 8):
+        raise SecretValidationError("TOTP digits must be 6 or 8")
+    if period < 1 or period > 300:
+        raise SecretValidationError("TOTP period must be 1-300 seconds")
+    algorithm = algorithm.upper()
+    if algorithm not in ("SHA1", "SHA256", "SHA512"):
+        raise SecretValidationError("TOTP algorithm must be SHA1, SHA256, or SHA512")
+    compact = secret.upper().replace(" ", "")
+    pad = "=" * ((8 - len(compact) % 8) % 8)
+    try:
+        key = base64.b32decode(compact + pad, casefold=True)
+    except Exception as exc:
+        raise SecretValidationError("TOTP seed is not valid base32") from exc
+    if len(key) < 10:
+        raise SecretValidationError("TOTP seed is too short")
+    return {
+        "secret": compact.rstrip("="),
+        "digits": digits,
+        "period": period,
+        "alg": algorithm,
+    }
+
+
+def totp_code(
+    key: bytes,
+    *,
+    digits: int = 6,
+    period: int = 30,
+    algorithm: str = "SHA1",
+    at: float | None = None,
+) -> str:
+    """RFC 6238 digits. Stdlib HMAC only."""
+    hashes = {"SHA1": hashlib.sha1, "SHA256": hashlib.sha256, "SHA512": hashlib.sha512}
+    digestmod = hashes.get(algorithm.upper())
+    if digestmod is None:
+        raise SecretValidationError("TOTP algorithm must be SHA1, SHA256, or SHA512")
+    counter = int((time.time() if at is None else at) // period)
+    digest = hmac.new(key, struct.pack(">Q", counter), digestmod).digest()
+    offset = digest[-1] & 0x0F
+    number = struct.unpack(">I", digest[offset : offset + 4])[0] & 0x7FFFFFFF
+    return str(number % (10**digits)).zfill(digits)
 
 
 def normalize_recovery_codes(raw: str | list[str]) -> list[str]:
@@ -402,11 +481,41 @@ class SecretStore:
                 raise SecretValidationError(
                     "recovery codes are consumed one at a time - use consume_recovery_code"
                 )
+            if row["kind"] == "totp":
+                raise SecretValidationError(
+                    "TOTP seed cannot be revealed - use GET /api/secrets/{id}/current-code"
+                )
             conn.execute(
                 "UPDATE secrets SET last_revealed_at = ? WHERE id = ?", (time.time(), secret_id)
             )
             conn.commit()
         return self._seal.decrypt(row["secret_blob"])
+
+    def active_password_matches(
+        self, label: str, candidate: str, *, account_id: str | None = None
+    ) -> bool | None:
+        """Whether an active password labelled ``label`` holds ``candidate`` for ``account_id``.
+
+        The comparison happens inside this module, so no plaintext leaves it and
+        nothing is stamped as revealed: this is not a reveal. ``None`` when no
+        active password carries that label. ``False`` when one does but none
+        holds the same password for the same account. Used by the site-password
+        migration to tell a true duplicate from a conflict.
+        """
+        with contextlib.closing(self._connect()) as conn, conn:
+            rows = conn.execute(
+                "SELECT secret_blob, account_id FROM secrets "
+                "WHERE kind = 'password' AND label = ? AND lifecycle = 'active'",
+                (label,),
+            ).fetchall()
+        if not rows:
+            return None
+        want = candidate.encode("utf-8")
+        return any(
+            row["account_id"] == account_id
+            and hmac.compare_digest(self._seal.decrypt(row["secret_blob"]).encode("utf-8"), want)
+            for row in rows
+        )
 
     # --- write ---
 
@@ -447,6 +556,79 @@ class SecretStore:
         record = self.get(secret_id)
         assert record is not None
         return record
+
+    def create_totp(
+        self,
+        *,
+        label: str,
+        seed: str,
+        username: str = "",
+        url: str = "",
+        account_id: str | None = None,
+    ) -> SecretRecord:
+        parsed = parse_totp_input(seed)
+        digits = int(parsed["digits"])
+        secret_id = uuid.uuid4().hex
+        now = time.time()
+        payload = json.dumps(
+            {
+                "secret": parsed["secret"],
+                "digits": digits,
+                "period": parsed["period"],
+                "alg": parsed["alg"],
+            }
+        )
+        with contextlib.closing(self._connect()) as conn, conn:
+            conn.execute(
+                """
+                INSERT INTO secrets (
+                  id, kind, label, secret_blob, masked, account_id, lifecycle,
+                  username, url, created_at, updated_at
+                ) VALUES (?, 'totp', ?, ?, ?, ?, 'active', ?, ?, ?, ?)
+                """,
+                (
+                    secret_id,
+                    label,
+                    self._seal.encrypt(payload),
+                    mask_totp(digits),
+                    account_id,
+                    username,
+                    url,
+                    now,
+                    now,
+                ),
+            )
+            conn.commit()
+        record = self.get(secret_id)
+        assert record is not None
+        return record
+
+    def current_totp_code(self, secret_id: str, *, at: float | None = None) -> str | None:
+        """Return current RFC 6238 digits. Never the seed."""
+        with contextlib.closing(self._connect()) as conn, conn:
+            row = conn.execute(
+                "SELECT secret_blob, kind FROM secrets WHERE id = ?", (secret_id,)
+            ).fetchone()
+            if row is None:
+                return None
+            if row["kind"] != "totp":
+                raise SecretValidationError("secret is not a TOTP seed")
+            payload = json.loads(self._seal.decrypt(row["secret_blob"]))
+            compact = str(payload["secret"])
+            pad = "=" * ((8 - len(compact) % 8) % 8)
+            key = base64.b32decode(compact + pad, casefold=True)
+            code = totp_code(
+                key,
+                digits=int(payload.get("digits") or 6),
+                period=int(payload.get("period") or 30),
+                algorithm=str(payload.get("alg") or "SHA1"),
+                at=at,
+            )
+            conn.execute(
+                "UPDATE secrets SET last_revealed_at = ? WHERE id = ?", (time.time(), secret_id)
+            )
+            conn.commit()
+        return code
 
     def create_recovery_codes(
         self,
@@ -752,6 +934,8 @@ class SecretStore:
                 url=current.url,
                 account_id=current.account_id,
             )
+        elif current.kind == "totp":
+            raise SecretValidationError("rotate a TOTP seed with POST /api/secrets/totp instead")
         else:
             if not new_pan:
                 raise SecretValidationError("rotating a card requires new_pan")

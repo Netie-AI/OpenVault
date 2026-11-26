@@ -9,7 +9,11 @@ from __future__ import annotations
 from dataclasses import asdict
 from typing import Any
 
-from openmw.openvault.vault.free_keys_onboard import onboard_install_defaults
+from openmw.openvault.vault.free_keys_onboard import (
+    is_password_env_key,
+    looks_like_site_password_key,
+    onboard_install_defaults,
+)
 from openmw.openvault.vault.providers import get_provider, list_catalog
 from openmw.openvault.vault.store import KeyCustody, KeyRecord, KeyRole, KeyVault, ProviderKind
 
@@ -83,7 +87,13 @@ def _best_key(keys: list[KeyRecord], provider: str) -> KeyRecord | None:
 
 def keyvault_snapshot(vault: KeyVault, *, openvault_url: str = "") -> dict[str, Any]:
     """Catalog + configured status for AirGPT Key Vault UI. No raw secrets."""
-    keys = vault.list_keys()
+    keys = [
+        k
+        for k in vault.list_keys()
+        if not looks_like_site_password_key(
+            label=k.label, provider=k.provider, base_url=k.base_url or ""
+        )
+    ]
     providers: list[dict[str, Any]] = []
     for spec in list_catalog():
         pid = str(spec.get("id") or "")
@@ -206,6 +216,11 @@ def upsert_env_secret(
         return {"ok": False, "error": "empty or masked secret"}
 
     env_key = (env_key or "").strip().upper()
+    if is_password_env_key(env_key):
+        return {
+            "ok": False,
+            "error": "site passwords go to POST /api/secrets/passwords, not /api/keys",
+        }
     provider: ProviderKind = ENV_KEY_TO_PROVIDER.get(env_key, "custom")
     if provider_hint and provider_hint in (
         "openai",
@@ -240,6 +255,11 @@ def upsert_env_secret(
     custody: KeyCustody = "tenant" if custody_raw == "tenant" else "pooled"
 
     label = (label or env_key or provider).strip()[:80]
+    if looks_like_site_password_key(label=label, provider=provider, base_url=resolved_base):
+        return {
+            "ok": False,
+            "error": "site passwords go to POST /api/secrets/passwords, not /api/keys",
+        }
     existing = [
         k
         for k in vault.list_keys()

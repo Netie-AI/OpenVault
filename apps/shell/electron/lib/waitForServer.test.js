@@ -220,6 +220,14 @@ test("expectHtml accepts the real app document", async () => {
   }
 });
 
+test("only an unreachable port is a reason to start another web server", () => {
+  const { missingServerShouldStart } = require("./waitForServer");
+  assert.equal(missingServerShouldStart("unreachable"), true);
+  assert.equal(missingServerShouldStart("stalled"), false);
+  assert.equal(missingServerShouldStart("compiling"), false);
+  assert.equal(missingServerShouldStart("ready"), false);
+});
+
 test("without expectHtml the same shell counts as ready - the flag is what does the work", async () => {
   const srv = await startCompilingServer();
   try {

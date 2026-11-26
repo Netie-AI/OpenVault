@@ -21,7 +21,11 @@ const path = require("path");
 const fs = require("fs");
 const { spawn } = require("child_process");
 const { killProcessTree } = require("./processTree");
-const { waitForServer, htmlVerdict } = require("./lib/waitForServer");
+const {
+  waitForServer,
+  htmlVerdict,
+  missingServerShouldStart,
+} = require("./lib/waitForServer");
 
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
@@ -48,6 +52,10 @@ let mainWindow = null;
 let tray = null;
 let apiServer = null;
 let webServer = null;
+let webWatchdog = null;
+let lastWebRestartAt = 0;
+const WEB_WATCHDOG_MS = 20000;
+const WEB_RESTART_COOLDOWN_MS = 10000;
 let serversStopped = false;
 let clipboardTimer = null;
 let lastClipboardText = "";
@@ -285,6 +293,13 @@ function attachProcessLogging(proc, label) {
     console.log(`[OpenVault] ${label} exited with code:`, code);
     if (code) lastProcessExit[label] = code;
     sendToRenderer("server-status", { status: "stopped", service: label, code });
+    if (label === "web" && proc === webServer) {
+      webServer = null;
+      void maybeRestartWeb();
+    }
+    if (label === "api" && proc === apiServer) {
+      apiServer = null;
+    }
   });
 }
 
@@ -353,6 +368,35 @@ function startWebServer() {
     shell: USE_SHELL,
   });
   attachProcessLogging(webServer, "web");
+}
+
+async function maybeRestartWeb() {
+  // Reused :3010 is not our child. If that process dies, the window stays open
+  // on a dead port unless we spawn. Never spawn over compiling/stalled.
+  if (serversStopped || app.isQuitting) return;
+  if (webServer) return;
+  const now = Date.now();
+  if (now - lastWebRestartAt < WEB_RESTART_COOLDOWN_MS) return;
+  const result = await waitForServer(WEB_URL, 3000, { expectHtml: true });
+  if (!missingServerShouldStart(result.reason)) return;
+  if (serversStopped || webServer) return;
+  lastWebRestartAt = Date.now();
+  console.log("[OpenVault] Web is gone; starting it again.");
+  startWebServer();
+}
+
+function startWebWatchdog() {
+  if (webWatchdog) return;
+  webWatchdog = setInterval(() => {
+    void maybeRestartWeb();
+  }, WEB_WATCHDOG_MS);
+}
+
+function stopWebWatchdog() {
+  if (webWatchdog) {
+    clearInterval(webWatchdog);
+    webWatchdog = null;
+  }
 }
 
 function stopServers() {
@@ -671,6 +715,7 @@ app.whenReady().then(async () => {
     return;
   }
   sendToRenderer("server-status", { status: "running", service: "web", port: WEB_PORT });
+  startWebWatchdog();
 
   createWindow();
   createTray();
@@ -691,6 +736,8 @@ app.on("before-quit", async (event) => {
   if ((apiServer || webServer) && !serversStopped) {
     event.preventDefault();
     app.isQuitting = true;
+    serversStopped = true;
+    stopWebWatchdog();
 
     const apiToStop = apiServer;
     const webToStop = webServer;
@@ -698,10 +745,11 @@ app.on("before-quit", async (event) => {
 
     await Promise.all([waitForServerExit(apiToStop), waitForServerExit(webToStop)]);
 
-    serversStopped = true;
     app.quit();
   } else {
     app.isQuitting = true;
+    serversStopped = true;
+    stopWebWatchdog();
   }
 });
 

@@ -194,3 +194,4 @@ def test_spendable_freeroute_pool_includes_wired_free_providers() -> None:
     assert "github_models" not in ids
     assert "huggingface" not in ids
     assert "deepgram" not in ids
+    assert "litellm" not in ids

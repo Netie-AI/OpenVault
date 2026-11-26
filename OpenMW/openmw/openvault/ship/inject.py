@@ -12,13 +12,13 @@ systemd escaper is for SSH/unit hosts that write ``Environment=`` lines.
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
 from openmw.openvault.vault.crypto import Seal, VaultSealedError
 from openmw.openvault.vault.secrets import SecretStore
-from openmw.openvault.vault.store import KeyVault
+from openmw.openvault.vault.store import KeyRecord, KeyVault
 
 EnvSource = Literal["key", "secret"]
 
@@ -203,3 +203,97 @@ def resolve_ship_env(
             raise InjectError(str(exc), status_code=403) from exc
 
     return InjectResult(env=env, names=list(env.keys()), sources=sources)
+
+
+# Labels that are also the env names the host adapters read. A matching vault
+# row is the credential. Process env remains the fallback inside the engine.
+HOST_ENV_LABELS = frozenset(
+    {
+        "CLOUDFLARE_API_TOKEN",
+        "CF_API_TOKEN",
+        "CLOUDFLARE_ACCOUNT_ID",
+        "NETLIFY_AUTH_TOKEN",
+        "NETLIFY_SITE_ID",
+        "COOLIFY_URL",
+        "COOLIFY_TOKEN",
+        "COOLIFY_APP_UUID",
+        "SPACESHIP_FTP_HOST",
+        "SPACESHIP_FTP_USER",
+        "SPACESHIP_FTP_PASS",
+        "SPACESHIP_FTP_DIR",
+        "SPACESHIP_PUBLIC_URL",
+        "SPACESHIP_FTP_ENV_DIR",
+        "OPENVAULT_VPS_USER",
+        "OPENVAULT_VPS_PORT",
+        "OPENVAULT_VPS_KEY",
+        "OPENVAULT_VPS_REPLICAS",
+    }
+)
+
+
+def _is_host_credential_row(key: KeyRecord) -> bool:
+    """Whether a row may supply a ship host credential.
+
+    pooled + no account + enabled + active, all four. DR-0009 keeps tenant
+    custody out of anything OpenVault spends, and a host token is spent: it
+    authenticates a deploy on the operator's own Cloudflare, Netlify, Coolify,
+    FTP or VPS account. A ``custody == "tenant"`` row (somebody else's
+    credential) and an ``account_id``-bound row (a provider-account key, not a
+    host credential) are never eligible, so neither can shadow or replace the
+    operator's pooled row of the same label.
+    """
+    return (
+        key.label in HOST_ENV_LABELS
+        and key.enabled
+        and key.lifecycle == "active"
+        and key.custody == "pooled"
+        and key.account_id is None
+    )
+
+
+def vault_host_env(
+    vault: KeyVault,
+    *,
+    on_decrypt: Callable[[str, str], None] | None = None,
+) -> dict[str, str]:
+    """Copy host credentials out of the vault by label. Empty when sealed.
+
+    Eligible rows are pooled, unbound to a provider account, enabled and
+    active (see ``_is_host_credential_row``). When several eligible rows share
+    a label the most recently created one wins; a created_at tie falls back to
+    the larger row id so the answer never depends on list order. The choice is
+    made before any decrypt, so exactly one row per label is decrypted and
+    superseded or ineligible rows are never opened.
+
+    ``on_decrypt(label, key_ref)`` runs once per decrypted credential with the
+    label and the first 8 characters of the row id, never the value. The
+    caller owns the secret-audit writer (it lives in app.py), so this module
+    takes a callback rather than importing it.
+
+    Values are plaintext for the deploy call only. Callers must scrub them
+    from any response and must not call this for a target that never leaves
+    the machine. This function does not log them.
+    """
+    if vault.seal.is_sealed:
+        return {}
+    chosen: dict[str, KeyRecord] = {}
+    for key in vault.list_keys():
+        if not _is_host_credential_row(key):
+            continue
+        best = chosen.get(key.label)
+        if best is None or (key.created_at, key.id) > (best.created_at, best.id):
+            chosen[key.label] = key
+    found: dict[str, str] = {}
+    for label in sorted(chosen):
+        key = chosen[label]
+        try:
+            secret = vault.get_secret(key.id)
+        except VaultSealedError:
+            return {}
+        if secret:
+            if on_decrypt is not None:
+                on_decrypt(label, key.id[:8])
+            found[label] = secret
+    if "CLOUDFLARE_API_TOKEN" not in found and found.get("CF_API_TOKEN"):
+        found["CLOUDFLARE_API_TOKEN"] = found["CF_API_TOKEN"]
+    return found
