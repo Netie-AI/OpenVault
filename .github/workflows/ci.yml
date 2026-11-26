@@ -77,6 +77,55 @@ jobs:
           name: demo-report-${{ matrix.os }}-py${{ matrix.python-version }}
           path: reports/
 
+  # Profiler/ has its own pyproject.toml / uv.lock. nvme-sentinel comes from the repo root.
+  test-profiler:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Install Python 3.12
+        run: uv python install 3.12
+
+      - name: Sync Profiler dependencies
+        working-directory: Profiler
+        run: uv sync --all-extras --dev
+
+      - name: Pytest Profiler
+        working-directory: Profiler
+        run: uv run pytest -q
+
+  # apps/shell node --test. Node 22: the test script passes a glob, and node --test
+  # expands globs from Node 21 on. Electron 35 is built on Node 22. The tests use
+  # node builtins only, so the Electron binary is not downloaded.
+  test-shell:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/shell/package-lock.json
+
+      - name: Install dependencies
+        working-directory: apps/shell
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+        run: npm ci
+
+      - name: Test
+        working-directory: apps/shell
+        run: npm test
+
   # Product gate: OpenMW has its own pyproject.toml / uv.lock (cryptography, etc.).
   test-openmw:
     runs-on: ubuntu-latest
