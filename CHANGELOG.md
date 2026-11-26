@@ -2,6 +2,11 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-30 - Role ladders for DMS: grain and ontology, groq/google/openrouter only
+
+- `role` also accepts `grain` and `ontology`. DMS sends these two (`ao_vendor/llm/ov_client.py` role `ontology`, `dms_executor/grain_ai.py` role `grain`). Before ROUTE-ROLE-BUDGET-01 an unknown role was ignored and the default pool walked with `model: "auto"`, so DeepSeek was reachable. Since it, they were 422 `openvault_unknown_role`, so ontology compile and grain AI could not run.
+- `grain`: groq `openai/gpt-oss-20b`, google `gemini-3.1-flash-lite`, openrouter `google/gemma-4-31b-it:free`. `ontology`: groq `openai/gpt-oss-120b`, openrouter `nvidia/nemotron-3-ultra-550b-a55b:free`, google `gemini-3.5-flash`. Only groq, google and openrouter, per the 2026-08-22 DMS pin decision. Any other role is still 422.
+
 ## 2026-10-30 - Localhost unseal without an admin paste (OpenVault #123)
 
 - When the request `Host` header is loopback (`127.0.0.1`, `localhost`, `[::1]`, any port) and the middleware URL host is loopback, the :3010 console attaches `X-OpenVault-Admin` from the local admin token file for vault status, passphrase unseal, Hello unseal, and `GET /api/keys`. The token is not written into the page. Next strips it from the browser response.
