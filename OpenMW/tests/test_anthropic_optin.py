@@ -22,8 +22,10 @@ from openmw.openvault.app import create_app
 from openmw.openvault.route.breaker import reset_all_circuit_breakers
 from openmw.openvault.vault.crypto import Seal
 from openmw.openvault.vault.route_policy import (
+    DEFAULT_POLICY_PATH,
     POLICY_ENV,
     ROUTE_ROLES,
+    RoleHop,
     load_route_policy,
     reset_pending,
 )
@@ -149,8 +151,92 @@ def _err(status: int, *, retry_after: str | None = None) -> httpx.Response:
 
 def test_default_policy_has_no_anthropic_hop() -> None:
     policy = load_route_policy()
+    assert policy.sources == (str(DEFAULT_POLICY_PATH),)
+    assert "claude" not in DEFAULT_POLICY_PATH.read_text(encoding="utf-8")
     for role in ROUTE_ROLES:
         assert all(hop.provider != "anthropic" for hop in policy.hops_for(role)), role
+
+
+_CLAUDE_EXAMPLE = Path(__file__).resolve().parents[2] / "config" / "route_policy.claude.json"
+_SONNET = RoleHop("anthropic", "claude-sonnet-5-5")
+_OPUS = RoleHop("anthropic", "claude-opus-5-5")
+_FREE_PROVIDERS = frozenset({"groq", "google", "openrouter", "nvidia"})
+# Founder 2026-11-27: answer/sql serving is Sonnet; hard work, grain, ontology are Opus.
+_CLAUDE_HOPS = {
+    "sql": (
+        _SONNET,
+        RoleHop("groq", "qwen/qwen3.8-27b"),
+        RoleHop("openrouter", "qwen/qwen3.8-27b:free"),
+    ),
+    "tool": (
+        _SONNET,
+        RoleHop("groq", "openai/gpt-oss-20b"),
+        RoleHop("google", "gemini-3.1-flash-lite"),
+        RoleHop("nvidia", "openai/gpt-oss-20b"),
+    ),
+    "summarize": (
+        _SONNET,
+        RoleHop("google", "gemini-3.1-flash-lite"),
+        RoleHop("groq", "openai/gpt-oss-20b"),
+        RoleHop("openrouter", "google/gemma-4-31b-it:free"),
+    ),
+    "reason": (
+        _OPUS,
+        RoleHop("groq", "openai/gpt-oss-120b"),
+        RoleHop("nvidia", "nvidia/nemotron-3-super-120b-a12b"),
+        RoleHop("openrouter", "nvidia/nemotron-3-ultra-550b-a55b:free"),
+    ),
+    "grain": (
+        _OPUS,
+        RoleHop("groq", "openai/gpt-oss-20b"),
+        RoleHop("google", "gemini-3.1-flash-lite"),
+        RoleHop("openrouter", "google/gemma-4-31b-it:free"),
+    ),
+    "ontology": (
+        _OPUS,
+        RoleHop("groq", "openai/gpt-oss-120b"),
+        RoleHop("openrouter", "nvidia/nemotron-3-ultra-550b-a55b:free"),
+        RoleHop("google", "gemini-3.5-flash"),
+    ),
+}
+
+
+def test_claude_example_is_not_the_default_and_has_one_daily_knob() -> None:
+    assert _CLAUDE_EXAMPLE.is_file()
+    assert _CLAUDE_EXAMPLE.resolve() != DEFAULT_POLICY_PATH.resolve()
+    raw = json.loads(_CLAUDE_EXAMPLE.read_text(encoding="utf-8"))
+    assert raw["caps"] == {"callers": {"dms": {"daily_usd": 20}}}
+    assert raw["models"]["anthropic/claude-sonnet-5-5"] == {
+        "free": False,
+        "usd_per_1m_in": 2,
+        "usd_per_1m_out": 10,
+    }
+    assert raw["models"]["anthropic/claude-opus-5-5"] == {
+        "free": False,
+        "usd_per_1m_in": 4,
+        "usd_per_1m_out": 20,
+    }
+
+
+def test_claude_example_orders_hops_and_prices(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(POLICY_ENV, str(_CLAUDE_EXAMPLE))
+    policy = load_route_policy()
+    assert policy.sources[0] == str(DEFAULT_POLICY_PATH)
+    assert policy.sources[1] == str(_CLAUDE_EXAMPLE)
+    assert set(policy.caller_caps) == {"dms"}
+    assert policy.caller_caps["dms"].daily_usd == 20
+    assert policy.key_caps == {}
+    sonnet = policy.price_for("anthropic", "claude-sonnet-5-5")
+    opus = policy.price_for("anthropic", "claude-opus-5-5")
+    assert sonnet.cost(1_000_000, 0) == 2
+    assert sonnet.cost(0, 1_000_000) == 10
+    assert opus.cost(1_000_000, 0) == 4
+    assert opus.cost(0, 1_000_000) == 20
+    for role, hops in _CLAUDE_HOPS.items():
+        assert policy.hops_for(role) == hops, role
+        assert all(hop.provider in _FREE_PROVIDERS for hop in hops[1:])
+        for hop in hops[1:]:
+            assert policy.price_for(hop.provider, hop.model).free is True
 
 
 def test_gate_off_does_not_call_anthropic_and_keeps_the_historical_skip(vault: KeyVault) -> None:

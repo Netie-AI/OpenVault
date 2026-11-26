@@ -1,0 +1,49 @@
+{
+  "_doc": "DMS Claude serving example. Not loaded unless OPENVAULT_ROUTE_POLICY points at this file. See docs/reference/freeroute-role-budget.md. Prices are Claude API base rates (USD per million tokens): Sonnet 5.5 input 2, output 10; Opus 5.5 input 4, output 20. Source: https://platform.claude.com/docs/en/about-claude/pricing . The only spend knob is caps.callers.dms.daily_usd. Both models draw from that one daily ceiling.",
+  "roles": {
+    "sql": [
+      {"provider": "anthropic", "model": "claude-sonnet-5-5"},
+      {"provider": "groq", "model": "qwen/qwen3.8-27b"},
+      {"provider": "openrouter", "model": "qwen/qwen3.8-27b:free"}
+    ],
+    "tool": [
+      {"provider": "anthropic", "model": "claude-sonnet-5-5"},
+      {"provider": "groq", "model": "openai/gpt-oss-20b"},
+      {"provider": "google", "model": "gemini-3.1-flash-lite"},
+      {"provider": "nvidia", "model": "openai/gpt-oss-20b"}
+    ],
+    "reason": [
+      {"provider": "anthropic", "model": "claude-opus-5-5"},
+      {"provider": "groq", "model": "openai/gpt-oss-120b"},
+      {"provider": "nvidia", "model": "nvidia/nemotron-3-super-120b-a12b"},
+      {"provider": "openrouter", "model": "nvidia/nemotron-3-ultra-550b-a55b:free"}
+    ],
+    "summarize": [
+      {"provider": "anthropic", "model": "claude-sonnet-5-5"},
+      {"provider": "google", "model": "gemini-3.1-flash-lite"},
+      {"provider": "groq", "model": "openai/gpt-oss-20b"},
+      {"provider": "openrouter", "model": "google/gemma-4-31b-it:free"}
+    ],
+    "grain": [
+      {"provider": "anthropic", "model": "claude-opus-5-5"},
+      {"provider": "groq", "model": "openai/gpt-oss-20b"},
+      {"provider": "google", "model": "gemini-3.1-flash-lite"},
+      {"provider": "openrouter", "model": "google/gemma-4-31b-it:free"}
+    ],
+    "ontology": [
+      {"provider": "anthropic", "model": "claude-opus-5-5"},
+      {"provider": "groq", "model": "openai/gpt-oss-120b"},
+      {"provider": "openrouter", "model": "nvidia/nemotron-3-ultra-550b-a55b:free"},
+      {"provider": "google", "model": "gemini-3.5-flash"}
+    ]
+  },
+  "models": {
+    "anthropic/claude-sonnet-5-5": {"free": false, "usd_per_1m_in": 2, "usd_per_1m_out": 10},
+    "anthropic/claude-opus-5-5": {"free": false, "usd_per_1m_in": 4, "usd_per_1m_out": 20}
+  },
+  "caps": {
+    "callers": {
+      "dms": {"daily_usd": 20}
+    }
+  }
+}
