@@ -2,6 +2,12 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-10-30 - An app grant whose label cannot be issued is refused when asked (Refs #13, proposed F40)
+
+- `POST /api/local/grants` now checks the label against the issued-key rule before it creates the grant. A label outside `letters, digits and . : @ / - _ space` returns 400 `label may only contain letters, digits and . : @ / - _ space`. A label over 80 characters returns 400 `label must be at most 80 characters`; it is no longer cut to 80. An empty label still falls back to `client_name`, and that name must pass the same rule. A refused request creates no pending grant, so `GET /api/local/grants` does not list it.
+- Before, such a grant was accepted, listed as pending, and failed only when the human clicked Grant, so it could never be approved. `DMS grade52 armed (local)` did this: the parentheses are outside the rule.
+- A valid label is issued unchanged: the key from `GET /api/apikeys` carries exactly the label the app sent. The rule lives in one place, `api_keys.validate_label`, which `issue` and `start_grant` both call. `client_name` is still shown cut to 80 characters.
+
 ## 2026-10-30 - Localhost unseal without an admin paste (OpenVault #123)
 
 - When the request `Host` header is loopback (`127.0.0.1`, `localhost`, `[::1]`, any port) and the middleware URL host is loopback, the :3010 console attaches `X-OpenVault-Admin` from the local admin token file for vault status, passphrase unseal, Hello unseal, and `GET /api/keys`. The token is not written into the page. Next strips it from the browser response.

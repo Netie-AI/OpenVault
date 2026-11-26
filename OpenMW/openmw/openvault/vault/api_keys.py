@@ -40,7 +40,10 @@ from openmw.openvault.paths import keys_db_path
 TOKEN_PREFIX = "ov_"
 #: Shown in listings so a human can tell two keys apart. Never enough to use.
 _DISPLAY_CHARS = 6
-_LABEL_RE = re.compile(r"^[\w .:@/-]{1,80}$")
+LABEL_MAX = 80
+_LABEL_RE = re.compile(rf"^[\w .:@/-]{{1,{LABEL_MAX}}}$")
+LABEL_RULE = "label may only contain letters, digits and . : @ / - _ space"
+
 
 #: ``local`` is the loopback developer tier — effectively unmetered. Issuing it
 #: to a third party would hand out the exact bypass this module exists to close.
@@ -63,6 +66,25 @@ def issuable_tiers() -> frozenset[str]:
 
 class ApiKeyError(ValueError):
     """Bad issue/revoke request — never a leak of whether a token exists."""
+
+
+def validate_label(label: str) -> str:
+    """Return the stripped label, or raise ``ApiKeyError`` naming the rule.
+
+    The one place the issued-key label rule lives. ``issue`` calls it at mint
+    time and ``app_grants.start_grant`` calls it when a grant is asked for, so a
+    grant whose label can never be issued is refused up front instead of sitting
+    pending until the human clicks Grant. Over-long labels are refused, never
+    truncated: the key the human approves carries the label the app asked for.
+    """
+    clean = (label or "").strip()
+    if not clean:
+        raise ApiKeyError("label is required — an unnamed key cannot be revoked confidently")
+    if len(clean) > LABEL_MAX:
+        raise ApiKeyError(f"label must be at most {LABEL_MAX} characters")
+    if not _LABEL_RE.fullmatch(clean):
+        raise ApiKeyError(LABEL_RULE)
+    return clean
 
 
 @dataclass(frozen=True)
@@ -149,11 +171,7 @@ class ApiKeyStore:
 
     def issue(self, *, label: str, tier: str = "free") -> tuple[ApiKeyRecord, str]:
         """Mint a key. Returns (record, token) — the token is never retrievable again."""
-        clean_label = (label or "").strip()
-        if not clean_label:
-            raise ApiKeyError("label is required — an unnamed key cannot be revoked confidently")
-        if not _LABEL_RE.match(clean_label):
-            raise ApiKeyError("label may only contain letters, digits and . : @ / - _ space")
+        clean_label = validate_label(label)
         clean_tier = (tier or "").strip().lower()
         if not clean_tier:
             raise ApiKeyError("tier is required")
