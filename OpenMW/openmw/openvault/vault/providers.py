@@ -10,6 +10,8 @@ import os
 from dataclasses import asdict, dataclass, replace
 from typing import Any, Literal
 
+from openmw.openvault.vault.anthropic_messages import CHAT_MODELS as _ANTHROPIC_CHAT_MODELS
+
 ProviderTier = Literal["free", "freemium", "paid", "local"]
 
 
@@ -131,6 +133,11 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
         openai_compatible=False,
         needed_by=("cortex", "airgpt", "openvault"),
         status_page="https://status.anthropic.com/",
+        # Strongest first. Ids live in anthropic_messages.CHAT_MODELS so the
+        # proxy and the catalog cannot drift. openai_compatible stays false:
+        # the pooled /v1 walk does not spend this key. An explicit route_policy
+        # hop is the only way onto the Messages adapter.
+        chat_models=_ANTHROPIC_CHAT_MODELS,
     ),
     ProviderSpec(
         id="openrouter",
@@ -776,10 +783,10 @@ def resolve_model(provider: str, requested: str | None, *, multimodal: bool = Fa
 
     pool = spec.vision_models if multimodal else spec.chat_models
     if not pool:
-        # Nothing catalogued for this modality yet. Remaining empty entries
-        # (anthropic Messages API, speech-only, etc.) still need concrete caller
-        # ids to stay usable; only an alias is unresolvable here, and guessing
-        # is what sent "auto" upstream as a model name in the first place.
+        # Nothing catalogued for this modality yet. Speech-only entries and any
+        # other empty pool still need a concrete caller id to stay usable; only
+        # an alias is unresolvable here, and guessing is what sent "auto"
+        # upstream as a model name in the first place.
         want = (requested or "").strip()
         if want and want.lower() not in _AUTO_ALIASES:
             return want

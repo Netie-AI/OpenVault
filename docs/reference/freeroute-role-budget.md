@@ -96,9 +96,9 @@ DeepSeek. They carry no nvidia, sambanova or sea_lion hop.
 
 The defaults mark these providers' models free: `groq/*`, `google/*`, `nvidia/*`,
 `sambanova/*`, `sea_lion/*`, `openrouter/*:free`, and `local_qwen/*`. Every other
-model is paid. No paid prices ship, because a guessed number would read as a
-measured one. The operator adds the price for each paid model. Default caps:
-none, and `max_tokens_per_request: null`.
+model is paid. The default file ships no paid prices, because a guessed number
+would read as a measured one. An operator file adds the price for each paid
+model. Default caps: none, and `max_tokens_per_request: null`.
 
 Example override. Replace the `<...>` placeholders with the provider's own
 published rate. The file will not load until you do. Do not use `0`: a paid
@@ -116,6 +116,76 @@ model priced at 0 never moves a cap.
   }
 }
 ```
+
+## Anthropic opt-in
+
+Anthropic is not in the default role lists. A vault key with `provider: anthropic`
+does not receive `/v1/chat/completions` traffic on its own. The historical
+pool-walk skip (`anthropic chat not via /v1 proxy yet`) stays in that case.
+With `OPENVAULT_ROUTE_POLICY` unset, the walk is the shipped
+`route_policy.json` and nothing else.
+
+Founder decision 2026-11-27 07:27 SGT: Claude is the DMS serving path. The
+example is `config/route_policy.claude.json`. It is not loaded by default.
+Enable it with the env var set to that file (absolute path, or a path the
+process can open):
+
+```text
+OPENVAULT_ROUTE_POLICY=/path/to/OpenVault/config/route_policy.claude.json
+```
+
+Unset the variable to go back to the shipped defaults. A role list in the
+example replaces that role. The default free-model globs stay underneath.
+
+| Role | First hop | Why |
+|------|-----------|-----|
+| `sql`, `tool`, `summarize` | `claude-sonnet-5-5` | DMS answer and SQL serving. These are the lighter rungs in the default ladder. |
+| `reason` | `claude-opus-5-5` | Escalation and hard work. |
+| `grain`, `ontology` | `claude-opus-5-5` | Named by the founder for Opus. |
+
+After the Claude hop, each role keeps its current free hops whose provider is
+`groq`, `google`, `openrouter`, or `nvidia`, in the same order. `sea_lion` and
+`sambanova` are left off this example. `grain` and `ontology` had no nvidia
+hop, so they still do not.
+
+Prices in that file are the Claude API base rates, USD per million tokens, from
+<https://platform.claude.com/docs/en/about-claude/pricing> (model ids
+`claude-sonnet-5-5` and `claude-opus-5-5`,
+<https://platform.claude.com/docs/en/about-claude/models/overview>):
+
+| Model | Input | Output |
+|-------|-------|--------|
+| Claude Sonnet 5.5 | $2 | $10 |
+| Claude Opus 5.5 | $4 | $20 |
+
+The stamp uses those two rates. Published cache reads on these two models are
+0.05x the base input price, and cache writes are higher. The adapter counts
+cache tokens inside `prompt_tokens`, so a cache hit is stamped at the base
+input rate. Batch pricing is not used.
+
+The one spend knob is `caps.callers.dms.daily_usd`, set to `20`. Both Claude
+models draw from that one daily ceiling. A rough day at these rates is about
+$0.02 for a 4k-in / 1k-out Sonnet answer and about $0.16 for a 20k-in / 4k-out
+Opus compile, so $20 is about a thousand Sonnet answers or about a hundred
+Opus compiles. Change that one number. Do not copy it onto a second cap.
+
+The cap binds when the caller id is `dms`. Loopback DMS sends
+`"service_id": "dms"`. An issued `ov_` key is its own caller id and ignores
+`service_id`; move the same number onto `caps.keys.<vault key id>` and remove
+the caller entry so there is still one number. The vault key `provider` must
+be `anthropic`. The free-text label is not a gate. The key is sent as
+`x-api-key` and is not logged.
+
+Without `usd_per_1m_in` and `usd_per_1m_out` the hop is refused as unpriced
+(`requested: null`) and nothing is posted. Without a `daily_usd` or
+`monthly_usd` on the key or the caller, a role hop is refused as
+`paid_default`. The same #148 caps and `model` / `provider` / `tokens_in` /
+`tokens_out` / `est_cost_usd` stamps apply. A 401, 429, or 529 (overload,
+mapped to 503) walks to the next hop in that role.
+
+`stream: true` is not translated. If a later hop can stream, the walk uses it.
+If anthropic was the only hop, the response is 400
+`openvault_anthropic_unsupported`.
 
 ## Cap rules
 

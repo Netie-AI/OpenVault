@@ -2,6 +2,17 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-11-27 - DMS Claude example policy, not loaded by default (Refs #169)
+
+- `config/route_policy.claude.json` is the founder DMS serving path (2026-11-27 07:27 SGT). `sql`, `tool`, and `summarize` try `claude-sonnet-5-5` first. `reason`, `grain`, and `ontology` try `claude-opus-5-5` first. Each role then keeps its current free hops on groq, google, openrouter, or nvidia. Prices are the Claude API base rates from <https://platform.claude.com/docs/en/about-claude/pricing>: Sonnet 5.5 $2 / $10 per million tokens, Opus 5.5 $4 / $20. The one spend knob is `caps.callers.dms.daily_usd` = 20.
+- The file loads only when `OPENVAULT_ROUTE_POLICY` points at it. Unset, the shipped `route_policy.json` is the only source and the walk is unchanged. Contract: `docs/reference/freeroute-role-budget.md`.
+
+## 2026-11-26 - Anthropic Messages is an opt-in chat hop (Refs #169)
+
+- `POST /v1/chat/completions` can serve a role hop whose provider is `anthropic` through `OpenMW/openmw/openvault/vault/anthropic_messages.py` (OpenAI chat body to `POST https://api.anthropic.com/v1/messages` and back). The catalog `chat_models` are `claude-opus-5-5`, `claude-sonnet-5-5`, `claude-haiku-5-5`. `openai_compatible` stays false, so the provider is still not on the pooled spend list.
+- Shipped `route_policy.json` does not name anthropic. With no policy entry the walk is unchanged, including the skip `anthropic chat not via /v1 proxy yet` when an anthropic key sits in the pool. The hop runs only when an override lists that provider and a vault key with `provider: anthropic` exists. The key label is not a gate. The key is the `x-api-key` header and is not logged.
+- #148 caps and stamps apply. An unpriced anthropic model is refused before HTTP. A priced hop needs a daily or monthly USD cap on the key or the caller. 401, 429, and 529 (overload, returned as 503) walk to the next hop. `stream: true` is not translated: a later hop may stream, and an anthropic-only walk returns 400 `openvault_anthropic_unsupported`.
+
 ## 2026-10-30 - Role ladders for DMS: grain and ontology, groq/google/openrouter only
 
 - `role` also accepts `grain` and `ontology`. DMS sends these two (`ao_vendor/llm/ov_client.py` role `ontology`, `dms_executor/grain_ai.py` role `grain`). Before ROUTE-ROLE-BUDGET-01 an unknown role was ignored and the default pool walked with `model: "auto"`, so DeepSeek was reachable. Since it, they were 422 `openvault_unknown_role`, so ontology compile and grain AI could not run.

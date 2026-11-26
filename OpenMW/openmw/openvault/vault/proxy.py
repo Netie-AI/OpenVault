@@ -16,6 +16,7 @@ import structlog
 
 from openmw.openvault.route.attempt import AttemptOutcome, classify_attempt
 from openmw.openvault.route.breaker import CircuitBreaker, get_circuit_breaker
+from openmw.openvault.vault import anthropic_messages
 from openmw.openvault.vault.budget import (
     BudgetDecision,
     estimate_tokens_for_body,
@@ -74,14 +75,68 @@ def _sealed_refusal() -> tuple[int, dict[str, Any]]:
     }
 
 
-def _compat_skip(label: str, provider: str) -> str | None:
-    """Why this hop cannot go through the OpenAI-compat /v1 spend path."""
+_ANTHROPIC_STREAM_UNSUPPORTED = "stream is not supported by the Anthropic adapter yet"
+
+
+def _policy_enables_anthropic(provider: str, role_models: tuple[str, ...] | None) -> bool:
+    """True when this step is an explicit route_policy hop for anthropic.
+
+    A pool walk passes ``role_models is None`` and stays on the historical
+    skip, even if a vault key for anthropic exists. The key is the other half
+    of the gate: ``_vault_candidates`` never builds a hop without one.
+    """
+    return provider == "anthropic" and role_models is not None
+
+
+def _compat_skip(label: str, provider: str, *, anthropic_enabled: bool = False) -> str | None:
+    """Why this hop cannot go through the OpenAI-compat /v1 spend path.
+
+    ``anthropic_enabled`` is set only for an explicit policy hop. The adapter
+    then serves ``/v1/chat/completions``. Every other anthropic candidate keeps
+    the historical skip so a vault key alone does not change the walk.
+    """
     if provider == "anthropic":
+        if anthropic_enabled:
+            return None
         return f"{label}: anthropic chat not via /v1 proxy yet"
     spec = get_provider(provider)
     if spec is not None and not spec.openai_compatible:
         return f"{label}: {spec.name} is not on the OpenAI-compat /v1 spend path"
     return None
+
+
+class _HopResponse:
+    """Status and body after a non-OpenAI hop, with the same reads as ``httpx.Response``."""
+
+    def __init__(self, status_code: int, body: dict[str, Any], headers: dict[str, str]) -> None:
+        self.status_code = status_code
+        self.headers = headers
+        self._body = body
+        self.text = json.dumps(body) if status_code >= 400 else ""
+
+    def json(self) -> dict[str, Any]:
+        return self._body
+
+
+async def _anthropic_hop_response(
+    client: httpx.AsyncClient,
+    secret: str,
+    hop_body: dict[str, Any],
+    model: str,
+) -> _HopResponse:
+    """One Messages call. The key is revealed only inside the adapter header."""
+
+    def _key(bound: str = secret) -> str:
+        return bound
+
+    status, body = await anthropic_messages.call(client, _key, hop_body, default_model=model)
+    headers: dict[str, str] = {}
+    err = body.get("error") if isinstance(body, dict) else None
+    if isinstance(err, dict):
+        retry = err.get("retry_after_s")
+        if isinstance(retry, int):
+            headers["retry-after"] = str(retry)
+    return _HopResponse(status, body, headers)
 
 
 def _is_multimodal(body: dict[str, Any]) -> bool:
@@ -1150,7 +1205,8 @@ async def chat_completions(
 
             url = f"{base}/chat/completions"
             headers = {"Authorization": f"Bearer {secret}", "Content-Type": "application/json"}
-            skip = _compat_skip(cand.label, cand.provider)
+            anthropic_enabled = _policy_enables_anthropic(cand.provider, role_models)
+            skip = _compat_skip(cand.label, cand.provider, anthropic_enabled=anthropic_enabled)
             if skip is not None:
                 errors.append(skip)
                 continue
@@ -1219,7 +1275,10 @@ async def chat_completions(
                 _remember_key_use(cand)
                 started = time.perf_counter()
                 try:
-                    resp = await client.post(url, headers=headers, json=hop_body)
+                    if cand.provider == "anthropic":
+                        resp = await _anthropic_hop_response(client, secret, hop_body, model)
+                    else:
+                        resp = await client.post(url, headers=headers, json=hop_body)
                 except httpx.TimeoutException:
                     outcome = classify_attempt(None, "timeout")
                     _ledger_attempt(
@@ -1410,6 +1469,7 @@ async def prepare_chat_stream(
     prompt_estimate = estimate_tokens_for_body(work)
     context_blocked = 0
     considered = 0
+    anthropic_stream_skips = 0
     local_fail_reason = REASON_UNREACHABLE
     client = httpx.AsyncClient(timeout=timeout_s)
 
@@ -1444,7 +1504,8 @@ async def prepare_chat_stream(
                 errors.append(f"{cand.label}: missing base_url")
                 continue
 
-            skip = _compat_skip(cand.label, cand.provider)
+            anthropic_enabled = _policy_enables_anthropic(cand.provider, role_models)
+            skip = _compat_skip(cand.label, cand.provider, anthropic_enabled=anthropic_enabled)
             if skip is not None:
                 errors.append(skip)
                 continue
@@ -1474,6 +1535,13 @@ async def prepare_chat_stream(
             if not models:
                 why = "no vision model" if wants_images else "no catalogued model"
                 errors.append(f"{cand.label}: {why} for provider {cand.provider}")
+                continue
+
+            if cand.provider == "anthropic":
+                # The Messages adapter has no SSE translation. Say so and keep
+                # walking. A walk that can only offer this hop returns 400.
+                errors.append(f"{cand.label}: {_ANTHROPIC_STREAM_UNSUPPORTED}")
+                anthropic_stream_skips += 1
                 continue
 
             limited = 0
@@ -1697,6 +1765,17 @@ async def prepare_chat_stream(
     if context_blocked and context_blocked == considered:
         trace.error_type = "openvault_context_length_exceeded"
         return _context_refusal(errors)
+
+    if anthropic_stream_skips and considered == anthropic_stream_skips:
+        trace.error_type = "openvault_anthropic_unsupported"
+        return 400, {
+            "error": {
+                "message": _ANTHROPIC_STREAM_UNSUPPORTED,
+                "type": "openvault_anthropic_unsupported",
+                "provider": "anthropic",
+                "details": errors,
+            }
+        }
 
     if spend is not None and spend.blocks:
         return _budget_refusal(trace, spend, errors)
