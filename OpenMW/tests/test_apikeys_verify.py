@@ -7,6 +7,7 @@ is not enough. Other /api/apikeys routes stay admin-only.
 from __future__ import annotations
 
 import asyncio
+import functools
 import hmac
 import json
 import logging
@@ -28,6 +29,7 @@ from openmw.openvault.vault.http_guard import (
     apikey_verify_post,
     verify_service_allowlist,
 )
+from openmw.openvault.vault.ratelimit import TokenBudgetLimiter
 from openmw.openvault.vault.trust import TrustStore
 
 INTENT = {"X-OpenVault-Reveal": "intentional"}
@@ -573,8 +575,24 @@ def test_verify_behind_root_path_matches_unprefixed(
     _assert_absent(raw, closed_body.decode())
 
 
-def test_verify_rate_cap_is_429(app: FastAPI) -> None:
-    client = _client(app)
+@pytest.fixture()
+def frozen_clock_app(home: Any, monkeypatch: pytest.MonkeyPatch) -> FastAPI:
+    """``app``, with every ``TokenBudgetLimiter`` reading a clock that never moves.
+
+    The verify bucket refills one call per second. When the 61 calls took longer
+    than that (a loaded full-suite run), call 61 found a fresh token and got 200.
+    """
+    frozen = functools.partial(TokenBudgetLimiter, clock=lambda: 0.0)
+    monkeypatch.setattr("openmw.openvault.app.TokenBudgetLimiter", frozen)
+    return create_app(
+        mock_health=True,
+        enable_precheck_loop=False,
+        cortex_url="http://127.0.0.1:9",
+    )
+
+
+def test_verify_rate_cap_is_429(frozen_clock_app: FastAPI) -> None:
+    client = _client(frozen_clock_app)
     _key_id, _tier, raw = _issue(client)
     headers = admin_headers()
     for _ in range(60):
