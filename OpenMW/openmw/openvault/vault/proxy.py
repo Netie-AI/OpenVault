@@ -385,7 +385,10 @@ def _on_model_outcome(
 
     A 429 parks ``(key, model)`` only. The caller parks the whole key once
     every model on this hop has returned 429. A dead model is ejected for
-    this job. 402 and auth quarantine still apply to the key and stop the hop.
+    this job. A provider 402 parks the key and leaves this hop so the walk
+    can try the next one. The request itself is 402 only when every hop is
+    exhausted by a cap. Auth quarantine still applies to the key and leaves
+    the hop.
     """
     if outcome.attempt_class == "success":
         _apply_candidate_outcome(vault, fallback, cand, outcome, "")
@@ -1017,7 +1020,11 @@ def _sse_stamp(
 def _budget_refusal(
     trace: HopTrace, spend: SpendGuard, errors: list[str]
 ) -> tuple[int, dict[str, Any]]:
-    """Every hop that could still serve was refused by a cap. Name the first."""
+    """Nothing served, and a cap refused at least one hop. Name the first.
+
+    A single refusal does not end the walk. Callers reach this only after
+    every hop has been considered.
+    """
     trace.error_type = BUDGET_ERROR_TYPE
     body = spend.blocks[0].to_body()
     body["error"]["details"] = errors
@@ -1139,6 +1146,32 @@ def _ledger_attempt(
         )
     except Exception:
         log.warning("openvault_hop_attempt_ledger_failed", key_ref=key_id[:8])
+
+
+def _note_budget_skip(
+    vault: KeyVault,
+    *,
+    request_id: str,
+    cand: ProxyCandidate,
+    model: str,
+    blocked: BudgetBlock,
+    errors: list[str],
+) -> None:
+    """One hop refused by a cap. Record it and let the walk try the next hop.
+
+    The detail line is the same text the 402 body already carries. The ledger
+    row keeps the cap name only, so a later hop can still serve.
+    """
+    errors.append(f"{cand.label}: {blocked.cap} refuses {model}")
+    _ledger_attempt(
+        vault,
+        request_id=request_id,
+        key_id=cand.key_id,
+        model=model,
+        status="402",
+        started=time.perf_counter(),
+        reason=blocked.cap,
+    )
 
 
 async def chat_completions(
@@ -1266,7 +1299,14 @@ async def chat_completions(
                 blocked = _admit_hop(spend, cand, model, hop_body, prompt_estimate)
                 if blocked is not None:
                     other_skips += 1
-                    errors.append(f"{cand.label}: {blocked.cap} refuses {model}")
+                    _note_budget_skip(
+                        vault,
+                        request_id=request_id,
+                        cand=cand,
+                        model=model,
+                        blocked=blocked,
+                        errors=errors,
+                    )
                     continue
                 _log_budget(cand.provider, model, work.get("max_tokens"), decision)
 
@@ -1578,7 +1618,14 @@ async def prepare_chat_stream(
                 blocked = _admit_hop(spend, cand, model, hop_payload, prompt_estimate, stream=True)
                 if blocked is not None:
                     other_skips += 1
-                    errors.append(f"{cand.label}: {blocked.cap} refuses {model}")
+                    _note_budget_skip(
+                        vault,
+                        request_id=request_id,
+                        cand=cand,
+                        model=model,
+                        blocked=blocked,
+                        errors=errors,
+                    )
                     continue
                 _log_budget(cand.provider, model, work.get("max_tokens"), decision)
 
