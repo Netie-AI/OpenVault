@@ -2,7 +2,7 @@
 
 The limit and the reset zone live on ``ProviderSpec``. This module does not
 hard-code a provider id or a token number. ``usage_events`` is read only;
-its 18-column schema is not changed.
+this module does not change its schema.
 """
 
 from __future__ import annotations
@@ -172,7 +172,7 @@ def tokens_used_for_key(
 ) -> int:
     """Successful ``usage_events`` tokens for one vault key since ``since``.
 
-    Read only. The 18-column usage schema is not changed. A row with an
+    Read only. This function does not change the usage schema. A row with an
     empty ``vault_key_id`` is not attributed to a key.
     """
     if not db_path.is_file() or not vault_key_id:

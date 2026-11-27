@@ -2,6 +2,12 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-11-27 - FreeRoute service tier and limiter limited_by (Refs OV-FREEROUTE-TIER-429-01)
+
+- `DEFAULT_TIERS` gains `service`, the same request and token budget as `pro` (120 rpm / 400,000 tpm). A shared serving key uses this tier. `local` stays the unmetered loopback tier. No existing key's tier is changed here. Spend caps and prices are unchanged.
+- A TokenBudgetLimiter 429 writes `limited_by` (`request` or `token`) on the `usage_events` row. An older database gains the column on open. The JSON body still carries it.
+- Operator command, run only in a founder window: `openmw apikey-tier <key_id> service`. It updates only that key's tier column and does not print the token.
+
 ## 2026-11-27 - A per-hop 402 tries the next hop (Refs OV-402-FALLTHROUGH-01)
 
 - A role or pool walk that hits `openvault_budget_exceeded` on one hop, including an unpriced model under a cap, or a provider 402, records that hop and tries the next. The request is 402 only when every hop is exhausted, with the same body as before. Prices, caps, and the unpriced-is-paid rule are unchanged.

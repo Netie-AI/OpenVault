@@ -3623,6 +3623,7 @@ def create_app(
             completion_tokens_in: int = 0,
             tokens_in: int | None = None,
             tokens_out: int | None = None,
+            limited_by: str = "",
         ) -> None:
             """One ledger row per request. Never fails the request it describes."""
             keep_hold = False
@@ -3645,6 +3646,7 @@ def create_app(
                         status=status,
                         error_type=trace.error_type,
                         latency_ms=int((time.time() - started_at) * 1000),
+                        limited_by=limited_by,
                         service_id=caller_id,
                         route_role=spend.route_role or "",
                         est_cost_usd=spend.cost_for(
@@ -3725,7 +3727,13 @@ def create_app(
         )
         if not decision.allowed:
             trace.error_type = "rate_limited"
-            _record_usage(status=429, total_tokens=0, estimated=False, stream=bool(body.stream))
+            _record_usage(
+                status=429,
+                total_tokens=0,
+                estimated=False,
+                stream=bool(body.stream),
+                limited_by=decision.limited_by,
+            )
             return JSONResponse(
                 status_code=429,
                 content={

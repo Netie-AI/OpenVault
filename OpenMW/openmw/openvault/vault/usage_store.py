@@ -21,9 +21,12 @@ Same ``keys.db`` as the vault and the trust store, for one backup surface. A
 billing row is never pruned the way ``health_store`` prunes heartbeats.
 
 ``route_spend`` sits beside ``usage_events`` with the same ``event_id``: the
-route policy's budget scope, role and estimated USD. A separate table, so the
-18-column ``usage_events`` shape that other readers rely on does not move.
-Hard caps sum ``route_spend.est_cost_usd``.
+route policy's budget scope, role and estimated USD. Hard caps sum
+``route_spend.est_cost_usd``. Spend caps do not read ``limited_by``.
+
+``limited_by`` is an additive column on ``usage_events`` (``request`` or
+``token`` when the token-budget limiter refused the call, otherwise empty).
+An older database gains it on open. It is not a price and not a spend cap.
 """
 
 from __future__ import annotations
@@ -46,6 +49,17 @@ USAGE_UNIT_USD: float | None = None
 USAGE_UNIT_STATUS = "NEEDS-YOU"
 USAGE_UNIT_PREFIX = f"{CURRENCY_CODE} {USAGE_UNIT_STATUS}"
 USAGE_UNIT_SIGN = f"{CURRENCY_SIGN} {USAGE_UNIT_STATUS}"
+
+#: Limiter denial axis stored on a usage row. Anything else is dropped.
+_LIMITED_BY_VALUES = frozenset({"", "request", "token"})
+
+
+def _limited_by_value(value: str) -> str:
+    """Keep ``request`` or ``token``. Drop any other text."""
+    clean = value.strip()
+    if clean in _LIMITED_BY_VALUES:
+        return clean
+    return ""
 
 
 def usd_prefix(amount: int) -> str:
@@ -85,6 +99,8 @@ class UsageEvent:
     status: int = 0
     #: Typed refusal name when the request failed, e.g. openvault_vault_sealed.
     error_type: str = ""
+    #: ``request`` or ``token`` when the limiter returned 429. Empty otherwise.
+    limited_by: str = ""
     latency_ms: int = 0
     #: Budget scope for caps: the issued key id, or a loopback ``service_id``.
     service_id: str = ""
@@ -171,10 +187,19 @@ class UsageStore:
                   stream INTEGER NOT NULL DEFAULT 0,
                   status INTEGER NOT NULL DEFAULT 0,
                   error_type TEXT NOT NULL DEFAULT '',
-                  latency_ms INTEGER NOT NULL DEFAULT 0
+                  latency_ms INTEGER NOT NULL DEFAULT 0,
+                  limited_by TEXT NOT NULL DEFAULT ''
                 )
                 """
             )
+            usage_cols = {
+                row[1] for row in conn.execute("PRAGMA table_info(usage_events)").fetchall()
+            }
+            if "limited_by" not in usage_cols:
+                # Additive. Empty on every row that predates the column.
+                conn.execute(
+                    "ALTER TABLE usage_events ADD COLUMN limited_by TEXT NOT NULL DEFAULT ''"
+                )
             conn.execute(
                 "CREATE INDEX IF NOT EXISTS idx_usage_key_time "
                 "ON usage_events(api_key_id, created_at)"
@@ -211,7 +236,8 @@ class UsageStore:
                 "INSERT INTO usage_events (event_id, created_at, identity, tier, api_key_id, "
                 "model_requested, model_served, provider, vault_key_id, prompt_tokens, "
                 "completion_tokens, total_tokens, estimated, cache_hit, stream, status, "
-                "error_type, latency_ms) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                "error_type, latency_ms, limited_by) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (
                     event.event_id,
                     event.created_at,
@@ -231,6 +257,7 @@ class UsageStore:
                     int(event.status),
                     event.error_type,
                     int(event.latency_ms),
+                    _limited_by_value(event.limited_by),
                 ),
             )
             conn.execute(
@@ -310,6 +337,7 @@ class UsageStore:
             "status": int(row["status"]),
             "error_type": row["error_type"],
             "latency_ms": int(row["latency_ms"]),
+            "limited_by": _limited_by_value(str(row["limited_by"] or "")),
             "billable_tokens": 0 if row["cache_hit"] else int(row["total_tokens"]),
         }
 

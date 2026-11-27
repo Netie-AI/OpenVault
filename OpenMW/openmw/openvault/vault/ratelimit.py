@@ -63,11 +63,13 @@ class TierLimits:
         return self.tokens_per_min / 60.0
 
 
-# Loopback/dev "local" is effectively unmetered; free/pro are real budgets.
+# Loopback/dev "local" is effectively unmetered. free and pro are caller budgets.
+# service matches pro and is for a shared serving key. Do not put that key on local.
 DEFAULT_TIERS: dict[str, TierLimits] = {
     "local": TierLimits("local", requests_per_min=6000, tokens_per_min=6_000_000),
     "free": TierLimits("free", requests_per_min=20, tokens_per_min=40_000),
     "pro": TierLimits("pro", requests_per_min=120, tokens_per_min=400_000),
+    "service": TierLimits("service", requests_per_min=120, tokens_per_min=400_000),
 }
 
 

@@ -66,6 +66,7 @@ _USAGE_COLUMNS = (
     "status",
     "error_type",
     "latency_ms",
+    "limited_by",
 )
 
 
@@ -143,12 +144,13 @@ def _response(status: int, text: str) -> MagicMock:
     return resp
 
 
-def test_usage_events_schema_stays_18_columns(vault: KeyVault) -> None:
+def test_usage_events_schema_keeps_limited_by(vault: KeyVault) -> None:
     keys_before = _cols(vault.db_path, "keys")
     UsageStore(db_path=vault.db_path)
     usage = _cols(vault.db_path, "usage_events")
     assert usage == list(_USAGE_COLUMNS)
-    assert len(usage) == 18
+    assert len(usage) == 19
+    assert usage[-1] == "limited_by"
     FallbackManager(vault)
     assert _cols(vault.db_path, "keys") == keys_before
     assert _cols(vault.db_path, "usage_events") == usage
