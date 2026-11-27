@@ -909,16 +909,17 @@ def test_sse_injector_without_stamp_is_unchanged() -> None:
 # --- ledger migration --------------------------------------------------------
 
 
-def test_old_db_gains_route_spend_and_usage_events_keeps_18_columns(tmp_path: Path) -> None:
+def test_old_db_gains_route_spend_and_usage_events_keep_limited_by(tmp_path: Path) -> None:
     db = tmp_path / "old.db"
     UsageStore(db_path=db)
     with sqlite3.connect(db) as conn:
         conn.execute("DROP TABLE route_spend")
     store = UsageStore(db_path=db)
     with sqlite3.connect(db) as conn:
-        usage_cols = conn.execute("PRAGMA table_info(usage_events)").fetchall()
+        usage_cols = [r[1] for r in conn.execute("PRAGMA table_info(usage_events)").fetchall()]
         spend_cols = {r[1] for r in conn.execute("PRAGMA table_info(route_spend)")}
-    assert len(usage_cols) == 18
+    assert len(usage_cols) == 19
+    assert usage_cols[-1] == "limited_by"
     assert {"service_id", "vault_key_id", "route_role", "est_cost_usd"} <= spend_cols
     store.record(UsageEvent(identity="y", tier="free", service_id="svc", est_cost_usd=0.25))
     store.record(UsageEvent(identity="y", tier="free", vault_key_id="vk", est_cost_usd=None))

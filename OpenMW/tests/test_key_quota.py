@@ -1,6 +1,6 @@
 """T3 slice 2: admin per-key quota view.
 
-No network. No provider secret in the payload. usage_events stays 18 columns.
+No network. No provider secret in the payload. usage_events keeps limited_by.
 """
 
 from __future__ import annotations
@@ -245,11 +245,12 @@ def test_quota_view_output_contains_no_secret(vault: KeyVault) -> None:
     assert router["is_free_tier"] is True
 
 
-def test_usage_events_stays_18_and_keys_columns_unchanged(vault: KeyVault) -> None:
+def test_usage_events_keeps_limited_by_and_keys_columns_unchanged(vault: KeyVault) -> None:
     keys_before = _cols(vault.db_path, "keys")
     UsageStore(db_path=vault.db_path)
     usage = _cols(vault.db_path, "usage_events")
-    assert len(usage) == 18
+    assert len(usage) == 19
+    assert usage[-1] == "limited_by"
     _app(vault).get("/api/keys/quota")
     record_hop_attempt(
         vault.db_path,

@@ -1,7 +1,7 @@
 """Persisted hop parks in keys.db.
 
 Additive: a new ``hop_parks`` table. This module does not ALTER ``keys`` or
-``usage_events``. ``usage_events`` stays 18 columns.
+``usage_events``.
 
 A row is one key park (``model`` empty) or one (key, model) park. The text
 column is a scrubbed provider message, never a request or response body.

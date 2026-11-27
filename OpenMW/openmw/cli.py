@@ -389,5 +389,29 @@ def ports_cmd(
     raise typer.Exit(1)
 
 
+@app.command("apikey-tier")
+def apikey_tier_cmd(key_id: str, tier: str) -> None:
+    """Set one issued key's limiter tier. Writes only the tier column.
+
+    Pass the key id, never the token. The token is not read and not printed.
+    local is refused. Example: openmw apikey-tier <key_id> service
+    """
+    from openmw.openvault.vault.api_keys import ApiKeyError, ApiKeyStore, looks_like_issued_token
+
+    offered_id = key_id.strip()
+    offered_tier = tier.strip()
+    if looks_like_issued_token(offered_id) or looks_like_issued_token(offered_tier):
+        typer.echo("Pass the key id and a tier name. Tokens are not accepted.", err=True)
+        raise typer.Exit(code=2)
+    try:
+        record = ApiKeyStore().set_tier(offered_id, offered_tier)
+    except ApiKeyError as exc:
+        typer.echo(str(exc), err=True)
+        code = 1 if str(exc).startswith("no key") else 2
+        raise typer.Exit(code=code) from exc
+    typer.echo(f"key_id={record.key_id}")
+    typer.echo(f"tier={record.tier}")
+
+
 if __name__ == "__main__":
     app()

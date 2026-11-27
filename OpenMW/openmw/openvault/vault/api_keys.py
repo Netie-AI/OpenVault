@@ -47,6 +47,27 @@ _LABEL_RE = re.compile(r"^[\w .:@/-]{1,80}$")
 NON_ISSUABLE_TIERS = frozenset({"local"})
 
 
+def _require_issuable_tier(tier: str) -> str:
+    """Metered tier name, or :class:`ApiKeyError`.
+
+    ``local`` stays the loopback developer tier and is not assignable.
+    """
+    clean_tier = (tier or "").strip().lower()
+    if not clean_tier:
+        raise ApiKeyError("tier is required")
+    if clean_tier in NON_ISSUABLE_TIERS:
+        raise ApiKeyError(
+            f"{clean_tier!r} is the loopback developer tier and is effectively unmetered; "
+            "issue a metered tier instead"
+        )
+    allowed = issuable_tiers()
+    if clean_tier not in allowed:
+        raise ApiKeyError(
+            f"unknown tier {clean_tier!r}; issuable tiers are {', '.join(sorted(allowed))}"
+        )
+    return clean_tier
+
+
 def issuable_tiers() -> frozenset[str]:
     """Tiers a key may be minted at: configured, minus the unmetered dev tier.
 
@@ -154,19 +175,7 @@ class ApiKeyStore:
             raise ApiKeyError("label is required — an unnamed key cannot be revoked confidently")
         if not _LABEL_RE.match(clean_label):
             raise ApiKeyError("label may only contain letters, digits and . : @ / - _ space")
-        clean_tier = (tier or "").strip().lower()
-        if not clean_tier:
-            raise ApiKeyError("tier is required")
-        if clean_tier in NON_ISSUABLE_TIERS:
-            raise ApiKeyError(
-                f"{clean_tier!r} is the loopback developer tier and is effectively unmetered; "
-                "issue a metered tier instead"
-            )
-        allowed = issuable_tiers()
-        if clean_tier not in allowed:
-            raise ApiKeyError(
-                f"unknown tier {clean_tier!r}; issuable tiers are {', '.join(sorted(allowed))}"
-            )
+        clean_tier = _require_issuable_tier(tier)
 
         token = TOKEN_PREFIX + secrets.token_urlsafe(32)
         record = ApiKeyRecord(
@@ -264,6 +273,29 @@ class ApiKeyStore:
         sql += " ORDER BY created_at DESC"
         with contextlib.closing(self._connect()) as conn, conn:
             return [self._row(r) for r in conn.execute(sql).fetchall()]
+
+    def set_tier(self, key_id: str, tier: str) -> ApiKeyRecord:
+        """Change one key's limiter tier. No other column is written.
+
+        Does not mint, revoke, or reveal the token. ``local`` is refused.
+        """
+        clean_id = (key_id or "").strip()
+        if not clean_id:
+            raise ApiKeyError("key id is required")
+        clean_tier = _require_issuable_tier(tier)
+        with contextlib.closing(self._connect()) as conn, conn:
+            cur = conn.execute(
+                "UPDATE api_keys SET tier=? WHERE key_id=?",
+                (clean_tier, clean_id),
+            )
+            conn.commit()
+            changed = cur.rowcount > 0
+        if not changed:
+            raise ApiKeyError("no key with that id")
+        record = self.get(clean_id)
+        if record is None:
+            raise ApiKeyError("no key with that id")
+        return record
 
     def revoke(self, key_id: str, *, reason: str = "") -> bool:
         with contextlib.closing(self._connect()) as conn, conn:

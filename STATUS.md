@@ -14,6 +14,7 @@ Building the product comes before cleanup.
 
 ## Now
 
+- FreeRoute `service` tier matches `pro` (120 rpm / 400,000 tpm) for a shared serving key. Existing keys stay on their current tier until `openmw apikey-tier <key_id> service` in a founder window. A limiter 429 stores `limited_by` on `usage_events`. Spend caps and prices are unchanged.
 - One vault: `E:\OpenVault\.openvault`. No second vault.
 - HUMAN_STOP: do not bind `:5000` on a public or LAN interface.
 - HT1-HT5 on epic 18 are cleared (founder 2026-09-04; boxes ticked 2026-09-07). The epic is closed.
