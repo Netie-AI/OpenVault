@@ -37,8 +37,11 @@ unchanged and is not stamped.
 
 ## `budget_exceeded` refusal
 
-HTTP **402**. No upstream call is made for the refused hop. The walk never
-moves on to a paid model to find room.
+HTTP **402** only when every hop has been considered and none served. No
+upstream call is made for the refused hop. That hop is skipped, its cap name
+is written to `hop_attempts`, and the walk tries the next hop. A provider
+402 parks that key and is the same kind of skip. Prices, caps, and the rule
+that an unpriced model is paid do not change.
 
 ```json
 {
@@ -177,9 +180,9 @@ be `anthropic`. The free-text label is not a gate. The key is sent as
 `x-api-key` and is not logged.
 
 Without `usd_per_1m_in` and `usd_per_1m_out` the hop is refused as unpriced
-(`requested: null`) and nothing is posted. Without a `daily_usd` or
-`monthly_usd` on the key or the caller, a role hop is refused as
-`paid_default`. The same #148 caps and `model` / `provider` / `tokens_in` /
+(`requested: null`) and nothing is posted. The walk tries the next hop.
+Without a `daily_usd` or `monthly_usd` on the key or the caller, a role hop
+is refused as `paid_default`. The same #148 caps and `model` / `provider` / `tokens_in` /
 `tokens_out` / `est_cost_usd` stamps apply. A 401, 429, or 529 (overload,
 mapped to 503) walks to the next hop in that role.
 

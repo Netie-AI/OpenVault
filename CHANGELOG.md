@@ -2,6 +2,10 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-11-27 - A per-hop 402 tries the next hop (Refs OV-402-FALLTHROUGH-01)
+
+- A role or pool walk that hits `openvault_budget_exceeded` on one hop, including an unpriced model under a cap, or a provider 402, records that hop and tries the next. The request is 402 only when every hop is exhausted, with the same body as before. Prices, caps, and the unpriced-is-paid rule are unchanged.
+
 ## 2026-11-27 - DMS Claude example policy, not loaded by default (Refs #169)
 
 - `config/route_policy.claude.json` is the founder DMS serving path (2026-11-27 07:27 SGT). `sql`, `tool`, and `summarize` try `claude-sonnet-5-5` first. `reason`, `grain`, and `ontology` try `claude-opus-5-5` first. Each role then keeps its current free hops on groq, google, openrouter, or nvidia. Prices are the Claude API base rates from <https://platform.claude.com/docs/en/about-claude/pricing>: Sonnet 5.5 $2 / $10 per million tokens, Opus 5.5 $4 / $20. The one spend knob is `caps.callers.dms.daily_usd` = 20.
