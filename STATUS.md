@@ -14,6 +14,7 @@ Building the product comes before cleanup.
 
 ## Now
 
+- A paid hop with no USD cap is 402 `paid_default` even when `role` is omitted. A later hop that serves after that refusal sets `served_downgraded` (header, body, ledger) with from/to. An unpriced paid model is `cost_unknown`, never null or 0. Cap numbers, keys, and bind addresses are unchanged. Draft: founder objection window.
 - FreeRoute `service` tier matches `pro` (120 rpm / 400,000 tpm) for a shared serving key. Existing keys stay on their current tier until `openmw apikey-tier <key_id> service` in a founder window. A limiter 429 stores `limited_by` on `usage_events`. Spend caps and prices are unchanged.
 - One vault: `E:\OpenVault\.openvault`. No second vault.
 - HUMAN_STOP: do not bind `:5000` on a public or LAN interface.

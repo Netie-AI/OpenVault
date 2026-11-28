@@ -49,6 +49,9 @@ LOCAL_ONLY_MESSAGE = "local-only request cannot be served; no local hop succeede
 SERVED_PROVIDER_HEADER = "X-OpenVault-Served-Provider"
 SERVED_MODEL_HEADER = "X-OpenVault-Served-Model"
 SERVED_LOCAL_HEADER = "X-OpenVault-Served-Local"
+SERVED_DOWNGRADED_HEADER = "X-OpenVault-Served-Downgraded"
+DOWNGRADED_FROM_HEADER = "X-OpenVault-Downgraded-From"
+DOWNGRADED_TO_HEADER = "X-OpenVault-Downgraded-To"
 
 LOCAL_PLACEHOLDER_SECRET = "local"
 
@@ -166,6 +169,22 @@ def served_response_headers(
         SERVED_PROVIDER_HEADER: provider,
         SERVED_MODEL_HEADER: model,
         SERVED_LOCAL_HEADER: "true" if served_local else "false",
+    }
+
+
+def downgrade_response_headers(
+    *,
+    downgraded: bool,
+    downgraded_from: str,
+    downgraded_to: str,
+) -> dict[str, str]:
+    """Present only when a later hop served after a budget refusal."""
+    if not downgraded:
+        return {}
+    return {
+        SERVED_DOWNGRADED_HEADER: "true",
+        DOWNGRADED_FROM_HEADER: downgraded_from,
+        DOWNGRADED_TO_HEADER: downgraded_to,
     }
 
 
@@ -366,12 +385,15 @@ def walkable_local_base() -> tuple[str, str] | tuple[None, str]:
 
 
 __all__ = [
+    "DOWNGRADED_FROM_HEADER",
+    "DOWNGRADED_TO_HEADER",
     "LOCAL_ONLY_ERROR_TYPE",
     "LOCAL_ONLY_MESSAGE",
     "LOCAL_PLACEHOLDER_SECRET",
     "REASON_MODEL_NOT_LOADED",
     "REASON_NOT_LOOPBACK",
     "REASON_UNREACHABLE",
+    "SERVED_DOWNGRADED_HEADER",
     "SERVED_LOCAL_HEADER",
     "SERVED_MODEL_HEADER",
     "SERVED_PROVIDER_HEADER",
@@ -380,6 +402,7 @@ __all__ = [
     "chat_error_is_model_missing",
     "configured_base_url",
     "configured_model",
+    "downgrade_response_headers",
     "inject_served_into_sse_chunk",
     "is_loopback_base_url",
     "local_only_refusal",

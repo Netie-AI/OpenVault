@@ -406,6 +406,7 @@ def test_unpriced_anthropic_hop_is_refused(
     assert resp.status_code == 402
     assert resp.json()["error"]["cap_detail"]["requested"] is None
     assert "no price" in resp.json()["error"]["message"]
+    assert resp.json()["est_cost_usd"] == "cost_unknown"
     assert urls == []
 
 

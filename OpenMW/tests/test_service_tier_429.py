@@ -174,8 +174,9 @@ def test_old_usage_events_gains_limited_by_column(tmp_path: Path) -> None:
         old = conn.execute(
             "SELECT identity, tier, status, limited_by FROM usage_events WHERE event_id='old'"
         ).fetchone()
-    assert cols[-1] == "limited_by"
-    assert len(cols) == 19
+    assert "limited_by" in cols
+    assert cols[-4:] == ["served_downgraded", "downgraded_from", "downgraded_to", "cost_status"]
+    assert len(cols) == 23
     assert old == ("old-id", "free", 200, "")
     store.record(
         UsageEvent(

@@ -9,7 +9,7 @@ Contract for Cortex #303/#304 on `POST /v1/chat/completions`. Code:
 | Field | Values | Behaviour |
 |---|---|---|
 | `role` | `sql` \| `tool` \| `reason` \| `summarize` \| `grain` \| `ontology` | Walks that role's ordered model list from the policy. Free models come first. On a provider failure the walk moves to the next entry in order. `model` is not used to pick the hop. |
-| `role` omitted or `null` | - | Unchanged: the pre-role pool walk. Configured caps still apply. |
+| `role` omitted or `null` | - | Pool walk, same order as before. A paid hop still needs a USD cap. Without one it is 402 `paid_default` and is not sent. Free hops are unchanged. |
 | `role` anything else (`""`, `"SQL"`, `"chat"`, `7`) | - | **422** `openvault_unknown_role`, with `allowed: ["sql","tool","reason","summarize","grain","ontology"]`. No upstream call. |
 | `role` with `strict` (or `X-OpenVault-Strict`) or `local_only` | - | **422** `openvault_role_conflict`, with `conflicts_with`. |
 | `service_id` | string, max 128 | Budget scope for a loopback caller, e.g. `cortex`. An issued `ov_` key is always its own scope (its key id), and this field is ignored for keyed callers. Default: the loopback host. |
@@ -28,7 +28,7 @@ and `served_local` fields stay.
 | `provider` | provider id of that hop, e.g. `groq` | `null` |
 | `tokens_in` | upstream `usage.prompt_tokens`, or `null` if upstream sent no usage | `0` |
 | `tokens_out` | upstream `usage.completion_tokens`, or `null` | `0` |
-| `est_cost_usd` | from the policy price table. A free model costs `0.0`. A paid model without a price is `null`. When usage is missing it is the reserved worst case | `0.0` |
+| `est_cost_usd` | from the policy price table. A free model costs `0.0`. A paid model without a price is the string `cost_unknown` (never null, never `0.0`). When usage is missing on a priced hop it is the reserved worst case | `0.0`, or `cost_unknown` when the refusal is an unpriced paid model |
 
 Streams add `model` and `provider` to every `data:` chunk. The token and cost
 fields go on the chunk that carries `usage`, so send
@@ -65,10 +65,22 @@ that an unpriced model is paid do not change.
 `cap` is one of `key.daily_usd`, `key.monthly_usd`, `caller.daily_usd`,
 `caller.monthly_usd`, `request.max_tokens_per_request` (`unit: "tokens"`),
 `request.completions` (`unit: "completions"`, see Cap rules), or
-`paid_default`. `paid_default` means a role walk reached a paid model and no USD
-cap is set for that vault key or caller. For a key cap, `id` is the first 8
-characters of the vault key id. `requested: null` means the paid model has no
-price, so the cap cannot be checked.
+`paid_default`. `paid_default` means a paid hop was reached and no USD cap is
+set for that vault key or caller. That includes a request that omits `role`.
+For a key cap, `id` is the first 8 characters of the vault key id.
+`requested: null` means the paid model has no price, so the cap cannot be
+checked, and `est_cost_usd` on that response is `cost_unknown`.
+
+## Downgrade stamp
+
+When a hop is refused by a cap (including `paid_default` and an unpriced paid
+model) and a later hop serves, the response says so. The body fields are
+`served_downgraded: true`, `downgraded_from` (the first refused hop,
+`provider/model`), and `downgraded_to` (the hop that served). The headers are
+`X-OpenVault-Served-Downgraded: true`, `X-OpenVault-Downgraded-From`, and
+`X-OpenVault-Downgraded-To`. The same three values are stored on the usage
+ledger row. A response that was not downgraded omits them. Streams put the
+body fields on each `data:` object and the headers on the response.
 
 ## Policy file
 
@@ -180,9 +192,10 @@ be `anthropic`. The free-text label is not a gate. The key is sent as
 `x-api-key` and is not logged.
 
 Without `usd_per_1m_in` and `usd_per_1m_out` the hop is refused as unpriced
-(`requested: null`) and nothing is posted. The walk tries the next hop.
-Without a `daily_usd` or `monthly_usd` on the key or the caller, a role hop
-is refused as `paid_default`. The same #148 caps and `model` / `provider` / `tokens_in` /
+(`requested: null`, `est_cost_usd` is `cost_unknown`) and nothing is posted.
+The walk tries the next hop. Without a `daily_usd` or `monthly_usd` on the
+key or the caller, the hop is refused as `paid_default` whether or not the
+request names a role. The same #148 caps and `model` / `provider` / `tokens_in` /
 `tokens_out` / `est_cost_usd` stamps apply. A 401, 429, or 529 (overload,
 mapped to 503) walks to the next hop in that role.
 
@@ -193,10 +206,10 @@ If anthropic was the only hop, the response is 400
 ## Cap rules
 
 - A model is paid unless the policy marks it `"free": true`.
-- On a `role` request, a paid hop runs only if the vault key it would spend, or
-  the caller, has a `daily_usd` or `monthly_usd` cap. Without one the hop is
-  refused as `paid_default`. A request without `role` keeps the pool walk, so a
-  paid pooled key still serves it when no cap applies.
+- A paid hop runs only if the vault key it would spend, or the caller, has a
+  `daily_usd` or `monthly_usd` cap. Without one the hop is refused as
+  `paid_default` (402). A request without `role` still walks the pool, but a
+  paid pooled key does not serve when no cap applies.
 - Each applicable cap is checked before the hop: spent in the window, plus
   in-flight holds in this process, plus this hop's worst case (prompt estimate
   plus the output budget actually sent, once per completion). Windows are UTC
@@ -210,8 +223,8 @@ If anthropic was the only hop, the response is 400
   `max_completion_tokens` if that is the field they used. A streamed one also
   gets `stream_options.include_usage: true` (other `stream_options` keys are
   kept), so the ledger records the usage frame instead of the hold, and the
-  client receives that frame. Free hops, and pool-walk hops with no cap on
-  them, are sent exactly as the caller wrote them.
+  client receives that frame. A free hop is sent exactly as the caller wrote
+  it. A paid hop with no cap is not sent.
 - Spend persists in keys.db table `route_spend`. It sits beside `usage_events`
   and uses the same `event_id`. There is no new store.
 - `max_tokens_per_request` is the smaller of the global and the per-caller

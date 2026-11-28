@@ -9,6 +9,7 @@ as happily if the wiring in between were broken.
 from __future__ import annotations
 
 import asyncio
+import json
 from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -34,6 +35,12 @@ _CHAT: dict[str, Any] = {"model": "auto", "messages": [{"role": "user", "content
 def vault(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> KeyVault:
     monkeypatch.setenv("OPENVAULT_HOME", str(tmp_path / "home"))
     monkeypatch.setenv("OPENVAULT_KEY", Fernet.generate_key().decode())
+    # This file measures the walk, the output ceiling, and the ledger.
+    # An uncapped openai hop is now 402. Mark it free here so those checks
+    # still reach upstream. The cap contract is test_paid_hop_fail_closed.
+    policy = tmp_path / "openai-free.json"
+    policy.write_text(json.dumps({"models": {"openai/*": {"free": True}}}), encoding="utf-8")
+    monkeypatch.setenv("OPENVAULT_ROUTE_POLICY", str(policy))
     return KeyVault(db_path=tmp_path / "keys.db", seal=Seal())
 
 

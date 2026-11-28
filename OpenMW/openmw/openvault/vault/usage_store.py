@@ -22,11 +22,19 @@ billing row is never pruned the way ``health_store`` prunes heartbeats.
 
 ``route_spend`` sits beside ``usage_events`` with the same ``event_id``: the
 route policy's budget scope, role and estimated USD. Hard caps sum
-``route_spend.est_cost_usd``. Spend caps do not read ``limited_by``.
+``route_spend.est_cost_usd``. A row whose ``cost_status`` is ``cost_unknown``
+stores SQL NULL in that column, so the sum does not treat a missing price as
+zero. Readers see the string ``cost_unknown``. Spend caps do not read
+``limited_by``.
 
 ``limited_by`` is an additive column on ``usage_events`` (``request`` or
 ``token`` when the token-budget limiter refused the call, otherwise empty).
 An older database gains it on open. It is not a price and not a spend cap.
+
+``served_downgraded``, ``downgraded_from``, and ``downgraded_to`` are additive
+on both tables. They are empty unless a budget refusal was skipped and a later
+hop served. ``cost_status`` is additive on both tables. Older databases gain
+the columns on open. None of them hold a key or a secret.
 """
 
 from __future__ import annotations
@@ -40,6 +48,7 @@ from pathlib import Path
 from typing import Any
 
 from openmw.openvault.paths import keys_db_path
+from openmw.openvault.vault.route_policy import COST_UNKNOWN
 
 #: Usage $/unit is a founder decision. A number here would read as a real rate.
 #: Display SKUs and this ledger still label the currency as USD (prefix + sign).
@@ -60,6 +69,46 @@ def _limited_by_value(value: str) -> str:
     if clean in _LIMITED_BY_VALUES:
         return clean
     return ""
+
+
+def _cost_status_value(value: str) -> str:
+    """Keep ``cost_unknown``. Drop any other text so the column stays a token."""
+    return COST_UNKNOWN if value.strip() == COST_UNKNOWN else ""
+
+
+def _ledger_text(value: str) -> str:
+    """Hop label for the ledger. No newlines, and short enough for a header."""
+    return value.replace("\r", "").replace("\n", "")[:200]
+
+
+def _add_column(conn: sqlite3.Connection, table: str, name: str, ddl: str) -> None:
+    cols = {row[1] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+    if name not in cols:
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN {name} {ddl}")
+
+
+def _shown_cost(raw: object, status: str) -> float | None | str:
+    if status == COST_UNKNOWN:
+        return COST_UNKNOWN
+    if isinstance(raw, bool) or not isinstance(raw, int | float):
+        return None
+    return float(raw)
+
+
+def _spend_row(row: sqlite3.Row) -> dict[str, Any]:
+    status = str(row["cost_status"] or "")
+    return {
+        "event_id": row["event_id"],
+        "created_at": float(row["created_at"]),
+        "service_id": row["service_id"],
+        "vault_key_id": row["vault_key_id"],
+        "route_role": row["route_role"],
+        "est_cost_usd": _shown_cost(row["est_cost_usd"], status),
+        "cost_status": status,
+        "served_downgraded": bool(row["served_downgraded"]),
+        "downgraded_from": str(row["downgraded_from"] or ""),
+        "downgraded_to": str(row["downgraded_to"] or ""),
+    }
 
 
 def usd_prefix(amount: int) -> str:
@@ -107,8 +156,13 @@ class UsageEvent:
     #: ``sql`` | ``tool`` | ``reason`` | ``summarize`` | ``grain`` | ``ontology``,
     #: or "" when not role-routed.
     route_role: str = ""
-    #: From the route policy price table. None when a paid model has no price.
+    #: Numeric cost. None when unknown or when ``cost_status`` is ``cost_unknown``.
     est_cost_usd: float | None = 0.0
+    #: ``cost_unknown`` when the price must not be read as null or zero.
+    cost_status: str = ""
+    served_downgraded: bool = False
+    downgraded_from: str = ""
+    downgraded_to: str = ""
     event_id: str = field(default_factory=lambda: uuid.uuid4().hex[:16])
     created_at: float = field(default_factory=time.time)
 
@@ -140,6 +194,9 @@ class HopTrace:
     served_local: bool = False
     #: Set when a strict pin is parked. The gateway copies this to Retry-After.
     retry_after_s: int | None = None
+    served_downgraded: bool = False
+    downgraded_from: str = ""
+    downgraded_to: str = ""
 
     def note_attempt(self) -> None:
         self.attempts += 1
@@ -151,6 +208,11 @@ class HopTrace:
         self.model_served = model
         self.vault_key_id = vault_key_id
         self.served_local = served_local
+
+    def note_downgrade(self, *, downgraded_from: str, downgraded_to: str) -> None:
+        self.served_downgraded = True
+        self.downgraded_from = downgraded_from
+        self.downgraded_to = downgraded_to
 
 
 class UsageStore:
@@ -188,7 +250,11 @@ class UsageStore:
                   status INTEGER NOT NULL DEFAULT 0,
                   error_type TEXT NOT NULL DEFAULT '',
                   latency_ms INTEGER NOT NULL DEFAULT 0,
-                  limited_by TEXT NOT NULL DEFAULT ''
+                  limited_by TEXT NOT NULL DEFAULT '',
+                  served_downgraded INTEGER NOT NULL DEFAULT 0,
+                  downgraded_from TEXT NOT NULL DEFAULT '',
+                  downgraded_to TEXT NOT NULL DEFAULT '',
+                  cost_status TEXT NOT NULL DEFAULT ''
                 )
                 """
             )
@@ -200,6 +266,15 @@ class UsageStore:
                 conn.execute(
                     "ALTER TABLE usage_events ADD COLUMN limited_by TEXT NOT NULL DEFAULT ''"
                 )
+            _add_column(
+                conn,
+                "usage_events",
+                "served_downgraded",
+                "INTEGER NOT NULL DEFAULT 0",
+            )
+            _add_column(conn, "usage_events", "downgraded_from", "TEXT NOT NULL DEFAULT ''")
+            _add_column(conn, "usage_events", "downgraded_to", "TEXT NOT NULL DEFAULT ''")
+            _add_column(conn, "usage_events", "cost_status", "TEXT NOT NULL DEFAULT ''")
             conn.execute(
                 "CREATE INDEX IF NOT EXISTS idx_usage_key_time "
                 "ON usage_events(api_key_id, created_at)"
@@ -216,10 +291,18 @@ class UsageStore:
                   service_id TEXT NOT NULL DEFAULT '',
                   vault_key_id TEXT NOT NULL DEFAULT '',
                   route_role TEXT NOT NULL DEFAULT '',
-                  est_cost_usd REAL
+                  est_cost_usd REAL,
+                  cost_status TEXT NOT NULL DEFAULT '',
+                  served_downgraded INTEGER NOT NULL DEFAULT 0,
+                  downgraded_from TEXT NOT NULL DEFAULT '',
+                  downgraded_to TEXT NOT NULL DEFAULT ''
                 )
                 """
             )
+            _add_column(conn, "route_spend", "cost_status", "TEXT NOT NULL DEFAULT ''")
+            _add_column(conn, "route_spend", "served_downgraded", "INTEGER NOT NULL DEFAULT 0")
+            _add_column(conn, "route_spend", "downgraded_from", "TEXT NOT NULL DEFAULT ''")
+            _add_column(conn, "route_spend", "downgraded_to", "TEXT NOT NULL DEFAULT ''")
             conn.execute(
                 "CREATE INDEX IF NOT EXISTS idx_spend_service_time "
                 "ON route_spend(service_id, created_at)"
@@ -232,12 +315,21 @@ class UsageStore:
 
     def record(self, event: UsageEvent) -> UsageEvent:
         with contextlib.closing(self._connect()) as conn, conn:
+            cost_status = _cost_status_value(event.cost_status)
+            # Unknown price stays NULL so the cap sum does not count it as $0.
+            if cost_status == COST_UNKNOWN or event.est_cost_usd is None:
+                stored_cost = None
+            else:
+                stored_cost = float(event.est_cost_usd)
+            downgraded_from = _ledger_text(event.downgraded_from)
+            downgraded_to = _ledger_text(event.downgraded_to)
             conn.execute(
                 "INSERT INTO usage_events (event_id, created_at, identity, tier, api_key_id, "
                 "model_requested, model_served, provider, vault_key_id, prompt_tokens, "
                 "completion_tokens, total_tokens, estimated, cache_hit, stream, status, "
-                "error_type, latency_ms, limited_by) "
-                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                "error_type, latency_ms, limited_by, served_downgraded, downgraded_from, "
+                "downgraded_to, cost_status) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (
                     event.event_id,
                     event.created_at,
@@ -258,18 +350,27 @@ class UsageStore:
                     event.error_type,
                     int(event.latency_ms),
                     _limited_by_value(event.limited_by),
+                    1 if event.served_downgraded else 0,
+                    downgraded_from,
+                    downgraded_to,
+                    cost_status,
                 ),
             )
             conn.execute(
                 "INSERT INTO route_spend (event_id, created_at, service_id, vault_key_id, "
-                "route_role, est_cost_usd) VALUES (?,?,?,?,?,?)",
+                "route_role, est_cost_usd, cost_status, served_downgraded, downgraded_from, "
+                "downgraded_to) VALUES (?,?,?,?,?,?,?,?,?,?)",
                 (
                     event.event_id,
                     event.created_at,
                     event.service_id,
                     event.vault_key_id,
                     event.route_role,
-                    None if event.est_cost_usd is None else float(event.est_cost_usd),
+                    stored_cost,
+                    cost_status,
+                    1 if event.served_downgraded else 0,
+                    downgraded_from,
+                    downgraded_to,
                 ),
             )
             conn.commit()
@@ -298,23 +399,17 @@ class UsageStore:
         return float(row["usd"])
 
     def spend_events(self, *, limit: int = 200) -> list[dict[str, Any]]:
-        """Budget rows, oldest first. ``est_cost_usd`` None means unpriced."""
+        """Budget rows, oldest first.
+
+        ``est_cost_usd`` is ``cost_unknown`` when the price was missing, None
+        for a legacy unpriced row with no status, otherwise a float.
+        """
         with contextlib.closing(self._connect()) as conn, conn:
             rows = conn.execute(
                 "SELECT * FROM route_spend ORDER BY created_at ASC LIMIT ?",
                 (max(1, min(int(limit), 1000)),),
             ).fetchall()
-        return [
-            {
-                "event_id": r["event_id"],
-                "created_at": float(r["created_at"]),
-                "service_id": r["service_id"],
-                "vault_key_id": r["vault_key_id"],
-                "route_role": r["route_role"],
-                "est_cost_usd": None if r["est_cost_usd"] is None else float(r["est_cost_usd"]),
-            }
-            for r in rows
-        ]
+        return [_spend_row(r) for r in rows]
 
     @staticmethod
     def _row(row: sqlite3.Row) -> dict[str, Any]:
@@ -338,6 +433,10 @@ class UsageStore:
             "error_type": row["error_type"],
             "latency_ms": int(row["latency_ms"]),
             "limited_by": _limited_by_value(str(row["limited_by"] or "")),
+            "served_downgraded": bool(row["served_downgraded"]),
+            "downgraded_from": str(row["downgraded_from"] or ""),
+            "downgraded_to": str(row["downgraded_to"] or ""),
+            "cost_status": str(row["cost_status"] or ""),
             "billable_tokens": 0 if row["cache_hit"] else int(row["total_tokens"]),
         }
 

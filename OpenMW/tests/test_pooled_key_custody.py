@@ -13,6 +13,7 @@ missing.
 
 from __future__ import annotations
 
+import json
 import sqlite3
 from pathlib import Path
 from typing import Any
@@ -36,6 +37,11 @@ _USAGE = {"total_tokens": 40, "prompt_tokens": 20, "completion_tokens": 20}
 def vault(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> KeyVault:
     monkeypatch.setenv("OPENVAULT_HOME", str(tmp_path / "home"))
     monkeypatch.setenv("OPENVAULT_KEY", Fernet.generate_key().decode())
+    # Custody is which key is spent. An uncapped openai hop is now 402, so
+    # this file marks that test provider free and leaves the cap tests elsewhere.
+    policy = tmp_path / "openai-free.json"
+    policy.write_text(json.dumps({"models": {"openai/*": {"free": True}}}), encoding="utf-8")
+    monkeypatch.setenv("OPENVAULT_ROUTE_POLICY", str(policy))
     return KeyVault(db_path=tmp_path / "keys.db", seal=Seal())
 
 

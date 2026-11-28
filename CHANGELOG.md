@@ -2,6 +2,13 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-11-28 - Uncapped paid hops fail closed, downgrades are stamped (Refs readiness sim 2026-11-28)
+
+- A paid hop with no `daily_usd` or `monthly_usd` on the vault key or the caller is 402 `paid_default` (`reason: budget_exceeded`), including when the request omits `role`. Before, that request took the pool walk and the hop served with no ceiling. Cap numbers are unchanged. A key that has a cap still serves while it is under that cap.
+- When a budget refusal is skipped and a later hop serves, the response sets `served_downgraded` true, plus `downgraded_from` and `downgraded_to` (`provider/model`). The same values are response headers (`X-OpenVault-Served-Downgraded`, `X-OpenVault-Downgraded-From`, `X-OpenVault-Downgraded-To`) and columns on `usage_events` and `route_spend`. A response that was not downgraded omits them. Streams put the fields on each `data:` object.
+- An unpriced paid model is refused and recorded as `cost_unknown`. The chat body uses that string. The ledger stores `cost_status=cost_unknown` and SQL NULL in `est_cost_usd`, so the cap sum does not treat the missing price as $0. A known-price refusal that spent nothing stays `0.0`.
+- No key material, vault seal, or bind address changes. Older `keys.db` files gain the new columns on open.
+
 ## 2026-11-28 - Patched next, electron, and the server lock (Refs READY-05)
 
 - `apps/web` `next` 16.3.8 -> 16.4.5. npm audit before: 1 critical, 0 high (total 1). After: 0.

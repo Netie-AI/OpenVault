@@ -138,7 +138,7 @@ from openmw.openvault.vault.http_guard import (
     dev_docs_enabled,
     install_lease_access_filter,
 )
-from openmw.openvault.vault.local_hop import served_response_headers
+from openmw.openvault.vault.local_hop import downgrade_response_headers, served_response_headers
 from openmw.openvault.vault.pm_import import ingest_import_dir, ingest_pm_csv
 from openmw.openvault.vault.precheck import PrecheckLoop, precheck_all, precheck_one
 from openmw.openvault.vault.providers import (
@@ -171,6 +171,7 @@ from openmw.openvault.vault.route_packs import (
 )
 from openmw.openvault.vault.route_policy import (
     BUDGET_ERROR_TYPE,
+    COST_UNKNOWN,
     ROUTE_ROLES,
     RoutePolicyError,
     SpendGuard,
@@ -3649,9 +3650,18 @@ def create_app(
                         limited_by=limited_by,
                         service_id=caller_id,
                         route_role=spend.route_role or "",
-                        est_cost_usd=spend.cost_for(
-                            trace.provider, trace.model_served, tokens_in, tokens_out
+                        est_cost_usd=(
+                            None
+                            if spend.cost_status_for(trace.provider, trace.model_served)
+                            == COST_UNKNOWN
+                            else spend.cost_for(
+                                trace.provider, trace.model_served, tokens_in, tokens_out
+                            )
                         ),
+                        cost_status=spend.cost_status_for(trace.provider, trace.model_served),
+                        served_downgraded=trace.served_downgraded,
+                        downgraded_from=trace.downgraded_from,
+                        downgraded_to=trace.downgraded_to,
                     )
                 )
             except Exception as exc:  # pragma: no cover - ledger must not 500 a good call
@@ -3937,6 +3947,11 @@ def _chat_result_headers(rate_headers: dict[str, str], trace: HopTrace) -> dict[
             provider=trace.provider,
             model=trace.model_served,
             served_local=trace.served_local,
+        ),
+        **downgrade_response_headers(
+            downgraded=trace.served_downgraded,
+            downgraded_from=trace.downgraded_from,
+            downgraded_to=trace.downgraded_to,
         ),
     }
     if trace.retry_after_s is not None:

@@ -249,8 +249,9 @@ def test_usage_events_keeps_limited_by_and_keys_columns_unchanged(vault: KeyVaul
     keys_before = _cols(vault.db_path, "keys")
     UsageStore(db_path=vault.db_path)
     usage = _cols(vault.db_path, "usage_events")
-    assert len(usage) == 19
-    assert usage[-1] == "limited_by"
+    assert len(usage) == 23
+    assert "limited_by" in usage
+    assert usage[-1] == "cost_status"
     _app(vault).get("/api/keys/quota")
     record_hop_attempt(
         vault.db_path,

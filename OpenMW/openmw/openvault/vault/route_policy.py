@@ -11,11 +11,11 @@ restart:
 Three rules the gateway relies on:
 
 * **A model is paid unless the policy marks it free.** There is no third
-  state. An unpriced paid model costs ``None`` - unknown, never a guessed zero.
-* **Paid needs a USD cap.** On a role-routed request a paid hop is refused
-  unless the vault key that would spend, or the caller, has a daily or monthly
-  USD cap. Requests without ``role`` keep today's pool walk; any cap that
-  applies to them is still enforced.
+  state. An unpriced paid model is ``cost_unknown``: never null and never a
+  guessed zero, and the hop is not sent upstream.
+* **Paid needs a USD cap.** A paid hop is refused unless the vault key that
+  would spend, or the caller, has a daily or monthly USD cap. That holds with
+  or without ``role``. A missing cap is not an unlimited pool walk.
 * **A cap that would be exceeded refuses.** It never walks on to a paid model
   to find room. Spend is the sum of ``usage_events.est_cost_usd`` in keys.db
   plus what other in-flight requests in this process have reserved.
@@ -44,6 +44,8 @@ POLICY_ENV = "OPENVAULT_ROUTE_POLICY"
 DEFAULT_POLICY_PATH = Path(__file__).with_name("route_policy.json")
 
 BUDGET_EXCEEDED = "budget_exceeded"
+#: Response and ledger token for a paid model with no price. Not a number.
+COST_UNKNOWN = "cost_unknown"
 BUDGET_ERROR_TYPE = "openvault_budget_exceeded"
 UNKNOWN_ROLE_TYPE = "openvault_unknown_role"
 ROLE_CONFLICT_TYPE = "openvault_role_conflict"
@@ -394,6 +396,35 @@ class BudgetBlock:
         }
 
 
+def block_is_unpriced(block: BudgetBlock) -> bool:
+    """True when the refusal is a missing price, not a token or completion count."""
+    return block.requested is None and block.scope != "request"
+
+
+def hop_label(provider: str, model: str) -> str:
+    """``provider/model`` safe for a response header and the ledger."""
+    text = f"{provider}/{model}".replace("\r", "").replace("\n", "")
+    return text[:200]
+
+
+def downgrade_of(blocks: list[BudgetBlock], *, provider: str, model: str) -> dict[str, Any]:
+    """Fields for a response that served only after a budget refusal.
+
+    Empty when nothing was refused or nothing served. ``from`` is the first
+    refused hop. ``to`` is the hop that served.
+    """
+    if not blocks or not provider:
+        return {}
+    first = blocks[0]
+    if not first.provider and not first.model:
+        return {}
+    return {
+        "served_downgraded": True,
+        "downgraded_from": hop_label(first.provider, first.model),
+        "downgraded_to": hop_label(provider, model),
+    }
+
+
 class SpendLedger(Protocol):
     def spend_usd(
         self, *, vault_key_id: str | None = None, service_id: str | None = None, since: float
@@ -526,8 +557,8 @@ class SpendGuard:
             return None
         caps = self._applicable(key_id)
         if not caps:
-            if self.route_role is None:
-                return None
+            # Fail closed. Omitting role used to take the pool walk and serve
+            # this hop with no ceiling. A missing cap is not an unlimited cap.
             block = BudgetBlock(
                 scope="paid_default",
                 limit_name="paid_requires_cap",
@@ -552,6 +583,11 @@ class SpendGuard:
             self.blocks.append(block)
             return block
         estimate = price.cost(prompt_tokens, max_output * completions)
+        if estimate is None:
+            # Do not reserve $0 for a price the policy does not name.
+            block = self._unpriced_block(caps[0], provider=provider, model=model)
+            self.blocks.append(block)
+            return block
         now = self.clock()
         with _PENDING_LOCK:
             for scope, ident, shown, cap in caps:
@@ -563,7 +599,7 @@ class SpendGuard:
                     if limit is None:
                         continue
                     spent = round(self._spent(scope, ident, since) + pending, 8)
-                    if estimate is None or spent + estimate > limit:
+                    if spent + estimate > limit:
                         block = BudgetBlock(
                             scope=scope,
                             limit_name=limit_name,
@@ -578,11 +614,43 @@ class SpendGuard:
                         return block
             held = tuple(f"{scope}:{ident}" for scope, ident, _shown, _cap in caps)
             for name in held:
-                _PENDING[name] = _PENDING.get(name, 0.0) + float(estimate or 0.0)
+                _PENDING[name] = _PENDING.get(name, 0.0) + float(estimate)
         self._held_scopes = held
-        self._held_usd = float(estimate or 0.0)
+        self._held_usd = float(estimate)
         self._held = True
         return None
+
+    def _unpriced_block(
+        self,
+        cap_row: tuple[str, str, str, SpendCap],
+        *,
+        provider: str,
+        model: str,
+    ) -> BudgetBlock:
+        """The first applicable cap, named, with no reservation behind it."""
+        scope, ident, shown, cap = cap_row
+        now = self.clock()
+        if cap.daily_usd is not None:
+            limit_name = "daily_usd"
+            limit_value: float = cap.daily_usd
+            since = day_start(now)
+        else:
+            limit_name = "monthly_usd"
+            limit_value = float(cap.monthly_usd if cap.monthly_usd is not None else 0.0)
+            since = month_start(now)
+        with _PENDING_LOCK:
+            pending = _PENDING.get(f"{scope}:{ident}", 0.0)
+            spent = round(self._spent(scope, ident, since) + pending, 8)
+        return BudgetBlock(
+            scope=scope,
+            limit_name=limit_name,
+            limit=limit_value,
+            spent=spent,
+            requested=None,
+            cap_id=shown,
+            provider=provider,
+            model=model,
+        )
 
     def release(self) -> None:
         """Drop this request's reservation. Call after the ledger row is written."""
@@ -602,7 +670,11 @@ class SpendGuard:
     def cost_for(
         self, provider: str, model: str, tokens_in: int | None, tokens_out: int | None
     ) -> float | None:
-        """What the hop that served cost. 0.0 when nothing served."""
+        """What the hop that served cost. 0.0 when nothing served or it is free.
+
+        A paid model with no price does not return 0. ``cost_status_for`` maps
+        that case to ``cost_unknown`` so callers do not store null or zero.
+        """
         if not provider:
             return 0.0
         price = self.policy.price_for(provider, model)
@@ -613,7 +685,21 @@ class SpendGuard:
             if measured is not None:
                 return measured
         # No usage frame: bill the worst case that was reserved, never less.
+        # An unknown price is not a reservation of 0.
+        if price.usd_per_1m_in is None or price.usd_per_1m_out is None:
+            return None
         return self._held_usd if self._held else None
+
+    def cost_status_for(self, provider: str, model: str) -> str:
+        """``cost_unknown`` when a numeric cost would hide a missing price."""
+        if provider:
+            price = self.policy.price_for(provider, model)
+            if (not price.free) and (price.usd_per_1m_in is None or price.usd_per_1m_out is None):
+                return COST_UNKNOWN
+            return ""
+        if self.blocks and block_is_unpriced(self.blocks[0]):
+            return COST_UNKNOWN
+        return ""
 
     def stamps(
         self,
@@ -624,13 +710,20 @@ class SpendGuard:
         tokens_out: int | None,
     ) -> dict[str, Any]:
         if not provider:
-            return empty_stamps()
+            body = empty_stamps()
+            if self.cost_status_for("", "") == COST_UNKNOWN:
+                body["est_cost_usd"] = COST_UNKNOWN
+            return body
+        if self.cost_status_for(provider, model) == COST_UNKNOWN:
+            shown: Any = COST_UNKNOWN
+        else:
+            shown = self.cost_for(provider, model, tokens_in, tokens_out)
         return {
             "model": model or None,
             "provider": provider,
             "tokens_in": tokens_in,
             "tokens_out": tokens_out,
-            "est_cost_usd": self.cost_for(provider, model, tokens_in, tokens_out),
+            "est_cost_usd": shown,
         }
 
 
@@ -650,6 +743,7 @@ def usage_pair(usage: object) -> tuple[int | None, int | None]:
 __all__ = [
     "BUDGET_ERROR_TYPE",
     "BUDGET_EXCEEDED",
+    "COST_UNKNOWN",
     "DEFAULT_POLICY_PATH",
     "MAX_COMPLETIONS",
     "POLICY_ENV",
@@ -665,7 +759,10 @@ __all__ = [
     "SpendCap",
     "SpendGuard",
     "SpendLedger",
+    "block_is_unpriced",
+    "downgrade_of",
     "empty_stamps",
+    "hop_label",
     "load_route_policy",
     "parse_route_role",
     "policy_invalid_body",
