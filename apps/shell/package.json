@@ -9,6 +9,6 @@
     "test": "node --test \"electron/lib/**/*.test.js\""
   },
   "devDependencies": {
-    "electron": "^35.0.0"
+    "electron": "^42.11.16"
   }
 }

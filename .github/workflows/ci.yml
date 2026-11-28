@@ -101,8 +101,8 @@ jobs:
         run: uv run pytest -q
 
   # apps/shell node --test. Node 22: the test script passes a glob, and node --test
-  # expands globs from Node 21 on. Electron 35 is built on Node 22. The tests use
-  # node builtins only, so the Electron binary is not downloaded.
+  # expands globs from Node 21 on. The tests use node builtins only, so the
+  # Electron binary is not downloaded.
   test-shell:
     runs-on: ubuntu-latest
     steps:
@@ -179,3 +179,28 @@ jobs:
       - name: Type-check
         working-directory: apps/web
         run: npx tsc --noEmit
+
+  # High and critical advisories in apps/web, apps/shell, and the OpenMW server
+  # lock. security/audit-ignore.txt is the only bypass, and only for an
+  # unfixable finding with a reason.
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install Python 3.12
+        run: uv python install 3.12
+
+      - name: Audit gate
+        run: python3 scripts/ci_audit.py

@@ -2,6 +2,15 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-11-28 - Patched next, electron, and the server lock (Refs READY-05)
+
+- `apps/web` `next` 16.3.8 -> 16.4.5. npm audit before: 1 critical, 0 high (total 1). After: 0.
+- `apps/shell` `electron` 35.7.5 -> 42.11.16. npm audit before: 2 high (electron, extract-zip). After: 0. Shell source is unchanged.
+- OpenMW pip-audit before: 83 known vulnerabilities in 5 packages (anyio 4.14.0, certifi 2026.6.17, cryptography 49.0.0, filelock 3.29.4, pillow 12.2.0). After: 0 (anyio 4.14.2, certifi 2026.10.18, cryptography 50.0.0, filelock 4.2.1, pillow 13.0.0).
+- filelock 4.2.1 and pillow 13.0.0 require Python >=3.11, so the OpenMW floor moves from `>=3.10` to `>=3.11`. The root nvme-sentinel package still supports 3.10.
+- CI job `audit` runs `scripts/ci_audit.py` and fails on high or critical. `security/audit-ignore.txt` is the ignore list. It is empty: every finding had a patched release.
+- Auth, routing, key storage, and limits are unchanged.
+
 ## 2026-11-27 - FreeRoute service tier and limiter limited_by (Refs OV-FREEROUTE-TIER-429-01)
 
 - `DEFAULT_TIERS` gains `service`, the same request and token budget as `pro` (120 rpm / 400,000 tpm). A shared serving key uses this tier. `local` stays the unmetered loopback tier. No existing key's tier is changed here. Spend caps and prices are unchanged.
