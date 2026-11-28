@@ -259,7 +259,9 @@ def test_api_smoke(vault: KeyVault, monkeypatch: pytest.MonkeyPatch, tmp_path: P
         "/v1/chat/completions",
         json={"model": "auto", "messages": [{"role": "user", "content": "hi"}]},
     )
-    # No real upstream — expect fallback exhaustion or connection failure path
-    assert proxy.status_code in (502, 503)
+    # ollama is not marked free and this key has no USD cap, so the hop is
+    # refused before any upstream call.
+    assert proxy.status_code == 402
+    assert proxy.json()["error"]["cap"] == "paid_default"
 
     assert client.delete(f"/api/keys/{key_id}").status_code == 200

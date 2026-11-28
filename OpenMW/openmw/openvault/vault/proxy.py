@@ -54,6 +54,7 @@ from openmw.openvault.vault.route_policy import (
     BUDGET_ERROR_TYPE,
     BudgetBlock,
     SpendGuard,
+    downgrade_of,
     requested_completions,
     usage_pair,
 )
@@ -317,6 +318,27 @@ def _stamp_served(
     return attach_served_fields(
         body, provider=cand.provider, model=model, served_local=cand.served_local
     )
+
+
+def _with_downgrade(
+    trace: HopTrace,
+    spend: SpendGuard | None,
+    payload: dict[str, Any],
+    *,
+    provider: str,
+    model: str,
+) -> dict[str, Any]:
+    """Mark a 200 that served only after a budget refusal. No-op otherwise."""
+    if spend is None:
+        return payload
+    fields = downgrade_of(spend.blocks, provider=provider, model=model)
+    if not fields:
+        return payload
+    trace.note_downgrade(
+        downgraded_from=str(fields["downgraded_from"]),
+        downgraded_to=str(fields["downgraded_to"]),
+    )
+    return {**payload, **fields}
 
 
 def _local_fail_reason(status: int | None, body_text: str, model: str) -> str:
@@ -988,22 +1010,31 @@ def _admit_hop(
         max_output=reserved,
         completions=requested_completions(hop_body),
     )
-    # Only a hop that took a hold is bounded. A free hop, or a pool-walk hop with
-    # no cap on it, goes upstream exactly as the caller sent it.
+    # Only a hop that took a hold is bounded. A free hop goes upstream exactly
+    # as the caller sent it. A paid hop with no cap is refused in admit and
+    # never reaches this send.
     if blocked is None and spend.holding:
         _bound_to_reservation(hop_body, reserved, stream=stream)
     return blocked
 
 
 def _sse_stamp(
-    spend: SpendGuard | None, provider: str, model: str
+    spend: SpendGuard | None,
+    provider: str,
+    model: str,
+    extra: dict[str, Any] | None = None,
 ) -> Callable[[dict[str, Any]], dict[str, Any]] | None:
-    """Model and provider on every chunk; tokens and cost on the usage chunk."""
+    """Model and provider on every chunk; tokens and cost on the usage chunk.
+
+    ``extra`` is the downgrade stamp, present on every chunk when this response
+    served only after a budget refusal.
+    """
     if spend is None:
         return None
+    added = dict(extra or {})
 
     def stamp(obj: dict[str, Any]) -> dict[str, Any]:
-        out: dict[str, Any] = {"model": model, "provider": provider}
+        out: dict[str, Any] = {"model": model, "provider": provider, **added}
         usage = obj.get("usage")
         if isinstance(usage, dict):
             tokens_in, tokens_out = usage_pair(usage)
@@ -1405,7 +1436,10 @@ async def chat_completions(
                         payload: dict[str, Any] | str = resp.json()
                     except Exception:
                         payload = {"raw": resp.text}
-                    return status_code, _stamp_served(payload, cand, model)
+                    stamped = _stamp_served(payload, cand, model)
+                    return status_code, _with_downgrade(
+                        trace, spend, stamped, provider=cand.provider, model=model
+                    )
                 if step == "dead":
                     errors.append(f"{cand.label}: {err} ({outcome.attempt_class})")
                     return _non_retryable(
@@ -1753,8 +1787,11 @@ async def prepare_chat_stream(
                 served_provider = cand.provider
                 served_model = model
                 served_local = cand.served_local
+                downgrade = _with_downgrade(
+                    trace, spend, {}, provider=served_provider, model=served_model
+                )
 
-                stamp = _sse_stamp(spend, served_provider, served_model)
+                stamp = _sse_stamp(spend, served_provider, served_model, downgrade)
 
                 async def _byte_iter(
                     response: httpx.Response = resp,

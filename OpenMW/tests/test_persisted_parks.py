@@ -67,6 +67,10 @@ _USAGE_COLUMNS = (
     "error_type",
     "latency_ms",
     "limited_by",
+    "served_downgraded",
+    "downgraded_from",
+    "downgraded_to",
+    "cost_status",
 )
 
 
@@ -149,8 +153,9 @@ def test_usage_events_schema_keeps_limited_by(vault: KeyVault) -> None:
     UsageStore(db_path=vault.db_path)
     usage = _cols(vault.db_path, "usage_events")
     assert usage == list(_USAGE_COLUMNS)
-    assert len(usage) == 19
-    assert usage[-1] == "limited_by"
+    assert len(usage) == 23
+    assert "limited_by" in usage
+    assert usage[-1] == "cost_status"
     FallbackManager(vault)
     assert _cols(vault.db_path, "keys") == keys_before
     assert _cols(vault.db_path, "usage_events") == usage

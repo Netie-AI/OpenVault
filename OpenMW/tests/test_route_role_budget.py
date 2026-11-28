@@ -688,16 +688,19 @@ def test_caps_apply_without_role(
     assert rec.urls == []
 
 
-def test_role_less_paid_without_cap_is_unchanged_and_unpriced(vault: KeyVault) -> None:
+def test_role_less_paid_without_cap_is_refused(vault: KeyVault) -> None:
+    """Omitting role used to serve an uncapped paid hop and record a null cost."""
     _key(vault, "openai")
     rec = _Recorder(_ok(_PAID))
     resp = _post(_client(vault), rec, {"model": _PAID})
-    assert resp.status_code == 200
+    assert resp.status_code == 402, resp.text
+    assert rec.urls == []
     data = resp.json()
-    assert data["provider"] == "openai"
-    assert data["model"] == _PAID
-    assert data["est_cost_usd"] is None
-    assert _ledger().spend_events()[-1]["est_cost_usd"] is None
+    assert data["error"]["reason"] == BUDGET_EXCEEDED
+    assert data["error"]["cap"] == "paid_default"
+    assert data["est_cost_usd"] == "cost_unknown"
+    assert _ledger().spend_events()[-1]["est_cost_usd"] == "cost_unknown"
+    assert _ledger().spend_events()[-1]["cost_status"] == "cost_unknown"
 
 
 def test_in_flight_reservations_count_against_the_cap() -> None:
@@ -918,9 +921,24 @@ def test_old_db_gains_route_spend_and_usage_events_keep_limited_by(tmp_path: Pat
     with sqlite3.connect(db) as conn:
         usage_cols = [r[1] for r in conn.execute("PRAGMA table_info(usage_events)").fetchall()]
         spend_cols = {r[1] for r in conn.execute("PRAGMA table_info(route_spend)")}
-    assert len(usage_cols) == 19
-    assert usage_cols[-1] == "limited_by"
-    assert {"service_id", "vault_key_id", "route_role", "est_cost_usd"} <= spend_cols
+    assert len(usage_cols) == 23
+    assert usage_cols[18] == "limited_by"
+    assert usage_cols[19:] == [
+        "served_downgraded",
+        "downgraded_from",
+        "downgraded_to",
+        "cost_status",
+    ]
+    assert {
+        "service_id",
+        "vault_key_id",
+        "route_role",
+        "est_cost_usd",
+        "cost_status",
+        "served_downgraded",
+        "downgraded_from",
+        "downgraded_to",
+    } <= spend_cols
     store.record(UsageEvent(identity="y", tier="free", service_id="svc", est_cost_usd=0.25))
     store.record(UsageEvent(identity="y", tier="free", vault_key_id="vk", est_cost_usd=None))
     assert store.spend_usd(service_id="svc", since=0) == pytest.approx(0.25)
@@ -1137,14 +1155,15 @@ def test_free_hop_body_is_unchanged_by_the_spend_bounds(vault: KeyVault) -> None
     assert body["stream_options"] == {"include_obfuscation": False}
 
 
-def test_pool_walk_without_a_cap_is_unchanged(vault: KeyVault) -> None:
+def test_pool_walk_without_a_cap_does_not_send_the_paid_hop(vault: KeyVault) -> None:
+    """An uncapped paid pool walk used to forward n=128 with no ceiling."""
     _key(vault, "openai")
     rec = _Recorder(_ok(_PAID))
     resp = _post(_client(vault), rec, {"n": 128})
-    assert resp.status_code == 200, resp.text
-    body = rec.bodies[0]
-    assert body["n"] == 128
-    assert "max_tokens" not in body
+    assert resp.status_code == 402, resp.text
+    assert rec.urls == []
+    assert resp.json()["error"]["cap"] == "paid_default"
+    assert resp.json()["error"]["reason"] == BUDGET_EXCEEDED
 
 
 def test_capped_paid_hop_forwards_the_output_bound_it_reserved(

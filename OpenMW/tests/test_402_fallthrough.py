@@ -234,7 +234,7 @@ def test_every_hop_refused_is_402_with_the_same_body(
         "provider": None,
         "tokens_in": 0,
         "tokens_out": 0,
-        "est_cost_usd": 0.0,
+        "est_cost_usd": "cost_unknown",
         "served_provider": None,
         "served_model": None,
         "served_local": False,
