@@ -110,6 +110,47 @@ export function isLoopbackVaultBootstrap(method: string, pathname: string): bool
   return BOOTSTRAP.some((row) => row.method === verb && row.path === bare);
 }
 
+/**
+ * Backend GETs that answer with no credential. Mirrors PUBLIC_READ_ALLOWLIST in
+ * OpenMW/openmw/openvault/vault/http_guard.py (READY-02). Exact paths only.
+ */
+const PUBLIC_READ_PATHS: ReadonlySet<string> = new Set([
+  "/api/healthz",
+  "/api/freeroute/status",
+  "/api/freeroute/onboard",
+  "/api/freeroute/ratelimit",
+  "/api/openfree/ratelimit",
+  "/api/tool/register",
+]);
+
+/** Roots the browser must unlock with its own admin session, never the file. */
+const SESSION_ONLY_ROOTS: ReadonlyArray<string> = [
+  "/api/keys",
+  "/api/keyvault",
+  "/api/apikeys",
+  "/api/secrets",
+  "/api/vault",
+  "/api/ship/github/pat",
+];
+
+/**
+ * READY-02: FastAPI now needs X-OpenVault-Admin on every GET under /api/ except
+ * the public paths above, loopback included. The console reads that status and
+ * catalog data through the /ov-api rewrite, so the loopback middleware attaches
+ * the file token for GET only, on the /ov-api prefix only. Key, secret, vault
+ * and PAT roots stay out: they keep the session-token rule and the exact
+ * bootstrap list above.
+ */
+export function isLoopbackVaultRead(method: string, pathname: string): boolean {
+  if (method.toUpperCase() !== "GET") return false;
+  const prefix = (pathname.split("?")[0] ?? pathname).trim();
+  if (prefix !== "/ov-api" && !prefix.startsWith("/ov-api/")) return false;
+  const bare = vaultBackendPath(pathname);
+  if (!bare.startsWith("/api/")) return false;
+  if (PUBLIC_READ_PATHS.has(bare)) return false;
+  return !SESSION_ONLY_ROOTS.some((root) => bare === root || bare.startsWith(`${root}/`));
+}
+
 function expandHome(value: string, homedir: string): string {
   const trimmed = value.trim();
   if (trimmed === "~") return homedir;
@@ -167,7 +208,12 @@ export function applyLoopbackAdminHeader(
 ): boolean {
   if (!isLoopbackHost(input.urlHost)) return false;
   if (!hostHeaderIsLoopback(input.hostHeader)) return false;
-  if (!isLoopbackVaultBootstrap(input.method, input.pathname)) return false;
+  if (
+    !isLoopbackVaultBootstrap(input.method, input.pathname) &&
+    !isLoopbackVaultRead(input.method, input.pathname)
+  ) {
+    return false;
+  }
   const token = sanitizeAdminToken(input.token);
   if (!token) return false;
   headers.set(LOOPBACK_ADMIN_HEADER, token);

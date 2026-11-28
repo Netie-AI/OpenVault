@@ -145,6 +145,12 @@ jobs:
         working-directory: OpenMW
         run: uv sync --all-extras --dev
 
+      # READY-02 (founder GO 2026-11-28 17:01 SGT): fails on any unauthenticated
+      # GET outside the explicit allowlist. Also runs inside the full suite below.
+      - name: Read gate contract (no unauthenticated GET outside allowlist)
+        working-directory: OpenMW
+        run: uv run pytest tests/test_http_guard_read_gate.py -q
+
       - name: Pytest OpenMW + openvault coverage gate
         working-directory: OpenMW
         run: >

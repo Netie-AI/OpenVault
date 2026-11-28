@@ -17,6 +17,7 @@ import {
   applyLoopbackAdminHeader,
   hostHeaderIsLoopback,
   isLoopbackVaultBootstrap,
+  isLoopbackVaultRead,
   localAdminTokenPath,
   readLocalAdminToken,
   sanitizeAdminToken,
@@ -479,4 +480,69 @@ test("localhost with a trailing dot is refused (documented fail-closed choice)",
     const res = await call(`${BOUND_URL}/ov-api/api/keys`, "GET", { host: "localhost.:3010" });
     assert.equal(upstreamAdmin(res), null);
   });
+});
+
+test("READY-02: console GETs on newly closed paths attach on /ov-api only", () => {
+  const read = (p: string, m = "GET") => isLoopbackVaultRead(m, p);
+  assert.equal(read("/ov-api/api/usage"), true);
+  assert.equal(read("/ov-api/api/accounts"), true);
+  assert.equal(read("/ov-api/api/system/bind"), true);
+  assert.equal(read("/ov-api/api/providers/cards?x=1"), true);
+  assert.equal(read("/ov-api/api/ship/engine/abc/stream"), true);
+  // Public backend GETs need no header.
+  assert.equal(read("/ov-api/api/healthz"), false);
+  assert.equal(read("/ov-api/api/freeroute/status"), false);
+  assert.equal(read("/ov-api/api/tool/register"), false);
+  // Only GET, only the /ov-api prefix, only under /api/.
+  assert.equal(read("/ov-api/api/usage", "POST"), false);
+  assert.equal(read("/ov-api/api/usage", "HEAD"), false);
+  assert.equal(read("/api/usage"), false);
+  assert.equal(read("/ov-api/keys/jwks"), false);
+  assert.equal(read("/ov-api/api/../api/usage"), false);
+  // Key, secret, vault and PAT roots keep the session-token rule.
+  for (const root of [
+    "/api/keys",
+    "/api/keys/abc/secret",
+    "/api/keyvault/snapshot",
+    "/api/apikeys",
+    "/api/secrets/x/reveal",
+    "/api/vault/env-scan",
+    "/api/ship/github/pat",
+  ]) {
+    assert.equal(read(`/ov-api${root}`), false, root);
+  }
+  // The bootstrap list is unchanged.
+  assert.equal(isLoopbackVaultBootstrap("GET", "/ov-api/api/usage"), false);
+});
+
+test("READY-02: apply sets the header for a closed GET only on a loopback host", () => {
+  const ok = new Headers();
+  assert.equal(
+    applyLoopbackAdminHeader(ok, {
+      method: "GET",
+      pathname: "/ov-api/api/usage",
+      urlHost: "127.0.0.1",
+      hostHeader: "127.0.0.1:3010",
+      token: TOKEN,
+    }),
+    true,
+  );
+  assert.equal(ok.get("x-openvault-admin"), TOKEN);
+  for (const bad of [
+    { urlHost: "203.0.113.10", hostHeader: "127.0.0.1:3010" },
+    { urlHost: "127.0.0.1", hostHeader: "evil.example:3010" },
+    { urlHost: "127.0.0.1", hostHeader: null },
+  ]) {
+    const h = new Headers();
+    assert.equal(
+      applyLoopbackAdminHeader(h, {
+        method: "GET",
+        pathname: "/ov-api/api/usage",
+        token: TOKEN,
+        ...bad,
+      }),
+      false,
+    );
+    assert.equal(h.get("x-openvault-admin"), null);
+  }
 });
