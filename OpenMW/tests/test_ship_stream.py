@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 from openmw.openvault.app import create_app
 from openmw.openvault.ship.engine import EngineStep, ShipDeployment, save_deployment
 from openmw.openvault.ship.stream import deployment_frames
+from openmw.openvault.vault.admin_token import admin_headers
 from openmw.openvault.vault.crypto import Seal
 from openmw.openvault.vault.store import KeyVault
 
@@ -61,7 +62,10 @@ def test_ship_engine_stream_endpoint(
     save_deployment(dep)
     app = create_app(vault=vault, mock_health=True, enable_precheck_loop=False)
     client = TestClient(app, client=("127.0.0.1", 5555))
-    with client.stream("GET", f"/api/ship/engine/{dep.deployment_id}/stream") as resp:
+    # TestClient.stream does not pass through the suite's admin injector.
+    with client.stream(
+        "GET", f"/api/ship/engine/{dep.deployment_id}/stream", headers=admin_headers()
+    ) as resp:
         assert resp.status_code == 200
         assert "text/event-stream" in (resp.headers.get("content-type") or "")
         body = b"".join(resp.iter_bytes()).decode("utf-8", errors="replace")

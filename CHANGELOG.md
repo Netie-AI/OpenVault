@@ -2,6 +2,15 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-11-28 - Read gate: no unauthenticated GET outside an allowlist (Refs READY-02, SEC-GUARD #72)
+
+- Auth change, founder GO 2026-11-28 17:01 SGT; 1-hour objection window, earliest merge 18:01 SGT. Full tier.
+- Every `GET` and `HEAD` under `/api/` and `/keys/` now needs `X-OpenVault-Admin` or an issued `ov_` key, loopback included. Before, a loopback peer read `/api/usage`, `/api/accounts`, `/api/cloud/devices` and 60 more with no credential. An `ov_` holder keeps its scoped view of `/api/usage`.
+- The only unauthenticated GETs are the exact paths in `PUBLIC_READ_ALLOWLIST` (`http_guard.py`): `/api/healthz`, both JWKS paths, and the five FreeRoute catalog and budget reads DMS and Cortex call with no credential today. A new GET route is closed until it is added there on purpose. `tests/test_http_guard_read_gate.py` walks every GET route and fails on a leak; CI runs it as its own step.
+- `GET /api/system/bind` and `/api/system/catalog` no longer return `internal_writers_url` or `jwks_url` (a public address). They return `internal_writers_configured`.
+- Console: the loopback middleware attaches the file token for GET on the `/ov-api` prefix for the newly closed paths. Key, secret, vault and PAT roots keep the session-token rule.
+- Not deployed. The live :5000 process is unchanged until a founder-approved redeploy. Callers that read `/api/usage` with no credential (DMS `scripts/verify/grade52.py`, `scripts/bench_matrix.py`) must send `X-OpenVault-Admin` or an `ov_` key before that redeploy.
+
 ## 2026-11-27 - FreeRoute service tier and limiter limited_by (Refs OV-FREEROUTE-TIER-429-01)
 
 - `DEFAULT_TIERS` gains `service`, the same request and token budget as `pro` (120 rpm / 400,000 tpm). A shared serving key uses this tier. `local` stays the unmetered loopback tier. No existing key's tier is changed here. Spend caps and prices are unchanged.

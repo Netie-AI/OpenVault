@@ -209,6 +209,20 @@ def bind_policy() -> dict[str, Any]:
     }
 
 
+def bind_policy_view() -> dict[str, Any]:
+    """``bind_policy`` for an HTTP response: no internal URL, host or IP.
+
+    The writers URL carries a public address. HTTP callers learn only that an
+    internal writers endpoint exists. The raw value stays inside the process
+    for ``require_private_bind`` and operator logs.
+    """
+    view = bind_policy()
+    view.pop("internal_writers_url", None)
+    view.pop("jwks_url", None)
+    view["internal_writers_configured"] = bool(INTERNAL_WRITERS_URL.strip())
+    return view
+
+
 def _safe_live_key_id() -> str | None:
     """Echo the sealed caller id only. Never an ``ov_`` token."""
     raw = (os.environ.get("OPENVAULT_LIVE_KEY_ID") or os.environ.get("LIVE_KEY_ID") or "").strip()
@@ -243,7 +257,7 @@ def catalog_payload() -> dict[str, Any]:
             "credit_normal_on": ["pro", "seat"],
             "priced": False,
         },
-        "bind": bind_policy(),
+        "bind": bind_policy_view(),
     }
 
 
@@ -472,6 +486,7 @@ __all__ = [
     "SystemPlaneError",
     "bind_is_public",
     "bind_policy",
+    "bind_policy_view",
     "catalog_payload",
     "metering_overlay",
     "monthly_display_usd",

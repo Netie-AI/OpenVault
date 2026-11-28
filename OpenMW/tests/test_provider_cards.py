@@ -248,7 +248,9 @@ def test_sealed_vault_stores_nothing(home: Path, monkeypatch: pytest.MonkeyPatch
 
 def test_cards_json_is_catalog_only_and_bad_body_is_not_echoed(home: Path) -> None:
     client = _client()
-    listed = client.get("/api/providers/cards")
+    # READY-02: the cards JSON needs the admin header; the page itself does not.
+    assert client.get("/api/providers/cards").status_code == 401
+    listed = client.get("/api/providers/cards", headers=_admin())
     assert listed.status_code == 200
     ids: list[str] = []
     for section in listed.json()["sections"]:

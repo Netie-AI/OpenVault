@@ -26,6 +26,15 @@ not an ``ov_`` key. Exceptions:
   re-register can present the current service token. Other methods and near
   paths stay on the admin gate.
 
+READY-02 read gate (founder GO 2026-11-28 17:01 SGT): every ``GET`` and
+``HEAD`` on ``/api/*`` and ``/keys/*`` needs a credential even from loopback.
+The credential is ``X-OpenVault-Admin`` or an issued ``ov_`` API key (an
+``ov_`` holder keeps its own scoped view, for example ``GET /api/usage``).
+Only the exact paths in ``PUBLIC_READ_ALLOWLIST`` answer a GET with no
+credential. A new GET route is closed by default until it is added there and
+the contract test in ``tests/test_http_guard_read_gate.py`` is changed on
+purpose. Write methods keep the rules above.
+
 The peer is ``request.client.host`` after the socket accept. Forwarded and
 Host headers are never read.
 
@@ -78,6 +87,27 @@ from openmw.openvault.vault.lease import LEASE_MINT_PATH, LEASE_REDEEM_PATH, OWN
 
 #: The only unauthenticated ``/api/*`` path. Length 1 is a contract test.
 AUTH_ALLOWLIST: frozenset[str] = frozenset({"/api/healthz"})
+
+#: Exact paths that answer ``GET``/``HEAD`` with no credential. Every other GET
+#: under ``/api/`` or ``/keys/`` needs ``X-OpenVault-Admin`` or an ``ov_`` key.
+#: The first two are liveness and the published signing keys. The rest are the
+#: catalog and budget reads DMS and Cortex call with no credential today
+#: (``dms_api/freeroute_client.py``, ``CortexOS/integrations/freeroute.py``).
+#: Moving those callers to a service credential is a follow-up; until then a
+#: change here is an auth change.
+PUBLIC_READ_ALLOWLIST: frozenset[str] = frozenset(
+    {
+        "/api/healthz",
+        "/.well-known/jwks.json",
+        "/keys/jwks",
+        "/api/freeroute/status",
+        "/api/freeroute/onboard",
+        "/api/freeroute/ratelimit",
+        "/api/openfree/ratelimit",
+        "/api/tool/register",
+    }
+)
+_READ_METHODS = frozenset({"GET", "HEAD"})
 
 _GUARDED_PREFIXES: tuple[str, ...] = ("/api/", "/keys/")
 _DOCS_TRUTH = frozenset({"1", "true", "yes", "on"})
@@ -139,6 +169,19 @@ def path_is_guarded(path: str) -> bool:
     if path in AUTH_ALLOWLIST:
         return False
     return path.startswith(_GUARDED_PREFIXES)
+
+
+def read_needs_credential(method: str, path: str) -> bool:
+    """True for a GET/HEAD under ``/api/`` or ``/keys/`` that is not public.
+
+    ``path`` is the routed path. Equality on ``PUBLIC_READ_ALLOWLIST``, no
+    prefix match, no case folding, no trailing-slash pass.
+    """
+    if method.upper() not in _READ_METHODS:
+        return False
+    if path in PUBLIC_READ_ALLOWLIST:
+        return False
+    return path == "/keys" or path.startswith(_GUARDED_PREFIXES)
 
 
 def _load_get_route_path() -> Any:
@@ -401,6 +444,22 @@ def peer_is_loopback(host: str) -> bool:
     return value in _LOOPBACK_PEERS
 
 
+def _refuse_read(request: Request, api_keys: _KeyStore) -> JSONResponse | None:
+    """READY-02: a non-public GET needs the admin header or a valid ``ov_`` key.
+
+    Loopback is not a credential here. No credential is 401. A presented
+    bearer that does not verify is 403, and it is not retried as anonymous.
+    """
+    if _admin_presented(request):
+        return None
+    token = bearer_token(request)
+    if not token:
+        return _missing()
+    if api_keys.verify(token) is None:
+        return _bad()
+    return None
+
+
 def refuse_if_unauthorised(request: Request, *, api_keys: _KeyStore) -> JSONResponse | None:
     """Return a 401/403 response to send, or None to let the request through.
 
@@ -428,6 +487,11 @@ def refuse_if_unauthorised(request: Request, *, api_keys: _KeyStore) -> JSONResp
         presented = (request.headers.get(ADMIN_HEADER) or "").strip()
         if not admin_token_matches(presented):
             return _missing()
+
+    if not mint and read_needs_credential(request.method, path):
+        refused = _refuse_read(request, api_keys)
+        if refused is not None:
+            return refused
 
     if not path_is_guarded(path):
         return None
@@ -502,6 +566,7 @@ class HttpGuardMiddleware:
 __all__ = [
     "AUTH_ALLOWLIST",
     "LEASE_TLS_VERIFY",
+    "PUBLIC_READ_ALLOWLIST",
     "VERIFY_SERVICES_ENV",
     "ApikeyVerifyDecision",
     "HttpGuardMiddleware",
@@ -515,6 +580,7 @@ __all__ = [
     "path_is_guarded",
     "path_needs_admin",
     "peer_is_loopback",
+    "read_needs_credential",
     "refuse_if_unauthorised",
     "route_path",
     "signing_mint_kind",

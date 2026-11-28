@@ -155,16 +155,21 @@ def test_catalog_and_bind_are_loopback_only(client: TestClient) -> None:
     ok = client.get("/api/system/catalog")
     assert ok.status_code == 200, ok.text
     body = ok.json()
-    assert body["bind"]["internal_writers_url"] == INTERNAL_WRITERS_URL
+    # READY-02: no internal URL or public IP in the HTTP view.
+    assert "internal_writers_url" not in body["bind"]
+    assert "jwks_url" not in body["bind"]
+    assert body["bind"]["internal_writers_configured"] is True
     assert body["bind"]["default_host"] == DEFAULT_BIND_HOST
     assert body["bind"]["custody_port"] == CUSTODY_PORT
     assert body["bind"]["public_bind_allowed"] is False
     assert body["bind"]["internal_writers_only"] is True
-    assert "35.253.229.206:8080" in body["bind"]["internal_writers_url"]
+    assert "35.253.229.206" not in ok.text
     assert client.get("/api/system/bind").json()["internal_writers_only"] is True
     bind = client.get("/api/system/bind").json()
     assert bind["jwks_uri"] == "/.well-known/jwks.json"
     assert bind["mint_loopback_only"] is True
+    assert "35.253.229.206" not in str(bind)
+    assert INTERNAL_WRITERS_URL not in str(bind)
 
     remote = TestClient(client.app, client=("8.8.8.8", 5555))
     assert remote.get("/api/system/catalog").status_code == 401

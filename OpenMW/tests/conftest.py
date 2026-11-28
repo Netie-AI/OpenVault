@@ -24,6 +24,7 @@ from openmw.openvault.vault.admin_token import (
     ensure_admin_token,
     path_needs_admin,
 )
+from openmw.openvault.vault.http_guard import read_needs_credential
 
 #: Tests send the real admin token on key/secret routes. Set false to prove a
 #: keyless call. This does not turn the gate off inside the app.
@@ -66,7 +67,9 @@ def _with_admin_header(headers: object) -> dict[str, str]:
 
 
 def _request_with_admin(self: TestClient, method: str, url: object, **kwargs: Any) -> Any:
-    needs = path_needs_admin(_request_path(url))
+    path = _request_path(url)
+    # READY-02: non-public GETs need the admin header from loopback too.
+    needs = path_needs_admin(path) or read_needs_credential(method, path)
     missing = not _has_admin_header(kwargs.get("headers"))
     if inject_admin_credential.get() and needs and missing:
         kwargs["headers"] = _with_admin_header(kwargs.get("headers"))

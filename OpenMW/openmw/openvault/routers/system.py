@@ -18,7 +18,7 @@ from openmw.openvault.vault.accounts import AccountStore
 from openmw.openvault.vault.system_plane import (
     EntitlementStore,
     SystemPlaneError,
-    bind_policy,
+    bind_policy_view,
     catalog_payload,
     metering_overlay,
     route_decision,
@@ -70,7 +70,7 @@ def build_system_router(
     @router.get("/api/system/bind")
     def system_bind(request: Request) -> dict[str, Any]:
         _guard(request, "read system bind policy")
-        return {"ok": True, **bind_policy()}
+        return {"ok": True, **bind_policy_view()}
 
     @router.get("/api/system/entitlements/{account_id}")
     def system_entitlement(account_id: str, request: Request) -> dict[str, Any]:

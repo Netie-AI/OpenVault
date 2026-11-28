@@ -14,6 +14,7 @@ import {
   applyLoopbackAdminHeader,
   hostHeaderIsLoopback,
   isLoopbackVaultBootstrap,
+  isLoopbackVaultRead,
   readLocalAdminToken,
 } from "./loopbackVaultAdmin";
 import { classifyRequestPeerLocality } from "./peerStamp";
@@ -165,7 +166,7 @@ export async function runAuthzPipeline(
   if (
     isLoopbackHost(request.nextUrl.hostname) &&
     hostHeaderIsLoopback(hostHeader) &&
-    isLoopbackVaultBootstrap(method, pathname)
+    (isLoopbackVaultBootstrap(method, pathname) || isLoopbackVaultRead(method, pathname))
   ) {
     applyLoopbackAdminHeader(requestHeaders, {
       method,
