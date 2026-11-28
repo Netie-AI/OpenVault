@@ -153,6 +153,10 @@ jobs:
           --cov-report=term-missing
           --cov-fail-under=75
 
+      - name: Multitenant seat sim
+        working-directory: OpenMW
+        run: uv run python ../scripts/verify/sim_multitenant_load.py
+
   # apps/web npm test and tsc. Node 20: no .nvmrc and no engines field.
   test-web:
     runs-on: ubuntu-latest

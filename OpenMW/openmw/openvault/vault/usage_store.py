@@ -32,6 +32,7 @@ An older database gains it on open. It is not a price and not a spend cap.
 from __future__ import annotations
 
 import contextlib
+import os
 import sqlite3
 import time
 import uuid
@@ -160,6 +161,10 @@ class UsageStore:
         self._db_path = db_path if db_path is not None else keys_db_path()
         self._ensure_schema()
 
+    @property
+    def db_path(self) -> Path:
+        return self._db_path
+
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(str(self._db_path))
         conn.row_factory = sqlite3.Row
@@ -272,8 +277,32 @@ class UsageStore:
                     None if event.est_cost_usd is None else float(event.est_cost_usd),
                 ),
             )
+            # Flag off does not touch the counter tables, so the ledger write
+            # stays the two inserts above.
+            if (os.environ.get("OV_SEAT_PLANE") or "").strip() == "1":
+                from openmw.openvault.vault.seat_plane import note_recorded
+
+                note_recorded(conn, event)
             conn.commit()
         return event
+
+    def counter_billable(self, api_key_id: str) -> int:
+        """Billable tokens from the incremental counter, not an all-time scan."""
+        from openmw.openvault.vault.seat_plane import read_billable
+
+        conn = self._connect()
+        conn.isolation_level = None
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            try:
+                value = read_billable(conn, api_key_id)
+                conn.execute("COMMIT")
+            except Exception:
+                conn.execute("ROLLBACK")
+                raise
+        finally:
+            conn.close()
+        return value
 
     def spend_usd(
         self,

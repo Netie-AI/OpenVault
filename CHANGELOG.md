@@ -2,6 +2,14 @@
 
 Append-only. Never edited, only added to. Newest first.
 
+## 2026-11-28 - Tenant seats, manager scope, allowance (Refs OV-SEAT-PLANE-01)
+
+- `OV_SEAT_PLANE=1` turns on tenant seats. Any other value, including unset, `true`, and `yes`, leaves `GET /api/system/metering` and the keyed chat path byte-identical. Keys stay in `api_keys`. A seat binding is a separate row. A manager token (`X-OpenVault-Manager`, stored as SHA-256) sees only its tenant.
+- Manager routes under `/api/system/tenant/` raise or lower per-seat caps and the model/role allowlist. Each change is an audit row: who, when, old, new. `OV_SEAT_POLICY` is optional. A bad file keeps the last good parse and is reported on `GET /api/system/tenant/policy`. It does not 503 chat.
+- Per-seat allowance is included USD. Overage is `(metered cost - allowance) x markup` (default 1.2, per tenant). A ceiling or daily/monthly cap stops the seat. `GET /api/system/tenant/billing?month=YYYY-MM&format=csv|json` is that tenant's month.
+- Manager `GET /api/usage` pages with `since` and `until`, and includes cost, role, and per-seat and per-tenant totals. Question capture is off until the tenant sets it, with retention days, and only that tenant's manager can read it.
+- With the flag on, a keyed request reads an incremental counter instead of `UsageStore.summary()`. `scripts/verify/sim_multitenant_load.py` runs in CI against a temp `OPENVAULT_HOME` and a stub upstream. Bind address, issued-key format, and existing limiter numbers are unchanged.
+
 ## 2026-11-27 - FreeRoute service tier and limiter limited_by (Refs OV-FREEROUTE-TIER-429-01)
 
 - `DEFAULT_TIERS` gains `service`, the same request and token budget as `pro` (120 rpm / 400,000 tpm). A shared serving key uses this tier. `local` stays the unmetered loopback tier. No existing key's tier is changed here. Spend caps and prices are unchanged.

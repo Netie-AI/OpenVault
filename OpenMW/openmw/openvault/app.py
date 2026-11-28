@@ -182,6 +182,15 @@ from openmw.openvault.vault.route_policy import (
     unknown_role_body,
     usage_pair,
 )
+from openmw.openvault.vault.seat_plane import (
+    MANAGER_HEADER,
+    SeatError,
+    billable_for_gate,
+    manager_usage,
+    maybe_capture_question,
+    seat_block,
+    seat_plane_enabled,
+)
 from openmw.openvault.vault.secrets import (
     IdentityDocType,
     SecretKind,
@@ -1320,6 +1329,7 @@ def create_app(
     from openmw.openvault.routers.lease import build_lease_router
     from openmw.openvault.routers.provider_cards import build_provider_cards_router
     from openmw.openvault.routers.route import router as route_router
+    from openmw.openvault.routers.seat_plane import build_seat_router
     from openmw.openvault.routers.sentinel import router as sentinel_router
     from openmw.openvault.routers.ship import router as ship_router
     from openmw.openvault.routers.system import build_system_router
@@ -1366,6 +1376,14 @@ def create_app(
             state_usage,
             guard=_system_guard,
             audit=_system_audit,
+        )
+    )
+
+    app.include_router(
+        build_seat_router(
+            state_accounts,
+            state_usage,
+            require_loopback=_system_guard,
         )
     )
 
@@ -3531,6 +3549,17 @@ def create_app(
         how one tenant enumerates another tenant's spend, and the rows carry the
         vault key id that served.
         """
+        if seat_plane_enabled():
+            presented = (request.headers.get(MANAGER_HEADER) or "").strip()
+            if presented:
+                try:
+                    return manager_usage(
+                        presented,
+                        dict(request.query_params),
+                        db_path=state_usage.db_path,
+                    )
+                except SeatError as exc:
+                    raise HTTPException(status_code=exc.status, detail=exc.detail) from exc
         caller = None
         with suppress(AuthRefusedError):
             caller = resolve_caller(request, api_keys=state_api_keys)
@@ -3587,8 +3616,28 @@ def create_app(
         started_at = time.time()
         trace = HopTrace()
         if caller.api_key_id:
-            usage_now = state_usage.summary(api_key_id=caller.api_key_id)
-            pack_gate = evaluate_pack(caller.api_key_id, int(usage_now.get("billable_tokens") or 0))
+            billable = billable_for_gate(state_usage, caller.api_key_id)
+            blocked = seat_block(
+                caller.api_key_id,
+                str(body.model or ""),
+                body.role,
+                db_path=state_usage.db_path,
+            )
+            if blocked is not None:
+                return JSONResponse(
+                    status_code=blocked.status,
+                    content={
+                        "error": {
+                            "message": blocked.message,
+                            "type": blocked.error_type,
+                            "reason": blocked.reason,
+                            "seat_id": blocked.seat_id,
+                            "cap": blocked.cap or None,
+                        },
+                        **empty_stamps(),
+                    },
+                )
+            pack_gate = evaluate_pack(caller.api_key_id, billable)
             if not pack_gate.get("allowed"):
                 return JSONResponse(
                     status_code=402,
@@ -3602,6 +3651,11 @@ def create_app(
                         **empty_stamps(),
                     },
                 )
+            maybe_capture_question(
+                caller.api_key_id,
+                body.messages,
+                db_path=state_usage.db_path,
+            )
 
         try:
             policy = load_route_policy()

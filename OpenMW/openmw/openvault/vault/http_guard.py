@@ -450,6 +450,21 @@ def refuse_if_unauthorised(request: Request, *, api_keys: _KeyStore) -> JSONResp
     # Intermediate issue and revoke stay 401 here; their handlers are loopback.
     if mint == "services" and _socket_peer_may_mint_service(host):
         return None
+    # Seat-plane managers are not ov_ keys. Admit them only on the manager
+    # surface, and only when OV_SEAT_PLANE is the digit 1. Flag off falls
+    # through to the same 401 as a request with no credential.
+    manager = (request.headers.get("X-OpenVault-Manager") or "").strip()
+    if manager and path is not None:
+        from openmw.openvault.vault.seat_plane import (
+            manager_surface,
+            manager_token_ok,
+            seat_plane_enabled,
+        )
+
+        if seat_plane_enabled() and manager_surface(path):
+            if manager_token_ok(manager):
+                return None
+            return _missing()
     return _missing()
 
 

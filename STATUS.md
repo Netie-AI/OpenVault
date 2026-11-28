@@ -2,7 +2,7 @@
 
 What is true now. History: [CHANGELOG.md](CHANGELOG.md). Deferred: [PARKING_LOT.md](PARKING_LOT.md). Map: [docs/ACTIVE.md](docs/ACTIVE.md). Rules: [AGENTS.md](AGENTS.md).
 
-Last reconciled: 2026-11-06. Main is `3ba51cdc`.
+Last reconciled: 2026-11-28. Seat plane is behind `OV_SEAT_PLANE=1` (default off).
 
 Building the product comes before cleanup.
 
@@ -39,6 +39,7 @@ Building the product comes before cleanup.
 - Open drafts from `gh pr list --state open --draft`: #99, #169, #170, #171, #172, #173, #174.
 - GitHub is the queue: 57 open issues at this reconcile. Landed behavior is in CHANGELOG.md.
 - Usage $/unit is still NEEDS-YOU. Display SKUs stay locked (DR-0013).
+- `OV_SEAT_PLANE` is off unless it is the digit `1`. On, a manager token sees only its tenant: caps, allowlist, allowance x markup (default 1.2), billing export, paged usage, and optional question capture. Keyed requests use counters instead of an all-time `summary()`. A bad `OV_SEAT_POLICY` keeps the last good file and does not 503 chat. Bind address and existing limiter numbers are unchanged. Refs OV-SEAT-PLANE-01.
 
 ## Verify
 

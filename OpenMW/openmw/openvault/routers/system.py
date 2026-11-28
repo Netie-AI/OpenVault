@@ -15,6 +15,12 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from openmw.openvault.vault.accounts import AccountStore
+from openmw.openvault.vault.seat_plane import (
+    MANAGER_HEADER,
+    SeatError,
+    scoped_metering,
+    seat_plane_enabled,
+)
 from openmw.openvault.vault.system_plane import (
     EntitlementStore,
     SystemPlaneError,
@@ -88,6 +94,19 @@ def build_system_router(
 
     @router.get("/api/system/metering")
     def system_metering(request: Request, account_id: str) -> dict[str, Any]:
+        # Flag off ignores a manager header and returns the process ledger.
+        presented = (request.headers.get(MANAGER_HEADER) or "").strip()
+        if seat_plane_enabled() and presented:
+            try:
+                return scoped_metering(
+                    presented,
+                    account_id,
+                    accounts,
+                    entitlements,
+                    db_path=usage.db_path,
+                )
+            except SeatError as exc:
+                raise HTTPException(status_code=exc.status, detail=exc.detail) from exc
         _guard(request, "read system metering")
         if accounts.get(account_id) is None:
             raise HTTPException(status_code=404, detail="account not found")
