@@ -1,0 +1,16 @@
+# Audit ignore list for scripts/ci_audit.py
+#
+# The gate fails on high and critical advisories in apps/web, apps/shell, and
+# the OpenMW server lock. Add a row only when no patched release can be
+# installed. One finding per line:
+#
+#   <id> <reason>
+#
+# The id is a GHSA, a CVE, a PYSEC, or an npm advisory number. The reason is
+# required. A row with no reason fails the gate.
+#
+# No rows. The 2026-11-28 findings all had a patched release:
+#   next 16.4.5, electron 42.11.16, anyio 4.14.2, certifi 2026.10.18,
+#   cryptography 50.0.0, filelock 4.2.1, pillow 13.0.0.
+# filelock 4.2.1 and pillow 13.0.0 require Python >=3.11, so the OpenMW
+# floor moved to that. Nothing in the shipped lock is unfixable.
